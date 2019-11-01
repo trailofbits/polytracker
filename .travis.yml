@@ -1,0 +1,36 @@
+language: cpp
+cache:
+  directories:
+  - trailofbits/TheAlanParsersProject/polytracker/test/downloads
+
+matrix:
+  include:
+  - os: linux
+    dist: xenial    # ubuntu 16.04
+    compiler: clang
+
+  - os: linux
+    dist: bionic    # ubuntu 18.04
+    compiler: clang
+
+  - os: linux
+    dist: xenial    # ubuntu 16.04
+    compiler: gcc
+
+  - os: linux
+    dist: bionic    # ubuntu 18.04
+    compiler: gcc
+
+before_install:
+- |
+  set -exo pipefail
+  sudo apt-get install -y nlohmann-json-dev
+  # Use Python 3.7 and make sure it has the `venv` module
+  pyenv global system 3.7.1  # https://github.com/travis-ci/travis-ci/issues/8363
+  python3.7 -mvenv -h
+
+install:
+- make CC="$CC" CXX="$CXX" install
+
+script:
+- make -j"$(nproc)" check

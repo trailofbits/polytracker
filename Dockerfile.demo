@@ -1,0 +1,20 @@
+FROM trailofbits/tapp
+MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get install -y git pkg-config
+
+RUN git clone --recursive git://git.ghostscript.com/mupdf.git
+
+WORKDIR /polytracker/the_klondike/mupdf
+
+RUN git submodule update --init
+
+RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=./bin install
+
+RUN mkdir -p /workdir
+
+RUN echo "cd /workdir && $$@" > /polytracker/rundemo.sh && chmod +x /polytracker/rundemo.sh
+
+WORKDIR /workdir

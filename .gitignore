@@ -1,0 +1,5 @@
+/build
+*~
+.cmake_init
+.venv
+__pycache__
