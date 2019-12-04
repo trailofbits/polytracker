@@ -18,10 +18,15 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "dfsan_platform.h"
 #include <stdint.h> 
-#include <roaring/roaring.hh>
+#include <unordered_map>
+#include <unordered_set>
+#include <nlohmann/json.hpp>
+#include <lrucache/lrucache.hpp>
+
 using __sanitizer::uptr;
 using __sanitizer::u16;
 using __sanitizer::u32;
+using json = nlohmann::json;
 
 extern "C" {
 void dfsan_add_label(dfsan_label label, void *addr, uptr size);
@@ -46,6 +51,7 @@ inline dfsan_label *shadow_for(void *ptr) {
 inline const dfsan_label *shadow_for(const void *ptr) {
   return shadow_for(const_cast<void *>(ptr));
 }
+
 
 struct Flags {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) Type Name;
