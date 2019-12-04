@@ -92,6 +92,14 @@ POLYPATH=input.pdf POLYTTL=10 POLYCACHE=100000 POLYDUMP=TRUE ./mutool info input
 
 This will produce two files, one is the contents of the in memory taint forest, and the other is a json that maps function names to a set of taint nodes touched in a comparison. The schema for the taint forest can be found in `dfsan_types.h`, which is just the node structure that is written to disk.  
 
+## Snapshotting 
+
+With Polytracker is it possible to create a snapshot of processed taint during tracking. The `POLYTIME` variable allows the user to specify an interval at which to take snapshots. These snapshots are stored as jsons in the current working directory. 
+
+```
+POLYPATH=input.pdf POLYTIME=1 ./mutool draw input.pdf 
+``` 
+
 ## Current Status and Known Issues
 
 Taints will not propagate through dynamically loaded libraries unless
