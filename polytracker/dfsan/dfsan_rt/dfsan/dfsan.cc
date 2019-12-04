@@ -43,6 +43,7 @@
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
+#include <ctime>
 //Amalgamated CRoaring lib
 #include "roaring.hh"
 #include "roaring.c" 
@@ -74,14 +75,27 @@ std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> un
 std::mutex function_to_bytes_mutex; 
 std::mutex union_table_mutex;
 
-bool dump_forest_and_sets = false;
-decay_val taint_node_ttl = 16;
-uint64_t dfs_cache_size = 100000;
+static bool dump_forest_and_sets = false;
+static decay_val taint_node_ttl = 16;
+static uint64_t dfs_cache_size = 100000;
+
+/*
+ * Time info for periodic logging 
+ * Interval time = 0 means do nothing 
+ */
+static double interval_time = 0; //default is 0, do nothing
+static clock_t prev_time = 0; 
+static clock_t curr_time = 0;
 
 char * target_file; 
 uint_dfsan_label_t byte_start = 0;
 uint_dfsan_label_t byte_end;
 
+static void dfsan_create_function_sets(
+		json * output_json, std::string fname, 
+		std::unordered_set<taint_node_t*> nodes, 
+		cache::lru_cache<taint_node_t*, 
+		Roaring> * dfs_cache);
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
 //
@@ -111,71 +125,101 @@ int __dfsan::vmaSize;
 #endif
 
 static uptr UnusedAddr() {
-  //The unused region 
-  return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>() + (sizeof(taint_node_t) * MAX_LABELS);
+	//The unused region 
+	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>() + (sizeof(taint_node_t) * MAX_LABELS);
 }
 
 static inline taint_node_t * node_for(dfsan_label label) {
-  //fprintf(stderr, "getting node for\n");
-  return (taint_node_t*)(forest_base_addr + (label * sizeof(taint_node_t)));
+	//fprintf(stderr, "getting node for\n");
+	return (taint_node_t*)(forest_base_addr + (label * sizeof(taint_node_t)));
 }
 static inline dfsan_label value_for_node(taint_node_t * node) {
-  //fprintf(stderr, "getting value forr\n");
-  return ((((uptr)node) - forest_base_addr)/sizeof(taint_node_t));
+	//fprintf(stderr, "getting value forr\n");
+	return ((((uptr)node) - forest_base_addr)/sizeof(taint_node_t));
 }
 
 // Checks we do not run out of labels.
 static void dfsan_check_label(dfsan_label label) {
-  if (label == MAX_LABELS) {
-    Report("FATAL: DataFlowSanitizer: out of labels\n");
-    Die();
-  }
+	if (label == MAX_LABELS) {
+		Report("FATAL: DataFlowSanitizer: out of labels\n");
+		Die();
+	}
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
-  func_stack.resize(*index + 1);
+	func_stack.resize(*index + 1);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsan_func_entry(char * fname) {
 #ifdef DEBUG_INFO
-  fprintf(stderr, "PUSHING BACK %s\n", fname);
+	fprintf(stderr, "PUSHING BACK %s\n", fname);
 #endif
-  func_stack.push_back(fname);
-  int ret_val = func_stack.size()-1;
-  return ret_val;
+	func_stack.push_back(fname);
+	int ret_val = func_stack.size()-1;
+	return ret_val;
 }
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
-  if (some_label == 0) {return;}
-  taint_node_t * new_node = node_for(some_label);
-  function_to_bytes_mutex.lock();
-  (*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-  function_to_bytes_mutex.unlock();
+	static unsigned int interval_nonce = 0;
+
+	//If there is no taint, dont log
+	if (some_label == 0) {return;}
+
+	taint_node_t * new_node = node_for(some_label);
+	function_to_bytes_mutex.lock();
+	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);
+	
+	//If we have an interval timer, check if we should dump to json
+	if (interval_time > 0) {
+		curr_time = clock();
+		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
+		if (passed_time > interval_time) {
+			json output_json;
+
+			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
+			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
+			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
+				dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+				//Clear vector so future results show new data only
+				it->second.clear();
+			}
+
+			std::string output_string = "polytracker_interval:" + std::to_string(interval_nonce) + ".json";
+			interval_nonce += 1; 
+			std::ofstream o(output_string);
+			o << std::setw(4) << output_json << std::endl;
+			o.close();
+		
+			delete dfs_cache;
+
+		}
+	}	
+	function_to_bytes_mutex.unlock();
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_func_exit() {
-  func_stack.pop_back();
+	func_stack.pop_back();
 }
 
 static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, decay_val max_decay) {
-  //Fetch new label 
-  dfsan_label label = atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed);
-  //Check to make sure there is no overflow
-  dfsan_check_label(label);
-  label++;
+	//Fetch new label 
+	dfsan_label label = atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed);
+	//Check to make sure there is no overflow
+	dfsan_check_label(label);
+	label++;
 
-  //Grab the pre reserved mem for this region and set vals
-  taint_node_t * new_node = node_for(label); 
-  new_node->p1 = node_for(l1);
-  new_node->p2 = node_for(l2);
+	//Grab the pre reserved mem for this region and set vals
+	taint_node_t * new_node = node_for(label); 
+	new_node->p1 = node_for(l1);
+	new_node->p2 = node_for(l2);
 
-  new_node->decay = max_decay;
-  new_node->bit_field = '\0';
+	new_node->decay = max_decay;
+	new_node->bit_field = '\0';
 
-  return label;
+	return label;
 }
 
 
@@ -186,122 +230,122 @@ static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, deca
 // This assumes that a lot of taint will be generated in functions and not used again
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
-  DCHECK_NE(l1, l2);
-  if (l1 == 0)
-    return l2;
-  if (l2 == 0)
-    return l1;
-  if (l1 > l2)
-    Swap(l1, l2);
+	DCHECK_NE(l1, l2);
+	if (l1 == 0)
+		return l2;
+	if (l2 == 0)
+		return l1;
+	if (l1 > l2)
+		Swap(l1, l2);
 
-  //Quick union table check 
-  if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
-    auto val = union_table[l1].find(l2); 
-    return val->second;
-  } 
-  //Check for max decay
-  taint_node_t * p1 = node_for(l1);
-  taint_node_t * p2 = node_for(l2);
+	//Quick union table check 
+	if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
+		auto val = union_table[l1].find(l2); 
+		return val->second;
+	} 
+	//Check for max decay
+	taint_node_t * p1 = node_for(l1);
+	taint_node_t * p2 = node_for(l2);
 	//This calculates the average of the two decays, and then decreases it by a factor of 2.
-  decay_val max_decay = (p1->decay + p2->decay) / 4;
-  if (max_decay == 0) {
-    return 0;
-  }
+	decay_val max_decay = (p1->decay + p2->decay) / 4;
+	if (max_decay == 0) {
+		return 0;
+	}
 
-  dfsan_label label = dfsan_create_union_label(l1, l2, max_decay);
+	dfsan_label label = dfsan_create_union_label(l1, l2, max_decay);
 
-  union_table_mutex.lock();
-  (union_table[l1])[l2] = label;
-  union_table_mutex.unlock();
-  return label;
+	union_table_mutex.lock();
+	(union_table[l1])[l2] = label;
+	union_table_mutex.unlock();
+	return label;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
-  dfsan_label label = ls[0];
-  for (uptr i = 1; i != n; ++i) {
-    dfsan_label next_label = ls[i];
-    if (label != next_label)
-      label = __dfsan_union(label, next_label);
-  }
-  return label;
+	dfsan_label label = ls[0];
+	for (uptr i = 1; i != n; ++i) {
+		dfsan_label next_label = ls[i];
+		if (label != next_label)
+			label = __dfsan_union(label, next_label);
+	}
+	return label;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_unimplemented(char *fname) {
-  if (flags().warn_unimplemented)
-    Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
-        fname);
+	if (flags().warn_unimplemented)
+		Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
+				fname);
 }
 
 // Use '-mllvm -dfsan-debug-nonzero-labels' and break on this function
 // to try to figure out where labels are being introduced in a nominally
 // label-free program.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_nonzero_label() {
-  if (flags().warn_nonzero_labels)
-    Report("WARNING: DataFlowSanitizer: saw nonzero label\n");
+	if (flags().warn_nonzero_labels)
+		Report("WARNING: DataFlowSanitizer: saw nonzero label\n");
 }
 
 // Indirect call to an uninstrumented vararg function. We don't have a way of
 // handling these at the moment.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __dfsan_vararg_wrapper(const char *fname) {
-  Report("FATAL: DataFlowSanitizer: unsupported indirect call to vararg "
-      "function %s\n", fname);
-  Die();
+	Report("FATAL: DataFlowSanitizer: unsupported indirect call to vararg "
+			"function %s\n", fname);
+	Die();
 }
 
 // Like __dfsan_union, but for use from the client or custom functions.  Hence
 // the equality comparison is done here before calling __dfsan_union.
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_union(dfsan_label l1, dfsan_label l2) {
-  if (l1 == l2)
-    return l1;
-  return __dfsan_union(l1, l2);
+	if (l1 == l2)
+		return l1;
+	return __dfsan_union(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label dfsan_create_label(uint_dfsan_label_t offset) {
-  //File bytes have a mapping to og labels + 1
-  dfsan_label label = offset + 1;
-  //Grab the pre reserved mem for this region and set vals
-  taint_node_t * new_node = node_for(label);
-  //Both NULL means canonical parent 
-  new_node->p1 = NULL;
-  new_node->p2 = NULL;
-  new_node->bit_field = '\0';
-  new_node->decay = taint_node_ttl;
-  return label;
+	//File bytes have a mapping to og labels + 1
+	dfsan_label label = offset + 1;
+	//Grab the pre reserved mem for this region and set vals
+	taint_node_t * new_node = node_for(label);
+	//Both NULL means canonical parent 
+	new_node->p1 = NULL;
+	new_node->p2 = NULL;
+	new_node->bit_field = '\0';
+	new_node->decay = taint_node_ttl;
+	return label;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_set_label(dfsan_label label, void *addr, uptr size) {
-  for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp) {
-    // Don't write the label if it is already the value we need it to be.
-    // In a program where most addresses are not labeled, it is common that
-    // a page of shadow memory is entirely zeroed.  The Linux copy-on-write
-    // implementation will share all of the zeroed pages, making a copy of a
-    // page when any value is written.  The un-sharing will happen even if
-    // the value written does not change the value in memory.  Avoiding the
-    // write when both |label| and |*labelp| are zero dramatically reduces
-    // the amount of real memory used by large programs.
-    if (label == *labelp)
-      continue;
+	for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp) {
+		// Don't write the label if it is already the value we need it to be.
+		// In a program where most addresses are not labeled, it is common that
+		// a page of shadow memory is entirely zeroed.  The Linux copy-on-write
+		// implementation will share all of the zeroed pages, making a copy of a
+		// page when any value is written.  The un-sharing will happen even if
+		// the value written does not change the value in memory.  Avoiding the
+		// write when both |label| and |*labelp| are zero dramatically reduces
+		// the amount of real memory used by large programs.
+		if (label == *labelp)
+			continue;
 
-    *labelp = label;
-  }
+		*labelp = label;
+	}
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_set_label(dfsan_label label, void *addr, uptr size) {
-  __dfsan_set_label(label, addr, size);
+	__dfsan_set_label(label, addr, size);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void dfsan_add_label(dfsan_label label, void *addr, uptr size) {
-  for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp)
-    if (*labelp != label)
-      *labelp = __dfsan_union(*labelp, label);
+	for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp)
+		if (*labelp != label)
+			*labelp = __dfsan_union(*labelp, label);
 }
 
 // Unlike the other dfsan interface functions the behavior of this function
@@ -309,24 +353,24 @@ void dfsan_add_label(dfsan_label label, void *addr, uptr size) {
 // custom function.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 __dfsw_dfsan_get_label(long data, dfsan_label data_label,
-    dfsan_label *ret_label) {
-  *ret_label = 0;
-  return data_label;
+		dfsan_label *ret_label) {
+	*ret_label = 0;
+	return data_label;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_read_label(const void *addr, uptr size) {
-  if (size == 0)
-    return 0;
-  return __dfsan_union_load(shadow_for(addr), size);
+	if (size == 0)
+		return 0;
+	return __dfsan_union_load(shadow_for(addr), size);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr
 dfsan_get_label_count(void) {
-  dfsan_label max_label_allocated =
-      atomic_load(&__dfsan_last_label, memory_order_relaxed);
+	dfsan_label max_label_allocated =
+		atomic_load(&__dfsan_last_label, memory_order_relaxed);
 
-  return static_cast<uptr>(max_label_allocated);
+	return static_cast<uptr>(max_label_allocated);
 }
 
 void Flags::SetDefaults() {
@@ -337,275 +381,285 @@ void Flags::SetDefaults() {
 
 static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) \
-    RegisterFlag(parser, #Name, Description, &f->Name);
+	RegisterFlag(parser, #Name, Description, &f->Name);
 #include "dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
 static void InitializeFlags() {
-  SetCommonFlagsDefaults();
-  flags().SetDefaults();
+	SetCommonFlagsDefaults();
+	flags().SetDefaults();
 
-  FlagParser parser;
-  RegisterCommonFlags(&parser);
-  RegisterDfsanFlags(&parser, &flags());
-  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
-  InitializeCommonFlags();
-  if (Verbosity()) ReportUnrecognizedFlags();
-  if (common_flags()->help) parser.PrintFlagDescriptions();
+	FlagParser parser;
+	RegisterCommonFlags(&parser);
+	RegisterDfsanFlags(&parser, &flags());
+	parser.ParseString(GetEnv("DFSAN_OPTIONS"));
+	InitializeCommonFlags();
+	if (Verbosity()) ReportUnrecognizedFlags();
+	if (common_flags()->help) parser.PrintFlagDescriptions();
 }
 
 static void InitializePlatformEarly() {
-  AvoidCVE_2016_2143();
+	AvoidCVE_2016_2143();
 #ifdef DFSAN_RUNTIME_VMA
-  __dfsan::vmaSize =
-      (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
-  if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42 ||
-      __dfsan::vmaSize == 48) {
-    __dfsan_shadow_ptr_mask = ShadowMask();
-  } else {
-    Printf("FATAL: DataFlowSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %d - Supported 39, 42, and 48\n", __dfsan::vmaSize);
-    Die();
-  }
+	__dfsan::vmaSize =
+		(MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
+	if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42 ||
+			__dfsan::vmaSize == 48) {
+		__dfsan_shadow_ptr_mask = ShadowMask();
+	} else {
+		Printf("FATAL: DataFlowSanitizer: unsupported VMA range\n");
+		Printf("FATAL: Found %d - Supported 39, 42, and 48\n", __dfsan::vmaSize);
+		Die();
+	}
 #endif
 }
 
 static Roaring dfsan_postorder_traversal(taint_node_t * node, 
-    cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) {
-  //Check cache
-  if (dfs_cache->exists(node)) {
-    return dfs_cache->get(node);
-  }
-  Roaring parent_set;
-  if (node->p1 == NULL && node->p2 == NULL) {
-    parent_set.add(value_for_node(node));
-    return parent_set;
-  }
-  Roaring left_parent_set;
-  Roaring right_parent_set; 
-  if (node->p1 != NULL) {
-    left_parent_set = dfsan_postorder_traversal(node->p1, dfs_cache);
-    dfs_cache->put(node->p1, left_parent_set);
+		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) {
+	//Check cache
+	if (dfs_cache->exists(node)) {
+		return dfs_cache->get(node);
+	}
+	Roaring parent_set;
+	if (node->p1 == NULL && node->p2 == NULL) {
+		parent_set.add(value_for_node(node));
+		return parent_set;
+	}
+	Roaring left_parent_set;
+	Roaring right_parent_set; 
+	if (node->p1 != NULL) {
+		left_parent_set = dfsan_postorder_traversal(node->p1, dfs_cache);
+		dfs_cache->put(node->p1, left_parent_set);
 
-  }
-  if (node->p2 != NULL) {
-    right_parent_set =  dfsan_postorder_traversal(node->p2, dfs_cache);
-    dfs_cache->put(node->p1, right_parent_set);
-  }
-  parent_set = left_parent_set | right_parent_set;
-  dfs_cache->put(node, parent_set);
-  return parent_set;
+	}
+	if (node->p2 != NULL) {
+		right_parent_set =  dfsan_postorder_traversal(node->p2, dfs_cache);
+		dfs_cache->put(node->p1, right_parent_set);
+	}
+	parent_set = left_parent_set | right_parent_set;
+	dfs_cache->put(node, parent_set);
+	return parent_set;
 }
 
 
 static void dfsan_create_function_sets(
-    json * output_json, 
-    std::string fname, 
-    std::unordered_set<taint_node_t*> nodes,
-    cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
+		json * output_json, 
+		std::string fname, 
+		std::unordered_set<taint_node_t*> nodes,
+		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
 {
-  Roaring function_set;
-  std::unordered_set<taint_node_t*>::iterator it;
-  #ifdef DEBUG_INFO
-  std::cout << "Operating on function " << fname << std::endl;
-  std::cout << "Vector size is " << nodes.size() << std::endl;
-  #endif
-  for (it = nodes.begin(); it != nodes.end(); it++) {
-    Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
-    function_set = function_set | label_set;
-  }
-  //Offset by 1, this orders it for us for output 
-  std::set<int> large_set;
-  for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
-    large_set.insert(*i - 1);
-  }
-  json j_set(large_set);
-  (*output_json)[fname] = j_set; 
+	Roaring function_set;
+	std::unordered_set<taint_node_t*>::iterator it;
+#ifdef DEBUG_INFO
+	std::cout << "Operating on function " << fname << std::endl;
+	std::cout << "Vector size is " << nodes.size() << std::endl;
+#endif
+	for (it = nodes.begin(); it != nodes.end(); it++) {
+		Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
+		function_set = function_set | label_set;
+	}
+	//Offset by 1, this orders it for us for output 
+	std::set<int> large_set;
+	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
+		large_set.insert(*i - 1);
+	}
+	json j_set(large_set);
+	(*output_json)[fname] = j_set; 
 
 }
 static void dfsan_dump_forest() {
-  std::string forest_fname = std::string(target_file) + "_forest.bin";
-  FILE * forest_file = fopen(forest_fname.c_str(), "w");
-  if (forest_file == NULL) {
-    std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
-    exit(1);
-  }
-  dfsan_label max_label = dfsan_get_label_count();
-  taint_node_t * curr = nullptr;
-  for (int i = 0; i < max_label; i++) {
-    curr = node_for(i);
-    dfsan_label node_p1 = value_for_node(curr->p1);
-    dfsan_label node_p2 = value_for_node(curr->p2);
-    fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
-    fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
-    fwrite(&(curr->bit_field), sizeof(curr->bit_field), 1, forest_file);
-    fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
+	std::string forest_fname = std::string(target_file) + "_forest.bin";
+	FILE * forest_file = fopen(forest_fname.c_str(), "w");
+	if (forest_file == NULL) {
+		std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
+		exit(1);
+	}
+	dfsan_label max_label = dfsan_get_label_count();
+	taint_node_t * curr = nullptr;
+	for (int i = 0; i < max_label; i++) {
+		curr = node_for(i);
+		dfsan_label node_p1 = value_for_node(curr->p1);
+		dfsan_label node_p2 = value_for_node(curr->p2);
+		fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
+		fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
+		fwrite(&(curr->bit_field), sizeof(curr->bit_field), 1, forest_file);
+		fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
 
-  }
-  fclose(forest_file);
+	}
+	fclose(forest_file);
 }
 
 static void dfsan_dump_process_sets() {
-  std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
-  json output_json;
-  for (it = function_to_bytes->begin(); it != function_to_bytes->end(); it++) {
-      std::unordered_set<dfsan_label> large_set;
-      std::unordered_set<taint_node_t*> ptr_set;
-      ptr_set = it->second;
-      for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
-        large_set.insert(value_for_node(*ptr_it));
-      }
-      json j_set(large_set);
-      output_json[it->first] = j_set;
-  }
-  std::string output_string = std::string(target_file) + "_process_set.json";
-  std::ofstream o(output_string);
-  o << std::setw(4) << output_json;
-  o.close();
+	std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
+	json output_json;
+	for (it = function_to_bytes->begin(); it != function_to_bytes->end(); it++) {
+		std::unordered_set<dfsan_label> large_set;
+		std::unordered_set<taint_node_t*> ptr_set;
+		ptr_set = it->second;
+		for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
+			large_set.insert(value_for_node(*ptr_it));
+		}
+		json j_set(large_set);
+		output_json[it->first] = j_set;
+	}
+	std::string output_string = std::string(target_file) + "_process_set.json";
+	std::ofstream o(output_string);
+	o << std::setw(4) << output_json;
+	o.close();
 }
 
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "FINISHED TRACKING, max label %lu, creating json!\n", dfsan_get_label_count());
-  fflush(stderr);
+	fflush(stderr);
 #endif
 
-  if (dump_forest_and_sets) {
-    dfsan_dump_forest();
-    dfsan_dump_process_sets();
-  }
+	if (dump_forest_and_sets) {
+		dfsan_dump_forest();
+		dfsan_dump_process_sets();
+	}
 
-  else {
-    json output_json;
+	else {
+		json output_json;
 
-    std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
-    cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
-    for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-      dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
-    }
+		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
+		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
+		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
+			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+		}
 
-    std::string output_string = "polytracker.json";
-    std::ofstream o(output_string);
-    o << std::setw(4) << output_json << std::endl;
-    o.close();
+		std::string output_string = "polytracker.json";
+		std::ofstream o(output_string);
+		o << std::setw(4) << output_json << std::endl;
+		o.close();
 
-    delete dfs_cache;
-  }
-  delete function_to_bytes;
+		delete dfs_cache;
+	}
+	delete function_to_bytes;
 }
 
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
 // gets initialized before all the internal data structures for `getenv` are
 // set up.
 static char * dfsan_get_env_path(const char * name) {
-  char *environ;
-  uptr len;
-  uptr environ_size;
-  if (!ReadFileToBuffer("/proc/self/environ", &environ, &environ_size, &len)) {
-    return NULL;
-  }
-  uptr namelen = strlen(name);
-  char *p = environ;
-  while (*p != '\0') {  // will happen at the \0\0 that terminates the buffer
-    // proc file has the format NAME=value\0NAME=value\0NAME=value\0...
-    char* endp =
-        (char*)memchr(p, '\0', len - (p - environ));
-    if (!endp) { // this entry isn't NUL terminated
-      fprintf(stderr, "Something in the env is not null terminated, exiting!\n"); 
-      return NULL;
-    }
-    // match
-    else if (!memcmp(p, name, namelen) && p[namelen] == '=')  {
+	char *environ;
+	uptr len;
+	uptr environ_size;
+	if (!ReadFileToBuffer("/proc/self/environ", &environ, &environ_size, &len)) {
+		return NULL;
+	}
+	uptr namelen = strlen(name);
+	char *p = environ;
+	while (*p != '\0') {  // will happen at the \0\0 that terminates the buffer
+		// proc file has the format NAME=value\0NAME=value\0NAME=value\0...
+		char* endp =
+			(char*)memchr(p, '\0', len - (p - environ));
+		if (!endp) { // this entry isn't NUL terminated
+			fprintf(stderr, "Something in the env is not null terminated, exiting!\n"); 
+			return NULL;
+		}
+		// match
+		else if (!memcmp(p, name, namelen) && p[namelen] == '=')  {
 #ifdef DEBUG_INFO
-      fprintf(stderr, "Found target file\n");
+			fprintf(stderr, "Found target file\n");
 #endif
-      return p + namelen + 1;
-    }
-    p = endp + 1;
-  }
-  return NULL;
+			return p + namelen + 1;
+		}
+		p = endp + 1;
+	}
+	return NULL;
 }
 
 static void dfsan_init(int argc, char **argv, char **envp) {
-  InitializeFlags();
-  InitializePlatformEarly();
-  //Note for some reason this original mmap call also mapped in the union table
-  //I don't think we need to make any changes to this 
-  if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
-    Die();
+	InitializeFlags();
+	InitializePlatformEarly();
+	//Note for some reason this original mmap call also mapped in the union table
+	//I don't think we need to make any changes to this 
+	if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+		Die();
 
-  // Protect the region of memory we don't use, to preserve the one-to-one
-  // mapping from application to shadow memory. But if ASLR is disabled, Linux
-  // will load our executable in the middle of our unused region. This mostly
-  // works so long as the program doesn't use too much memory. We support this
-  // case by disabling memory protection when ASLR is disabled.
-  uptr init_addr = (uptr)&dfsan_init;
-  if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
-    MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+	// Protect the region of memory we don't use, to preserve the one-to-one
+	// mapping from application to shadow memory. But if ASLR is disabled, Linux
+	// will load our executable in the middle of our unused region. This mostly
+	// works so long as the program doesn't use too much memory. We support this
+	// case by disabling memory protection when ASLR is disabled.
+	uptr init_addr = (uptr)&dfsan_init;
+	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
+		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
-  InitializeInterceptors();
-  // Register the fini callback to run when the program terminates successfully
-  // or it is killed by the runtime.
-  Atexit(dfsan_fini);
-  AddDieCallback(dfsan_fini);
+	InitializeInterceptors();
+	// Register the fini callback to run when the program terminates successfully
+	// or it is killed by the runtime.
+	Atexit(dfsan_fini);
+	AddDieCallback(dfsan_fini);
 
-  //Load environment variables and grab our target file path
-  std::string env_var(POLYTRACKER_ENV_VAR);
-  target_file = dfsan_get_env_path(env_var.c_str());
-  if (target_file == NULL) {
-    fprintf(stderr, "Unable to get %s environment variable -- perhaps it's not set?\n",
-        POLYTRACKER_ENV_VAR);
-    exit(1);
-  }
-  std::string dump_info("POLYDUMP");
-  char * env_dump = dfsan_get_env_path(dump_info.c_str());
-  if (env_dump != NULL) {
-    dump_forest_and_sets = true;
-  }
-  std::string ttl_info("POLYTTL");
-  char * env_ttl = dfsan_get_env_path(ttl_info.c_str());
-  if (env_ttl != NULL) {
-    taint_node_ttl = atoi(env_ttl);
-    #ifdef DEBUG_INFO
-    fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
-    #endif
-  }
-  std::string cache_info("POLYCACHE");
-  char * env_cache = dfsan_get_env_path(cache_info.c_str());
-  if (env_cache != NULL) {
-    dfs_cache_size = atoi(env_cache);
-    #ifdef DEBUG_INFO
-    fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
-    #endif
-  }
-  
-	//Get file size start and end
-  FILE * temp_file = fopen(target_file, "r");
-  if (temp_file == NULL) {
-    fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-        target_file, strerror(errno));
-    exit(1);
-  }
+	//Load environment variables and grab our target file path
+	std::string env_var(POLYTRACKER_ENV_VAR);
+	target_file = dfsan_get_env_path(env_var.c_str());
+	if (target_file == NULL) {
+		fprintf(stderr, "Unable to get %s environment variable -- perhaps it's not set?\n",
+				POLYTRACKER_ENV_VAR);
+		exit(1);
+	}
+	std::string dump_info("POLYDUMP");
+	char * env_dump = dfsan_get_env_path(dump_info.c_str());
+	if (env_dump != NULL) {
+		dump_forest_and_sets = true;
+	}
+	std::string ttl_info("POLYTTL");
+	char * env_ttl = dfsan_get_env_path(ttl_info.c_str());
+	if (env_ttl != NULL) {
+		taint_node_ttl = atoi(env_ttl);
 #ifdef DEBUG_INFO
-  fprintf(stderr, "File is %s\n", target_file);
+		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
 #endif
-  fseek(temp_file, 0L, SEEK_END);
-  byte_end = ftell(temp_file);
-  fclose(temp_file);
+	}
+	std::string cache_info("POLYCACHE");
+	char * env_cache = dfsan_get_env_path(cache_info.c_str());
+	if (env_cache != NULL) {
+		dfs_cache_size = atoi(env_cache);
+#ifdef DEBUG_INFO
+		fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
+#endif
+	}
 
-  /* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
-   * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
-   */
-  atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
-  function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
-  if (function_to_bytes == NULL) {
-    fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
-    exit(1);
-  }
+	std::string time_interval("POLYTIME");
+	char * env_time_interval = dfsan_get_env_path(time_interval.c_str());
+	if (env_cache != NULL) {
+		time_interval = atof(env_time_interval);
+#ifdef DEBUG_INFO
+		fprintf(stderr, "Time interval in seconds: %d\n", time_interval);
+#endif
+		curr_time = prev_time = clock();
+	}
+
+	//Get file size start and end
+	FILE * temp_file = fopen(target_file, "r");
+	if (temp_file == NULL) {
+		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
+				target_file, strerror(errno));
+		exit(1);
+	}
+#ifdef DEBUG_INFO
+	fprintf(stderr, "File is %s\n", target_file);
+#endif
+	fseek(temp_file, 0L, SEEK_END);
+	byte_end = ftell(temp_file);
+	fclose(temp_file);
+
+	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
+	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
+	 */
+	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
+	function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
+	if (function_to_bytes == NULL) {
+		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
+		exit(1);
+	}
 
 #ifdef DEBUG_INFO
-  fprintf(stderr, "Done init\n");
+	fprintf(stderr, "Done init\n");
 #endif
 }
 
