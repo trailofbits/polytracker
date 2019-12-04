@@ -163,7 +163,7 @@ int __dfsan_func_entry(char * fname) {
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
 	static unsigned int interval_nonce = 0;
-
+	
 	//If there is no taint, dont log
 	if (some_label == 0) {return;}
 
@@ -177,7 +177,6 @@ void __dfsan_log_taint(dfsan_label some_label) {
 		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
 		if (passed_time > interval_time) {
 			json output_json;
-
 			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
@@ -193,7 +192,7 @@ void __dfsan_log_taint(dfsan_label some_label) {
 			o.close();
 		
 			delete dfs_cache;
-
+			prev_time = curr_time;
 		}
 	}	
 	function_to_bytes_mutex.unlock();
@@ -626,12 +625,11 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
 	std::string time_interval("POLYTIME");
 	char * env_time_interval = dfsan_get_env_path(time_interval.c_str());
-	if (env_cache != NULL) {
-		time_interval = atof(env_time_interval);
+	if (env_time_interval != NULL) {
+		interval_time = atof(env_time_interval);
 #ifdef DEBUG_INFO
 		fprintf(stderr, "Time interval in seconds: %d\n", time_interval);
 #endif
-		curr_time = prev_time = clock();
 	}
 
 	//Get file size start and end
