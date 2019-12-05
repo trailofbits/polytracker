@@ -7,14 +7,6 @@ RUN python3.7 -m pip install pytest
 
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" | tee -a /etc/apt/sources.list && apt-get -y update && apt-get install -y llvm-7 clang-7
 
-WORKDIR /
-
-RUN git clone https://github.com/RoaringBitmap/CRoaring.git
-
-WORKDIR /CRoaring
-
-RUN mkdir -p build && cd build && cmake .. && make && make install
-
 COPY . /polytracker
 
 WORKDIR /polytracker
