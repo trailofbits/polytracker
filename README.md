@@ -27,7 +27,7 @@ This creates a Docker container with an instrumented version of MuPDF. You can e
 
 ## Dependencies and Prerequisites
 
-PolyTracker has only been tested on Linux.
+PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
 
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
