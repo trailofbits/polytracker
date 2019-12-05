@@ -71,6 +71,21 @@ cd mupdf
 git submodule update --init
 make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin install
 ``` 
+## Enviornment Variables 
+
+PolyTracker accepts configuration paramters in the form of enviornment variables to avoid recompiling target programs. The current enviornment variables PolyTracker supports is: 
+
+```
+POLYPATH: The path to the file to mark as tainted 
+
+POLYCACHE: The size (in bytes) of a cache used to increase processing 
+
+POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean 
+
+POLYTIME: This value is the time (in seconds) used to create snapshots. A snapshot contains the taint tracing data so far during execution, if this is not set, no snapshots will be taken. 
+
+POLYDUMP: Instead of dumping json, if this is set to TRUE it will dump the contents of shadow memory to a file. 
+```
 
 ## Running an Instrumented Program
 
