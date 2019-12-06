@@ -48,7 +48,6 @@
 #include "roaring.hh"
 #include "roaring.c" 
 #define MAX_CACHE 100000
-#define POLYTRACKER_ENV_VAR "POLYPATH"
 
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
 #define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
@@ -70,14 +69,16 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 thread_local std::vector<std::string> func_stack;
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-std::mutex function_to_bytes_mutex; 
-std::mutex union_table_mutex;
+static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
+static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
+static std::mutex function_to_bytes_mutex;
+static std::mutex union_table_mutex;
 
 static bool dump_forest_and_sets = false;
 static decay_val taint_node_ttl = 16;
 static uint64_t dfs_cache_size = 100000;
+
+static const char *polytracker_output_json_filename;
 
 /*
  * Time info for periodic logging 
@@ -87,7 +88,8 @@ static double interval_time = 0; //default is 0, do nothing
 static clock_t prev_time = 0; 
 static clock_t curr_time = 0;
 
-char * target_file; 
+/* Note: the following 3 variables are explicitly non-static */
+const char * target_file;
 uint_dfsan_label_t byte_start = 0;
 uint_dfsan_label_t byte_end;
 
@@ -502,15 +504,16 @@ static void dfsan_dump_process_sets() {
 		json j_set(large_set);
 		output_json[it->first] = j_set;
 	}
-	std::string output_string = std::string(target_file) + "_process_set.json";
-	std::ofstream o(output_string);
+	std::string output_filename = std::string(target_file) + "_process_set.json";
+	std::ofstream o(output_filename);
 	o << std::setw(4) << output_json;
 	o.close();
 }
 
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
-	fprintf(stderr, "FINISHED TRACKING, max label %lu, creating json!\n", dfsan_get_label_count());
+	fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
+			dfsan_get_label_count(), polytracker_output_json_filename);
 	fflush(stderr);
 #endif
 
@@ -528,8 +531,7 @@ static void dfsan_fini() {
 			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
 		}
 
-		std::string output_string = "polytracker.json";
-		std::ofstream o(output_string);
+		std::ofstream o(polytracker_output_json_filename);
 		o << std::setw(4) << output_json << std::endl;
 		o.close();
 
@@ -538,10 +540,10 @@ static void dfsan_fini() {
 	delete function_to_bytes;
 }
 
-// This function is like `getenv`.  So why does it exist?  It's because dfsan
-// gets initialized before all the internal data structures for `getenv` are
-// set up.
-static char * dfsan_get_env_path(const char * name) {
+// This function is an alternative implementation of `getenv`.  So why does it
+// exist?  It's because dfsan gets initialized before all the internal data
+// structures for `getenv` are set up.
+static const char * dfsan_getenv(const char * name) {
 	char *environ;
 	uptr len;
 	uptr environ_size;
@@ -594,28 +596,28 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	AddDieCallback(dfsan_fini);
 
 	//Load environment variables and grab our target file path
-	std::string env_var(POLYTRACKER_ENV_VAR);
-	target_file = dfsan_get_env_path(env_var.c_str());
+	target_file = dfsan_getenv("POLYPATH");
 	if (target_file == NULL) {
-		fprintf(stderr, "Unable to get %s environment variable -- perhaps it's not set?\n",
-				POLYTRACKER_ENV_VAR);
+		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
 		exit(1);
 	}
-	std::string dump_info("POLYDUMP");
-	char * env_dump = dfsan_get_env_path(dump_info.c_str());
-	if (env_dump != NULL) {
+	const char * poly_output = dfsan_getenv("POLYOUTPUT");
+	if (poly_output != NULL) {
+		polytracker_output_json_filename = poly_output;
+	} else {
+		polytracker_output_json_filename = "polytracker.json";
+	}
+	if (dfsan_getenv("POLYDUMP") != NULL) {
 		dump_forest_and_sets = true;
 	}
-	std::string ttl_info("POLYTTL");
-	char * env_ttl = dfsan_get_env_path(ttl_info.c_str());
+	const char * env_ttl = dfsan_getenv("POLYTTL");
 	if (env_ttl != NULL) {
 		taint_node_ttl = atoi(env_ttl);
 #ifdef DEBUG_INFO
 		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
 #endif
 	}
-	std::string cache_info("POLYCACHE");
-	char * env_cache = dfsan_get_env_path(cache_info.c_str());
+	const char * env_cache = dfsan_getenv("POLYCACHE");
 	if (env_cache != NULL) {
 		dfs_cache_size = atoi(env_cache);
 #ifdef DEBUG_INFO
@@ -623,12 +625,11 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 #endif
 	}
 
-	std::string time_interval("POLYTIME");
-	char * env_time_interval = dfsan_get_env_path(time_interval.c_str());
+	const char * env_time_interval = dfsan_getenv("POLYTIME");
 	if (env_time_interval != NULL) {
 		interval_time = atof(env_time_interval);
 #ifdef DEBUG_INFO
-		fprintf(stderr, "Time interval in seconds: %d\n", time_interval);
+		fprintf(stderr, "Time interval in seconds: %d\n", interval_time);
 #endif
 	}
 
