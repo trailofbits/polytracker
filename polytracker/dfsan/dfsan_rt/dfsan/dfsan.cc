@@ -78,6 +78,8 @@ static bool dump_forest_and_sets = false;
 static decay_val taint_node_ttl = 16;
 static uint64_t dfs_cache_size = 100000;
 
+static const char *polytracker_output_json_filename;
+
 /*
  * Time info for periodic logging 
  * Interval time = 0 means do nothing 
@@ -510,7 +512,8 @@ static void dfsan_dump_process_sets() {
 
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
-	fprintf(stderr, "FINISHED TRACKING, max label %lu, creating json!\n", dfsan_get_label_count());
+	fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
+			dfsan_get_label_count(), polytracker_output_json_filename);
 	fflush(stderr);
 #endif
 
@@ -528,8 +531,7 @@ static void dfsan_fini() {
 			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
 		}
 
-		std::string output_string = "polytracker.json";
-		std::ofstream o(output_string);
+		std::ofstream o(polytracker_output_json_filename);
 		o << std::setw(4) << output_json << std::endl;
 		o.close();
 
@@ -598,6 +600,12 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	if (target_file == NULL) {
 		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
 		exit(1);
+	}
+	const char * poly_output = dfsan_getenv("POLYOUTPUT");
+	if (poly_output != NULL) {
+		polytracker_output_json_filename = poly_output;
+	} else {
+		polytracker_output_json_filename = "polytracker.json";
 	}
 	if (dfsan_getenv("POLYDUMP") != NULL) {
 		dump_forest_and_sets = true;
