@@ -3,14 +3,14 @@ MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 
 RUN apt-get -y update \
  && apt-get install -y \
- && cmake \
- && git \
- && gnupg \
- && ninja-build \
- && nlohmann-json-dev \
- && python3-pip \
- && python3.7 \
- && wget
+    cmake \
+    git \
+    gnupg \
+    ninja-build \
+    nlohmann-json-dev \
+    python3-pip \
+    python3.7 \
+    wget
 
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" | tee -a /etc/apt/sources.list && apt-get -y update && apt-get install -y llvm-7 clang-7
 
