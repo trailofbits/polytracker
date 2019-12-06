@@ -504,8 +504,8 @@ static void dfsan_dump_process_sets() {
 		json j_set(large_set);
 		output_json[it->first] = j_set;
 	}
-	std::string output_string = std::string(target_file) + "_process_set.json";
-	std::ofstream o(output_string);
+	std::string output_filename = std::string(target_file) + "_process_set.json";
+	std::ofstream o(output_filename);
 	o << std::setw(4) << output_json;
 	o.close();
 }
