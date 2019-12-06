@@ -71,6 +71,13 @@ cd mupdf
 git submodule update --init
 make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin install
 ``` 
+
+Or if you would like to build the debug version, as we do in our Dockerfile:
+
+```
+make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin debug
+```
+
 ## Enviornment Variables 
 
 PolyTracker accepts configuration paramters in the form of enviornment variables to avoid recompiling target programs. The current enviornment variables PolyTracker supports is: 
