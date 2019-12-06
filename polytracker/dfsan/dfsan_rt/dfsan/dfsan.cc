@@ -70,10 +70,10 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 thread_local std::vector<std::string> func_stack;
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-std::mutex function_to_bytes_mutex; 
-std::mutex union_table_mutex;
+static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
+static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
+static std::mutex function_to_bytes_mutex;
+static std::mutex union_table_mutex;
 
 static bool dump_forest_and_sets = false;
 static decay_val taint_node_ttl = 16;
