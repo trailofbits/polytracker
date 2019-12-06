@@ -11,6 +11,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag trailofbits/polytracker:$(date +%s)
+      run: docker build . --file Dockerfile --tag trailofbits/polytracker
     - name: Build the demo Docker image
-      run: docker build . --file Dockerfile.demo --tag trailofbits/polytracker-demo:$(date +%s)
+      run: docker build . --file Dockerfile.demo --tag trailofbits/polytracker-demo
