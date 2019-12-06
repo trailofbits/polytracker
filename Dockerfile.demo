@@ -11,7 +11,7 @@ WORKDIR /polytracker/the_klondike/mupdf
 
 RUN git submodule update --init
 
-RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=./bin install
+RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local debug
 
 RUN mkdir -p /workdir
 
