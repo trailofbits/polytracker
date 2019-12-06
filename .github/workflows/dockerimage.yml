@@ -1,0 +1,16 @@
+name: Build Docker Images
+
+on: [push]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag trailofbits/polytracker:$(date +%s)
+    - name: Build the demo Docker image
+      run: docker build . --file Dockerfile.demo --tag trailofbits/polytracker-demo:$(date +%s)
