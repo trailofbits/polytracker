@@ -38,7 +38,6 @@
 #include <unordered_set>
 #include <algorithm>
 #include <stack> 
-#include <nlohmann/json.hpp>
 #include <lrucache/lrucache.hpp>
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
@@ -47,6 +46,8 @@
 //Amalgamated CRoaring lib
 #include "roaring.hh"
 #include "roaring.c" 
+//nlohmann-json
+#include "json.hpp"
 #define MAX_CACHE 100000
 
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
