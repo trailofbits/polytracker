@@ -7,7 +7,6 @@ RUN apt-get -y update \
     git \
     gnupg \
     ninja-build \
-    nlohmann-json-dev \
     python3-pip \
     python3.7 \
     wget
