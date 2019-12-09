@@ -20,13 +20,11 @@
 #include <stdint.h> 
 #include <unordered_map>
 #include <unordered_set>
-#include <nlohmann/json.hpp>
 #include <lrucache/lrucache.hpp>
 
 using __sanitizer::uptr;
 using __sanitizer::u16;
 using __sanitizer::u32;
-using json = nlohmann::json;
 
 extern "C" {
 void dfsan_add_label(dfsan_label label, void *addr, uptr size);
