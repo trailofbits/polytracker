@@ -32,14 +32,13 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 * [Niels Lohmann's JSON library](https://github.com/nlohmann/json) (`nlohmann-json-dev` on Ubuntu), although we are in the process of switching to the built-in LLVM JSON library
-* [Roaring Compressed Bitmaps C library](https://github.com/RoaringBitmap/CRoaring.git), although we are in the process of embedding this into the build itself
 
 ## Building PolyTracker from Source
 
 The following tools are required to build PolyTracker:
-* [Ninja Build](https://ninja-build.org) (`ninja-build` on Ubuntu)
-* Python 3.7 and `pytest`, for testing (`apt-get -y install python3.7 python3-pip && python3.7 -m pip install pytest`)
-* cmake
+* [CMake](https://cmake.org)
+* [Ninja](https://ninja-build.org) (`ninja-build` on Ubuntu)
+* Python 3.7 and `pip`, for testing purposes (`apt-get -y install python3.7 python3-pip`)
 
 First, make sure that the LLVM 7 binaries have priority in your `PATH`, _e.g._,
 ```
