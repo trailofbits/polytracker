@@ -14,14 +14,14 @@ PolyTracker can be used in conjunction with [PolyFile](https://github.com/trailo
 The easiest way to run PolyTracker is via Docker. To build the Docker
 container, simply run the following from the root of this repository:
 ```
-docker build -t trailofbits/tapp .
+docker build -t trailofbits/polytracker .
 ```
 
 This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polyclang`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
 ```
-docker build -t trailofbits/tappdemo -f Dockerfile.demo .
+docker build -t trailofbits/polytracker-demo -f Dockerfile.demo .
 ```
 This creates a Docker container with an instrumented version of MuPDF. You can execute the instrumented version of `mutool` from your host system using some Docker magic provided in the `mutool.sh` script. Simply run that script on any PDF in the current directory and it will run the instrumented version of `mutool draw` on it, saving the JSON output to `polytracker.json` in the current directory.
 

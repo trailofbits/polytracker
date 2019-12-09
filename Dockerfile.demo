@@ -1,4 +1,4 @@
-FROM trailofbits/tapp
+FROM trailofbits/polytracker
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 
 WORKDIR /polytracker/the_klondike
