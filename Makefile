@@ -6,7 +6,7 @@
 
 CC       := clang
 CXX      := clang++
-CFLAGS   := "-DSANITIZER_DEBUG=1 -Wall -Wextra -Wno-unused-parameter"
+CFLAGS   := -DSANITIZER_DEBUG=1 -Wall -Wextra -Wno-unused-parameter
 CXXFLAGS := $(CFLAGS)
 
 install: .cmake_init
@@ -14,7 +14,7 @@ install: .cmake_init
 
 .cmake_init:
 	mkdir -p build
-	cd build && CC=$(CC) CXX=$(CXX) CFLAGS=$(CFLAGS) CXXFLAGS=$(CXXFLAGS) cmake -DCMAKE_BUILD_TYPE=Debug ../
+	cd build && CC="$(CC)" CXX="$(CXX)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" cmake -DCMAKE_BUILD_TYPE=Debug ../
 	touch $@
 
 clean:
