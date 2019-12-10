@@ -69,6 +69,9 @@ def test_build_mupdf(tmpdir) -> None:
     mupdf_tarball = join('downloads', f'{mupdf_dirname}.tar.gz')
     check_call(['wget', '-qc', f'https://mupdf.com/downloads/archive/{mupdf_dirname}.tar.gz', '-O', mupdf_tarball])
     run(['sha1sum', '-c'], input=f'ccbef63c3d43d6a866b7978db5674dc4b1719f0f  {mupdf_tarball}'.encode(), check=True)
+    pc_env = os.environ.copy()
+    pc_env['CC'] = PC
+    pc_env['CXX'] = PCPP
     with chdir(tmpdir) as prev_dir:
         check_call(['tar', '-xzf', join(prev_dir, mupdf_tarball)])
-        check_call(['make', '-C', mupdf_dirname, 'HAVE_GLUT=no', 'HAVE_X11=no', '-j4', 'debug'])
+        check_call(['make', '-C', mupdf_dirname, 'HAVE_GLUT=no', 'HAVE_X11=no', 'build=debug', '-j4'], env=pc_env)
