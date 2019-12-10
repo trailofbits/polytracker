@@ -1,0 +1,179 @@
+#!/usr/bin/env python3.8
+
+import argparse
+import hashlib
+import json
+import logging
+import os
+import re
+import subprocess
+import sys
+
+from datetime import datetime
+from logging import debug, info, error, exception
+from subprocess import check_call, check_output, DEVNULL
+from typing import Optional
+
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s',
+                    level=logging.INFO)
+
+
+def get_options() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description='Run a Polytracker-instrumented '
+                                            '`mutool draw` on a given PDF',
+                                formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    p.add_argument('pdf_file',
+                   metavar='PDF',
+                   help='The PDF file to run on')
+    p.add_argument('--time-limit',
+                   metavar='DURATION',
+                   type=duration,
+                   default=10.0,
+                   help='A time limit in minutes at which the job '
+                        'will be killed')
+    p.add_argument('--memory-limit',
+                   metavar='SIZE',
+                   type=size,
+                   default=4.0,
+                   help='A memory limit in gigabytes at which the job '
+                        'will be killed')
+    p.add_argument('--skip-cleanup',
+                   action='store_true',
+                   help='Do not clean up the Docker container '
+                        'launched by this program')
+    p.add_argument('--rebuild-images',
+                   action='store_true',
+                   help='Unconditionally rebuild the relevant Docker images '
+                        'used by this program')
+    p.add_argument('--debug',
+                   action='store_true',
+                   help='Enable debugging output')
+
+    options = p.parse_args()
+    options.log_path = f'{options.pdf_file}.log'
+    options.polytracker_output_path = f'{options.pdf_file}.json'
+
+    return options
+
+def duration(s: str) -> str:
+    """
+    Parse a duration string.
+
+    A duration string is a positive number suffexed with one of [smhd].
+    """
+    if re.match(r'^\d+[smhd]$', s) is None:
+        raise ValueError(f'{s!r} is not a valid duration')
+    return s
+
+def size(s: str) -> str:
+    """
+    Parse a size string.
+
+    A size string is a positive number suffexed with one of [bkmg].
+    """
+    if re.match(r'^\d+[bkmg]$', s) is None:
+        raise ValueError(f'{s!r} is not a valid size')
+    return s
+
+def positive_number(s: str) -> float:
+    f = float(s)
+    if f <= 0.0:
+        raise ValueError(f'{s!r} is not a positive number')
+    return f
+
+def has_docker_image(image_name: str) -> bool:
+    return b'' != check_output(['docker', 'images', '-q', image_name])
+
+def sha256sum(filename: str) -> str:
+    h = hashlib.new('sha256')
+    with open(filename, 'rb') as infile:
+        while c := infile.read(16 * 1024):
+            h.update(c)
+    return h.hexdigest()
+
+def main() -> None:
+    options = get_options()
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        def audit_logging_hook(evt, args):
+            if evt == 'subprocess.Popen':
+                debug('%s executable=%s args=%s cwd=%s env=%s', evt, *args)
+        sys.addaudithook(audit_logging_hook)
+
+    debug('Running with the following options: %s', options)
+
+    # Rebuild Docker images if needed
+    rebuild = options.rebuild_images \
+              or not has_docker_image('trailofbits/polytracker') \
+              or not has_docker_image('trailofbits/polytracker-demo')
+    if rebuild:
+        info('Building Docker image trailofbits/polytracker')
+        check_call(['docker', 'build', '-t', 'trailofbits/polytracker', '.'])
+        info('Building Docker image trailofbits/polytracker-demo')
+        check_call(['docker', 'build', '-t', 'trailofbits/polytracker-demo', '-f', 'Dockerfile.demo', '.'])
+
+    # Collect some input file metadata
+    pdf_file_sha256sum = sha256sum(options.pdf_file)
+    pdf_file_size_bytes = os.stat(options.pdf_file).st_size
+
+    # Run mutool
+    container: Optional[str] = None
+    try:
+        out = check_output(['docker', 'run',
+                                      '-d',
+                                      '--read-only',
+                                      '--mount', f'type=bind,source={os.getcwd()},target=/workdir',
+                                      f'--memory={options.memory_limit}',
+                                      '-e', f'POLYPATH={options.pdf_file}',
+                                      '-e', f'POLYOUTPUT={options.polytracker_output_path}',
+                                      'trailofbits/polytracker-demo:latest',
+                                      'timeout', '-k', '3s', f'{options.time_limit}', '/polytracker/the_klondike/mupdf/bin/bin/mutool', 'draw', options.pdf_file])
+        container = out.decode().strip()
+        with open(options.log_path, 'wb') as outfile:
+            check_call(['docker', 'logs', '-f', container], stdout=outfile, stderr=subprocess.STDOUT)
+        check_call(['docker', 'wait', container], stdout=DEVNULL)
+        inspect_out = check_output(['docker', 'inspect', container])
+        inspect_json = json.loads(inspect_out)
+        inspect_state = inspect_json[0]['State']
+        # print(json.dumps(inspect_json, indent=4, sort_keys=True))
+
+        def from_timestamp(s: str) -> datetime:
+            # This expects a string like '2019-12-05T20:52:22.937104174Z',
+            # which has _nanoseconds_ and a Z at the end. But Python `datetime`
+            # only supports _microseconds_, so strip off the excess.
+            return datetime.strptime(s[:-4], '%Y-%m-%dT%H:%M:%S.%f')
+
+        started_at = from_timestamp(inspect_state['StartedAt'])
+        finished_at = from_timestamp(inspect_state['FinishedAt'])
+        metadata = {
+            'input': {
+                'filename': options.pdf_file,
+                'sha256sum': pdf_file_sha256sum,
+                'size_bytes': pdf_file_size_bytes,
+                'memory_limit': options.memory_limit,
+                'time_limit': options.time_limit,
+            },
+            'result': {
+                'exit_code': inspect_state['ExitCode'],
+                'memory_limited': inspect_state['OOMKilled'],
+                'time_limited': inspect_state['ExitCode'] == 124,
+                'duration_seconds': (finished_at - started_at).total_seconds(),
+                'log_path': options.log_path,
+                'polytracker_output_path': options.polytracker_output_path,
+            },
+        }
+        print(json.dumps(metadata, indent=4, sort_keys=False))
+
+    finally:
+        if container is None:
+            pass
+        elif options.skip_cleanup:
+            info('Skipping cleanup of container %s', container)
+        else:
+            check_call(['docker', 'rm', '-f', container], stdout=DEVNULL)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit('Goodbye!')
