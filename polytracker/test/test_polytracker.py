@@ -55,19 +55,42 @@ PC: str   = _find_program('polyclang')
 PCPP: str = _find_program('polyclang++')
 TESTS_DIR = realpath(dirname(__file__))
 
+EXPECTED_STDERR_NO_POLYPATH = b"Unable to get required POLYPATH environment variable -- perhaps it's not set?\n"
 
 ################################################################################
 # Test cases here!
 ################################################################################
-def test_test1(tmpdir) -> None:
+def test_test1_no_polypath(tmpdir) -> None:
     with chdir(tmpdir):
         check_call([PC, '-Wall', '-O2', join(TESTS_DIR, 'test1.c'), '-o', 'test1'])
-        check_call(['./test1'])
+        p = run(['./test1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert p.stdout == b""
+        assert p.stderr == EXPECTED_STDERR_NO_POLYPATH
+        assert p.returncode == 1
 
-def test_test2(tmpdir) -> None:
+def test_test1(tmpdir) -> None:
+    f = join(TESTS_DIR, 'test1.c')
+    env = os.environ.copy()
+    env['POLYPATH'] = f
+    with chdir(tmpdir):
+        check_call([PC, '-Wall', '-O2', f, '-o', 'test1'])
+        check_call(['./test1'], env=env)
+
+def test_test2_no_polypath(tmpdir) -> None:
     with chdir(tmpdir):
         check_call([PCPP, '-Wall', '-O2', join(TESTS_DIR, 'test2.cpp'), '-o', 'test2'])
-        check_call(['./test2'])
+        p = run(['./test2'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert p.stdout == b""
+        assert p.stderr == EXPECTED_STDERR_NO_POLYPATH
+        assert p.returncode == 1
+
+def test_test2(tmpdir) -> None:
+    f = join(TESTS_DIR, 'test1.c')
+    env = os.environ.copy()
+    env['POLYPATH'] = f
+    with chdir(tmpdir):
+        check_call([PCPP, '-Wall', '-O2', join(TESTS_DIR, 'test2.cpp'), '-o', 'test2'])
+        check_call(['./test2'], env=env)
 
 def test_build_mupdf(tmpdir) -> None:
     os.makedirs('downloads', exist_ok=True)
