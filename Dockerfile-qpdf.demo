@@ -1,0 +1,29 @@
+FROM trailofbits/polytracker
+MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
+
+RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
+RUN wget http://www.ijg.org/files/jpegsrc.v9c.tar.gz
+
+RUN echo "temp" > PLACEHOLDER
+ENV POLYPATH=/PLACEHOLDER
+ENV LD=ld
+
+RUN tar -xzvf zlib-1.2.11.tar.gz
+WORKDIR zlib-1.2.11
+RUN ./configure
+RUN make test
+RUN make install
+
+WORKDIR / 
+
+RUN tar -xzvf jpegsrc.v9c.tar.gz
+WORKDIR jpeg-9c
+RUN ./configure --disable-shared --enable-static
+RUN make install
+
+WORKDIR /polytracker/the_klondike/
+ 
+RUN git clone https://github.com/qpdf/qpdf.git
+WORKDIR  qpdf
+RUN ./configure --disable-shared --enable-static
+RUN make install
