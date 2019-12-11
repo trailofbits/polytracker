@@ -6,7 +6,7 @@
 #define POLYTRACKER_VERSION_REVISION 1
 
 // Set the version note to an empty string if there is no note
-#define POLYTRACKER_SUFFIX     "alpha1-SafeDocs-Internal"
+#define POLYTRACKER_SUFFIX     "alpha2.1"
 
 /**********************************************************************************/
 
