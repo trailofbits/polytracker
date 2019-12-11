@@ -1,4 +1,4 @@
-add_executable(PolyClang polyclang.c)
+add_executable(PolyClang polyclang.cpp)
 set_target_properties(PolyClang PROPERTIES OUTPUT_NAME "polyclang")
 
 find_program(Clang "clang")
