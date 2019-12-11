@@ -174,6 +174,7 @@ int __dfsan_func_entry(char * fname) {
 }
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
+	static unsigned int interval_nonce = 0;
 	if (some_label == 0) {return;}
 #ifdef DEBUG_INFO
 	fprintf(stderr, "Logging taint %lu\n", some_label);
@@ -196,10 +197,11 @@ void __dfsan_log_taint(dfsan_label some_label) {
 			std::ofstream o(output_string);
 			o << std::setw(4) << output_json << std::endl;
 			o.close();
-		
+
 			delete dfs_cache;
 			prev_time = curr_time;
 		}
+	}
 	taint_node_t * new_node = node_for(some_label);
 	function_to_bytes_mutex.lock();
 	std::thread::id this_id = std::this_thread::get_id();
@@ -285,10 +287,10 @@ dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_unimplemented(char *fname) {
 	if (flags().warn_unimplemented) {
-	#ifdef DEBUG_INFO
-			Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
-					fname);
-	#endif
+#ifdef DEBUG_INFO
+		Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
+				fname);
+#endif
 
 	}
 }
@@ -557,7 +559,7 @@ static void dfsan_fini() {
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
 // gets initialized before all the internal data structures for `getenv` are
 // set up. This is similar to how ASAN does it 
-static char * dfsan_get_env_path(const char * name) {
+static char * dfsan_getenv(const char * name) {
 	char *environ;
 	uptr len;
 	uptr environ_size;
@@ -671,7 +673,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		fprintf(stderr, "Failed to allocate thread stack map, aborting!\n");
 		exit(1);
 	}
-	
+
 	// Register the fini callback to run when the program terminates
 	// successfully or it is killed by the runtime.
 	//
