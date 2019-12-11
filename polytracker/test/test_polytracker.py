@@ -16,6 +16,12 @@ from subprocess import check_call, run
 
 from typing import Generator, Optional
 
+try:
+    assert False
+except AssertionError:
+    pass
+else:
+    sys.exit("Error: assertions don't seem to be enabled?!")
 
 ################################################################################
 # Utilities
