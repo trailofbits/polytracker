@@ -72,18 +72,36 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
 
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-std::mutex function_to_bytes_mutex; 
-std::mutex union_table_mutex;
+static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
+static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
+static std::mutex function_to_bytes_mutex; 
+static std::mutex union_table_mutex;
 
-bool dump_forest_and_sets = false;
-decay_val taint_node_ttl = 16;
-uint64_t dfs_cache_size = 100000;
+static bool dump_forest_and_sets = false;
+static decay_val taint_node_ttl = 16;
+static uint64_t dfs_cache_size = 100000;
 
+static const char * polytracker_output_json_filename;
+
+/*
+ * Time info for periodic logging
+ * Interval time = 0 means do nothing 
+ */
+static double interval_time = 0;
+static clock_t prev_time = 0;
+static clock_t curr_time = 0; 
+
+
+/* Note: the following 3 variables are explicitly non-static */
 char * target_file; 
 uint_dfsan_label_t byte_start = 0;
 uint_dfsan_label_t byte_end;
+
+static void dfsan_create_function_sets(
+		json * output_json, std::string fname, 
+		std::unordered_set<taint_node_t*> nodes, 
+		cache::lru_cache<taint_node_t*, 
+		Roaring> * dfs_cache);
 
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
@@ -160,6 +178,28 @@ void __dfsan_log_taint(dfsan_label some_label) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "Logging taint %lu\n", some_label);
 #endif
+	if (interval_time > 0) {
+		curr_time = clock();
+		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
+		if (passed_time > interval_time) {
+			json output_json;
+			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
+			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
+			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
+				dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+				//Clear vector so future results show new data only
+				it->second.clear();
+			}
+
+			std::string output_string = "polytracker_interval:" + std::to_string(interval_nonce) + ".json";
+			interval_nonce += 1; 
+			std::ofstream o(output_string);
+			o << std::setw(4) << output_json << std::endl;
+			o.close();
+		
+			delete dfs_cache;
+			prev_time = curr_time;
+		}
 	taint_node_t * new_node = node_for(some_label);
 	function_to_bytes_mutex.lock();
 	std::thread::id this_id = std::this_thread::get_id();
@@ -486,7 +526,8 @@ static void dfsan_dump_process_sets() {
 
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
-	fprintf(stderr, "FINISHED TRACKING, max label %lu, creating json!\n", dfsan_get_label_count());
+	fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
+			dfsan_get_label_count(), polytracker_output_json_filename);
 	fflush(stderr);
 #endif
 
@@ -503,8 +544,7 @@ static void dfsan_fini() {
 			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
 		}
 
-		std::string output_string = "polytracker.json";
-		std::ofstream o(output_string);
+		std::ofstream o(polytracker_output_json_filename);
 		o << std::setw(4) << output_json << std::endl;
 		o.close();
 
@@ -564,40 +604,44 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
 	InitializeInterceptors();
-	// Register the fini callback to run when the program terminates successfully
-	// or it is killed by the runtime.
-	Atexit(dfsan_fini);
-	AddDieCallback(dfsan_fini);
 
-	//Load environment variables and grab our target file path
-	std::string env_var(POLYTRACKER_ENV_VAR);
-	target_file = dfsan_get_env_path(env_var.c_str());
+	target_file = dfsan_getenv("POLYPATH");
 	if (target_file == NULL) {
-		fprintf(stderr, "Unable to get %s environment variable -- perhaps it's not set?\n",
-				POLYTRACKER_ENV_VAR);
+		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
 		exit(1);
 	}
-	std::string dump_info("POLYDUMP");
-	char * env_dump = dfsan_get_env_path(dump_info.c_str());
-	if (env_dump != NULL) {
+	const char * poly_output = dfsan_getenv("POLYOUTPUT");
+	if (poly_output != NULL) {
+		polytracker_output_json_filename = poly_output;
+	} else {
+		polytracker_output_json_filename = "polytracker.json";
+	}
+	if (dfsan_getenv("POLYDUMP") != NULL) {
 		dump_forest_and_sets = true;
 	}
-	std::string ttl_info("POLYTTL");
-	char * env_ttl = dfsan_get_env_path(ttl_info.c_str());
+	const char * env_ttl = dfsan_getenv("POLYTTL");
 	if (env_ttl != NULL) {
 		taint_node_ttl = atoi(env_ttl);
 #ifdef DEBUG_INFO
 		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
 #endif
 	}
-	std::string cache_info("POLYCACHE");
-	char * env_cache = dfsan_get_env_path(cache_info.c_str());
+	const char * env_cache = dfsan_getenv("POLYCACHE");
 	if (env_cache != NULL) {
 		dfs_cache_size = atoi(env_cache);
 #ifdef DEBUG_INFO
-		fprintf(stderr, "DFS cache size: %lu\n", dfs_cache_size);
+		fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
 #endif
 	}
+
+	const char * env_time_interval = dfsan_getenv("POLYTIME");
+	if (env_time_interval != NULL) {
+		interval_time = atof(env_time_interval);
+#ifdef DEBUG_INFO
+		fprintf(stderr, "Time interval in seconds: %d\n", interval_time);
+#endif
+	}
+
 	//Get file size start and end
 	FILE * temp_file = fopen(target_file, "r");
 	if (temp_file == NULL) {
@@ -621,11 +665,24 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
 		exit(1);
 	}
+
 	thread_stack_map = new std::unordered_map<std::thread::id, std::vector<std::string>>();
 	if (thread_stack_map == NULL) {
 		fprintf(stderr, "Failed to allocate thread stack map, aborting!\n");
 		exit(1);
 	}
+	
+	// Register the fini callback to run when the program terminates
+	// successfully or it is killed by the runtime.
+	//
+	// Note: we do this at the very end of initialization, so that if
+	// initialization itself fails for some reason, we don't try to call
+	// `dfsan_fini` from a partially-initialized state.
+	// Register the fini callback to run when the program terminates successfully
+	// or it is killed by the runtime.
+	Atexit(dfsan_fini);
+	AddDieCallback(dfsan_fini);
+
 #ifdef DEBUG_INFO
 	fprintf(stderr, "Done init\n");
 #endif
