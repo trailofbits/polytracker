@@ -22,6 +22,7 @@
 
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
+//#define DEBUG_INFO 
 
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
@@ -32,7 +33,7 @@ std::vector<FILE *> target_ffds;
 std::mutex target_fds_mutex; 
 std::mutex target_ffds_mutex; 
 //Defined by dfsan_init 
-extern const char * target_file;
+extern char * target_file; 
 extern uint_dfsan_label_t byte_start; 
 extern uint_dfsan_label_t byte_end; 
 
