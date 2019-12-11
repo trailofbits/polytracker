@@ -21,7 +21,7 @@ This will create a Docker container with PolyTracker built, and the `CC` environ
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile.demo .
+docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
 ```
 This creates a Docker container with an instrumented version of MuPDF. You can execute the instrumented version of `mutool` from your host system using some Docker magic provided in the `mutool.sh` script. Simply run that script on any PDF in the current directory and it will run the instrumented version of `mutool draw` on it, saving the JSON output to `polytracker.json` in the current directory.
 
@@ -33,6 +33,8 @@ The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
 ## Building PolyTracker from Source
+
+NOTE: While you can build PolyTracker from source, at the moment it only runs in Docker, this will be fixed soon
 
 The following tools are required to build PolyTracker:
 * [CMake](https://cmake.org)
