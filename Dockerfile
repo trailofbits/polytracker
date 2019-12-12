@@ -36,6 +36,5 @@ RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE
 
 ENV CC=/polytracker/build/bin/polytracker/polyclang
 ENV CXX=/polytracker/build/bin/polytracker/polyclang++
-ENV LD_LIBRARY_PATH=/usr/local/lib
 
 WORKDIR / 
