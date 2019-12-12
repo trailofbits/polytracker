@@ -20,8 +20,6 @@ RUN add-apt-repository "deb http://archive.canonical.com/ $(lsb_release -sc) par
 RUN apt update
 RUN apt install sudo -y
 RUN apt install vim -y
-#For some reason this isnt in our llvm-7 install?
-RUN apt install lld -y
 
 WORKDIR pdfium
 

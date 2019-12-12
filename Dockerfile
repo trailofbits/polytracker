@@ -1,19 +1,26 @@
 FROM ubuntu:bionic
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 
-RUN apt-get -y update && apt-get install -y cmake nlohmann-json-dev gnupg wget ninja-build python3.7 python3-pip git
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      wget                                            \
+      gnupg
 
-RUN python3.7 -m pip install pytest
+# Add the LLVM repo for Ubuntu packages, since the official Ubuntu repo has an
+# LLVM that doesn't work right with polytracker for some reason.
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+ && echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" >>/etc/apt/sources.list
 
-RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" | tee -a /etc/apt/sources.list && apt-get -y update && apt-get install -y llvm-7 clang-7
-
-WORKDIR /
-
-RUN git clone https://github.com/RoaringBitmap/CRoaring.git
-
-WORKDIR /CRoaring
-
-RUN mkdir -p build && cd build && cmake .. && make && make install
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      clang-7                                         \
+      cmake                                           \
+      git                                             \
+      lld-7                                           \
+      llvm-7                                          \
+      ninja-build                                     \
+      python3-pip                                     \
+      python3.7
 
 COPY . /polytracker
 
