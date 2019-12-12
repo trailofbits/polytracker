@@ -128,13 +128,13 @@ int main(int argc, char * argv[]) {
 	int i;
 	for (i = 0; i < new_argc; i++) {
 #ifdef DEBUG_INFO
-		std::cout << "Arg is: " << new_argv[i] << std::endl;
+		fprintf(stderr, "Arg is: %s\n", new_argv[i].c_str());
 #endif
 		final_argv[i] = new_argv[i].c_str();
 	}
 #ifdef DEBUG_INFO
-	std::cout << "I IS: " << i << std::endl;
-	std::cout << "====================" << std::endl;
+	fprintf(stderr, "I IS: %d\n", i);
+	fprintf(stderr, "====================\n");
 #endif
 	final_argv[i] = NULL;
 	final_argv[new_argv.size()] = NULL;
