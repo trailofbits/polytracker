@@ -682,8 +682,6 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	// Note: we do this at the very end of initialization, so that if
 	// initialization itself fails for some reason, we don't try to call
 	// `dfsan_fini` from a partially-initialized state.
-	// Register the fini callback to run when the program terminates successfully
-	// or it is killed by the runtime.
 	Atexit(dfsan_fini);
 	AddDieCallback(dfsan_fini);
 
