@@ -39,14 +39,17 @@
 #include <algorithm>
 #include <stack> 
 #include <thread> 
-#include "json.hpp"
 #include <lrucache/lrucache.hpp>
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
-//Amalgamated CRoaring lib
+
+// Amalgamated CRoaring lib
 #include "roaring.hh"
 #include "roaring.c" 
+// nlohmann-json lib
+#include "json.hpp"
+
 #define MAX_CACHE 100000
 #define POLYTRACKER_ENV_VAR "POLYPATH"
 
