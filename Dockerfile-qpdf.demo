@@ -10,20 +10,16 @@ ENV LD=ld
 
 RUN tar -xzvf zlib-1.2.11.tar.gz
 WORKDIR zlib-1.2.11
-RUN ./configure
-RUN make test
-RUN make install
+RUN ./configure && make -j$(nproc) test && make -j$(nproc) install
 
 WORKDIR / 
 
 RUN tar -xzvf jpegsrc.v9c.tar.gz
 WORKDIR jpeg-9c
-RUN ./configure --disable-shared --enable-static
-RUN make install
+RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
 
 WORKDIR /polytracker/the_klondike/
  
 RUN git clone https://github.com/qpdf/qpdf.git
 WORKDIR  qpdf
-RUN ./configure --disable-shared --enable-static
-RUN make install
+RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
