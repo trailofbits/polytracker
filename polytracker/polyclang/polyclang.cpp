@@ -16,8 +16,8 @@ static struct {
 /*
  * Checks if we are compiling a c++ or c prog
  */
-static bool PolyCheckCxx(char * argv[]) {
-	std::string clang_type = argv[0];
+static bool PolyCheckCxx(char * argv0) {
+	std::string clang_type = argv0;
 	if (clang_type.find("++") != std::string::npos) {
 		return true;
 	}
@@ -109,7 +109,7 @@ int main(int argc, char * argv[]) {
 	}
 	fprintf(stderr, "===END ORIGINAL ARGS===\n");
 #endif 
-	compiler_meta.is_cxx = PolyCheckCxx(argv);
+	compiler_meta.is_cxx = PolyCheckCxx(argv[0]);
 	compiler_meta.compiler_dir = PolyFindDir(argv[0]);
 	
 	//This is hard coded because to build some targets they expect things to be in certain places
