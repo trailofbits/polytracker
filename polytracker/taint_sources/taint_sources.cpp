@@ -177,7 +177,9 @@ __dfsw_read(int fd, void * buff, size_t size, dfsan_label fd_label, dfsan_label 
 	long read_start = lseek(fd, 0, SEEK_CUR);
 	ssize_t ret_val = read(fd, buff, size); 
 
+#ifdef DEBUG_INFO
 	fprintf(stderr, "read: fd is %d, buffer addr is %p, size is %ld\n", fd, buff, size); 
+#endif
 	//Check if we are tracking this fd. 
 	if (is_target_fd(fd)) {
 		if (ret_val > 0) {
