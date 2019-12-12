@@ -1,0 +1,13 @@
+diff --git a/testing/utils/file_util.cpp b/testing/utils/file_util.cpp
+index ffd387bc2..f95b1c71f 100644
+--- a/testing/utils/file_util.cpp
++++ b/testing/utils/file_util.cpp
+@@ -7,7 +7,7 @@
+ #include <stdio.h>
+ 
+ #include "testing/utils/path_service.h"
+-
++#include <string.h>
+ std::unique_ptr<char, pdfium::FreeDeleter> GetFileContents(const char* filename,
+                                                            size_t* retlen) {
+   FILE* file = fopen(filename, "rb");

@@ -1,0 +1,6 @@
+mkdir build;
+cd build; 
+
+cmake -G Ninja ../llvm-project/llvm -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_CXX_FLAGS="-fPIC" -DCMAKE_INSTALL_PREFIX=/new_headers/ -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" -DLLVM_TARGETS-DLLVM_TARGETS_TO_BUILD="X86" -DLIBCXXABI_ENABLE_SHARED=NO -DLIBCXX_ENABLE_SHARED=NO -DLIBCXX_CXX_ABI=libcxxabi -DLIBCXX_ABI_NAMESPACE="__dfsan_private" -DLIBCXX_ABI_VERSION=1
+
+ninja cxx cxxabi

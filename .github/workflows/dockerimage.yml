@@ -10,7 +10,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag trailofbits/polytracker
-    - name: Build the demo Docker image
-      run: docker build . --file Dockerfile.demo --tag trailofbits/polytracker-demo
+
+    - name: Build the mupdf demo Docker image
+      run: docker build . --file Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
+
+    - name: Build the qpdf demo Docker image
+      run: docker build . --file Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
+
+    - name: Build the pdfium demo Docker image
+      run: docker build . --file Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium

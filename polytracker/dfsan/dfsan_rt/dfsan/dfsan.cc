@@ -38,16 +38,18 @@
 #include <unordered_set>
 #include <algorithm>
 #include <stack> 
+#include <thread> 
 #include <lrucache/lrucache.hpp>
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
-#include <ctime>
-//Amalgamated CRoaring lib
+
+// Amalgamated CRoaring lib
 #include "roaring.hh"
 #include "roaring.c" 
-//nlohmann-json
+// nlohmann-json lib
 #include "json.hpp"
+
 #define MAX_CACHE 100000
 
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
@@ -68,29 +70,32 @@ Flags __dfsan::flags_data;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_retval_tls;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
-thread_local std::vector<std::string> func_stack;
+
+std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
+
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
 static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
 static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-static std::mutex function_to_bytes_mutex;
+static std::mutex function_to_bytes_mutex; 
 static std::mutex union_table_mutex;
 
 static bool dump_forest_and_sets = false;
 static decay_val taint_node_ttl = 16;
 static uint64_t dfs_cache_size = 100000;
 
-static const char *polytracker_output_json_filename;
+static const char * polytracker_output_json_filename;
 
 /*
- * Time info for periodic logging 
+ * Time info for periodic logging
  * Interval time = 0 means do nothing 
  */
-static double interval_time = 0; //default is 0, do nothing
-static clock_t prev_time = 0; 
-static clock_t curr_time = 0;
+static double interval_time = 0;
+static clock_t prev_time = 0;
+static clock_t curr_time = 0; 
+
 
 /* Note: the following 3 variables are explicitly non-static */
-const char * target_file;
+char * target_file; 
 uint_dfsan_label_t byte_start = 0;
 uint_dfsan_label_t byte_end;
 
@@ -99,6 +104,7 @@ static void dfsan_create_function_sets(
 		std::unordered_set<taint_node_t*> nodes, 
 		cache::lru_cache<taint_node_t*, 
 		Roaring> * dfs_cache);
+
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
 //
@@ -151,7 +157,9 @@ static void dfsan_check_label(dfsan_label label) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
-	func_stack.resize(*index + 1);
+	std::thread::id this_id = std::this_thread::get_id(); 
+	(*thread_stack_map)[this_id].resize(*index + 1);
+	//func_stack.resize(*index + 1);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -159,22 +167,20 @@ int __dfsan_func_entry(char * fname) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "PUSHING BACK %s\n", fname);
 #endif
-	func_stack.push_back(fname);
-	int ret_val = func_stack.size()-1;
-	return ret_val;
+	std::string new_str = std::string(fname);
+	std::thread::id this_id = std::this_thread::get_id(); 
+	(*thread_stack_map)[this_id].push_back(new_str);
+	return (*thread_stack_map)[this_id].size()-1;;
+	//int ret_val = func_stack.size()-1;
+	//return ret_val;
 }
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
 	static unsigned int interval_nonce = 0;
-	
-	//If there is no taint, dont log
 	if (some_label == 0) {return;}
-
-	taint_node_t * new_node = node_for(some_label);
-	function_to_bytes_mutex.lock();
-	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);
-	
-	//If we have an interval timer, check if we should dump to json
+#ifdef DEBUG_INFO
+	fprintf(stderr, "Logging taint %lu\n", some_label);
+#endif
 	if (interval_time > 0) {
 		curr_time = clock();
 		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
@@ -193,17 +199,24 @@ void __dfsan_log_taint(dfsan_label some_label) {
 			std::ofstream o(output_string);
 			o << std::setw(4) << output_json << std::endl;
 			o.close();
-		
+
 			delete dfs_cache;
 			prev_time = curr_time;
 		}
-	}	
+	}
+	taint_node_t * new_node = node_for(some_label);
+	function_to_bytes_mutex.lock();
+	std::thread::id this_id = std::this_thread::get_id();
+	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
+	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
 	function_to_bytes_mutex.unlock();
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_func_exit() {
-	func_stack.pop_back();
+	std::thread::id this_id = std::this_thread::get_id(); 
+	(*thread_stack_map)[this_id].pop_back();
+	//func_stack.pop_back();
 }
 
 static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, decay_val max_decay) {
@@ -275,9 +288,13 @@ dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_unimplemented(char *fname) {
-	if (flags().warn_unimplemented)
+	if (flags().warn_unimplemented) {
+#ifdef DEBUG_INFO
 		Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
 				fname);
+#endif
+
+	}
 }
 
 // Use '-mllvm -dfsan-debug-nonzero-labels' and break on this function
@@ -505,8 +522,8 @@ static void dfsan_dump_process_sets() {
 		json j_set(large_set);
 		output_json[it->first] = j_set;
 	}
-	std::string output_filename = std::string(target_file) + "_process_set.json";
-	std::ofstream o(output_filename);
+	std::string output_string = std::string(target_file) + "_process_set.json";
+	std::ofstream o(output_string);
 	o << std::setw(4) << output_json;
 	o.close();
 }
@@ -525,7 +542,6 @@ static void dfsan_fini() {
 
 	else {
 		json output_json;
-
 		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
@@ -539,12 +555,13 @@ static void dfsan_fini() {
 		delete dfs_cache;
 	}
 	delete function_to_bytes;
+	delete thread_stack_map;
 }
 
-// This function is an alternative implementation of `getenv`.  So why does it
-// exist?  It's because dfsan gets initialized before all the internal data
-// structures for `getenv` are set up.
-static const char * dfsan_getenv(const char * name) {
+// This function is like `getenv`.  So why does it exist?  It's because dfsan
+// gets initialized before all the internal data structures for `getenv` are
+// set up. This is similar to how ASAN does it 
+static char * dfsan_getenv(const char * name) {
 	char *environ;
 	uptr len;
 	uptr environ_size;
@@ -592,7 +609,6 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
 	InitializeInterceptors();
 
-	//Load environment variables and grab our target file path
 	target_file = dfsan_getenv("POLYPATH");
 	if (target_file == NULL) {
 		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
@@ -651,6 +667,12 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
 	if (function_to_bytes == NULL) {
 		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
+		exit(1);
+	}
+
+	thread_stack_map = new std::unordered_map<std::thread::id, std::vector<std::string>>();
+	if (thread_stack_map == NULL) {
+		fprintf(stderr, "Failed to allocate thread stack map, aborting!\n");
 		exit(1);
 	}
 

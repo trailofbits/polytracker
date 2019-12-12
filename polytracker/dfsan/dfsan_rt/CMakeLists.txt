@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
+
 include_directories(sanitizer_common)
 include_directories(interception)
 # Add path for custom compiler-rt modules.
@@ -14,7 +15,6 @@ set(COMPILER_RT_INSTALL_PATH ${CMAKE_INSTALL_PREFIX} CACHE PATH
 
 set(COMPILER_RT_LIBRARY_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
 set(COMPILER_RT_LIBRARY_INSTALL_DIR ${POLYTRACK_LIB_DIR})
-
 
 set(ARM64 aarch64)
 set(X86_64 x86_64)
