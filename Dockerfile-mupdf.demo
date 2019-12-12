@@ -9,7 +9,7 @@ RUN git clone --recursive git://git.ghostscript.com/mupdf.git
 WORKDIR /polytracker/the_klondike/mupdf
 RUN git submodule update --init
 
-RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local debug
+RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
