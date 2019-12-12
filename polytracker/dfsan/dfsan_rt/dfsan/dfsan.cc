@@ -51,7 +51,6 @@
 #include "json.hpp"
 
 #define MAX_CACHE 100000
-#define POLYTRACKER_ENV_VAR "POLYPATH"
 
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
 #define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
