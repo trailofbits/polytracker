@@ -74,6 +74,8 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
 
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
+/* Note: this is a pointer on purpose, to avoid any complications from ordering
+ * of destructors of static objects */
 static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
 static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
 static std::mutex function_to_bytes_mutex; 
