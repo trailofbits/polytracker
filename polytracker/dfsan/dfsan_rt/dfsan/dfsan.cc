@@ -34,8 +34,8 @@
 #include <iomanip>
 #include <unordered_map>
 #include <unordered_set>
-#include <set>
 #include <unordered_set>
+#include <set>
 #include <algorithm>
 #include <stack> 
 #include <thread> 
@@ -50,7 +50,9 @@
 // nlohmann-json lib
 #include "json.hpp"
 
-#define MAX_CACHE 100000
+#define DEFAULT_CACHE 100000
+#define DEFAULT_INTERVAL 0  
+#define DEFAULT_TTL 16  
 
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
 #define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
@@ -64,32 +66,75 @@ using namespace __dfsan;
 typedef PPCAT(PPCAT(atomic_uint, DFSAN_LABEL_BITS), _t) atomic_dfsan_label;
 // An unsigned int big enough to address a dfsan label:
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
+
+/*
+ * The reason there are so many globals in this codebase is due to the 
+ * inherent way taint tracking is done. Almost every function here, log, union, etc. 
+ * can/will be called by the "host" program at will, and we need to store state that we can access later 
+ * to get the results of what we run.
+ */
+
+//I think this is depricated 
 static const dfsan_label kInitializingLabel = MAX_LABELS + 1;
+
+//This keeps track of the current taint label we are on 
 static atomic_dfsan_label __dfsan_last_label;
+
 Flags __dfsan::flags_data;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_retval_tls;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 
-std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
+//This maps the current thread to its call stack. 
+static std::mutex thread_stack_mutex;
+static std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
 
+//This is a boundry we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
+
+//This maps functions to the bytes they touched during tracking, results vary based on logging  
 static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
 static std::mutex function_to_bytes_mutex; 
+
+//This is a data structures that helps prevents repeat pairs of bytes from generating new labels. 
+//The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps 
+//While its not a full solution, it actually reduces the amount of labels by a lot, so its worth having 
+static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
 static std::mutex union_table_mutex;
 
-static bool dump_forest_and_sets = false;
-static decay_val taint_node_ttl = 16;
-static uint64_t dfs_cache_size = 100000;
+//This is basically an adjcency matrix, but since we dont have a numerical index 
+//I implemented the lookup using a map. So its string --> list of callers 
+//i.e foo ---> main, bar, baz 
+static std::unordered_map<std::string, std::unordered_set<std::string>> * runtime_cfg; 
 
+//This allows us to discover the origin of taints
+//Used by taint sources when a new taint label is created
+//These structures are allocated on init, but mostly used in taint_sources.cpp and final functions
+/* Note: the following 3 variables are explicitly non-static */
+std::vector<taint_source_info_t> taint_source_info;
+char taint_source_bit = 0;
+std::mutex source_map_mutex;
+
+//These are some configuration options set via some enviornment variables to change resource usage 
+//And tracking behavior dump_forest dumps shadow memory content and function_to_bytes map, see above 
+static bool dump_forest_and_sets = false;
+
+//This is a decay value, its a practical choice made due to the inherent problems when using taint analysis 
+//Specifically, when analyzing functions that manipulate a lot of data, like decompression functions, youll get way too much data 
+//This "decay" value is similar to hop count in packets, the higher this value, the longer your taint will live. 
+//The algorithm used models exponential decay, please check out the creation of union labels for more info 
+static decay_val taint_node_ttl = DEFAULT_TTL;
+
+//During processing we have an LRU cache which allows us to memoize some results 
+//This can use up a lot of memory so we have a setting for the cache size 
+static uint64_t dfs_cache_size = DEFAULT_CACHE;
+
+//This is the output file name
 static const char * polytracker_output_json_filename;
 
-/*
- * Time info for periodic logging
- * Interval time = 0 means do nothing 
- */
-static double interval_time = 0;
+//PolyTracker has an ability to take snapshots 
+//Interval time = 0 means do nothing 
+static double interval_time = DEFAULT_INTERVAL;
 static clock_t prev_time = 0;
 static clock_t curr_time = 0; 
 
@@ -169,11 +214,19 @@ int __dfsan_func_entry(char * fname) {
 #endif
 	std::string new_str = std::string(fname);
 	std::thread::id this_id = std::this_thread::get_id(); 
+
+	if ((*thread_stack_map)[this_id].size() > 0) {	
+		//Add name to list of callers
+		std::string caller = (*thread_stack_map)[this_id].back();
+		(*runtime_cfg)[new_str].insert(caller);  
+	}
+
 	(*thread_stack_map)[this_id].push_back(new_str);
+
 	return (*thread_stack_map)[this_id].size()-1;;
-	//int ret_val = func_stack.size()-1;
-	//return ret_val;
 }
+
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
 	static unsigned int interval_nonce = 0;
@@ -232,7 +285,7 @@ static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, deca
 	new_node->p2 = node_for(l2);
 
 	new_node->decay = max_decay;
-	new_node->bit_field = '\0';
+	new_node->taint_source = '\0';
 
 	return label;
 }
@@ -324,7 +377,7 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-dfsan_label dfsan_create_label(uint_dfsan_label_t offset) {
+dfsan_label dfsan_create_label(uint_dfsan_label_t offset, uint8_t taint_sourcee) {
 	//File bytes have a mapping to og labels + 1
 	dfsan_label label = offset + 1;
 	//Grab the pre reserved mem for this region and set vals
@@ -332,7 +385,10 @@ dfsan_label dfsan_create_label(uint_dfsan_label_t offset) {
 	//Both NULL means canonical parent 
 	new_node->p1 = NULL;
 	new_node->p2 = NULL;
-	new_node->bit_field = '\0';
+	//TODO When we want to support multiple taint sources 
+	//We need to change the schema 
+	new_node->taint_source = 
+	//new_node->taint_source = '\0';
 	new_node->decay = taint_node_ttl;
 	return label;
 }
@@ -484,7 +540,9 @@ static void dfsan_create_function_sets(
 		large_set.insert(*i - 1);
 	}
 	json j_set(large_set);
-	(*output_json)[fname] = j_set; 
+	json rt_set((*runtime_cfg)[fname]);
+	json j_output = {rt_set, j_set};
+	(*output_json)[fname] = j_output; 
 
 }
 static void dfsan_dump_forest() {
@@ -502,7 +560,7 @@ static void dfsan_dump_forest() {
 		dfsan_label node_p2 = value_for_node(curr->p2);
 		fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
 		fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
-		fwrite(&(curr->bit_field), sizeof(curr->bit_field), 1, forest_file);
+		fwrite(&(curr->taint_source), sizeof(curr->taint_source), 1, forest_file);
 		fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
 
 	}
@@ -673,6 +731,18 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	thread_stack_map = new std::unordered_map<std::thread::id, std::vector<std::string>>();
 	if (thread_stack_map == NULL) {
 		fprintf(stderr, "Failed to allocate thread stack map, aborting!\n");
+		exit(1);
+	}
+	
+	runtime_cfg = new std::unordered_map<std::string, std::unordered_set<std::string>>();
+	if (runtime_cfg == NULL) {
+		fprintf(stderr, "Failed to allocate runtime_cfg, aborting!\n");
+		exit(1);
+	}
+	
+	sources_map = new std::unordered_map<uint8_t, std::unordered_set<std::string>>();
+	if (sources_map == NULL) {
+		fprintf(stderr, "Failed to allocate sources_map, aborting!\n");
 		exit(1);
 	}
 
