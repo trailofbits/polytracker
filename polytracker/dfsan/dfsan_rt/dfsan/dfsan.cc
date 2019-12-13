@@ -190,10 +190,13 @@ void __dfsan_log_taint(dfsan_label some_label) {
 			json output_json;
 			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
-			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-				dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
-				//Clear vector so future results show new data only
-				it->second.clear();
+			{
+				std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+				for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
+					dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+					//Clear vector so future results show new data only
+					it->second.clear();
+				}
 			}
 
 			std::string output_string = "polytracker_interval:" + std::to_string(interval_nonce) + ".json";
@@ -207,11 +210,12 @@ void __dfsan_log_taint(dfsan_label some_label) {
 		}
 	}
 	taint_node_t * new_node = node_for(some_label);
-	function_to_bytes_mutex.lock();
 	std::thread::id this_id = std::this_thread::get_id();
 	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
-	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-	function_to_bytes_mutex.unlock();
+	{
+		std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+		(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);
+	}
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -255,11 +259,14 @@ dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
 	if (l1 > l2)
 		Swap(l1, l2);
 
+	std::lock_guard<std::mutex> guard(union_table_mutex);
+
 	//Quick union table check 
-	if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
-		auto val = union_table[l1].find(l2); 
-		return val->second;
+	const auto it = union_table[l1].find(l2);
+	if (it != union_table[l1].end()) {
+		return it->second;
 	} 
+
 	//Check for max decay
 	taint_node_t * p1 = node_for(l1);
 	taint_node_t * p2 = node_for(l2);
@@ -270,10 +277,7 @@ dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
 	}
 
 	dfsan_label label = dfsan_create_union_label(l1, l2, max_decay);
-
-	union_table_mutex.lock();
-	(union_table[l1])[l2] = label;
-	union_table_mutex.unlock();
+	union_table[l1][l2] = label;
 	return label;
 }
 
@@ -514,15 +518,18 @@ static void dfsan_dump_forest() {
 static void dfsan_dump_process_sets() {
 	std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 	json output_json;
-	for (it = function_to_bytes->begin(); it != function_to_bytes->end(); it++) {
-		std::unordered_set<dfsan_label> large_set;
-		std::unordered_set<taint_node_t*> ptr_set;
-		ptr_set = it->second;
-		for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
-			large_set.insert(value_for_node(*ptr_it));
+	{
+		std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+		for (it = function_to_bytes->begin(); it != function_to_bytes->end(); it++) {
+			std::unordered_set<dfsan_label> large_set;
+			std::unordered_set<taint_node_t*> ptr_set;
+			ptr_set = it->second;
+			for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
+				large_set.insert(value_for_node(*ptr_it));
+			}
+			json j_set(large_set);
+			output_json[it->first] = j_set;
 		}
-		json j_set(large_set);
-		output_json[it->first] = j_set;
 	}
 	std::string output_string = std::string(target_file) + "_process_set.json";
 	std::ofstream o(output_string);
@@ -546,8 +553,11 @@ static void dfsan_fini() {
 		json output_json;
 		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
-		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+		{
+			std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
+				dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+			}
 		}
 
 		std::ofstream o(polytracker_output_json_filename);
@@ -556,7 +566,10 @@ static void dfsan_fini() {
 
 		delete dfs_cache;
 	}
-	delete function_to_bytes;
+	{
+		std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+		delete function_to_bytes;
+	}
 	delete thread_stack_map;
 }
 
@@ -666,10 +679,14 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
 	 */
 	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
-	function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
-	if (function_to_bytes == NULL) {
-		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
-		exit(1);
+
+	{
+		std::lock_guard<std::mutex> guard(function_to_bytes_mutex);
+		function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
+		if (function_to_bytes == NULL) {
+			fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
+			exit(1);
+		}
 	}
 
 	thread_stack_map = new std::unordered_map<std::thread::id, std::vector<std::string>>();
