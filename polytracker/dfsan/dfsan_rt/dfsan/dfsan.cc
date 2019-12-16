@@ -39,7 +39,7 @@
 #include <algorithm>
 #include <stack> 
 #include <thread> 
-#include <lrucache/lrucache.hpp>
+#include "lrucache/lrucache.hpp"
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
@@ -86,8 +86,8 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 
 //This maps the current thread to its call stack. 
-static std::mutex thread_stack_mutex;
 static std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
+static std::mutex thread_stack_mutex;
 
 //This is a boundry we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
@@ -106,14 +106,7 @@ static std::mutex union_table_mutex;
 //I implemented the lookup using a map. So its string --> list of callers 
 //i.e foo ---> main, bar, baz 
 static std::unordered_map<std::string, std::unordered_set<std::string>> * runtime_cfg; 
-
-//This allows us to discover the origin of taints
-//Used by taint sources when a new taint label is created
-//These structures are allocated on init, but mostly used in taint_sources.cpp and final functions
-/* Note: the following 3 variables are explicitly non-static */
-std::vector<taint_source_info_t> taint_source_info;
-char taint_source_bit = 0;
-std::mutex source_map_mutex;
+static std::mutex runtime_cfg_mutex; 
 
 //These are some configuration options set via some enviornment variables to change resource usage 
 //And tracking behavior dump_forest dumps shadow memory content and function_to_bytes map, see above 
@@ -138,11 +131,11 @@ static double interval_time = DEFAULT_INTERVAL;
 static clock_t prev_time = 0;
 static clock_t curr_time = 0; 
 
+//Specifies json name 
+static char * output_file; 
 
-/* Note: the following 3 variables are explicitly non-static */
-char * target_file; 
-uint_dfsan_label_t byte_start = 0;
-uint_dfsan_label_t byte_end;
+//Used by taint sources
+taintInfoManager * taint_info_manager;
 
 static void dfsan_create_function_sets(
 		json * output_json, std::string fname, 
@@ -183,12 +176,11 @@ static uptr UnusedAddr() {
 	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>() + (sizeof(taint_node_t) * MAX_LABELS);
 }
 
+//These two functions are responsbility for mapping addresses to labels and visa versa
 static inline taint_node_t * node_for(dfsan_label label) {
-	//fprintf(stderr, "getting node for\n");
 	return (taint_node_t*)(forest_base_addr + (label * sizeof(taint_node_t)));
 }
 static inline dfsan_label value_for_node(taint_node_t * node) {
-	//fprintf(stderr, "getting value forr\n");
 	return ((((uptr)node) - forest_base_addr)/sizeof(taint_node_t));
 }
 
@@ -200,9 +192,11 @@ static void dfsan_check_label(dfsan_label label) {
 	}
 }
 
+//This function resets the stack frame when calls to setjmp/longjmp
+//FIXME Handle runtime CFG info with setjmp/longjmp 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
-	std::thread::id this_id = std::this_thread::get_id(); 
+	std::thread::id this_id = std::this_thread::get_id();	
 	(*thread_stack_map)[this_id].resize(*index + 1);
 	//func_stack.resize(*index + 1);
 }
@@ -377,7 +371,7 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-dfsan_label dfsan_create_label(uint_dfsan_label_t offset, uint8_t taint_sourcee) {
+dfsan_label dfsan_create_label(uint_dfsan_label_t offset, taint_source_id taint_id) {
 	//File bytes have a mapping to og labels + 1
 	dfsan_label label = offset + 1;
 	//Grab the pre reserved mem for this region and set vals
@@ -385,9 +379,7 @@ dfsan_label dfsan_create_label(uint_dfsan_label_t offset, uint8_t taint_sourcee)
 	//Both NULL means canonical parent 
 	new_node->p1 = NULL;
 	new_node->p2 = NULL;
-	//TODO When we want to support multiple taint sources 
-	//We need to change the schema 
-	new_node->taint_source = 
+	new_node->taint_source = taint_id; 
 	//new_node->taint_source = '\0';
 	new_node->decay = taint_node_ttl;
 	return label;
@@ -546,7 +538,7 @@ static void dfsan_create_function_sets(
 
 }
 static void dfsan_dump_forest() {
-	std::string forest_fname = std::string(target_file) + "_forest.bin";
+	std::string forest_fname = std::string(output_file) + "_forest.bin";
 	FILE * forest_file = fopen(forest_fname.c_str(), "w");
 	if (forest_file == NULL) {
 		std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
@@ -580,7 +572,7 @@ static void dfsan_dump_process_sets() {
 		json j_set(large_set);
 		output_json[it->first] = j_set;
 	}
-	std::string output_string = std::string(target_file) + "_process_set.json";
+	std::string output_string = std::string(output_file) + "_process_set.json";
 	std::ofstream o(output_string);
 	o << std::setw(4) << output_json;
 	o.close();
@@ -667,11 +659,41 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 
 	InitializeInterceptors();
 
-	target_file = dfsan_getenv("POLYPATH");
+	taint_info_manager = new taintInfoManager(); 
+	if (taint_info_manager == NULL) {
+		fprintf(stderr, "Error! Unable to create taint info manager, dying!\n"); 
+		exit(1);
+	}
+	
+	const char * target_file = dfsan_getenv("POLYPATH");
 	if (target_file == NULL) {
 		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
 		exit(1);
 	}
+	const char * output_file = dfsan_getenv("POLYOUTPUT"); 
+	if (output_file == NULL) {
+		output_file = "polytracker"; 
+	}	
+	//Get file size start and end
+	FILE * temp_file = fopen(target_file, "r");
+	if (temp_file == NULL) {
+		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
+				target_file, strerror(errno));
+		exit(1);
+	}
+#ifdef DEBUG_INFO
+	fprintf(stderr, "File is %s\n", target_file);
+#endif
+	fseek(temp_file, 0L, SEEK_END);
+	int byte_start = 0;
+	int byte_end = ftell(temp_file);
+	fclose(temp_file);
+	
+	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
+	//Special tracking for standard input
+	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS); 
+	taint_info_manager->createNewTaintInfo(stdin, "stdin");  
+
 	const char * poly_output = dfsan_getenv("POLYOUTPUT");
 	if (poly_output != NULL) {
 		polytracker_output_json_filename = poly_output;
@@ -681,6 +703,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	if (dfsan_getenv("POLYDUMP") != NULL) {
 		dump_forest_and_sets = true;
 	}
+
 	const char * env_ttl = dfsan_getenv("POLYTTL");
 	if (env_ttl != NULL) {
 		taint_node_ttl = atoi(env_ttl);
@@ -704,20 +727,6 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 #endif
 	}
 
-	//Get file size start and end
-	FILE * temp_file = fopen(target_file, "r");
-	if (temp_file == NULL) {
-		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-				target_file, strerror(errno));
-		exit(1);
-	}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "File is %s\n", target_file);
-#endif
-	fseek(temp_file, 0L, SEEK_END);
-	byte_end = ftell(temp_file);
-	fclose(temp_file);
-
 	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
 	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
 	 */
@@ -740,12 +749,6 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		exit(1);
 	}
 	
-	sources_map = new std::unordered_map<uint8_t, std::unordered_set<std::string>>();
-	if (sources_map == NULL) {
-		fprintf(stderr, "Failed to allocate sources_map, aborting!\n");
-		exit(1);
-	}
-
 	// Register the fini callback to run when the program terminates
 	// successfully or it is killed by the runtime.
 	//

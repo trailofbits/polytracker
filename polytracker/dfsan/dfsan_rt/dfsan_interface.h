@@ -31,7 +31,7 @@ typedef void (*dfsan_write_callback_t)(int fd, const void *buf, size_t count);
 dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
 
 /// Creates and returns a base label with the given description and user data.
-dfsan_label dfsan_create_label(uint32_t offset);
+dfsan_label dfsan_create_label(uint32_t offset, taint_source_id taint_source);
 
 /// Creates a label specifically for string lenghts
 dfsan_label dfsan_create_len_label(dfsan_label label);
