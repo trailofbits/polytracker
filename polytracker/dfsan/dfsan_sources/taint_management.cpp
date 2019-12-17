@@ -62,6 +62,7 @@ taintInfo::taintInfo(FILE* source,
 	ffd = source; 
 	taint_descrip = descrip; 
 }
+taintInfo::~taintInfo() {}
 
 taintInfoManager::taintInfoManager() {
 	id_nonce = 1; 
@@ -75,7 +76,7 @@ taint_source_id taintInfoManager::getId() {
 
 taint_source_id taintInfoManager::getNewId() {
 	taint_source_id curr_id = id_nonce; 
-	if (curr_id > (1L << ((sizeof(taint_source_id)-1) * 8))) {
+	if (curr_id == MAX_NONCE) {
 		std::cout << "ERROR: Too many taint sources to track" << std::endl; 
 		abort(); 
 	}
@@ -189,6 +190,7 @@ void taintInfoManager::closeSource(int fd) {
 	for (int i = 0; i < taint_source_info.size(); i++) {
 		if (taint_source_info[i].fd == fd && taint_source_info[i].is_open == true) {
 			taint_source_info[i].is_open = false; 
+			taint_info_mutex.unlock();
 			return;
 		}
 	}	
@@ -199,6 +201,7 @@ void taintInfoManager::closeSource(FILE * ffd) {
 	for (int i = 0; i < taint_source_info.size(); i++) {
 		if (taint_source_info[i].ffd == ffd && taint_source_info[i].is_open == true) {
 			taint_source_info[i].is_open = false; 
+			taint_info_mutex.unlock();
 			return;
 		}
 	}	
@@ -242,3 +245,14 @@ taint_source_id taintInfoManager::getTaintId(FILE * fd) {
 	taint_info_mutex.unlock();
 	return id; 
 }
+
+std::string 
+taintInfoManager::getTaintSource(taint_source_id id) {
+	taint_info_mutex.lock(); 
+	std::vector<taintInfo>::iterator it = findTaintInfo(id); 
+	taintInfo info = (*it);
+	std::string ret_val = info.taint_descrip; 	
+	taint_info_mutex.unlock(); 
+	return ret_val;
+}
+
