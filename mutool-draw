@@ -105,12 +105,12 @@ def main() -> None:
     # Rebuild Docker images if needed
     rebuild = options.rebuild_images \
               or not has_docker_image('trailofbits/polytracker') \
-              or not has_docker_image('trailofbits/polytracker-demo')
+              or not has_docker_image('trailofbits/polytracker-demo-mupdf')
     if rebuild:
         info('Building Docker image trailofbits/polytracker')
-        check_call(['docker', 'build', '-t', 'trailofbits/polytracker', '.'])
-        info('Building Docker image trailofbits/polytracker-demo')
-        check_call(['docker', 'build', '-t', 'trailofbits/polytracker-demo', '-f', 'Dockerfile.demo', '.'])
+        check_call(['docker', 'build', '-t', 'trailofbits/polytracker', '-f', 'Dockerfile', '.'])
+        info('Building Docker image trailofbits/polytracker-demo-mupdf')
+        check_call(['docker', 'build', '-t', 'trailofbits/polytracker-demo-mupdf', '-f', 'Dockerfile-mupdf.demo', '.'])
 
     # Collect some input file metadata
     pdf_file_sha256sum = sha256sum(options.pdf_file)
@@ -126,8 +126,8 @@ def main() -> None:
                                       f'--memory={options.memory_limit}',
                                       '-e', f'POLYPATH={options.pdf_file}',
                                       '-e', f'POLYOUTPUT={options.polytracker_output_path}',
-                                      'trailofbits/polytracker-demo:latest',
-                                      'timeout', '-k', '3s', f'{options.time_limit}', '/polytracker/the_klondike/mupdf/bin/bin/mutool', 'draw', options.pdf_file])
+                                      'trailofbits/polytracker-demo-mupdf:latest',
+                                      'timeout', '-k', '3s', f'{options.time_limit}', 'mutool', 'draw', options.pdf_file])
         container = out.decode().strip()
         with open(options.log_path, 'wb') as outfile:
             check_call(['docker', 'logs', '-f', container], stdout=outfile, stderr=subprocess.STDOUT)

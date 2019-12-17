@@ -14,7 +14,7 @@ install: .cmake_init
 
 .cmake_init:
 	mkdir -p build
-	cd build && CC="$(CC)" CXX="$(CXX)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" cmake -DCMAKE_BUILD_TYPE=Debug ../
+	cd build && CC="$(CC)" CXX="$(CXX)" CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug ../
 	touch $@
 
 clean:
