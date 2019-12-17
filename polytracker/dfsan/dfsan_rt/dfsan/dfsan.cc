@@ -508,7 +508,11 @@ static Roaring dfsan_postorder_traversal(taint_node_t * node,
 	dfs_cache->put(node, parent_set);
 	return parent_set;
 }
-
+static void dfsan_find_taint_source(
+		std::unordered_map<std::string, Roaring> * tsource_map, 
+		Roaring nodes) {
+		
+}
 
 static void dfsan_create_function_sets(
 		json * output_json, 
@@ -526,15 +530,23 @@ static void dfsan_create_function_sets(
 		Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
 		function_set = function_set | label_set;
 	}
+
+	std::unordered_map<std::string, std::set<int>>::iterator source_it; 
 	//Offset by 1, this orders it for us for output 
-	std::set<int> large_set;
+	std::unordered_map<std::string, std::set<int>> taint_source_sets; 
 	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
-		large_set.insert(*i - 1);
+		taint_node_t * curr_node = node_for(*i);
+	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
+		taint_source_sets[source_name].insert(*i - 1);
 	}
-	json j_set(large_set);
+
 	json rt_set((*runtime_cfg)[fname]);
-	json j_output = {rt_set, j_set};
-	(*output_json)[fname] = j_output; 
+	(*output_json)[fname]["called_from"] = rt_set; 
+	for (source_it = taint_source_sets.begin(); source_it != taint_source_sets.end(); source_it++) {
+		json byte_set(source_it->second); 
+		std::string source_name = "POLYTRACK " + source_it->first;
+		(*output_json)[fname]["input_bytes"][source_name] = byte_set;  
+	}
 
 }
 static void dfsan_dump_forest() {
