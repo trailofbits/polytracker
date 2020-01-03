@@ -94,7 +94,8 @@ static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
 
 //This maps functions to the bytes they touched during tracking, results vary based on logging  
 static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-static std::mutex function_to_bytes_mutex; 
+static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_cmp_bytes;
+static std::mutex bytes_map_mutex; 
 
 //This is a data structures that helps prevents repeat pairs of bytes from generating new labels. 
 //The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps 
@@ -220,15 +221,10 @@ int __dfsan_func_entry(char * fname) {
 	return (*thread_stack_map)[this_id].size()-1;;
 }
 
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void __dfsan_log_taint(dfsan_label some_label) {
+static void dfsan_check_snapshot() {
 	static unsigned int interval_nonce = 0;
-	if (some_label == 0) {return;}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "Logging taint %lu\n", some_label);
-#endif
 	if (interval_time > 0) {
+		bytes_map_mutex.lock(); 
 		curr_time = clock();
 		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
 		if (passed_time > interval_time) {
@@ -250,13 +246,38 @@ void __dfsan_log_taint(dfsan_label some_label) {
 			delete dfs_cache;
 			prev_time = curr_time;
 		}
+		bytes_map_mutex.unlock(); 
 	}
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+void __dfsan_log_taint_cmp(dfsan_label some_label) {
+	if (some_label == 0) {return;}
+#ifdef DEBUG_INFO
+	fprintf(stderr, "Logging taint cmp %lu\n", some_label);
+#endif
+	dfsan_check_snapshot();
 	taint_node_t * new_node = node_for(some_label);
-	function_to_bytes_mutex.lock();
+	bytes_map_mutex.lock(); 
+	std::thread::id this_id = std::this_thread::get_id();
+	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
+	(*function_to_cmp_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
+	bytes_map_mutex.unlock(); 
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE
+void __dfsan_log_taint(dfsan_label some_label) {
+	if (some_label == 0) {return;}
+#ifdef DEBUG_INFO
+	fprintf(stderr, "Logging taint %lu\n", some_label);
+#endif
+	dfsan_check_snapshot();
+	taint_node_t * new_node = node_for(some_label);
+	bytes_map_mutex.lock(); 
 	std::thread::id this_id = std::this_thread::get_id();
 	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
 	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-	function_to_bytes_mutex.unlock();
+	bytes_map_mutex.unlock(); 
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -513,6 +534,40 @@ static void dfsan_find_taint_source(
 		Roaring nodes) {
 		
 }
+static void dfsan_create_function_cmp_sets(
+		json * output_json, 
+		std::string fname, 
+		std::unordered_set<taint_node_t*> nodes,
+		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
+{
+	Roaring function_set;
+	std::unordered_set<taint_node_t*>::iterator it;
+#ifdef DEBUG_INFO
+	std::cout << "Operating on function " << fname << std::endl;
+	std::cout << "Vector size is " << nodes.size() << std::endl;
+#endif
+	for (it = nodes.begin(); it != nodes.end(); it++) {
+		Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
+		function_set = function_set | label_set;
+	}
+
+	std::unordered_map<std::string, std::set<int>>::iterator source_it; 
+	//Offset by 1, this orders it for us for output 
+	std::unordered_map<std::string, std::set<int>> taint_source_sets; 
+	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
+		taint_node_t * curr_node = node_for(*i);
+	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
+		taint_source_sets[source_name].insert(*i - 1);
+	}
+
+	json rt_set((*runtime_cfg)[fname]);
+	(*output_json)[fname]["called_from"] = rt_set; 
+	for (source_it = taint_source_sets.begin(); source_it != taint_source_sets.end(); source_it++) {
+		json byte_set(source_it->second); 
+		std::string source_name = "POLYTRACK " + source_it->first;
+		(*output_json)[fname]["cmp_bytes"][source_name] = byte_set;  
+	}
+}
 
 static void dfsan_create_function_sets(
 		json * output_json, 
@@ -608,6 +663,9 @@ static void dfsan_fini() {
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
 			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+		}
+		for (it = (*function_to_cmp_bytes).begin(); it != (*function_to_cmp_bytes).end(); it++) {
+			dfsan_create_function_cmp_sets(&output_json, it->first, it->second, dfs_cache);
 		}
 
 		std::ofstream o(polytracker_output_json_filename);
@@ -745,6 +803,12 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
 	function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
 	if (function_to_bytes == NULL) {
+		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
+		exit(1);
+	}
+
+	function_to_cmp_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
+	if (function_to_cmp_bytes == NULL) {
 		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
 		exit(1);
 	}
