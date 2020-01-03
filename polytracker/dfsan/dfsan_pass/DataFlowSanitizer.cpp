@@ -349,11 +349,17 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
 
+	//General for all taint 
   FunctionType *DFSanLogTaintFnTy;
+  Constant *DFSanLogTaintFn;
+
+	//Function to log cmps
+  FunctionType *DFSanLogCmpFnTy;
+  Constant *DFSanLogCmpFn;
+
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
   FunctionType *DFSanResetFrameFnTy;
-  Constant *DFSanLogTaintFn;
   Constant *DFSanEntryFn;
   Constant *DFSanExitFn;
   Constant *DFSanResetFrameFn;
@@ -451,6 +457,7 @@ public:
   const DataLayout &getDataLayout() const {
     return DFSF.F->getParent()->getDataLayout();
   }
+  void logTaintedCmp(Instruction * InsertPoint, Value * Shadow);
   void logTaintedOps(Instruction * InsertPoint, Value * Shadow);
 
   void visitOperandShadowInst(Instruction &I);
@@ -588,10 +595,15 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(ShadowTy, DFSanUnionLoadArgs, /*isVarArg=*/ false);
   DFSanUnimplementedFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  Type * DFSanLogTaintArgs[1] = {ShadowTy};
-  DFSanLogTaintFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogTaintArgs, false);
-  Type * DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
-  DFSanEntryFnTy = FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
+  
+	Type * DFSanLogTaintArgs[1] = {ShadowTy};
+ 	DFSanLogTaintFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogTaintArgs, false);
+  
+	Type * DFSanLogCmpArgs[1] = {ShadowTy};
+ 	DFSanLogCmpFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogCmpArgs, false);
+	
+	Type * DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
+ 	DFSanEntryFnTy = FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
   //DFSanEntryFnTy =	FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type * DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
@@ -791,6 +803,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       DFSanVarargWrapperFnTy);
   DFSanLogTaintFn =
       Mod->getOrInsertFunction("__dfsan_log_taint", DFSanLogTaintFnTy);
+  DFSanLogCmpFn =
+      Mod->getOrInsertFunction("__dfsan_log_taint_cmp", DFSanLogCmpFnTy);
   DFSanEntryFn =
       Mod->getOrInsertFunction("__dfsan_func_entry", DFSanEntryFnTy);
   DFSanExitFn =
@@ -811,6 +825,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn &&
         &i != DFSanLogTaintFn &&
+				&i != DFSanLogCmpFn && 
         &i != DFSanEntryFn &&
         &i != DFSanExitFn &&
         &i != DFSanResetFrameFn)
@@ -1242,7 +1257,7 @@ Value *DFSanFunction::combineOperandShadows(Instruction *Inst) {
 void DFSanVisitor::visitOperandShadowInst(Instruction &I) {
   Value *CombinedShadow = DFSF.combineOperandShadows(&I);
   DFSF.setShadow(&I, CombinedShadow);
-  //logTaintedOps(&I, CombinedShadow);
+  logTaintedOps(&I, CombinedShadow);
 }
 
 // Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
@@ -1474,7 +1489,7 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   Value *CombinedShadow = DFSF.combineOperandShadows(&CI);
   DFSF.setShadow(&CI, CombinedShadow);
   IRBuilder<> IRB(&CI);
-  CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogTaintFn, CombinedShadow);
+  CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogCmpFn, CombinedShadow);
   Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
   Call->addParamAttr(0, Attribute::ZExt);
 
