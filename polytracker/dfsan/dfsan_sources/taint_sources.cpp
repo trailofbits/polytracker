@@ -17,6 +17,7 @@
 #include <mutex> 
 #include "dfsan_includes/dfsan_types.h"
 #include "dfsan_rt/dfsan_interface.h"
+#include "dfsan_includes/taint_management.hpp"
 #define BYTE 1
 #define RUNTIME_FUNC extern "C" __attribute__((visibility("default")))
 
@@ -26,62 +27,7 @@
 
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
-//fds to track 
-std::vector<int> target_fds; 
-//FILE * to track
-std::vector<FILE *> target_ffds; 
-std::mutex target_fds_mutex; 
-std::mutex target_ffds_mutex; 
-//Defined by dfsan_init 
-extern char * target_file; 
-extern uint_dfsan_label_t byte_start; 
-extern uint_dfsan_label_t byte_end; 
-
-static bool is_target_file(const char * file_path) {
-	std::string file_path_str = file_path;	
-	std::size_t found = file_path_str.find(target_file);
-	#ifdef DEBUG_INFO 
-		bool res = (found != std::string::npos);
-		if (res == true) {
-			fprintf(stderr, "### FOUND TARGET FILE\n"); 
-		}
-	#endif	
-	return (found != std::string::npos);
-}
-static bool is_target_fd(int fd) {
-	target_fds_mutex.lock(); 
-	bool res = std::find(target_fds.begin(), target_fds.end(), fd) != target_fds.end();
- 	target_fds_mutex.unlock(); 
-	return res; 	
-}
-static bool is_target_ffd(FILE * fd) {
-	target_ffds_mutex.lock();
-	bool res = std::find(target_ffds.begin(), target_ffds.end(), fd) != target_ffds.end();
- 	target_ffds_mutex.unlock(); 
-	return res; 	
-}
-
-//For the number of bytes we read into this buffer
-//If the byte is within the range we need to taint
-//Taint it 
-static void taint_io_data(void * buff, int offset, size_t ret_val) {
-#ifdef DEBUG_INFO
-	fprintf(stderr, "### TAINTING THIS INPUT DATA\n");
-	fflush(stderr);
-#endif
-	int curr_byte_num = offset;
-	for (char * curr_byte = (char*)buff; curr_byte_num < offset + ret_val; 
-			curr_byte_num++, curr_byte++) 
-	{
-		if (curr_byte_num >= byte_start && curr_byte_num <= byte_end) {
-			dfsan_label new_label = dfsan_create_label(curr_byte_num);
-#ifdef DEBUG_INFO
-fprintf(stderr, "LABEL SET %u FOR BYTE %u\n", new_label, curr_byte_num);
-#endif 
-			dfsan_set_label(new_label, curr_byte, BYTE); 	
-		}	
-	}
-}
+extern taintInfoManager * taint_info_manager; 
 
 //To create some label functions
 //Following the libc custom functions from custom.cc
@@ -96,10 +42,11 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 #ifdef DEBUG_INFO
 	fprintf(stderr, "open: filename is : %s, fd is %d \n", path, fd);
 #endif
-	if (fd >= 0 && is_target_file(path)) {
-		target_fds_mutex.lock(); 
-		target_fds.push_back(fd);
-	 	target_fds_mutex.unlock();
+	if (fd >= 0 && taint_info_manager->isTargetSource(path)) {
+		#ifdef DEBUG_INFO
+		std::cout << "open: adding new taint info!" << std::endl; 
+		#endif	
+		taint_info_manager->createNewTaintInfo(fd, path);
 	}
 	*ret_label = 0;
 	return fd;
@@ -113,10 +60,11 @@ __dfsw_fopen64(const char *filename, const char *mode, dfsan_label fn_label,
 	fprintf(stderr, "### fopen64, filename is : %s, fd is %p \n", filename, fd);
 	fflush(stderr);
 #endif
-	if (fd != NULL && is_target_file(filename)) {
-		target_ffds_mutex.lock();
-		target_ffds.push_back(fd);
-		target_ffds_mutex.unlock();
+	if (fd != NULL && taint_info_manager->isTargetSource(filename)) {
+		#ifdef DEBUG_INFO
+		std::cout << "fopen64: adding new taint info!" << std::endl; 
+		#endif	
+		taint_info_manager->createNewTaintInfo(fd, filename);
 	}
 	*ret_label = 0;
 	return fd;
@@ -129,10 +77,11 @@ __dfsw_fopen(const char *filename, const char *mode, dfsan_label fn_label,
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### fopen, filename is : %s, fd is %p \n", filename, fd);
 #endif
-	if (fd != NULL && is_target_file(filename)) {
-		target_ffds_mutex.lock(); 
-		target_ffds.push_back(fd);
-		target_ffds_mutex.unlock(); 
+	if (fd != NULL && taint_info_manager->isTargetSource(filename)) {
+		#ifdef DEBUG_INFO
+		std::cout << "fopen: adding new taint info!" << std::endl; 
+		#endif	
+		taint_info_manager->createNewTaintInfo(fd, filename);
 	}
 
 	*ret_label = 0;
@@ -145,13 +94,9 @@ __dfsw_close(int fd, dfsan_label fd_label, dfsan_label *ret_label) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### close, fd is %d , ret is %d \n", fd, ret);
 #endif
-
-	if (ret == 0 && is_target_fd(fd)) {
-		target_fds_mutex.lock(); 
-		target_fds.erase(std::find(target_fds.begin(), target_fds.end(), fd));
-		target_fds_mutex.unlock();
+	if (ret == 0 && taint_info_manager->isTracking(fd)) {
+		taint_info_manager->closeSource(fd);
 	}
-
 	*ret_label = 0;
 	return ret;
 }
@@ -162,10 +107,8 @@ __dfsw_fclose(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### close, fd is %p, ret is %d \n", fd, ret);
 #endif
-	if (ret == 0 && is_target_ffd(fd)) {
-		target_ffds_mutex.lock(); 
-		target_ffds.erase(std::find(target_ffds.begin(), target_ffds.end(), fd));
-		target_ffds_mutex.unlock();
+	if (ret == 0 && taint_info_manager->isTracking(fd)) {
+		taint_info_manager->closeSource(fd);
 	}
 	*ret_label = 0;
 	return ret;
@@ -181,11 +124,10 @@ __dfsw_read(int fd, void * buff, size_t size, dfsan_label fd_label, dfsan_label 
 	fprintf(stderr, "read: fd is %d, buffer addr is %p, size is %ld\n", fd, buff, size); 
 #endif
 	//Check if we are tracking this fd. 
-	if (is_target_fd(fd)) {
+	if (taint_info_manager->isTracking(fd)) {
 		if (ret_val > 0) {
-			taint_io_data(buff, read_start, ret_val); 
+			taint_info_manager->taintData(fd, (char*)buff, read_start, ret_val);
 		}	
-		//*ret_label = dfsan_create_len_label(read_start, read_start+ret_val);
 		*ret_label = 0;  
 	}
 	else {
@@ -200,11 +142,10 @@ __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
 		dfsan_label count_label, dfsan_label offset_label,
 		dfsan_label *ret_label) {
 	ssize_t ret = pread(fd, buf, count, offset);
-	if (is_target_fd(fd)) {
+	if (taint_info_manager->isTracking(fd)) {
 		if (ret > 0) {
-			taint_io_data(buf, offset, ret); 	
+			taint_info_manager->taintData(fd, (char*)buf, offset, ret);
 		}
-		//*ret_label = dfsan_create_len_label(offset, offset+ret); 
 		*ret_label = 0;  
 	} else {
 		*ret_label = 0;
@@ -213,23 +154,21 @@ __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
 }
 
 RUNTIME_FUNC size_t
-__dfsw_fread(void *buf, size_t size, size_t count, FILE *fd,
+__dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
 		dfsan_label buf_label, dfsan_label size_label,
 		dfsan_label count_label, dfsan_label fd_label,
 		dfsan_label *ret_label) {
 	long offset = ftell(fd);
-	size_t ret = fread(buf, size, count, fd);
+	size_t ret = fread(buff, size, count, fd);
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### fread, fd is %p \n", fd);
 	fflush(stderr);
 #endif
- 	if (is_target_ffd(fd)) {
+ 	if (taint_info_manager->isTracking(fd)) {
 		if (ret > 0) {
 			//fread returns number of objects read specified by size
-			//So if it attempts to read 10 of size 3, but ret is 2, then it read 6 bytes.
-			taint_io_data(buf, offset, ret * size); 
+		 	taint_info_manager->taintData(fd, (char*)buff, offset, ret * size); 	
 		}
-		//*ret_label = dfsan_create_len_label(offset, offset + ret * size);
 		*ret_label = 0;  
 	} else {
 #ifdef DEBUG_INFO
@@ -252,11 +191,10 @@ __dfsw_fread_unlocked(void *buff, size_t size, size_t count, FILE *fd,
 	fprintf(stderr, "### fread_unlocked %p,range is %ld, %ld/%ld\n", fd, offset,
 			ret, count);
 #endif
-	if (is_target_ffd(fd)) {
+	if (taint_info_manager->isTracking(fd)) {
 		if (ret > 0) {
-			taint_io_data(buff, offset, ret * size); 
+		 	taint_info_manager->taintData(fd, (char*)buff, offset, ret * size); 	
 		}
-		//*ret_label = dfsan_create_len_label(offset, offset + ret * size);
 		*ret_label = 0;  
 	} else {
 		*ret_label = 0;
@@ -271,8 +209,8 @@ __dfsw_fgetc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### fgetc %p, range is %ld, 1 \n", fd, offset);
 #endif
-	if (c != EOF && is_target_ffd(fd)) {
-		*ret_label = dfsan_create_label(offset);
+	if (c != EOF && taint_info_manager->isTracking(fd)) {
+		*ret_label = dfsan_create_label(offset, taint_info_manager->getTaintId(fd));
 	}
 	return c;
 }
@@ -284,8 +222,8 @@ __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### fgetc_unlocked %p, range is %ld, 1 \n", fd, offset);
 #endif
-	if (c != EOF && is_target_ffd(fd)) {
-		*ret_label = dfsan_create_label(offset);
+	if (c != EOF && taint_info_manager->isTracking(fd)) {
+		*ret_label = dfsan_create_label(offset, taint_info_manager->getTaintId(fd));
 	}
 	return c;
 }
@@ -298,8 +236,8 @@ __dfsw__IO_getc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	fprintf(stderr, "### _IO_getc %p, range is %ld, 1 , c is %d\n", fd, offset,
 			c);
 #endif
-	if (is_target_ffd(fd) && c != EOF) {
-		*ret_label = dfsan_create_label(offset);
+	if (taint_info_manager->isTracking(fd) && c != EOF) {
+		*ret_label = dfsan_create_label(offset, taint_info_manager->getTaintId(fd));
 	}
 	return c;
 }
@@ -313,7 +251,7 @@ __dfsw_getchar(dfsan_label *ret_label) {
 	fprintf(stderr, "### getchar stdin, range is %ld, 1 \n", offset);
 #endif
 	if (c != EOF) {
-		*ret_label = dfsan_create_label(offset);
+		*ret_label = dfsan_create_label(offset, taint_info_manager->getTaintId(stdin));
 	}
 	return c;
 }
@@ -327,9 +265,9 @@ __dfsw_fgets(char *str, int count, FILE *fd, dfsan_label str_label,
 #ifdef DEBUG_INFO
 	fprintf(stderr, "fgets %p, range is %ld, %ld \n", fd, offset, strlen(ret));
 #endif
-	if (ret && is_target_ffd(fd)) {
+	if (ret && taint_info_manager->isTracking(fd)) {
 		int len = strlen(ret);
-		taint_io_data(str, offset, len);
+		taint_info_manager->taintData(fd, str, offset, len);
 		*ret_label = str_label;
 	} else {
 		*ret_label = 0;
@@ -344,7 +282,7 @@ __dfsw_gets(char *str, dfsan_label str_label, dfsan_label *ret_label) {
 	fprintf(stderr, "gets stdin, range is %ld, %ld \n", offset, strlen(ret) + 1);
 #endif
 	if (ret) {
-		taint_io_data(str, offset, strlen(ret));
+		taint_info_manager->taintData(stdin, str, offset, strlen(ret));
 		*ret_label = str_label;
 	} else {
 		*ret_label = 0;
@@ -362,8 +300,8 @@ __dfsw_getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
-	if (ret > 0 && is_target_ffd(fd)) {
-		taint_io_data(*lineptr, offset, ret);
+	if (ret > 0 && taint_info_manager->isTracking(fd)) {
+		taint_info_manager->taintData(fd, *lineptr, offset, ret);
 	}
 	*ret_label = 0;
 	return ret;
@@ -379,8 +317,8 @@ __dfsw___getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 #ifdef DEBUG_INFO
 	fprintf(stderr, "### __getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
-	if (ret > 0 && is_target_ffd(fd)) {
-		taint_io_data(*lineptr, offset, ret);
+	if (ret > 0 && taint_info_manager->isTracking(fd)) {
+		taint_info_manager->taintData(fd, *lineptr, offset, ret);
 	}
 	*ret_label = 0;
 	return ret;
@@ -393,8 +331,8 @@ __dfsw_mmap(void *start, size_t length, int prot, int flags, int fd,
 		dfsan_label fd_label, dfsan_label offset_label,
 		dfsan_label *ret_label) {
 	void *ret = mmap(start, length, prot, flags, fd, offset);
-	if (ret && is_target_fd(fd)) {
-		taint_io_data(ret, offset, length); 
+	if (ret && taint_info_manager->isTracking(fd)) {
+		taint_info_manager->taintData(fd, (char*)ret, offset, length); 
 	}
 	*ret_label = 0;
 	return ret;

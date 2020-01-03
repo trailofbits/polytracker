@@ -10,6 +10,5 @@ set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/pass")
 
 add_subdirectory(polyclang)
 add_subdirectory(custom_abi)
-add_subdirectory(taint_sources)
 add_subdirectory(dfsan)
 add_subdirectory(test)
