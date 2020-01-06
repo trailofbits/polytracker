@@ -140,7 +140,6 @@ taintInfoManager * taint_info_manager;
 
 static void dfsan_create_function_sets(
 		json * output_json, std::string fname, 
-		std::unordered_set<taint_node_t*> nodes, 
 		cache::lru_cache<taint_node_t*, 
 		Roaring> * dfs_cache);
 
@@ -232,7 +231,7 @@ static void dfsan_check_snapshot() {
 			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-				dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
+				dfsan_create_function_sets(&output_json, it->first, dfs_cache);
 				//Clear vector so future results show new data only
 				it->second.clear();
 			}
@@ -261,7 +260,9 @@ void __dfsan_log_taint_cmp(dfsan_label some_label) {
 	bytes_map_mutex.lock(); 
 	std::thread::id this_id = std::this_thread::get_id();
 	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
+	//Also include regular bytes, the set of cmp_bytes is a subset of all bytes
 	(*function_to_cmp_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
+	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
 	bytes_map_mutex.unlock(); 
 }
 
@@ -293,15 +294,12 @@ static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, deca
 	//Check to make sure there is no overflow
 	dfsan_check_label(label);
 	label++;
-
 	//Grab the pre reserved mem for this region and set vals
 	taint_node_t * new_node = node_for(label); 
 	new_node->p1 = node_for(l1);
 	new_node->p2 = node_for(l2);
-
 	new_node->decay = max_decay;
 	new_node->taint_source = '\0';
-
 	return label;
 }
 
@@ -534,73 +532,59 @@ static void dfsan_find_taint_source(
 		Roaring nodes) {
 		
 }
-static void dfsan_create_function_cmp_sets(
-		json * output_json, 
-		std::string fname, 
-		std::unordered_set<taint_node_t*> nodes,
-		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
-{
-	Roaring function_set;
-	std::unordered_set<taint_node_t*>::iterator it;
-#ifdef DEBUG_INFO
-	std::cout << "Operating on function " << fname << std::endl;
-	std::cout << "Vector size is " << nodes.size() << std::endl;
-#endif
-	for (it = nodes.begin(); it != nodes.end(); it++) {
-		Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
-		function_set = function_set | label_set;
-	}
-
-	std::unordered_map<std::string, std::set<int>>::iterator source_it; 
-	//Offset by 1, this orders it for us for output 
-	std::unordered_map<std::string, std::set<int>> taint_source_sets; 
-	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
-		taint_node_t * curr_node = node_for(*i);
-	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
-		taint_source_sets[source_name].insert(*i - 1);
-	}
-
-	json rt_set((*runtime_cfg)[fname]);
-	(*output_json)[fname]["called_from"] = rt_set; 
-	for (source_it = taint_source_sets.begin(); source_it != taint_source_sets.end(); source_it++) {
-		json byte_set(source_it->second); 
-		std::string source_name = "POLYTRACK " + source_it->first;
-		(*output_json)[fname]["cmp_bytes"][source_name] = byte_set;  
-	}
-}
 
 static void dfsan_create_function_sets(
 		json * output_json, 
 		std::string fname, 
-		std::unordered_set<taint_node_t*> nodes,
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
 {
 	Roaring function_set;
-	std::unordered_set<taint_node_t*>::iterator it;
+	Roaring function_cmp_set; 
+	std::unordered_set<taint_node_t*>::iterator all_bytes_iter;
+	std::unordered_set<taint_node_t*>::iterator cmp_bytes_iter;
+
+	std::unordered_set<taint_node_t*> all_bytes = (*function_to_bytes)[fname]; 
+	std::unordered_set<taint_node_t*> cmp_bytes = (*function_to_cmp_bytes)[fname]; 
+
 #ifdef DEBUG_INFO
 	std::cout << "Operating on function " << fname << std::endl;
-	std::cout << "Vector size is " << nodes.size() << std::endl;
+	std::cout << "Vector size is " << all_bytes.size() << std::endl;
+	std::cout << "CMP Vector size is " << cmp_bytes.size() << std::endl;
 #endif
-	for (it = nodes.begin(); it != nodes.end(); it++) {
-		Roaring label_set = dfsan_postorder_traversal(*it, dfs_cache);
+	
+	for (all_bytes_iter = all_bytes.begin(); all_bytes_iter != all_bytes.end(); all_bytes_iter++) {
+		Roaring label_set = dfsan_postorder_traversal(*all_bytes_iter, dfs_cache);
 		function_set = function_set | label_set;
 	}
-
-	std::unordered_map<std::string, std::set<int>>::iterator source_it; 
+	for (cmp_bytes_iter = cmp_bytes.begin(); cmp_bytes_iter != cmp_bytes.end(); cmp_bytes_iter++) {
+		Roaring label_cmp_set = dfsan_postorder_traversal(*cmp_bytes_iter, dfs_cache);
+		function_cmp_set = function_cmp_set | label_cmp_set;
+	}
+	
+	std::unordered_map<std::string, std::set<dfsan_label>>::iterator source_it; 
 	//Offset by 1, this orders it for us for output 
-	std::unordered_map<std::string, std::set<int>> taint_source_sets; 
+	std::unordered_map<std::string, std::set<dfsan_label>> all_source_sets; 
+	std::unordered_map<std::string, std::set<dfsan_label>> cmp_source_sets; 
 	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
 		taint_node_t * curr_node = node_for(*i);
 	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
-		taint_source_sets[source_name].insert(*i - 1);
+		all_source_sets[source_name].insert(*i - 1);
+	}
+	for(Roaring::const_iterator i = function_cmp_set.begin(); i != function_cmp_set.end(); i++) {
+		taint_node_t * curr_node = node_for(*i);
+	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
+		cmp_source_sets[source_name].insert(*i - 1);
 	}
 
 	json rt_set((*runtime_cfg)[fname]);
 	(*output_json)[fname]["called_from"] = rt_set; 
-	for (source_it = taint_source_sets.begin(); source_it != taint_source_sets.end(); source_it++) {
+	for (source_it = all_source_sets.begin(); source_it != all_source_sets.end(); source_it++) {
 		json byte_set(source_it->second); 
+		json cmp_byte_set(cmp_source_sets[source_it->first]);
 		std::string source_name = "POLYTRACK " + source_it->first;
-		(*output_json)[fname]["input_bytes"][source_name] = byte_set;  
+		(*output_json)[fname]["input_bytes"][source_name] = byte_set; 
+		(*output_json)[fname]["cmp_bytes"][source_name] = cmp_byte_set; 
+	 		
 	}
 
 }
@@ -662,10 +646,7 @@ static void dfsan_fini() {
 		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-			dfsan_create_function_sets(&output_json, it->first, it->second, dfs_cache);
-		}
-		for (it = (*function_to_cmp_bytes).begin(); it != (*function_to_cmp_bytes).end(); it++) {
-			dfsan_create_function_cmp_sets(&output_json, it->first, it->second, dfs_cache);
+			dfsan_create_function_sets(&output_json, it->first, dfs_cache);
 		}
 
 		std::ofstream o(polytracker_output_json_filename);
@@ -675,6 +656,7 @@ static void dfsan_fini() {
 		delete dfs_cache;
 	}
 	delete function_to_bytes;
+	delete function_to_cmp_bytes;
 	delete thread_stack_map;
 }
 
