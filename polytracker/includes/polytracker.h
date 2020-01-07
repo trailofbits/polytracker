@@ -1,12 +1,12 @@
 #ifndef __POLYTRACKER_H__
 #define __POLYTRACKER_H__
 
-#define POLYTRACKER_VERSION_MAJOR    0
+#define POLYTRACKER_VERSION_MAJOR    1
 #define POLYTRACKER_VERSION_MINOR    0
 #define POLYTRACKER_VERSION_REVISION 1
 
 // Set the version note to an empty string if there is no note
-#define POLYTRACKER_SUFFIX     "alpha2.1"
+#define POLYTRACKER_SUFFIX     "alpha2.2"
 
 /**********************************************************************************/
 

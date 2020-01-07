@@ -24,6 +24,7 @@
 #include "../sanitizer_common/sanitizer_flags.h"
 #include "../sanitizer_common/sanitizer_flag_parser.h"
 #include "../sanitizer_common/sanitizer_libc.h"
+#include "polytracker.h" 
 
 #include <vector> 
 #include <string> 
@@ -208,11 +209,20 @@ int __dfsan_func_entry(char * fname) {
 #endif
 	std::string new_str = std::string(fname);
 	std::thread::id this_id = std::this_thread::get_id(); 
-
+	
 	if ((*thread_stack_map)[this_id].size() > 0) {	
 		//Add name to list of callers
 		std::string caller = (*thread_stack_map)[this_id].back();
+		runtime_cfg_mutex.lock(); 
 		(*runtime_cfg)[new_str].insert(caller);  
+		runtime_cfg_mutex.unlock(); 
+	}
+	else {
+		//Should only be called for the entry point
+		std::string caller = ""; 
+		runtime_cfg_mutex.lock(); 
+		(*runtime_cfg)[new_str].insert(caller);  
+		runtime_cfg_mutex.unlock(); 
 	}
 
 	(*thread_stack_map)[this_id].push_back(new_str);
@@ -582,12 +592,12 @@ static void dfsan_create_function_sets(
 		json byte_set(source_it->second); 
 		json cmp_byte_set(cmp_source_sets[source_it->first]);
 		std::string source_name = "POLYTRACK " + source_it->first;
-		(*output_json)[fname]["input_bytes"][source_name] = byte_set; 
-		(*output_json)[fname]["cmp_bytes"][source_name] = cmp_byte_set; 
+		(*output_json)["tainted_functions"][fname]["input_bytes"][source_name] = byte_set; 
+		(*output_json)["tainted_functions"][fname]["cmp_bytes"][source_name] = cmp_byte_set; 
 	 		
 	}
-
 }
+
 static void dfsan_dump_forest() {
 	std::string forest_fname = std::string(output_file) + "_forest.bin";
 	FILE * forest_file = fopen(forest_fname.c_str(), "w");
@@ -629,6 +639,14 @@ static void dfsan_dump_process_sets() {
 	o.close();
 }
 
+static void dfsan_output_cfg(json * output_json) {
+	std::unordered_map<std::string, std::unordered_set<std::string>>::iterator cfg_it; 
+	for (cfg_it = runtime_cfg->begin(); cfg_it != runtime_cfg->end(); cfg_it++) {
+		json j_set(cfg_it->second); 
+		(*output_json)["runtime_cfg"][cfg_it->first] = j_set; 	
+	}	
+}
+
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
@@ -643,6 +661,9 @@ static void dfsan_fini() {
 
 	else {
 		json output_json;
+		//Version is defined in includes/polytracker.h
+		output_json["version"] = POLYTRACKER_VERSION; 
+		dfsan_output_cfg(&output_json);
 		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
 		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
 		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
