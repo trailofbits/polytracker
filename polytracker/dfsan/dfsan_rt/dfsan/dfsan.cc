@@ -592,8 +592,8 @@ static void dfsan_create_function_sets(
 		json byte_set(source_it->second); 
 		json cmp_byte_set(cmp_source_sets[source_it->first]);
 		std::string source_name = "POLYTRACK " + source_it->first;
-		(*output_json)["called_functions"][fname]["input_bytes"][source_name] = byte_set; 
-		(*output_json)["called_functions"][fname]["cmp_bytes"][source_name] = cmp_byte_set; 
+		(*output_json)["tainted_functions"][fname]["input_bytes"][source_name] = byte_set; 
+		(*output_json)["tainted_functions"][fname]["cmp_bytes"][source_name] = cmp_byte_set; 
 	 		
 	}
 }
