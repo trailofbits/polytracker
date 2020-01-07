@@ -1401,6 +1401,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
     DFSF.NonZeroChecks.push_back(Shadow);
 
   DFSF.setShadow(&LI, Shadow);
+  logTaintedOps(&LI, Shadow);
 }
 
 void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, uint64_t Align,
@@ -1476,6 +1477,7 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &SI);
   }
   DFSF.storeShadow(SI.getPointerOperand(), Size, Align, Shadow, &SI);
+  logTaintedOps(&SI, Shadow);
 }
 
 void DFSanVisitor::visitBinaryOperator(BinaryOperator &BO) {
