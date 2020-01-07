@@ -586,8 +586,6 @@ static void dfsan_create_function_sets(
 		cmp_source_sets[source_name].insert(*i - 1);
 	}
 
-	json rt_set((*runtime_cfg)[fname]);
-	(*output_json)[fname]["called_from"] = rt_set; 
 	for (source_it = all_source_sets.begin(); source_it != all_source_sets.end(); source_it++) {
 		json byte_set(source_it->second); 
 		json cmp_byte_set(cmp_source_sets[source_it->first]);
