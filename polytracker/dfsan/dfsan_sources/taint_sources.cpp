@@ -52,6 +52,27 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 	return fd;
 }
 
+RUNTIME_FUNC int
+__dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
+              dfsan_label flag_label, dfsan_label *va_labels,
+              dfsan_label *ret_label, ...) {
+	va_list args;
+	va_start(args, ret_label);
+	int fd = openat(dirfd, path, oflags, args);
+	va_end(args);
+#ifdef DEBUG_INFO
+	fprintf(stderr, "openat: filename is : %s, fd is %d \n", path, fd);
+#endif
+	if (fd >= 0 && taint_info_manager->isTargetSource(path)) {
+		#ifdef DEBUG_INFO
+		std::cout << "openat: adding new taint info!" << std::endl; 
+		#endif	
+		taint_info_manager->createNewTaintInfo(fd, path);
+	}
+	*ret_label = 0;
+	return fd;
+}
+
 RUNTIME_FUNC FILE *
 __dfsw_fopen64(const char *filename, const char *mode, dfsan_label fn_label,
 		dfsan_label mode_label, dfsan_label *ret_label) {
