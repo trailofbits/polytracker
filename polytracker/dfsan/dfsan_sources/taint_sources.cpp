@@ -23,7 +23,11 @@
 
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
-//#define DEBUG_INFO 
+//#define DEBUG_INFO
+
+#ifdef DEBUG_INFO
+#include <iostream>
+#endif
 
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
