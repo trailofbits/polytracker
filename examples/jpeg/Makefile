@@ -13,11 +13,20 @@ build:
 	mkdir -p build/kaitai
 
 jpeg_example: $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SOURCES)) $(BUILD_DIR)/kaitai/kaitaistream.o
-	$(LD) $^ -o $@
+	$(CXX) $^ -o $@
 
 $(BUILD_DIR)/%.o : build %.cpp $(KAITAI_HEADERS) $(wildcard *.h)
 	$(CXX) $(CXXFLAGS) -I. -c $*.cpp -o $@
 
 .phony: clean
 clean:
-	rm -rf build
+	rm -rf build .built_docker_image
+
+.phony: docker
+docker .built_docker_image: $(KAITAI_HEADERS) $(wildcard *.h) $(SOURCES) $(KAITAI_RUNTIME)
+ifeq ($(shell docker images -q trailofbits/polytracker),)
+	@echo "Building the base PolyTracker Docker container..."
+	docker build -t trailofbits/polytracker -f ../../Dockerfile ../../
+endif
+	docker build -t trailofbits/polytracker-demo-jpeg -f Dockerfile .
+	touch .built_docker_image
