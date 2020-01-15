@@ -28,5 +28,5 @@ ifeq ($(shell docker images -q trailofbits/polytracker),)
 	@echo "Building the base PolyTracker Docker container..."
 	docker build -t trailofbits/polytracker -f ../../Dockerfile ../../
 endif
-	docker build -t trailofbits/polytracker-demo-jpeg -f Dockerfile .
+	docker build -t trailofbits/polytracker-demo-jpeg-kaitai -f Dockerfile .
 	touch .built_docker_image
