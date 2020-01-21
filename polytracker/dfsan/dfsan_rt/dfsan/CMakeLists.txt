@@ -4,12 +4,14 @@
 set(DFSAN_RTL_SOURCES
 	dfsan.cc
 	dfsan_custom.cc
-	dfsan_interceptors.cc)
+	dfsan_interceptors.cc
+	dfsan_log_mgmt.cpp)
 
 set(DFSAN_RTL_HEADERS
 	dfsan.h
 	dfsan_flags.inc
-	dfsan_platform.h)
+	dfsan_platform.h
+	dfsan_log_mgmt.h)
 
 list(APPEND ${SANITIZER_COMMON_CFLAGS} "-g" "-fno-asynchronous-unwind-tables")
 
