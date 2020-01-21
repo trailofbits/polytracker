@@ -25,6 +25,7 @@
 #include "../sanitizer_common/sanitizer_flag_parser.h"
 #include "../sanitizer_common/sanitizer_libc.h"
 #include "polytracker.h" 
+#include "dfsan_log_mgmt.h" 
 
 #include <vector> 
 #include <string> 
@@ -40,33 +41,13 @@
 #include <algorithm>
 #include <stack> 
 #include <thread> 
-#include "lrucache/lrucache.hpp"
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
-
-// Amalgamated CRoaring lib
-#include "roaring.hh"
+//Only include this in here, headers are shared via dfsan.h
 #include "roaring.c" 
-// nlohmann-json lib
-#include "json.hpp"
-
-#define DEFAULT_CACHE 100000
-#define DEFAULT_INTERVAL 0  
-#define DEFAULT_TTL 16  
-
-// MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
-#define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
-
 using json = nlohmann::json;
 using namespace __dfsan;
-
-#define PPCAT_NX(A, B) A ## B
-#define PPCAT(A, B) PPCAT_NX(A, B)
-
-typedef PPCAT(PPCAT(atomic_uint, DFSAN_LABEL_BITS), _t) atomic_dfsan_label;
-// An unsigned int big enough to address a dfsan label:
-typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
 /*
  * The reason there are so many globals in this codebase is due to the 
@@ -98,12 +79,6 @@ static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *funct
 static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_cmp_bytes;
 static std::mutex bytes_map_mutex; 
 
-//This is a data structures that helps prevents repeat pairs of bytes from generating new labels. 
-//The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps 
-//While its not a full solution, it actually reduces the amount of labels by a lot, so its worth having 
-static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-static std::mutex union_table_mutex;
-
 //This is basically an adjcency matrix, but since we dont have a numerical index 
 //I implemented the lookup using a map. So its string --> list of callers 
 //i.e foo ---> main, bar, baz 
@@ -129,15 +104,22 @@ static const char * polytracker_output_json_filename;
 
 //PolyTracker has an ability to take snapshots 
 //Interval time = 0 means do nothing 
-static double interval_time = DEFAULT_INTERVAL;
+static double interval_time = 0;
 static clock_t prev_time = 0;
 static clock_t curr_time = 0; 
 
 //Specifies json name 
 static char * output_file; 
 
+//FIXME Rename to taintSourceInfoManager or something more descriptive 
 //Used by taint sources
 taintInfoManager * taint_info_manager;
+
+//This is left here because its shared by prop_mgr and log_mgr 
+//Should be deleted after both of them, should not be used directly!    
+taintMappingManager * taint_map_mgr; 
+taintPropagationManager * taint_prop_manager; 
+//taintLogManager * taint_log_manager; 
 
 static void dfsan_create_function_sets(
 		json * output_json, std::string fname, 
@@ -298,22 +280,6 @@ void __dfsan_func_exit() {
 	//func_stack.pop_back();
 }
 
-static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, decay_val max_decay) {
-	//Fetch new label 
-	dfsan_label label = atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed);
-	//Check to make sure there is no overflow
-	dfsan_check_label(label);
-	label++;
-	//Grab the pre reserved mem for this region and set vals
-	taint_node_t * new_node = node_for(label); 
-	new_node->p1 = node_for(l1);
-	new_node->p2 = node_for(l2);
-	new_node->decay = max_decay;
-	new_node->taint_source = '\0';
-	return label;
-}
-
-
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
 // The union table prevents there from being dupilcate labels
@@ -321,34 +287,7 @@ static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, deca
 // This assumes that a lot of taint will be generated in functions and not used again
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
-	DCHECK_NE(l1, l2);
-	if (l1 == 0)
-		return l2;
-	if (l2 == 0)
-		return l1;
-	if (l1 > l2)
-		Swap(l1, l2);
-
-	//Quick union table check 
-	if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
-		auto val = union_table[l1].find(l2); 
-		return val->second;
-	} 
-	//Check for max decay
-	taint_node_t * p1 = node_for(l1);
-	taint_node_t * p2 = node_for(l2);
-	//This calculates the average of the two decays, and then decreases it by a factor of 2.
-	decay_val max_decay = (p1->decay + p2->decay) / 4;
-	if (max_decay == 0) {
-		return 0;
-	}
-
-	dfsan_label label = dfsan_create_union_label(l1, l2, max_decay);
-
-	union_table_mutex.lock();
-	(union_table[l1])[l2] = label;
-	union_table_mutex.unlock();
-	return label;
+	return taint_prop_manager->unionLabels(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -401,17 +340,7 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label dfsan_create_label(uint_dfsan_label_t offset, taint_source_id taint_id) {
-	//File bytes have a mapping to og labels + 1
-	dfsan_label label = offset + 1;
-	//Grab the pre reserved mem for this region and set vals
-	taint_node_t * new_node = node_for(label);
-	//Both NULL means canonical parent 
-	new_node->p1 = NULL;
-	new_node->p2 = NULL;
-	new_node->taint_source = taint_id; 
-	//new_node->taint_source = '\0';
-	new_node->decay = taint_node_ttl;
-	return label;
+	return taint_prop_manager->createNewLabel(offset, taint_id);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -776,6 +705,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	}
 
 	const char * env_ttl = dfsan_getenv("POLYTTL");
+	decay_val taint_node_ttl = DEFAULT_TTL; 
 	if (env_ttl != NULL) {
 		taint_node_ttl = atoi(env_ttl);
 #ifdef DEBUG_INFO
@@ -825,7 +755,9 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		fprintf(stderr, "Failed to allocate runtime_cfg, aborting!\n");
 		exit(1);
 	}
-	
+
+  taint_map_mgr = new taintMappingManager((char*)ShadowAddr(), (char*)ForestAddr());  
+	taint_prop_manager = new taintPropagationManager(taint_map_mgr, byte_end + 1, taint_node_ttl);	
 	// Register the fini callback to run when the program terminates
 	// successfully or it is killed by the runtime.
 	//
