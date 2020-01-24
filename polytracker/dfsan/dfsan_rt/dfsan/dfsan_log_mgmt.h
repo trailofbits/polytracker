@@ -12,9 +12,11 @@
 #include <string>
 #include <unordered_map> 
 #include <unordered_set> 
+#include <set>
 #include <mutex>
 #include <iostream> 
-
+#include <stdint.h> 
+#include "taint_management.hpp"
 #include "lrucache/lrucache.hpp"
 #include "dfsan/dfsan.h"
 //Amalgamated CRoaring files
@@ -25,6 +27,8 @@ using json = nlohmann::json;
 
 typedef std::unordered_map<std::thread::id, std::vector<std::string>> thread_id_map; 
 typedef std::unordered_map<std::string, std::unordered_set<taint_node_t*>> string_node_map; 
+typedef std::unordered_map<std::string, Roaring> string_roaring_map; 
+typedef cache::lru_cache<taint_node_t*, Roaring> node_roaring_cache; 
 
 /*
  * This manages the mapping between taint_label <--> taint_node 
@@ -44,37 +48,44 @@ class taintMappingManager {
 }; 
 
 /*
- * This class is responsible for converting vectors to output (json or raw) 
- */
-class taintOutputManager {
-	public:
-		taintOutputManager(char * outfile, bool dump_raw_taint_info, taintMappingManager * map_mgr); 
-	private:
-		std::string outfile; 
-		bool dump_raw_taint_info;
-	 	json output_json;
-		taintMappingManager * map_manager; 	
-};
-
-/*
  * This class will create and call methods in taintOutputManager and taintIntervalManager
  */
 class taintLogManager {
 	public:
-		taintLogManager(char * outfile, taintMappingManager * map_mgr); 
-		taintLogManager(); 
+		taintLogManager(taintMappingManager * map_mgr, taintInfoManager * info_mgr,
+				std::string outfile, bool should_dump, uint64_t cache_size); 
 		~taintLogManager(); 
 		void logCompare(dfsan_label some_label); 
 		void logOperation(dfsan_label some_label);
-		void logFunctionEntry(std::string fname); 
+		//This returns the index so it can be used by reset_frame later
+		int logFunctionEntry(char* fname); 
 		void logFunctionExit();
+		void resetFrame(int* index); 
+		void output(dfsan_label max_label); 
+		//TODO All these should have a _ prefix because private 
 	private:
+		void outputRawTaintForest(dfsan_label max_label);
+	 	void outputRawTaintSets();	
+		void outputJson(); 
+		void addJsonVersion();
+		void addJsonRuntimeCFG(); 
+		void writeJson(); 
+		void addJsonBytesMappings(); 
+		std::unordered_map<std::string, std::set<dfsan_label>> utilityPartitionSet(Roaring set);
+		Roaring postOrderTraversalAll(std::unordered_set<taint_node_t *> * nodes);
+		Roaring postOrderTraversal(taint_node_t * node, node_roaring_cache * lru_cache);
+
 		thread_id_map thread_stack_map; 
 		string_node_map function_to_bytes;
 	 	string_node_map function_to_cmp_bytes;
 		std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
 		std::mutex taint_log_lock;
-		taintOutputManager * output_manager; 
+		std::string outfile; 
+		bool dump_raw_taint_info;
+	 	json output_json;
+		uint64_t lru_cache_size;
+		taintInfoManager * info_manager; 
+		taintMappingManager * map_manager; 	
 };
 
 /*
@@ -85,7 +96,8 @@ class taintPropagationManager {
 		taintPropagationManager(taintMappingManager * map_mgr, decay_val init_decay_val, dfsan_label start_union_label); 
 		~taintPropagationManager();
 	 	dfsan_label createNewLabel(dfsan_label offset, taint_source_id taint_id); 
-	 	dfsan_label unionLabels(dfsan_label l1, dfsan_label l2); 	
+	 	dfsan_label unionLabels(dfsan_label l1, dfsan_label l2); 
+		dfsan_label getMaxLabel(); 	
 	private:
 		void _checkMaxLabel(dfsan_label label); 
 		dfsan_label _createUnionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay);
