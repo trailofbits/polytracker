@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <stack>
 #include "../sanitizer_common/sanitizer_atomic.h"
 #include "../sanitizer_common/sanitizer_common.h"
 #include "../sanitizer_common/sanitizer_file.h"
@@ -30,7 +31,7 @@ taintMappingManager::getTaintNode(dfsan_label label) {
 dfsan_label 
 taintMappingManager::getTaintLabel(taint_node_t * node) {
 	taint_mapping_lock.lock(); 
-	dfsan_label ret_label = ((((char*)node) - forest_mem)/sizeof(taint_node_t));
+	dfsan_label ret_label = ((char*)node - forest_mem)/sizeof(taint_node_t);
 	taint_mapping_lock.unlock();
 	return ret_label; 
 }	
@@ -41,16 +42,50 @@ taintLogManager::taintLogManager(taintMappingManager * map_mgr, taintInfoManager
 	outfile = of; 
 	dump_raw_taint_info = should_dump; 
 	lru_cache_size = cache_size; 
-	map_manager = map_mgr; 
+	map_manager = map_mgr;
+ 	info_manager = info_mgr;	
 }
 
 taintLogManager::~taintLogManager() {}
+
+void
+taintLogManager::debugTrap() {
+	std::cout << "TRAP HIT" << std::endl;
+ 	return;	
+}
+
+void
+taintLogManager::sanityCheck(taint_node_t * node) {
+	dfsan_label node_label = map_manager->getTaintLabel(node); 
+	//Hardcoded val for lenses_toplas mutool info 
+	if (node_label > 1762586) {
+		debugTrap();
+	}
+}
+
+void
+taintPropagationManager::debugTrap() {
+	std::cout << "TRAP HIT" << std::endl;
+ 	return;	
+}
+
+void
+taintPropagationManager::sanityCheck(taint_node_t * node) {
+	dfsan_label node_label = map_manager->getTaintLabel(node); 
+	//Hardcoded val for lenses_toplas mutool info 
+	if (node_label > 1762586) {
+		debugTrap();
+	}
+}
 
 void 
 taintLogManager::logCompare(dfsan_label some_label) {
 	if (some_label == 0) {return;}
 	taint_log_lock.lock();
 	taint_node_t * curr_node = map_manager->getTaintNode(some_label); 
+
+	sanityCheck(curr_node);
+
 	std::thread::id this_id = std::this_thread::get_id(); 
 	std::vector<std::string> func_stack = thread_stack_map[this_id];
 	(function_to_cmp_bytes)[func_stack[func_stack.size()-1]].insert(curr_node);
@@ -63,6 +98,9 @@ taintLogManager::logOperation(dfsan_label some_label) {
 	if (some_label == 0) {return;}
 	taint_log_lock.lock();
 	taint_node_t * new_node = map_manager->getTaintNode(some_label);
+
+	sanityCheck(new_node);
+
 	std::thread::id this_id = std::this_thread::get_id();
 	std::vector<std::string> func_stack = thread_stack_map[this_id];
 	(function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);
@@ -136,10 +174,55 @@ taintLogManager::utilityPartitionSet(Roaring label_set) {
 	std::unordered_map<std::string, std::set<dfsan_label>> source_set_map;
 	for (auto it = label_set.begin(); it != label_set.end(); it++) {
 		taint_node_t * curr_node = map_manager->getTaintNode(*it); 
+		sanityCheck(curr_node);
 		std::string source_name = info_manager->getTaintSource(curr_node->taint_source); 
 		source_set_map[source_name].insert(*it); 
 	}	
 	return source_set_map;	
+}
+
+Roaring
+taintLogManager::iterativeDFS(taint_node_t * node, node_roaring_cache * lru_cache) {
+	//Stack instead of using call stack 
+	std::stack<taint_node_t *> * node_stack = new std::stack<taint_node_t*>(); 
+	//Collection of parent labels for the node we want to return 
+	Roaring parent_labels;
+	std::vector<bool> * visited_node = new std::vector<bool>(max_label + 1, false); 
+	node_stack->push(node); 
+	//Go until we have no more paths to explore 
+	while (!node_stack->empty()) {
+		taint_node_t * curr_node = node_stack->top();
+		sanityCheck(curr_node);
+		node_stack->pop(); 
+
+		dfsan_label curr_label = map_manager->getTaintLabel(curr_node); 
+		//If visited just continue
+		if ((*visited_node)[curr_label])  {
+			continue; 
+		}
+		//Visited for first time 
+		(*visited_node)[curr_label] = true;
+		
+		//If we hit a canonical label, we done
+		if (curr_node->p1 == NULL && curr_node->p2 == NULL) {
+			parent_labels.add(curr_label); 
+			continue; 
+		}
+		//Else if we havent checked out the parents, lets do it
+		if (curr_node->p1 != NULL) {
+			dfsan_label p1_label = map_manager->getTaintLabel(curr_node->p1); 
+		 	if ((*visited_node)[p1_label] == false) {
+				node_stack->push(curr_node->p1); 
+			}	
+		}
+		if (curr_node->p2 != NULL) {
+			dfsan_label p2_label = map_manager->getTaintLabel(curr_node->p2); 
+			if ((*visited_node)[p2_label] == false) {
+				node_stack->push(curr_node->p2);
+			}
+		}	
+	}
+	return parent_labels; 
 }
 
 Roaring
@@ -168,13 +251,15 @@ taintLogManager::postOrderTraversal(taint_node_t * node, node_roaring_cache * lr
 	return parent_set;	
 }
 
+//TODO parallelize 
 Roaring
-taintLogManager::postOrderTraversalAll(std::unordered_set<taint_node_t *> * nodes) {
+taintLogManager::processAll(std::unordered_set<taint_node_t *> * nodes) {
 	node_roaring_cache lru_cache(lru_cache_size); 	
 	Roaring all_labels; 
 
 	for (auto it = nodes->begin(); it != nodes->end(); it++) {
-		Roaring ret = postOrderTraversal(*it, &lru_cache);
+		//Roaring ret = postOrderTraversal(*it, &lru_cache);
+		Roaring ret = iterativeDFS(*it, &lru_cache);
 		//You can bitwise or on the roaring sets 
 		all_labels = all_labels | ret; 	
 	}
@@ -198,7 +283,7 @@ taintLogManager::addJsonBytesMappings() {
 	//Instead of 2 maps 
 	for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
 		//We convert to Roaring to save space during this traversal/caching 
-		Roaring labels = postOrderTraversalAll(&it->second);
+		Roaring labels = processAll(&it->second);
 		//Split up roaring based on origin bytes, and then into sets which we can make jsons 
 		std::unordered_map<std::string, std::set<dfsan_label>> source_set_map  = utilityPartitionSet(labels);
 		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
@@ -209,7 +294,7 @@ taintLogManager::addJsonBytesMappings() {
 	}
 	for (it = function_to_cmp_bytes.begin(); it != function_to_cmp_bytes.end(); it++) {
 		//We convert to Roaring to save space during this traversal/caching 
-		Roaring labels = postOrderTraversalAll(&it->second);
+		Roaring labels = processAll(&it->second);
 		//Split up roaring based on origin bytes, and then into sets which we can make jsons 
 		std::unordered_map<std::string, std::set<dfsan_label>> source_set_map  = utilityPartitionSet(labels);
 		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
@@ -281,8 +366,9 @@ taintLogManager::outputRawTaintSets() {
 }
 
 void
-taintLogManager::output(dfsan_label max_label) {
-	taint_log_lock.lock(); 
+taintLogManager::output(dfsan_label max) {
+	taint_log_lock.lock();
+	max_label = max;
 	if (dump_raw_taint_info) {
 		outputRawTaintForest(max_label); 
 		outputRawTaintSets();
@@ -294,10 +380,12 @@ taintLogManager::output(dfsan_label max_label) {
 }
 
 //PROPAGATION MANAGER
-taintPropagationManager::taintPropagationManager(taintMappingManager * map_mgr, decay_val init_decay_val, dfsan_label start_union_label) {
+taintPropagationManager::taintPropagationManager(taintMappingManager * map_mgr, 
+		decay_val init_decay_val, dfsan_label start_union_label) {
 	taint_node_ttl = init_decay_val; 
 	map_manager = map_mgr; 
-	atomic_store(&next_union_label, start_union_label, memory_order_release); 
+	//atomic_store(&next_union_label, start_union_label, memory_order_release); 
+	shadow_union_label = start_union_label; 
 }
 
 taintPropagationManager::~taintPropagationManager() {} 
@@ -310,29 +398,31 @@ taintPropagationManager::createNewLabel(dfsan_label offset, taint_source_id tain
 	_checkMaxLabel(new_label);
 
 	taint_node_t * new_node = map_manager->getTaintNode(new_label); 
-	new_node->p1 = new_node->p2 = NULL; 
+	sanityCheck(new_node);
+	new_node->p1 = NULL; 
+	new_node->p2 = NULL; 
 	new_node->taint_source = taint_id; 
 	new_node->decay = taint_node_ttl; 
 	taint_prop_lock.unlock(); 
 	return new_label; 
 }	
 
-dfsan_label 
+dfsan_label
 taintPropagationManager::_createUnionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay) {
-#ifdef DEBUG_INFO
-	std::cout << "Current union label is " << next_union_label << std::endl;  
-#endif	
-	dfsan_label ret_label = atomic_fetch_add(&next_union_label, 1, memory_order_relaxed);
-#ifdef DEBUG_INFO 
-	std::cout << "Ret'd union label is " << ret_label << std::endl; 
-#endif	
+	//dfsan_label ret_label = atomic_fetch_add(&next_union_label, 1, memory_order_relaxed);
+	dfsan_label ret_label = shadow_union_label + 1;
+	shadow_union_label++;
+	
 	_checkMaxLabel(ret_label); 
 
 	taint_node_t * new_node = map_manager->getTaintNode(ret_label); 
+	sanityCheck(new_node);
 	new_node->p1 = map_manager->getTaintNode(l1); 
+	sanityCheck(new_node->p1);
 	new_node->p2 = map_manager->getTaintNode(l2); 
+	sanityCheck(new_node->p2);
 	new_node->decay = init_decay; 
-	new_node->taint_source = '\0';
+	new_node->taint_source = new_node->p1->taint_source | new_node->p2->taint_source;
 	return ret_label; 
 }
 
@@ -360,7 +450,9 @@ taintPropagationManager::unionLabels(dfsan_label l1, dfsan_label l2) {
 	}
 	//Check for max decay
 	taint_node_t * p1 = map_manager->getTaintNode(l1);
+	sanityCheck(p1);
 	taint_node_t * p2 = map_manager->getTaintNode(l2);
+	sanityCheck(p2);
 	//This calculates the average of the two decays, and then decreases it by a factor of 2.
 	decay_val max_decay = (p1->decay + p2->decay) / 4;
 	if (max_decay == 0) {
@@ -384,9 +476,12 @@ taintPropagationManager::_checkMaxLabel(dfsan_label label) {
 
 dfsan_label 
 taintPropagationManager::getMaxLabel() {
-	taint_prop_lock.lock(); 
+	taint_prop_lock.lock();
+ /*	
 	dfsan_label max_label = 
 		atomic_load(&next_union_label, memory_order_relaxed); 
-	taint_prop_lock.unlock(); 
+	*/
+	dfsan_label max_label = shadow_union_label;
+		taint_prop_lock.unlock(); 
 	return max_label; 	
 }

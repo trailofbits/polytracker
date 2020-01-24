@@ -71,10 +71,13 @@ class taintLogManager {
 		void addJsonRuntimeCFG(); 
 		void writeJson(); 
 		void addJsonBytesMappings(); 
+		void sanityCheck(taint_node_t * node); 
+		void debugTrap();
 		std::unordered_map<std::string, std::set<dfsan_label>> utilityPartitionSet(Roaring set);
-		Roaring postOrderTraversalAll(std::unordered_set<taint_node_t *> * nodes);
+		Roaring processAll(std::unordered_set<taint_node_t *> * nodes);
 		Roaring postOrderTraversal(taint_node_t * node, node_roaring_cache * lru_cache);
-
+		Roaring iterativeDFS(taint_node_t * node, node_roaring_cache * lru_cache);
+		
 		thread_id_map thread_stack_map; 
 		string_node_map function_to_bytes;
 	 	string_node_map function_to_cmp_bytes;
@@ -84,6 +87,7 @@ class taintLogManager {
 		bool dump_raw_taint_info;
 	 	json output_json;
 		uint64_t lru_cache_size;
+		dfsan_label max_label;
 		taintInfoManager * info_manager; 
 		taintMappingManager * map_manager; 	
 };
@@ -101,6 +105,8 @@ class taintPropagationManager {
 	private:
 		void _checkMaxLabel(dfsan_label label); 
 		dfsan_label _createUnionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay);
+		void sanityCheck(taint_node_t * node); 
+		void debugTrap();
 	 	//This is a data structures that helps prevents repeat pairs of bytes from generating new labels.
 		//The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps
 		//While its not a full solution, it actually reduces the amount of labels by a lot, so its worth having
@@ -109,6 +115,7 @@ class taintPropagationManager {
 		std::mutex taint_prop_lock;
 	  //Using atomic store and load to access this, so if we change our locking later its still fine	
 		atomic_dfsan_label next_union_label; 	
+		dfsan_label shadow_union_label; 	
 		taintMappingManager * map_manager; 
 };
 

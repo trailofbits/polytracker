@@ -398,7 +398,8 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 #endif
 	fseek(temp_file, 0L, SEEK_END);
 	int byte_start = 0;
-	int byte_end = ftell(temp_file);
+	uint64_t byte_end = ftell(temp_file);
+	fprintf(stderr, "BYTE_END IS: %d\n", byte_end); 
 	fclose(temp_file);
 	
 	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
@@ -443,7 +444,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 		exit(1);
 	}
 	
-	taint_prop_manager = new taintPropagationManager(taint_map_mgr, byte_end + 1, taint_node_ttl);	
+	taint_prop_manager = new taintPropagationManager(taint_map_mgr, taint_node_ttl, byte_end + 1);	
 	if (taint_prop_manager == nullptr) {
 		fprintf(stderr, "Taint prop manager null!\n"); 
 		exit(1); 
