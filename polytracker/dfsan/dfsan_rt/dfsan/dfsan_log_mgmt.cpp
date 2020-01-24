@@ -1,3 +1,5 @@
+#include <iostream>
+#include <fstream>
 #include "../sanitizer_common/sanitizer_atomic.h"
 #include "../sanitizer_common/sanitizer_common.h"
 #include "../sanitizer_common/sanitizer_file.h"
@@ -33,6 +35,263 @@ taintMappingManager::getTaintLabel(taint_node_t * node) {
 	return ret_label; 
 }	
 
+//LOG MANAGER
+taintLogManager::taintLogManager(taintMappingManager * map_mgr, taintInfoManager * info_mgr, 
+		std::string of, bool should_dump, uint64_t cache_size) {
+	outfile = of; 
+	dump_raw_taint_info = should_dump; 
+	lru_cache_size = cache_size; 
+	map_manager = map_mgr; 
+}
+
+taintLogManager::~taintLogManager() {}
+
+void 
+taintLogManager::logCompare(dfsan_label some_label) {
+	if (some_label == 0) {return;}
+	taint_log_lock.lock();
+	taint_node_t * curr_node = map_manager->getTaintNode(some_label); 
+	std::thread::id this_id = std::this_thread::get_id(); 
+	std::vector<std::string> func_stack = thread_stack_map[this_id];
+	(function_to_cmp_bytes)[func_stack[func_stack.size()-1]].insert(curr_node);
+	(function_to_bytes)[func_stack[func_stack.size()-1]].insert(curr_node);	      
+	taint_log_lock.unlock(); 
+}
+
+void 
+taintLogManager::logOperation(dfsan_label some_label) {
+	if (some_label == 0) {return;}
+	taint_log_lock.lock();
+	taint_node_t * new_node = map_manager->getTaintNode(some_label);
+	std::thread::id this_id = std::this_thread::get_id();
+	std::vector<std::string> func_stack = thread_stack_map[this_id];
+	(function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);
+	taint_log_lock.unlock(); 
+}
+
+int
+taintLogManager::logFunctionEntry(char * fname) {
+	taint_log_lock.lock();
+	std::string func_name = std::string(fname); 
+	std::string new_str = std::string(fname);
+	std::thread::id this_id = std::this_thread::get_id();
+	if (thread_stack_map[this_id].size() > 0) {
+		std::string caller = (thread_stack_map)[this_id].back();
+		(runtime_cfg)[new_str].insert(caller);
+	}
+	else {
+		//This indicates the cfg entrypoint 
+		std::string caller = "";
+		(runtime_cfg)[new_str].insert(caller);
+	}
+	(thread_stack_map)[this_id].push_back(new_str);
+	taint_log_lock.unlock();
+	return thread_stack_map[this_id].size()-1;
+}
+
+void
+taintLogManager::logFunctionExit() {
+	taint_log_lock.lock();
+	std::thread::id this_id = std::this_thread::get_id();
+	(thread_stack_map)[this_id].pop_back();
+	taint_log_lock.unlock();
+}
+
+void 
+taintLogManager::resetFrame(int * index) {
+	taint_log_lock.lock(); 
+	if (index == nullptr) {
+		std::cout << "Pointer to array index is null! Instrumentation error, aborting!" << std::endl; 
+		abort(); 
+	}
+	std::thread::id this_id = std::this_thread::get_id(); 
+	//NOTE this could use some testing 
+	//Get the function before we reset the frame (should be the one that called longjmp) 
+	std::string caller_func = thread_stack_map[this_id].back();
+	//Reset the frame 	
+	thread_stack_map[this_id].resize(*index + 1); 
+	//Get the current function 
+	std::string curr_func = thread_stack_map[this_id].back(); 
+	//Insert the function that called longjmp in cfg 
+	runtime_cfg[curr_func].insert(caller_func); 
+	taint_log_lock.unlock(); 
+}
+
+void 
+taintLogManager::addJsonVersion() {
+	output_json["version"] = POLYTRACKER_VERSION; 
+}
+
+void 
+taintLogManager::addJsonRuntimeCFG() {
+	std::unordered_map<std::string, std::unordered_set<std::string>>::iterator cfg_it;
+	for (cfg_it = runtime_cfg.begin(); cfg_it != runtime_cfg.end(); cfg_it++) {
+		json j_set(cfg_it->second);
+		output_json["runtime_cfg"][cfg_it->first] = j_set;
+	}
+}
+
+std::unordered_map<std::string, std::set<dfsan_label>>
+taintLogManager::utilityPartitionSet(Roaring label_set) {
+	std::unordered_map<std::string, std::set<dfsan_label>> source_set_map;
+	for (auto it = label_set.begin(); it != label_set.end(); it++) {
+		taint_node_t * curr_node = map_manager->getTaintNode(*it); 
+		std::string source_name = info_manager->getTaintSource(curr_node->taint_source); 
+		source_set_map[source_name].insert(*it); 
+	}	
+	return source_set_map;	
+}
+
+Roaring
+taintLogManager::postOrderTraversal(taint_node_t * node, node_roaring_cache * lru_cache) {
+	if (lru_cache->exists(node)) {
+		return lru_cache->get(node);
+	}
+	Roaring parent_set;
+	if (node->p1 == NULL && node->p2 == NULL) {
+		parent_set.add(map_manager->getTaintLabel(node));
+		return parent_set;
+	}
+	Roaring left_parent_set;
+	Roaring right_parent_set;
+	if (node->p1 != NULL) {
+		left_parent_set = postOrderTraversal(node->p1, lru_cache);
+		lru_cache->put(node->p1, left_parent_set);
+
+	}
+	if (node->p2 != NULL) {
+		right_parent_set =  postOrderTraversal(node->p2, lru_cache);
+		lru_cache->put(node->p1, right_parent_set);
+	}
+	parent_set = left_parent_set | right_parent_set;
+	lru_cache->put(node, parent_set);
+	return parent_set;	
+}
+
+Roaring
+taintLogManager::postOrderTraversalAll(std::unordered_set<taint_node_t *> * nodes) {
+	node_roaring_cache lru_cache(lru_cache_size); 	
+	Roaring all_labels; 
+
+	for (auto it = nodes->begin(); it != nodes->end(); it++) {
+		Roaring ret = postOrderTraversal(*it, &lru_cache);
+		//You can bitwise or on the roaring sets 
+		all_labels = all_labels | ret; 	
+	}
+	return all_labels; 
+}
+
+/*
+ * Map from func_names --> set<nodes> 
+ * Turn func_names --> Roaring
+ * Now split the set of labels based on their origin 
+ * So Roaring --> map<source, dfsan_label set> 
+ * 	put json object in json
+ *
+ * Repeat for compare bytes. 
+ */
+void 
+taintLogManager::addJsonBytesMappings() {
+	string_node_map::iterator it; 
+
+	//NOTE This could be improved later by having a single mapping from name --> pair<all_set, cmp_set>
+	//Instead of 2 maps 
+	for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
+		//We convert to Roaring to save space during this traversal/caching 
+		Roaring labels = postOrderTraversalAll(&it->second);
+		//Split up roaring based on origin bytes, and then into sets which we can make jsons 
+		std::unordered_map<std::string, std::set<dfsan_label>> source_set_map  = utilityPartitionSet(labels);
+		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
+			json byte_set(map_it->second); 
+			std::string source_name = "POLYTRACKER " + map_it->first; 
+			output_json["tainted_functions"][map_it->first]["input_bytes"][source_name] = byte_set; 
+		}
+	}
+	for (it = function_to_cmp_bytes.begin(); it != function_to_cmp_bytes.end(); it++) {
+		//We convert to Roaring to save space during this traversal/caching 
+		Roaring labels = postOrderTraversalAll(&it->second);
+		//Split up roaring based on origin bytes, and then into sets which we can make jsons 
+		std::unordered_map<std::string, std::set<dfsan_label>> source_set_map  = utilityPartitionSet(labels);
+		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
+			json byte_set(map_it->second); 
+			std::string source_name = "POLYTRACKER " + map_it->first; 
+			output_json["tainted_functions"][map_it->first]["cmp_bytes"][source_name] = byte_set; 
+		}
+	}
+}
+
+void 
+taintLogManager::writeJson() {
+	std::ofstream o(outfile); 
+	o << std::setw(4) << output_json << std::endl; 
+	o.close(); 
+}
+
+void
+taintLogManager::outputJson() {
+	addJsonVersion(); 
+	addJsonRuntimeCFG(); 	
+	addJsonBytesMappings();
+	writeJson(); 
+}
+
+void
+taintLogManager::outputRawTaintForest(dfsan_label max_label) {
+	std::string forest_fname = outfile + "_forest.bin";
+	FILE * forest_file = fopen(forest_fname.c_str(), "w");
+	if (forest_file == NULL) {
+		std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
+		exit(1);
+	}
+	taint_node_t * curr = nullptr;
+	for (int i = 0; i < max_label; i++) {
+		curr = map_manager->getTaintNode(i);
+		dfsan_label node_p1 = map_manager->getTaintLabel(curr->p1);
+		dfsan_label node_p2 = map_manager->getTaintLabel(curr->p2);
+		fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
+		fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
+		fwrite(&(curr->taint_source), sizeof(curr->taint_source), 1, forest_file);
+		fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
+	}
+	fclose(forest_file);	
+}
+
+void
+taintLogManager::outputRawTaintSets() {
+	std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
+
+	addJsonVersion();
+ 	addJsonRuntimeCFG();
+
+	//Collect bytes without doing any post order traversal/source mapping  
+	for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
+		std::unordered_set<dfsan_label> large_set;
+		std::unordered_set<taint_node_t*> ptr_set;
+		ptr_set = it->second;
+		for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
+			large_set.insert(map_manager->getTaintLabel(*ptr_it));
+		}
+		json j_set(large_set);
+		output_json[it->first] = j_set;
+	}
+	std::string output_string = outfile + "_process_set.json";
+	std::ofstream o(output_string);
+	o << std::setw(4) << output_json;
+	o.close();
+}
+
+void
+taintLogManager::output(dfsan_label max_label) {
+	taint_log_lock.lock(); 
+	if (dump_raw_taint_info) {
+		outputRawTaintForest(max_label); 
+		outputRawTaintSets();
+		taint_log_lock.unlock(); 
+		return; 
+	}
+	outputJson();
+	taint_log_lock.unlock(); 	
+}
 
 //PROPAGATION MANAGER
 taintPropagationManager::taintPropagationManager(taintMappingManager * map_mgr, decay_val init_decay_val, dfsan_label start_union_label) {
@@ -119,8 +378,15 @@ taintPropagationManager::_checkMaxLabel(dfsan_label label) {
 	if (label == MAX_LABELS) {
 		std::cout << "ERROR: MAX LABEL REACHED, ABORTING!" << std::endl;
 		//Cant exit due to our exit handlers 
-	 	abort();  	
+		abort();  	
 	}
 }
 
-
+dfsan_label 
+taintPropagationManager::getMaxLabel() {
+	taint_prop_lock.lock(); 
+	dfsan_label max_label = 
+		atomic_load(&next_union_label, memory_order_relaxed); 
+	taint_prop_lock.unlock(); 
+	return max_label; 	
+}
