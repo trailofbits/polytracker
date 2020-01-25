@@ -97,6 +97,11 @@ uptr ShadowAddr() {
 }
 
 ALWAYS_INLINE
+uptr ForestAddr() {
+	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
+}
+
+ALWAYS_INLINE
 uptr TaintForestAddr() {
   return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
 }
