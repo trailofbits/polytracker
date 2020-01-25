@@ -75,7 +75,6 @@ class taintLogManager {
 		void debugTrap();
 		std::unordered_map<std::string, std::set<dfsan_label>> utilityPartitionSet(Roaring set);
 		Roaring processAll(std::unordered_set<taint_node_t *> * nodes);
-		Roaring postOrderTraversal(taint_node_t * node, node_roaring_cache * lru_cache);
 		Roaring iterativeDFS(taint_node_t * node, node_roaring_cache * lru_cache);
 		
 		thread_id_map thread_stack_map; 

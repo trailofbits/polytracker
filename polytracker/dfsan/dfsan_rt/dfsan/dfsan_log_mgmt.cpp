@@ -222,33 +222,9 @@ taintLogManager::iterativeDFS(taint_node_t * node, node_roaring_cache * lru_cach
 			}
 		}	
 	}
+	delete visited_node; 
+	delete node_stack; 
 	return parent_labels; 
-}
-
-Roaring
-taintLogManager::postOrderTraversal(taint_node_t * node, node_roaring_cache * lru_cache) {
-	if (lru_cache->exists(node)) {
-		return lru_cache->get(node);
-	}
-	Roaring parent_set;
-	if (node->p1 == NULL && node->p2 == NULL) {
-		parent_set.add(map_manager->getTaintLabel(node));
-		return parent_set;
-	}
-	Roaring left_parent_set;
-	Roaring right_parent_set;
-	if (node->p1 != NULL) {
-		left_parent_set = postOrderTraversal(node->p1, lru_cache);
-		lru_cache->put(node->p1, left_parent_set);
-
-	}
-	if (node->p2 != NULL) {
-		right_parent_set =  postOrderTraversal(node->p2, lru_cache);
-		lru_cache->put(node->p1, right_parent_set);
-	}
-	parent_set = left_parent_set | right_parent_set;
-	lru_cache->put(node, parent_set);
-	return parent_set;	
 }
 
 //TODO parallelize 
