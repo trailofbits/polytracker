@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <unordered_set>
 #include "polytracker.h"
-
+#define DEBUG_INFO
 using namespace std;
 
 static struct {
