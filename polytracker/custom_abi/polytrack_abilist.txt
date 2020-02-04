@@ -4745,3 +4745,7 @@ fun:jsimd_ycc_rgb_convert_avx2=uninstrumented
 fun:jsimd_ycc_rgb_convert_avx2=discard
 fun:jsimd_ycc_rgb_convert_sse2=uninstrumented
 fun:jsimd_ycc_rgb_convert_sse2=discard
+
+#LibXML shenanigans 
+fun:crc32=uninstrumented
+fun:crc32=discard
