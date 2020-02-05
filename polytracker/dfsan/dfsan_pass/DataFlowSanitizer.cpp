@@ -927,7 +927,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           ? F.getLinkage()
               : GlobalValue::LinkOnceODRLinkage;
 
-			//FIXME debug
+#ifdef DEBUG_INFO
+		 //Looking for open and reads we might not have hooked  	
 			std::string test_fname = F.getName(); 
 			size_t found_place = test_fname.find("open"); 
 			if (found_place != std::string::npos) {
@@ -941,6 +942,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 				bool is_custom = getWrapperKind(&F) == WK_Custom; 
 				std::cout << "Is custom func? " << is_custom << std::endl;
 			}	
+#endif
       Function *NewF = buildWrapperFunction(
           &F, std::string("dfsw$") + std::string(F.getName()),
           wrapperLinkage, NewFT);
