@@ -183,27 +183,9 @@ __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
 		dfsan_label fd_label, dfsan_label buf_label,
 		dfsan_label count_label, dfsan_label offset_label,
 		dfsan_label *ret_label) {
-	//FIXME 
+#ifdef DEBUG_INFO
 	std::cout << "Inside of pread64" << std::endl; 
-	ssize_t ret = pread(fd, buf, count, offset);
-	if (taint_info_manager->isTracking(fd)) {
-		if (ret > 0) {
-			taint_info_manager->taintData(fd, (char*)buf, offset, ret);
-		}
-		*ret_label = 0;  
-	} else {
-		*ret_label = 0;
-	}
-	return ret;
-}
-
-EXT_C_FUNC ssize_t
-__dfsw___libc_pread64(int fd, void *buf, size_t count, off_t offset,
-		dfsan_label fd_label, dfsan_label buf_label,
-		dfsan_label count_label, dfsan_label offset_label,
-		dfsan_label *ret_label) {
-	//FIXME 
-	std::cout << "Inside of __libc_pread64" << std::endl; 
+#endif
 	ssize_t ret = pread(fd, buf, count, offset);
 	if (taint_info_manager->isTracking(fd)) {
 		if (ret > 0) {
