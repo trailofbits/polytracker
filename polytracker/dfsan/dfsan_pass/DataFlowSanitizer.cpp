@@ -109,8 +109,6 @@
 #include <vector>
 #include <iostream> 
 
-#define DEBUG_INFO
-
 using namespace llvm;
 
 // External symbol to be used when generating the shadow address for
@@ -986,11 +984,19 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
     removeUnreachableBlocks(*i);
 
-		std::string curr_fname = i->getName(); 
-		size_t found_place = curr_fname.find("pthread"); 
-		if (found_place != std::string::npos) {
-			std::cout << "FOUND PTHREAD, WHY???" << curr_fname << std::endl;
-		  continue; 	
+		std::string curr_fname = i->getName();
+		if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
+			if (curr_fname != "main") {
+			#ifdef DEBUG_INFO
+				std::cout << "SKIPPING: " << curr_fname << std::endl; 
+			#endif
+				continue; 
+			}
+			else {
+			#ifdef DEBUG_INFO
+				std::cout << "ADDING ENTRY: " << curr_fname << std::endl;
+			#endif
+			}
 		}	
     //Instrument function entry here
     BasicBlock *BB = &(i->getEntryBlock());
