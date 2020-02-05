@@ -107,6 +107,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream> 
+
+#define DEBUG_INFO
 
 using namespace llvm;
 
@@ -908,7 +911,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       } else {
         addGlobalNamePrefix(&F);
       }
-    } else if (!IsZeroArgsVoidRet || getWrapperKind(&F) == WK_Custom) {
+    } 
+		//Was !isZeroArgsRetVoid, but when we specify 
+		//Uninstrumented and Discard we MEAN dont touch 
+		else if ( getWrapperKind(&F) == WK_Custom) {
       // Build a wrapper function for F.  The wrapper simply calls F, and is
       // added to FnsToInstrument so that any instrumentation according to its
       // WrapperKind is done in the second pass below.
@@ -923,6 +929,20 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           ? F.getLinkage()
               : GlobalValue::LinkOnceODRLinkage;
 
+			//FIXME debug
+			std::string test_fname = F.getName(); 
+			size_t found_place = test_fname.find("open"); 
+			if (found_place != std::string::npos) {
+				std::cout << "Getting OPEN fname " << test_fname << std::endl;
+				bool is_custom = getWrapperKind(&F) == WK_Custom; 
+				std::cout << "Is custom func? " << is_custom << std::endl;
+			}	
+			found_place = test_fname.find("read"); 
+			if (found_place != std::string::npos) {
+				std::cout << "Getting READ fname " << test_fname << std::endl;
+				bool is_custom = getWrapperKind(&F) == WK_Custom; 
+				std::cout << "Is custom func? " << is_custom << std::endl;
+			}	
       Function *NewF = buildWrapperFunction(
           &F, std::string("dfsw$") + std::string(F.getName()),
           wrapperLinkage, NewFT);
@@ -966,6 +986,12 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
     removeUnreachableBlocks(*i);
 
+		std::string curr_fname = i->getName(); 
+		size_t found_place = curr_fname.find("pthread"); 
+		if (found_place != std::string::npos) {
+			std::cout << "FOUND PTHREAD, WHY???" << curr_fname << std::endl;
+		  continue; 	
+		}	
     //Instrument function entry here
     BasicBlock *BB = &(i->getEntryBlock());
     Instruction *InsertPoint = &(*(BB->getFirstInsertionPt()));
@@ -977,7 +1003,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         FrameIndex);
 
 #ifdef DEBUG_INFO
-    llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
+   // llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
 #endif
     DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
