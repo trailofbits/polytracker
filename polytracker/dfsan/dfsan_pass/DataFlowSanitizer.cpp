@@ -1011,7 +1011,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         FrameIndex);
 
 #ifdef DEBUG_INFO
-   // llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
+    llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
 #endif
     DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
