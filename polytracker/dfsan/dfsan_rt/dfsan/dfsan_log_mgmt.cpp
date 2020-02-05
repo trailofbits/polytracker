@@ -265,7 +265,7 @@ taintLogManager::addJsonBytesMappings() {
 		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
 			json byte_set(map_it->second); 
 			std::string source_name = "POLYTRACKER " + map_it->first; 
-			output_json["tainted_functions"][map_it->first]["input_bytes"][source_name] = byte_set; 
+			output_json["tainted_functions"][it->first]["input_bytes"][source_name] = byte_set; 
 		}
 	}
 	for (it = function_to_cmp_bytes.begin(); it != function_to_cmp_bytes.end(); it++) {
@@ -276,7 +276,7 @@ taintLogManager::addJsonBytesMappings() {
 		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
 			json byte_set(map_it->second); 
 			std::string source_name = "POLYTRACKER " + map_it->first; 
-			output_json["tainted_functions"][map_it->first]["cmp_bytes"][source_name] = byte_set; 
+			output_json["tainted_functions"][it->first]["cmp_bytes"][source_name] = byte_set; 
 		}
 	}
 }

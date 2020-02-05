@@ -77,7 +77,6 @@ static uint64_t dfs_cache_size = DEFAULT_CACHE;
 //This is the output file name
 static const char * polytracker_output_json_filename;
 
-//FIXME Rename to taintSourceInfoManager or something more descriptive 
 //Used by taint sources
 taintInfoManager * taint_info_manager;
 
@@ -86,6 +85,9 @@ taintInfoManager * taint_info_manager;
 taintMappingManager * taint_map_mgr; 
 taintPropagationManager * taint_prop_manager; 
 taintLogManager * taint_log_manager; 
+
+static bool is_init = false; 
+std::mutex init_lock; 
 
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
@@ -127,6 +129,12 @@ void __dfsan_reset_frame(int* index) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsan_func_entry(char * fname) {
+	init_lock.lock(); 
+	if (is_init == false) {
+		dfsan_late_init();
+		is_init = true; 	
+	}
+	init_lock.unlock(); 
 	return taint_log_manager->logFunctionEntry(fname);
 }
 
@@ -352,7 +360,7 @@ static char * dfsan_getenv(const char * name) {
 	return NULL;
 }
 
-static void dfsan_init(int argc, char **argv, char **envp) {
+void dfsan_late_init() {
 	InitializeFlags();
 	InitializePlatformEarly();
 	//Note for some reason this original mmap call also mapped in the union table
@@ -365,7 +373,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	// will load our executable in the middle of our unused region. This mostly
 	// works so long as the program doesn't use too much memory. We support this
 	// case by disabling memory protection when ASLR is disabled.
-	uptr init_addr = (uptr)&dfsan_init;
+	uptr init_addr = (uptr)&dfsan_late_init;
 	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
 		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
@@ -399,14 +407,14 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	fseek(temp_file, 0L, SEEK_END);
 	int byte_start = 0;
 	uint64_t byte_end = ftell(temp_file);
-	fprintf(stderr, "BYTE_END IS: %d\n", byte_end); 
+#ifdef DEBUG_INFO
+	fprintf(stderr, "BYTE_END IS: %d\n", byte_end);
+#endif	
 	fclose(temp_file);
-	
 	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
 	//Special tracking for standard input
 	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS); 
 	taint_info_manager->createNewTaintInfo(stdin, "stdin");  
-
 	const char * poly_output = dfsan_getenv("POLYOUTPUT");
 	if (poly_output != NULL) {
 		polytracker_output_json_filename = poly_output;
@@ -469,8 +477,3 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	fprintf(stderr, "Done init\n");
 #endif
 }
-
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used))
-static void (*dfsan_init_ptr)(int, char **, char **) = dfsan_init;
-#endif
