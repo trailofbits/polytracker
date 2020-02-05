@@ -87,6 +87,9 @@ taintMappingManager * taint_map_mgr;
 taintPropagationManager * taint_prop_manager; 
 taintLogManager * taint_log_manager; 
 
+static bool is_init = false; 
+std::mutex init_lock; 
+
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
 //
@@ -119,7 +122,128 @@ static uptr UnusedAddr() {
 	//The unused region 
 	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>() + (sizeof(taint_node_t) * MAX_LABELS);
 }
+//FIXME 
+static char * dfsan_getenv(const char * name);
+static void InitializeFlags();
+static void dfsan_fini();
+static void InitializePlatformEarly();
+void dfsan_late_init() {
+	InitializeFlags();
+	InitializePlatformEarly();
+	//Note for some reason this original mmap call also mapped in the union table
+	//I don't think we need to make any changes to this 
+	if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+		Die();
 
+	// Protect the region of memory we don't use, to preserve the one-to-one
+	// mapping from application to shadow memory. But if ASLR is disabled, Linux
+	// will load our executable in the middle of our unused region. This mostly
+	// works so long as the program doesn't use too much memory. We support this
+	// case by disabling memory protection when ASLR is disabled.
+	uptr init_addr = (uptr)&dfsan_late_init;
+	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
+		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+
+	InitializeInterceptors();
+
+	taint_info_manager = new taintInfoManager(); 
+	if (taint_info_manager == NULL) {
+		fprintf(stderr, "Error! Unable to create taint info manager, dying!\n"); 
+		exit(1);
+	}
+	
+	const char * target_file = dfsan_getenv("POLYPATH");
+	if (target_file == NULL) {
+		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
+		exit(1);
+	}
+	const char * output_file = dfsan_getenv("POLYOUTPUT"); 
+	if (output_file == NULL) {
+		output_file = "polytracker"; 
+	}	
+	//Get file size start and end
+	FILE * temp_file = fopen(target_file, "r");
+	if (temp_file == NULL) {
+		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
+				target_file, strerror(errno));
+		exit(1);
+	}
+#ifdef DEBUG_INFO
+	fprintf(stderr, "File is %s\n", target_file);
+#endif
+	fseek(temp_file, 0L, SEEK_END);
+	int byte_start = 0;
+	uint64_t byte_end = ftell(temp_file);
+	fprintf(stderr, "BYTE_END IS: %d\n", byte_end); 
+	fclose(temp_file);
+	
+	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
+	//Special tracking for standard input
+	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS); 
+	taint_info_manager->createNewTaintInfo(stdin, "stdin");  
+
+	const char * poly_output = dfsan_getenv("POLYOUTPUT");
+	if (poly_output != NULL) {
+		polytracker_output_json_filename = poly_output;
+	} else {
+		polytracker_output_json_filename = "polytracker.json";
+	}
+	if (dfsan_getenv("POLYDUMP") != NULL) {
+		dump_forest_and_sets = true;
+	}
+
+	const char * env_ttl = dfsan_getenv("POLYTTL");
+	decay_val taint_node_ttl = DEFAULT_TTL; 
+	if (env_ttl != NULL) {
+		taint_node_ttl = atoi(env_ttl);
+#ifdef DEBUG_INFO
+		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
+#endif
+	}
+	const char * env_cache = dfsan_getenv("POLYCACHE");
+	if (env_cache != NULL) {
+		dfs_cache_size = atoi(env_cache);
+#ifdef DEBUG_INFO
+		fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
+#endif
+	}
+
+	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
+	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
+	 */
+	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
+	
+  taint_map_mgr = new taintMappingManager((char*)ShadowAddr(), (char*)ForestAddr());  
+	if (taint_map_mgr == nullptr) {
+		fprintf(stderr, "Taint mapping manager null!\n"); 
+		exit(1);
+	}
+	
+	taint_prop_manager = new taintPropagationManager(taint_map_mgr, taint_node_ttl, byte_end + 1);	
+	if (taint_prop_manager == nullptr) {
+		fprintf(stderr, "Taint prop manager null!\n"); 
+		exit(1); 
+	}
+
+	taint_log_manager = new taintLogManager(taint_map_mgr, taint_info_manager,
+		 	polytracker_output_json_filename, dump_forest_and_sets, dfs_cache_size); 
+	if (taint_log_manager == nullptr) {
+		fprintf(stderr, "Taint log manager is null!\n"); 
+		exit(1);
+	}	
+	// Register the fini callback to run when the program terminates
+	// successfully or it is killed by the runtime.
+	//
+	// Note: we do this at the very end of initialization, so that if
+	// initialization itself fails for some reason, we don't try to call
+	// `dfsan_fini` from a partially-initialized state.
+	Atexit(dfsan_fini);
+	AddDieCallback(dfsan_fini);
+
+#ifdef DEBUG_INFO
+	fprintf(stderr, "Done init\n");
+#endif
+}
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
 	taint_log_manager->resetFrame(index);
@@ -127,6 +251,12 @@ void __dfsan_reset_frame(int* index) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsan_func_entry(char * fname) {
+	init_lock.lock(); 
+	if (is_init == false) {
+		dfsan_late_init();
+		is_init = true; 	
+	}
+	init_lock.unlock(); 
 	return taint_log_manager->logFunctionEntry(fname);
 }
 
@@ -470,7 +600,9 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 #endif
 }
 
+/*
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 __attribute__((section(".preinit_array"), used))
 static void (*dfsan_init_ptr)(int, char **, char **) = dfsan_init;
 #endif
+*/ 
