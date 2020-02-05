@@ -77,7 +77,6 @@ static uint64_t dfs_cache_size = DEFAULT_CACHE;
 //This is the output file name
 static const char * polytracker_output_json_filename;
 
-//FIXME Rename to taintSourceInfoManager or something more descriptive 
 //Used by taint sources
 taintInfoManager * taint_info_manager;
 
@@ -478,9 +477,3 @@ void dfsan_late_init() {
 	fprintf(stderr, "Done init\n");
 #endif
 }
-/*
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used))
-static void (*dfsan_init_ptr)(int, char **, char **) = dfsan_init;
-#endif
-*/ 
