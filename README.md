@@ -29,7 +29,7 @@ Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running m
 For a demo of PolyTracker running on Poppler utils run this command: 
 
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
+docker build -t trailofbits/polytracker-demo -f Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
