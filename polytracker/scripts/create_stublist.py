@@ -33,61 +33,8 @@ def defined_function_list(object):
       functions.append(function_name)
   return functions
 
-p = OptionParser()
-
-"""
-p.add_option('--libc-dso-path', metavar='PATH',
-             help='path to libc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libc-archive-path', metavar='PATH',
-             help='path to libc archive directory',
-             default='/usr/lib/x86_64-linux-gnu')
-
-p.add_option('--libgcc-dso-path', metavar='PATH',
-             help='path to libgcc DSO directory',
-             default='/lib/x86_64-linux-gnu')
-p.add_option('--libgcc-archive-path', metavar='PATH',
-             help='path to libgcc archive directory',
-             default='/usr/lib/gcc/x86_64-linux-gnu/4.6')
-
-p.add_option('--with-libstdcxx', action='store_true',
-             dest='with_libstdcxx',
-             help='include libstdc++ in the list (inadvisable)')
-p.add_option('--libstdcxx-dso-path', metavar='PATH',
-             help='path to libstdc++ DSO directory',
-             default='/usr/lib/x86_64-linux-gnu')
-"""
-
-(options, args) = p.parse_args()
-#libs = glob.glob("/polytracker/the_klondike/pdfium/out/pdfium/obj/third_party/libjpeg_turbo/simd_asm/*.o")
 libs = [sys.argv[1]]
-"""
-libs = [os.path.join(options.libc_dso_path, name) for name in
-        ['ld-linux-x86-64.so.2',
-         'libanl.so.1',
-         'libBrokenLocale.so.1',
-         'libcidn.so.1',
-         'libcrypt.so.1',
-         'libc.so.6',
-         'libdl.so.2',
-         'libm.so.6',
-         'libnsl.so.1',
-         'libpthread.so.0',
-         'libresolv.so.2',
-         'librt.so.1',
-         'libthread_db.so.1',
-         'libutil.so.1']]
 
-libs += [os.path.join(options.libc_archive_path, name) for name in
-         ['libc_nonshared.a',
-          'libpthread_nonshared.a']]
-
-libs.append(os.path.join(options.libgcc_dso_path, 'libgcc_s.so.1'))
-libs.append(os.path.join(options.libgcc_archive_path, 'libgcc.a'))
-
-if options.with_libstdcxx:
-  libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
-"""
 functions = []
 for l in libs:
   if os.path.exists(l):

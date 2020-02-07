@@ -70,10 +70,6 @@ static bool dump_forest_and_sets = false;
 //The algorithm used models exponential decay, please check out the creation of union labels for more info 
 static decay_val taint_node_ttl = DEFAULT_TTL;
 
-//During processing we have an LRU cache which allows us to memoize some results 
-//This can use up a lot of memory so we have a setting for the cache size 
-static uint64_t dfs_cache_size = DEFAULT_CACHE;
-
 //This is the output file name
 static const char * polytracker_output_json_filename;
 
@@ -156,8 +152,6 @@ void __dfsan_func_exit() {
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
 // The union table prevents there from being dupilcate labels
-// This dfs_lookup_cache is to make it so we dont have to do traverals a lot.
-// This assumes that a lot of taint will be generated in functions and not used again
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
 	return taint_prop_manager->unionLabels(l1, l2);
@@ -433,14 +427,7 @@ void dfsan_late_init() {
 		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
 #endif
 	}
-	const char * env_cache = dfsan_getenv("POLYCACHE");
-	if (env_cache != NULL) {
-		dfs_cache_size = atoi(env_cache);
-#ifdef DEBUG_INFO
-		fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
-#endif
-	}
-
+	
 	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
 	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
 	 */
@@ -459,7 +446,7 @@ void dfsan_late_init() {
 	}
 
 	taint_log_manager = new taintLogManager(taint_map_mgr, taint_info_manager,
-		 	polytracker_output_json_filename, dump_forest_and_sets, dfs_cache_size); 
+		 	polytracker_output_json_filename, dump_forest_and_sets); 
 	if (taint_log_manager == nullptr) {
 		fprintf(stderr, "Taint log manager is null!\n"); 
 		exit(1);

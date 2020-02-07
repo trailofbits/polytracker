@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <unordered_set>
 #include "polytracker.h"
-#define DEBUG_INFO
+
 using namespace std;
 
 static struct {
@@ -158,9 +158,6 @@ int main(int argc, char * argv[]) {
 	int new_argc = 0;
 	PolyInstrument(argc, argv, new_argc, new_argv);
 
-	//Convert string vector to a new argv
-	//std::cout << "Final argc is " << new_argc << std::endl;
-	//std::cout << "Vector size is " << new_argv.size() << std::endl;
 	const char ** final_argv = new const char*[new_argv.size() + 1];
 	int i;
 	for (i = 0; i < new_argc; i++) {
