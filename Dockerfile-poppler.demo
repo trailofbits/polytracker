@@ -6,18 +6,27 @@ WORKDIR /polytracker/the_klondike
 ENV CC=clang
 ENV CXX=clang++
 
-RUN apt update 
-
 #Update pkg-config/util-linux (needed for FontConfig)
-RUN apt update
-RUN apt install pkg-config uuid-dev gperf libtool \
-	gettext autopoint autoconf -y
+RUN apt update && apt install pkg-config \
+	uuid-dev \
+	gperf \
+	libtool \
+	gettext \
+	autopoint \
+	autoconf \
+	python3-dev \
+	libasound2-dev \
+	libssl-dev \
+	cmake \ 
+	libfreetype6-dev \
+	libxcb-composite0-dev \
+	libxml2-dev -y
 
-RUN apt-get install python3-dev
+#RUN apt-get install python3-dev
 
 #Fontconfig requires some stuff? 
-RUN apt install pkg-config libasound2-dev libssl-dev cmake libfreetype6-dev libexpat1-dev libxcb-composite0-dev -y
-RUN apt install libxml2-dev -y 
+#RUN apt install pkg-config \libasound2-dev libssl-dev cmake libfreetype6-dev libexpat1-dev libxcb-composite0-dev -y
+#RUN apt install libxml2-dev -y 
 
 #=================================
 WORKDIR /polytracker/the_klondike
