@@ -14,7 +14,7 @@ PolyTracker can be used in conjunction with [PolyFile](https://github.com/trailo
 The easiest way to run PolyTracker is via Docker. To build the Docker
 container, simply run the following from the root of this repository:
 ```
-docker build -t trailofbits/polytracker . --no-cache
+docker build -t trailofbits/polytracker . 
 ```
 
 This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polyclang`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
@@ -26,13 +26,18 @@ docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
 
 Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running mutool will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
 
-For a demo of PolyTracker running on Poppler utils run this command: 
+For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
 
 ```
 docker build -t trailofbits/polytracker-demo -f Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
+
+```
+cd /polytracker/the_klondike/poppler-0.84.0/build/utils
+POLYPATH=some_pdf.pdf ./pdfinfo some_pdf.pdf
+```
 
 ## Dependencies and Prerequisites
 
@@ -144,7 +149,7 @@ C++ programs, but currently the best results will be from C programs.
 
 Snapshotting is currently depricated and not supported in the latest version. 
 
-If there are issues with Docker please build with --no-cache for both PolyTracker 
+If there are issues with Docker please do a system prune and build with --no-cache for both PolyTracker 
 and whatever demo you are trying to run. 
 
 The worst case performance of PolyTracker is exercised when a single

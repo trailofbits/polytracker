@@ -17,7 +17,6 @@
 #include "dfsan_types.h"
 #include "taint_management.hpp"
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include "lrucache/lrucache.hpp"
 #include "dfsan_platform.h"
 #include <stdint.h> 
 #include <unordered_map>

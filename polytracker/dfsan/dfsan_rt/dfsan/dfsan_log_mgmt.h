@@ -17,7 +17,6 @@
 #include <iostream> 
 #include <stdint.h> 
 #include "taint_management.hpp"
-#include "lrucache/lrucache.hpp"
 #include "dfsan/dfsan.h"
 //Amalgamated CRoaring files
 #include "polytracker.h"
@@ -28,7 +27,6 @@ using json = nlohmann::json;
 typedef std::unordered_map<std::thread::id, std::vector<std::string>> thread_id_map; 
 typedef std::unordered_map<std::string, std::unordered_set<taint_node_t*>> string_node_map; 
 typedef std::unordered_map<std::string, Roaring> string_roaring_map; 
-typedef cache::lru_cache<taint_node_t*, Roaring> node_roaring_cache; 
 
 /*
  * This manages the mapping between taint_label <--> taint_node 
@@ -53,7 +51,7 @@ class taintMappingManager {
 class taintLogManager {
 	public:
 		taintLogManager(taintMappingManager * map_mgr, taintInfoManager * info_mgr,
-				std::string outfile, bool should_dump, uint64_t cache_size); 
+				std::string outfile, bool should_dump); 
 		~taintLogManager(); 
 		void logCompare(dfsan_label some_label); 
 		void logOperation(dfsan_label some_label);
@@ -71,11 +69,9 @@ class taintLogManager {
 		void addJsonRuntimeCFG(); 
 		void writeJson(); 
 		void addJsonBytesMappings(); 
-		void sanityCheck(taint_node_t * node); 
-		void debugTrap();
 		std::unordered_map<std::string, std::set<dfsan_label>> utilityPartitionSet(Roaring set);
 		Roaring processAll(std::unordered_set<taint_node_t *> * nodes);
-		Roaring iterativeDFS(taint_node_t * node, node_roaring_cache * lru_cache);
+		Roaring iterativeDFS(taint_node_t * node);
 		
 		thread_id_map thread_stack_map; 
 		string_node_map function_to_bytes;
@@ -85,7 +81,6 @@ class taintLogManager {
 		std::string outfile; 
 		bool dump_raw_taint_info;
 	 	json output_json;
-		uint64_t lru_cache_size;
 		dfsan_label max_label;
 		taintInfoManager * info_manager; 
 		taintMappingManager * map_manager; 	
@@ -104,16 +99,12 @@ class taintPropagationManager {
 	private:
 		void _checkMaxLabel(dfsan_label label); 
 		dfsan_label _createUnionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay);
-		void sanityCheck(taint_node_t * node); 
-		void debugTrap();
 	 	//This is a data structures that helps prevents repeat pairs of bytes from generating new labels.
 		//The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps
 		//While its not a full solution, it actually reduces the amount of labels by a lot, so its worth having
 		std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table; 	
 		decay_val taint_node_ttl;
 		std::mutex taint_prop_lock;
-	  //Using atomic store and load to access this, so if we change our locking later its still fine	
-		atomic_dfsan_label next_union_label; 	
 		dfsan_label shadow_union_label; 	
 		taintMappingManager * map_manager; 
 };
