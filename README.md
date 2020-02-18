@@ -46,7 +46,7 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
-## Building PolyTracker from Source
+## Building PolyTracker from Source (DEPRICATED - Please use Docker to build and run polytracker)
 
 NOTE: While you can build PolyTracker from source, at the moment it only runs in Docker, this will be fixed soon
 
