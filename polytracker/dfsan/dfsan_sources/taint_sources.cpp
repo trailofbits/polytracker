@@ -26,6 +26,10 @@
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
 
+#ifdef DEBUG_INFO
+#include <iostream>
+#endif
+
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
 extern taintInfoManager * taint_info_manager; 
@@ -46,6 +50,27 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 	if (fd >= 0 && taint_info_manager->isTargetSource(path)) {
 		#ifdef DEBUG_INFO
 		std::cout << "open: adding new taint info!" << std::endl; 
+		#endif	
+		taint_info_manager->createNewTaintInfo(fd, path);
+	}
+	*ret_label = 0;
+	return fd;
+}
+
+EXT_C_FUNC int
+__dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
+              dfsan_label flag_label, dfsan_label *va_labels,
+              dfsan_label *ret_label, ...) {
+	va_list args;
+	va_start(args, ret_label);
+	int fd = openat(dirfd, path, oflags, args);
+	va_end(args);
+#ifdef DEBUG_INFO
+	fprintf(stderr, "openat: filename is : %s, fd is %d \n", path, fd);
+#endif
+	if (fd >= 0 && taint_info_manager->isTargetSource(path)) {
+		#ifdef DEBUG_INFO
+		std::cout << "openat: adding new taint info!" << std::endl; 
 		#endif	
 		taint_info_manager->createNewTaintInfo(fd, path);
 	}

@@ -29,3 +29,5 @@ WORKDIR /polytracker/the_klondike/
 RUN git clone https://github.com/qpdf/qpdf.git
 WORKDIR  qpdf
 RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
+
+WORKDIR /workdir

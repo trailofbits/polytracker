@@ -5,6 +5,8 @@ fun:main=discard
 #Open stuff
 fun:open=uninstrumented
 fun:open=custom
+fun:openat=uninstrumented
+fun:openat=custom
 fun:fopen=uninstrumented
 fun:fopen=custom
 fun:fopen64=uninstrumented
