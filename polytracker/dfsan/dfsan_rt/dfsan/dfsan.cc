@@ -25,6 +25,7 @@
 #include "../sanitizer_common/sanitizer_flag_parser.h"
 #include "../sanitizer_common/sanitizer_libc.h"
 #include "polytracker.h" 
+#include "dfsan_log_mgmt.h" 
 
 #include <vector> 
 #include <string> 
@@ -40,43 +41,13 @@
 #include <algorithm>
 #include <stack> 
 #include <thread> 
-#include "lrucache/lrucache.hpp"
 #include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
-
-// Amalgamated CRoaring lib
-#include "roaring.hh"
+//Only include this in here, headers are shared via dfsan.h
 #include "roaring.c" 
-// nlohmann-json lib
-#include "json.hpp"
-
-#define DEFAULT_CACHE 100000
-#define DEFAULT_INTERVAL 0  
-#define DEFAULT_TTL 16  
-
-// MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
-#define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
-
 using json = nlohmann::json;
 using namespace __dfsan;
-
-#define PPCAT_NX(A, B) A ## B
-#define PPCAT(A, B) PPCAT_NX(A, B)
-
-typedef PPCAT(PPCAT(atomic_uint, DFSAN_LABEL_BITS), _t) atomic_dfsan_label;
-// An unsigned int big enough to address a dfsan label:
-typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
-
-/*
- * The reason there are so many globals in this codebase is due to the 
- * inherent way taint tracking is done. Almost every function here, log, union, etc. 
- * can/will be called by the "host" program at will, and we need to store state that we can access later 
- * to get the results of what we run.
- */
-
-//I think this is depricated 
-static const dfsan_label kInitializingLabel = MAX_LABELS + 1;
 
 //This keeps track of the current taint label we are on 
 static atomic_dfsan_label __dfsan_last_label;
@@ -86,29 +57,8 @@ SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_retval_tls;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 
-//This maps the current thread to its call stack. 
-static std::unordered_map<std::thread::id, std::vector<std::string>> * thread_stack_map;
-static std::mutex thread_stack_mutex;
-
 //This is a boundry we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-
-//This maps functions to the bytes they touched during tracking, results vary based on logging  
-static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_bytes;
-static std::unordered_map<std::string, std::unordered_set<taint_node_t*>> *function_to_cmp_bytes;
-static std::mutex bytes_map_mutex; 
-
-//This is a data structures that helps prevents repeat pairs of bytes from generating new labels. 
-//The original in DFsan was a matrix that was pretty sparse, so this saves space and also helps 
-//While its not a full solution, it actually reduces the amount of labels by a lot, so its worth having 
-static std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
-static std::mutex union_table_mutex;
-
-//This is basically an adjcency matrix, but since we dont have a numerical index 
-//I implemented the lookup using a map. So its string --> list of callers 
-//i.e foo ---> main, bar, baz 
-static std::unordered_map<std::string, std::unordered_set<std::string>> * runtime_cfg; 
-static std::mutex runtime_cfg_mutex; 
 
 //These are some configuration options set via some enviornment variables to change resource usage 
 //And tracking behavior dump_forest dumps shadow memory content and function_to_bytes map, see above 
@@ -120,29 +70,20 @@ static bool dump_forest_and_sets = false;
 //The algorithm used models exponential decay, please check out the creation of union labels for more info 
 static decay_val taint_node_ttl = DEFAULT_TTL;
 
-//During processing we have an LRU cache which allows us to memoize some results 
-//This can use up a lot of memory so we have a setting for the cache size 
-static uint64_t dfs_cache_size = DEFAULT_CACHE;
-
 //This is the output file name
 static const char * polytracker_output_json_filename;
-
-//PolyTracker has an ability to take snapshots 
-//Interval time = 0 means do nothing 
-static double interval_time = DEFAULT_INTERVAL;
-static clock_t prev_time = 0;
-static clock_t curr_time = 0; 
-
-//Specifies json name 
-static char * output_file; 
 
 //Used by taint sources
 taintInfoManager * taint_info_manager;
 
-static void dfsan_create_function_sets(
-		json * output_json, std::string fname, 
-		cache::lru_cache<taint_node_t*, 
-		Roaring> * dfs_cache);
+//This is left here because its shared by prop_mgr and log_mgr 
+//Should be deleted after both of them, should not be used directly!    
+taintMappingManager * taint_map_mgr; 
+taintPropagationManager * taint_prop_manager; 
+taintLogManager * taint_log_manager; 
+
+static bool is_init = false; 
+std::mutex init_lock; 
 
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
@@ -177,178 +118,43 @@ static uptr UnusedAddr() {
 	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>() + (sizeof(taint_node_t) * MAX_LABELS);
 }
 
-//These two functions are responsbility for mapping addresses to labels and visa versa
-static inline taint_node_t * node_for(dfsan_label label) {
-	return (taint_node_t*)(forest_base_addr + (label * sizeof(taint_node_t)));
-}
-static inline dfsan_label value_for_node(taint_node_t * node) {
-	return ((((uptr)node) - forest_base_addr)/sizeof(taint_node_t));
-}
-
-// Checks we do not run out of labels.
-static void dfsan_check_label(dfsan_label label) {
-	if (label == MAX_LABELS) {
-		Report("FATAL: DataFlowSanitizer: out of labels\n");
-		Die();
-	}
-}
-
-//This function resets the stack frame when calls to setjmp/longjmp
-//FIXME Handle runtime CFG info with setjmp/longjmp 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
-	std::thread::id this_id = std::this_thread::get_id();	
-	(*thread_stack_map)[this_id].resize(*index + 1);
-	//func_stack.resize(*index + 1);
+	taint_log_manager->resetFrame(index);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsan_func_entry(char * fname) {
-#ifdef DEBUG_INFO
-	fprintf(stderr, "PUSHING BACK %s\n", fname);
-#endif
-	std::string new_str = std::string(fname);
-	std::thread::id this_id = std::this_thread::get_id(); 
-	
-	if ((*thread_stack_map)[this_id].size() > 0) {	
-		//Add name to list of callers
-		std::string caller = (*thread_stack_map)[this_id].back();
-		runtime_cfg_mutex.lock(); 
-		(*runtime_cfg)[new_str].insert(caller);  
-		runtime_cfg_mutex.unlock(); 
+	init_lock.lock(); 
+	if (is_init == false) {
+		dfsan_late_init();
+		is_init = true; 	
 	}
-	else {
-		//Should only be called for the entry point
-		std::string caller = ""; 
-		runtime_cfg_mutex.lock(); 
-		(*runtime_cfg)[new_str].insert(caller);  
-		runtime_cfg_mutex.unlock(); 
-	}
-
-	(*thread_stack_map)[this_id].push_back(new_str);
-
-	return (*thread_stack_map)[this_id].size()-1;;
-}
-
-static void dfsan_check_snapshot() {
-	static unsigned int interval_nonce = 0;
-	if (interval_time > 0) {
-		bytes_map_mutex.lock(); 
-		curr_time = clock();
-		double passed_time = double(curr_time - prev_time) / CLOCKS_PER_SEC; 
-		if (passed_time > interval_time) {
-			json output_json;
-			std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
-			cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
-			for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-				dfsan_create_function_sets(&output_json, it->first, dfs_cache);
-				//Clear vector so future results show new data only
-				it->second.clear();
-			}
-
-			std::string output_string = "polytracker_interval:" + std::to_string(interval_nonce) + ".json";
-			interval_nonce += 1; 
-			std::ofstream o(output_string);
-			o << std::setw(4) << output_json << std::endl;
-			o.close();
-
-			delete dfs_cache;
-			prev_time = curr_time;
-		}
-		bytes_map_mutex.unlock(); 
-	}
+	init_lock.unlock(); 
+	return taint_log_manager->logFunctionEntry(fname);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint_cmp(dfsan_label some_label) {
-	if (some_label == 0) {return;}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "Logging taint cmp %lu\n", some_label);
-#endif
-	dfsan_check_snapshot();
-	taint_node_t * new_node = node_for(some_label);
-	bytes_map_mutex.lock(); 
-	std::thread::id this_id = std::this_thread::get_id();
-	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
-	//Also include regular bytes, the set of cmp_bytes is a subset of all bytes
-	(*function_to_cmp_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-	bytes_map_mutex.unlock(); 
+	taint_log_manager->logCompare(some_label); 
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
-	if (some_label == 0) {return;}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "Logging taint %lu\n", some_label);
-#endif
-	dfsan_check_snapshot();
-	taint_node_t * new_node = node_for(some_label);
-	bytes_map_mutex.lock(); 
-	std::thread::id this_id = std::this_thread::get_id();
-	std::vector<std::string> func_stack = (*thread_stack_map)[this_id];	
-	(*function_to_bytes)[func_stack[func_stack.size()-1]].insert(new_node);  
-	bytes_map_mutex.unlock(); 
+	taint_log_manager->logOperation(some_label); 
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_func_exit() {
-	std::thread::id this_id = std::this_thread::get_id(); 
-	(*thread_stack_map)[this_id].pop_back();
-	//func_stack.pop_back();
+	taint_log_manager->logFunctionExit(); 
 }
-
-static dfsan_label dfsan_create_union_label(dfsan_label l1, dfsan_label l2, decay_val max_decay) {
-	//Fetch new label 
-	dfsan_label label = atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed);
-	//Check to make sure there is no overflow
-	dfsan_check_label(label);
-	label++;
-	//Grab the pre reserved mem for this region and set vals
-	taint_node_t * new_node = node_for(label); 
-	new_node->p1 = node_for(l1);
-	new_node->p2 = node_for(l2);
-	new_node->decay = max_decay;
-	new_node->taint_source = '\0';
-	return label;
-}
-
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
 // The union table prevents there from being dupilcate labels
-// This dfs_lookup_cache is to make it so we dont have to do traverals a lot.
-// This assumes that a lot of taint will be generated in functions and not used again
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
-	DCHECK_NE(l1, l2);
-	if (l1 == 0)
-		return l2;
-	if (l2 == 0)
-		return l1;
-	if (l1 > l2)
-		Swap(l1, l2);
-
-	//Quick union table check 
-	if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
-		auto val = union_table[l1].find(l2); 
-		return val->second;
-	} 
-	//Check for max decay
-	taint_node_t * p1 = node_for(l1);
-	taint_node_t * p2 = node_for(l2);
-	//This calculates the average of the two decays, and then decreases it by a factor of 2.
-	decay_val max_decay = (p1->decay + p2->decay) / 4;
-	if (max_decay == 0) {
-		return 0;
-	}
-
-	dfsan_label label = dfsan_create_union_label(l1, l2, max_decay);
-
-	union_table_mutex.lock();
-	(union_table[l1])[l2] = label;
-	union_table_mutex.unlock();
-	return label;
+	return taint_prop_manager->unionLabels(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -401,17 +207,7 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label dfsan_create_label(uint_dfsan_label_t offset, taint_source_id taint_id) {
-	//File bytes have a mapping to og labels + 1
-	dfsan_label label = offset + 1;
-	//Grab the pre reserved mem for this region and set vals
-	taint_node_t * new_node = node_for(label);
-	//Both NULL means canonical parent 
-	new_node->p1 = NULL;
-	new_node->p2 = NULL;
-	new_node->taint_source = taint_id; 
-	//new_node->taint_source = '\0';
-	new_node->decay = taint_node_ttl;
-	return label;
+	return taint_prop_manager->createNewLabel(offset, taint_id);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -511,139 +307,6 @@ static void InitializePlatformEarly() {
 #endif
 }
 
-static Roaring dfsan_postorder_traversal(taint_node_t * node, 
-		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) {
-	//Check cache
-	if (dfs_cache->exists(node)) {
-		return dfs_cache->get(node);
-	}
-	Roaring parent_set;
-	if (node->p1 == NULL && node->p2 == NULL) {
-		parent_set.add(value_for_node(node));
-		return parent_set;
-	}
-	Roaring left_parent_set;
-	Roaring right_parent_set; 
-	if (node->p1 != NULL) {
-		left_parent_set = dfsan_postorder_traversal(node->p1, dfs_cache);
-		dfs_cache->put(node->p1, left_parent_set);
-
-	}
-	if (node->p2 != NULL) {
-		right_parent_set =  dfsan_postorder_traversal(node->p2, dfs_cache);
-		dfs_cache->put(node->p1, right_parent_set);
-	}
-	parent_set = left_parent_set | right_parent_set;
-	dfs_cache->put(node, parent_set);
-	return parent_set;
-}
-static void dfsan_find_taint_source(
-		std::unordered_map<std::string, Roaring> * tsource_map, 
-		Roaring nodes) {
-		
-}
-
-static void dfsan_create_function_sets(
-		json * output_json, 
-		std::string fname, 
-		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache) 
-{
-	Roaring function_set;
-	Roaring function_cmp_set; 
-	std::unordered_set<taint_node_t*>::iterator all_bytes_iter;
-	std::unordered_set<taint_node_t*>::iterator cmp_bytes_iter;
-
-	std::unordered_set<taint_node_t*> all_bytes = (*function_to_bytes)[fname]; 
-	std::unordered_set<taint_node_t*> cmp_bytes = (*function_to_cmp_bytes)[fname]; 
-
-#ifdef DEBUG_INFO
-	std::cout << "Operating on function " << fname << std::endl;
-	std::cout << "Vector size is " << all_bytes.size() << std::endl;
-	std::cout << "CMP Vector size is " << cmp_bytes.size() << std::endl;
-#endif
-	
-	for (all_bytes_iter = all_bytes.begin(); all_bytes_iter != all_bytes.end(); all_bytes_iter++) {
-		Roaring label_set = dfsan_postorder_traversal(*all_bytes_iter, dfs_cache);
-		function_set = function_set | label_set;
-	}
-	for (cmp_bytes_iter = cmp_bytes.begin(); cmp_bytes_iter != cmp_bytes.end(); cmp_bytes_iter++) {
-		Roaring label_cmp_set = dfsan_postorder_traversal(*cmp_bytes_iter, dfs_cache);
-		function_cmp_set = function_cmp_set | label_cmp_set;
-	}
-	
-	std::unordered_map<std::string, std::set<dfsan_label>>::iterator source_it; 
-	//Offset by 1, this orders it for us for output 
-	std::unordered_map<std::string, std::set<dfsan_label>> all_source_sets; 
-	std::unordered_map<std::string, std::set<dfsan_label>> cmp_source_sets; 
-	for(Roaring::const_iterator i = function_set.begin(); i != function_set.end(); i++) {
-		taint_node_t * curr_node = node_for(*i);
-	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
-		all_source_sets[source_name].insert(*i - 1);
-	}
-	for(Roaring::const_iterator i = function_cmp_set.begin(); i != function_cmp_set.end(); i++) {
-		taint_node_t * curr_node = node_for(*i);
-	 	std::string source_name = taint_info_manager->getTaintSource(curr_node->taint_source); 	
-		cmp_source_sets[source_name].insert(*i - 1);
-	}
-
-	for (source_it = all_source_sets.begin(); source_it != all_source_sets.end(); source_it++) {
-		json byte_set(source_it->second); 
-		json cmp_byte_set(cmp_source_sets[source_it->first]);
-		std::string source_name = "POLYTRACK " + source_it->first;
-		(*output_json)["tainted_functions"][fname]["input_bytes"][source_name] = byte_set; 
-		(*output_json)["tainted_functions"][fname]["cmp_bytes"][source_name] = cmp_byte_set; 
-	 		
-	}
-}
-
-static void dfsan_dump_forest() {
-	std::string forest_fname = std::string(output_file) + "_forest.bin";
-	FILE * forest_file = fopen(forest_fname.c_str(), "w");
-	if (forest_file == NULL) {
-		std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
-		exit(1);
-	}
-	dfsan_label max_label = dfsan_get_label_count();
-	taint_node_t * curr = nullptr;
-	for (int i = 0; i < max_label; i++) {
-		curr = node_for(i);
-		dfsan_label node_p1 = value_for_node(curr->p1);
-		dfsan_label node_p2 = value_for_node(curr->p2);
-		fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
-		fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
-		fwrite(&(curr->taint_source), sizeof(curr->taint_source), 1, forest_file);
-		fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
-
-	}
-	fclose(forest_file);
-}
-
-static void dfsan_dump_process_sets() {
-	std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
-	json output_json;
-	for (it = function_to_bytes->begin(); it != function_to_bytes->end(); it++) {
-		std::unordered_set<dfsan_label> large_set;
-		std::unordered_set<taint_node_t*> ptr_set;
-		ptr_set = it->second;
-		for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
-			large_set.insert(value_for_node(*ptr_it));
-		}
-		json j_set(large_set);
-		output_json[it->first] = j_set;
-	}
-	std::string output_string = std::string(output_file) + "_process_set.json";
-	std::ofstream o(output_string);
-	o << std::setw(4) << output_json;
-	o.close();
-}
-
-static void dfsan_output_cfg(json * output_json) {
-	std::unordered_map<std::string, std::unordered_set<std::string>>::iterator cfg_it; 
-	for (cfg_it = runtime_cfg->begin(); cfg_it != runtime_cfg->end(); cfg_it++) {
-		json j_set(cfg_it->second); 
-		(*output_json)["runtime_cfg"][cfg_it->first] = j_set; 	
-	}	
-}
 
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
@@ -651,32 +314,12 @@ static void dfsan_fini() {
 			dfsan_get_label_count(), polytracker_output_json_filename);
 	fflush(stderr);
 #endif
-
-	if (dump_forest_and_sets) {
-		dfsan_dump_forest();
-		dfsan_dump_process_sets();
-	}
-
-	else {
-		json output_json;
-		//Version is defined in includes/polytracker.h
-		output_json["version"] = POLYTRACKER_VERSION; 
-		dfsan_output_cfg(&output_json);
-		std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
-		cache::lru_cache<taint_node_t*, Roaring> * dfs_cache = new cache::lru_cache<taint_node_t*, Roaring>(dfs_cache_size);
-		for (it = (*function_to_bytes).begin(); it != (*function_to_bytes).end(); it++) {
-			dfsan_create_function_sets(&output_json, it->first, dfs_cache);
-		}
-
-		std::ofstream o(polytracker_output_json_filename);
-		o << std::setw(4) << output_json << std::endl;
-		o.close();
-
-		delete dfs_cache;
-	}
-	delete function_to_bytes;
-	delete function_to_cmp_bytes;
-	delete thread_stack_map;
+	dfsan_label max_label = taint_prop_manager->getMaxLabel();
+	taint_log_manager->output(max_label); 
+	delete taint_info_manager;
+	delete taint_map_mgr; 
+	delete taint_prop_manager;
+	delete taint_log_manager;
 }
 
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
@@ -711,7 +354,7 @@ static char * dfsan_getenv(const char * name) {
 	return NULL;
 }
 
-static void dfsan_init(int argc, char **argv, char **envp) {
+void dfsan_late_init() {
 	InitializeFlags();
 	InitializePlatformEarly();
 	//Note for some reason this original mmap call also mapped in the union table
@@ -724,7 +367,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	// will load our executable in the middle of our unused region. This mostly
 	// works so long as the program doesn't use too much memory. We support this
 	// case by disabling memory protection when ASLR is disabled.
-	uptr init_addr = (uptr)&dfsan_init;
+	uptr init_addr = (uptr)&dfsan_late_init;
 	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
 		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
@@ -757,14 +400,15 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 #endif
 	fseek(temp_file, 0L, SEEK_END);
 	int byte_start = 0;
-	int byte_end = ftell(temp_file);
+	uint64_t byte_end = ftell(temp_file);
+#ifdef DEBUG_INFO
+	fprintf(stderr, "BYTE_END IS: %d\n", byte_end);
+#endif	
 	fclose(temp_file);
-	
 	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
 	//Special tracking for standard input
 	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS); 
 	taint_info_manager->createNewTaintInfo(stdin, "stdin");  
-
 	const char * poly_output = dfsan_getenv("POLYOUTPUT");
 	if (poly_output != NULL) {
 		polytracker_output_json_filename = poly_output;
@@ -776,56 +420,37 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	}
 
 	const char * env_ttl = dfsan_getenv("POLYTTL");
+	decay_val taint_node_ttl = DEFAULT_TTL; 
 	if (env_ttl != NULL) {
 		taint_node_ttl = atoi(env_ttl);
 #ifdef DEBUG_INFO
 		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
 #endif
 	}
-	const char * env_cache = dfsan_getenv("POLYCACHE");
-	if (env_cache != NULL) {
-		dfs_cache_size = atoi(env_cache);
-#ifdef DEBUG_INFO
-		fprintf(stderr, "DFS cache size: %d\n", dfs_cache_size);
-#endif
-	}
-
-	const char * env_time_interval = dfsan_getenv("POLYTIME");
-	if (env_time_interval != NULL) {
-		interval_time = atof(env_time_interval);
-#ifdef DEBUG_INFO
-		fprintf(stderr, "Time interval in seconds: %d\n", interval_time);
-#endif
-	}
-
+	
 	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
 	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
 	 */
 	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
-	function_to_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
-	if (function_to_bytes == NULL) {
-		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
-		exit(1);
-	}
-
-	function_to_cmp_bytes = new std::unordered_map<std::string, std::unordered_set<taint_node_t*>>();
-	if (function_to_cmp_bytes == NULL) {
-		fprintf(stderr, "Failed to allocate function mapping, aborting!\n");
-		exit(1);
-	}
-
-	thread_stack_map = new std::unordered_map<std::thread::id, std::vector<std::string>>();
-	if (thread_stack_map == NULL) {
-		fprintf(stderr, "Failed to allocate thread stack map, aborting!\n");
+	
+  taint_map_mgr = new taintMappingManager((char*)ShadowAddr(), (char*)ForestAddr());  
+	if (taint_map_mgr == nullptr) {
+		fprintf(stderr, "Taint mapping manager null!\n"); 
 		exit(1);
 	}
 	
-	runtime_cfg = new std::unordered_map<std::string, std::unordered_set<std::string>>();
-	if (runtime_cfg == NULL) {
-		fprintf(stderr, "Failed to allocate runtime_cfg, aborting!\n");
-		exit(1);
+	taint_prop_manager = new taintPropagationManager(taint_map_mgr, taint_node_ttl, byte_end + 1);	
+	if (taint_prop_manager == nullptr) {
+		fprintf(stderr, "Taint prop manager null!\n"); 
+		exit(1); 
 	}
-	
+
+	taint_log_manager = new taintLogManager(taint_map_mgr, taint_info_manager,
+		 	polytracker_output_json_filename, dump_forest_and_sets); 
+	if (taint_log_manager == nullptr) {
+		fprintf(stderr, "Taint log manager is null!\n"); 
+		exit(1);
+	}	
 	// Register the fini callback to run when the program terminates
 	// successfully or it is killed by the runtime.
 	//
@@ -839,8 +464,3 @@ static void dfsan_init(int argc, char **argv, char **envp) {
 	fprintf(stderr, "Done init\n");
 #endif
 }
-
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"), used))
-static void (*dfsan_init_ptr)(int, char **, char **) = dfsan_init;
-#endif

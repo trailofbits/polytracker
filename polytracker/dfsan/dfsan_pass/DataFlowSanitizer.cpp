@@ -107,6 +107,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <iostream> 
 
 using namespace llvm;
 
@@ -604,8 +605,8 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
 	
 	Type * DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
  	DFSanEntryFnTy = FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
-  //DFSanEntryFnTy =	FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
-  DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
+  
+	DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type * DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
   DFSanResetFrameFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
 
@@ -908,7 +909,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       } else {
         addGlobalNamePrefix(&F);
       }
-    } else if (!IsZeroArgsVoidRet || getWrapperKind(&F) == WK_Custom) {
+    } 
+		//Was !isZeroArgsRetVoid, but when we specify 
+		//Uninstrumented and Discard we MEAN dont touch 
+		else if (getWrapperKind(&F) == WK_Custom) {
       // Build a wrapper function for F.  The wrapper simply calls F, and is
       // added to FnsToInstrument so that any instrumentation according to its
       // WrapperKind is done in the second pass below.
@@ -923,6 +927,22 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           ? F.getLinkage()
               : GlobalValue::LinkOnceODRLinkage;
 
+#ifdef DEBUG_INFO
+		 //Looking for open and reads we might not have hooked  	
+			std::string test_fname = F.getName(); 
+			size_t found_place = test_fname.find("open"); 
+			if (found_place != std::string::npos) {
+				std::cout << "Getting OPEN fname " << test_fname << std::endl;
+				bool is_custom = getWrapperKind(&F) == WK_Custom; 
+				std::cout << "Is custom func: " << is_custom << std::endl;
+			}	
+			found_place = test_fname.find("read"); 
+			if (found_place != std::string::npos) {
+				std::cout << "Getting READ fname " << test_fname << std::endl;
+				bool is_custom = getWrapperKind(&F) == WK_Custom; 
+				std::cout << "Is custom func: " << is_custom << std::endl;
+			}	
+#endif
       Function *NewF = buildWrapperFunction(
           &F, std::string("dfsw$") + std::string(F.getName()),
           wrapperLinkage, NewFT);
@@ -966,6 +986,20 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
     removeUnreachableBlocks(*i);
 
+		std::string curr_fname = i->getName();
+		if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
+			if (curr_fname != "main") {
+			#ifdef DEBUG_INFO
+				std::cout << "SKIPPING: " << curr_fname << std::endl; 
+			#endif
+				continue; 
+			}
+			else {
+			#ifdef DEBUG_INFO
+				std::cout << "ADDING ENTRY: " << curr_fname << std::endl;
+			#endif
+			}
+		}	
     //Instrument function entry here
     BasicBlock *BB = &(i->getEntryBlock());
     Instruction *InsertPoint = &(*(BB->getFirstInsertionPt()));
@@ -1002,8 +1036,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Inst = Next;
       }
     }
-    //Iterate here and do the setjmp/sigsetjmp stuff in each block
-    for (BasicBlock * curr_bb : BBList) {
+    //Add instrumentation for handling setjmp/longjmp here 
+		//This adds a function that resets the shadow call stack 
+		//When a longjmp is called. 
+		for (BasicBlock * curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
       while (true) {
         Instruction *Next = Inst->getNextNode();
@@ -1492,8 +1528,6 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogCmpFn, CombinedShadow);
   Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
   Call->addParamAttr(0, Attribute::ZExt);
-
-  //visitOperandShadowInst(CI);
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
@@ -1560,7 +1594,6 @@ void DFSanVisitor::visitSelectInst(SelectInst &I) {
           SelectInst::Create(I.getCondition(), TrueShadow, FalseShadow, "", &I);
     }
     DFSF.setShadow(&I, DFSF.combineShadows(CondShadow, ShadowSel, &I));
-    //logTaintedOps(&I, DFSF.combineShadows(CondShadow, ShadowSel, &I));
   }
 }
 

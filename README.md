@@ -14,7 +14,7 @@ PolyTracker can be used in conjunction with [PolyFile](https://github.com/trailo
 The easiest way to run PolyTracker is via Docker. To build the Docker
 container, simply run the following from the root of this repository:
 ```
-docker build -t trailofbits/polytracker .
+docker build -t trailofbits/polytracker . 
 ```
 
 This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polyclang`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
@@ -23,7 +23,21 @@ For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run 
 ```
 docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
 ```
-This creates a Docker container with an instrumented version of MuPDF. You can execute the instrumented version of `mutool` from your host system using some Docker magic provided in the `mutool.sh` script. Simply run that script on any PDF in the current directory and it will run the instrumented version of `mutool draw` on it, saving the JSON output to `polytracker.json` in the current directory.
+
+Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running mutool will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
+
+For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
+
+```
+docker build -t trailofbits/polytracker-demo -f Dockerfile-poppler.demo .
+```
+
+All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
+
+```
+cd /polytracker/the_klondike/poppler-0.84.0/build/utils
+POLYPATH=some_pdf.pdf ./pdfinfo some_pdf.pdf
+```
 
 ## Dependencies and Prerequisites
 
@@ -32,7 +46,7 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
-## Building PolyTracker from Source
+## Building PolyTracker from Source (DEPRICATED - Please use Docker to build and run polytracker)
 
 NOTE: While you can build PolyTracker from source, at the moment it only runs in Docker, this will be fixed soon
 
@@ -85,11 +99,7 @@ PolyTracker accepts configuration paramters in the form of enviornment variables
 ```
 POLYPATH: The path to the file to mark as tainted 
 
-POLYCACHE: The size (in bytes) of a cache used to increase processing 
-
-POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean 
-
-POLYTIME: This value is the time (in seconds) used to create snapshots. A snapshot contains the taint tracing data so far during execution, if this is not set, no snapshots will be taken. 
+POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
 
 POLYDUMP: Instead of dumping json, if this is set to TRUE it will dump the contents of shadow memory to a file. 
 ```
@@ -102,25 +112,28 @@ The instrumented software will write its output to `polytracker.json` in the cur
 
 For example, with our instrumented version of MuPDF, run
 ```
-POLYPATH=input.pdf POLYTTL=32 POLYCACHE=100000 ./mutool info input.pdf
+POLYPATH=input.pdf POLYTTL=32 ./mutool info input.pdf
 ```
 On program exit, `polytracker.json` will be created in the current directory.
 
 Alternatively, if you want to examine the results to process yourself, there is an option to dump the tracked results to disk. Simply set the `POLYDUMP` enviornment variable to `TRUE`. 
 
 ```
-POLYPATH=input.pdf POLYTTL=10 POLYCACHE=100000 POLYDUMP=TRUE ./mutool info input.pdf
+POLYPATH=input.pdf POLYTTL=2048 POLYDUMP=TRUE ./mutool info input.pdf
 ```
 
 This will produce two files, one is the contents of the in memory taint forest, and the other is a json that maps function names to a set of taint nodes touched in a comparison. The schema for the taint forest can be found in `dfsan_types.h`, which is just the node structure that is written to disk.  
 
-## Snapshotting 
 
-With Polytracker is it possible to create a snapshot of processed taint during tracking. The `POLYTIME` variable allows the user to specify an interval at which to take snapshots. These snapshots are stored as jsons in the current working directory. 
+## Creating custom ignore lists from pre-built libraries 
 
-```
-POLYPATH=input.pdf POLYTIME=1 ./mutool draw input.pdf 
-``` 
+Attempting to build large software projects can be time consuming, especially older/unsupported ones.
+It's even more time consuming to try and modify the build system such that it supports changes, like dfsan's/our instrumentation.
+
+There is a script located in `polytracker/scripts` that you can run on any ELF library and it will output a list of functions to ignore.
+We use this when we do not want to track information going through a specific library like libpng, or other sub components of a program. The `Dockerfile-listgen.demo` exists to build common open source libraries so we can create these lists. 
+ 
+This script is a slightly tweaked version of what DataFlowSanitizer has, which focuses on ignoring system libraries. The original script can be found in `dfsan_rt`. 
 
 ## Current Status and Known Issues
 
@@ -133,6 +146,11 @@ To be clear, programs that use uninstrumented functions will still run normally,
 however, operations performed by unsupported library calls will not
 propagate taint. We are currently working on adding robust support for
 C++ programs, but currently the best results will be from C programs.
+
+Snapshotting is currently depricated and not supported in the latest version. 
+
+If there are issues with Docker please do a system prune and build with --no-cache for both PolyTracker 
+and whatever demo you are trying to run. 
 
 The worst case performance of PolyTracker is exercised when a single
 byte in memory is simultaneously tainted by a large number of input
@@ -150,7 +168,7 @@ as a subcontractor to [Galois](https://galois.com). It is licensed
 under the [Apache 2.0 lisense](LICENSE). © 2019, Trail of Bits.
 
 ## Maintainers
-[Carson Harmon](https://github.com/ThatsNotVeryCashMoneyOfYou)<br />
+[Carson Harmon](https://github.com/notBD)<br />
 [Evan Sultanik](https://github.com/ESultanik)<br />
 [Brad Larsen](https://github.com/bradlarsen)<br />
 <br />

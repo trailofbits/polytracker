@@ -15,15 +15,16 @@
 #include <algorithm> 
 #include <string> 
 #include <mutex> 
+#include <iostream>
 #include "dfsan_includes/dfsan_types.h"
 #include "dfsan_rt/dfsan_interface.h"
 #include "dfsan_includes/taint_management.hpp"
 #define BYTE 1
-#define RUNTIME_FUNC extern "C" __attribute__((visibility("default")))
+#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
+#define EXT_CXX_FUNC extern  __attribute__((visibility("default")))
 
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
-//#define DEBUG_INFO
 
 #ifdef DEBUG_INFO
 #include <iostream>
@@ -35,7 +36,7 @@ extern taintInfoManager * taint_info_manager;
 
 //To create some label functions
 //Following the libc custom functions from custom.cc
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 		dfsan_label flag_label, dfsan_label *va_labels,
 		dfsan_label *ret_label, ...) {
@@ -56,7 +57,7 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 	return fd;
 }
 
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
               dfsan_label flag_label, dfsan_label *va_labels,
               dfsan_label *ret_label, ...) {
@@ -77,7 +78,7 @@ __dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
 	return fd;
 }
 
-RUNTIME_FUNC FILE *
+EXT_C_FUNC FILE *
 __dfsw_fopen64(const char *filename, const char *mode, dfsan_label fn_label,
 		dfsan_label mode_label, dfsan_label *ret_label) {
 	FILE *fd = fopen(filename, mode);
@@ -95,7 +96,7 @@ __dfsw_fopen64(const char *filename, const char *mode, dfsan_label fn_label,
 	return fd;
 }
 
-RUNTIME_FUNC FILE *
+EXT_C_FUNC FILE *
 __dfsw_fopen(const char *filename, const char *mode, dfsan_label fn_label,
 		dfsan_label mode_label, dfsan_label *ret_label) {
 	FILE *fd = fopen(filename, mode);
@@ -113,7 +114,7 @@ __dfsw_fopen(const char *filename, const char *mode, dfsan_label fn_label,
 	return fd;
 }
 
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_close(int fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	int ret = close(fd);
 #ifdef DEBUG_INFO
@@ -126,7 +127,7 @@ __dfsw_close(int fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	return ret;
 }
 
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_fclose(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	int ret = fclose(fd);
 #ifdef DEBUG_INFO
@@ -139,7 +140,7 @@ __dfsw_fclose(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	return ret;
 }
 
-RUNTIME_FUNC ssize_t 
+EXT_C_FUNC ssize_t 
 __dfsw_read(int fd, void * buff, size_t size, dfsan_label fd_label, dfsan_label buff_label, 
 		dfsan_label size_label, dfsan_label * ret_label) {
 	long read_start = lseek(fd, 0, SEEK_CUR);
@@ -161,7 +162,7 @@ __dfsw_read(int fd, void * buff, size_t size, dfsan_label fd_label, dfsan_label 
 	return ret_val; 
 }
 
-RUNTIME_FUNC ssize_t
+EXT_C_FUNC ssize_t
 __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
 		dfsan_label fd_label, dfsan_label buf_label,
 		dfsan_label count_label, dfsan_label offset_label,
@@ -178,7 +179,27 @@ __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
 	return ret;
 }
 
-RUNTIME_FUNC size_t
+EXT_C_FUNC ssize_t
+__dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
+		dfsan_label fd_label, dfsan_label buf_label,
+		dfsan_label count_label, dfsan_label offset_label,
+		dfsan_label *ret_label) {
+#ifdef DEBUG_INFO
+	std::cout << "Inside of pread64" << std::endl; 
+#endif
+	ssize_t ret = pread(fd, buf, count, offset);
+	if (taint_info_manager->isTracking(fd)) {
+		if (ret > 0) {
+			taint_info_manager->taintData(fd, (char*)buf, offset, ret);
+		}
+		*ret_label = 0;  
+	} else {
+		*ret_label = 0;
+	}
+	return ret;
+}
+
+EXT_C_FUNC size_t
 __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
 		dfsan_label buf_label, dfsan_label size_label,
 		dfsan_label count_label, dfsan_label fd_label,
@@ -205,7 +226,7 @@ __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
 	return ret;
 }
 
-RUNTIME_FUNC size_t
+EXT_C_FUNC size_t
 __dfsw_fread_unlocked(void *buff, size_t size, size_t count, FILE *fd,
 		dfsan_label buf_label, dfsan_label size_label,
 		dfsan_label count_label, dfsan_label fd_label,
@@ -226,7 +247,7 @@ __dfsw_fread_unlocked(void *buff, size_t size, size_t count, FILE *fd,
 	}
 	return ret;
 }
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_fgetc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	long offset = ftell(fd);
 	int c = fgetc(fd);
@@ -239,7 +260,7 @@ __dfsw_fgetc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	}
 	return c;
 }
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	long offset = ftell(fd);
 	int c = fgetc_unlocked(fd);
@@ -252,7 +273,7 @@ __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	}
 	return c;
 }
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw__IO_getc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	long offset = ftell(fd);
 	int c = getc(fd);
@@ -267,7 +288,7 @@ __dfsw__IO_getc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	return c;
 }
 
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_getchar(dfsan_label *ret_label) {
 	long offset = ftell(stdin);
 	int c = getchar();
@@ -281,7 +302,7 @@ __dfsw_getchar(dfsan_label *ret_label) {
 	return c;
 }
 
-RUNTIME_FUNC char *
+EXT_C_FUNC char *
 __dfsw_fgets(char *str, int count, FILE *fd, dfsan_label str_label,
 		dfsan_label count_label, dfsan_label fd_label,
 		dfsan_label *ret_label) {
@@ -299,7 +320,7 @@ __dfsw_fgets(char *str, int count, FILE *fd, dfsan_label str_label,
 	}
 	return ret;
 }
-RUNTIME_FUNC char *
+EXT_C_FUNC char *
 __dfsw_gets(char *str, dfsan_label str_label, dfsan_label *ret_label) {
 	long offset = ftell(stdin);
 	char *ret = fgets(str, sizeof str, stdin);
@@ -315,7 +336,7 @@ __dfsw_gets(char *str, dfsan_label str_label, dfsan_label *ret_label) {
 	return ret;
 }
 
-RUNTIME_FUNC ssize_t
+EXT_C_FUNC ssize_t
 __dfsw_getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 		dfsan_label buf_label, dfsan_label size_label,
 		dfsan_label delim_label, dfsan_label fd_label,
@@ -332,7 +353,7 @@ __dfsw_getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 	return ret;
 }
 
-RUNTIME_FUNC ssize_t
+EXT_C_FUNC ssize_t
 __dfsw___getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 		dfsan_label buf_label, dfsan_label size_label,
 		dfsan_label delim_label, dfsan_label fd_label,
@@ -349,7 +370,7 @@ __dfsw___getdelim(char **lineptr, size_t *n, int delim, FILE *fd,
 	return ret;
 }
 
-RUNTIME_FUNC void *
+EXT_C_FUNC void *
 __dfsw_mmap(void *start, size_t length, int prot, int flags, int fd,
 		off_t offset, dfsan_label start_label, dfsan_label len_label,
 		dfsan_label prot_label, dfsan_label flags_label,
@@ -363,7 +384,7 @@ __dfsw_mmap(void *start, size_t length, int prot, int flags, int fd,
 	return ret;
 }
 
-RUNTIME_FUNC int
+EXT_C_FUNC int
 __dfsw_munmap(void *addr, size_t length, dfsan_label addr_label,
 		dfsan_label length_label, dfsan_label *ret_label) {
 #ifdef DEBUG_INFO
