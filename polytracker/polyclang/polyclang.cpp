@@ -89,7 +89,11 @@ static void PolyInstrument(int old_argc, char * old_argv[],
 	//That build systems like PDFium use 
 	for (int i = 1; i < old_argc; i++) {
 		std::string curr_string = old_argv[i];
-		if (curr_string.find("-ftrivial-auto-var-init") != std::string::npos) {
+		if (curr_string.find("-ftrivial-auto-var-init") != std::string::npos ||
+				curr_string.find("-fintegrated-cc1") != std::string::npos ||
+				curr_string.find("-debug-info-kind=constructor") != std::string::npos ||
+				curr_string.find("-gsplit-dwarf") != std::string::npos) {
+			printf("Skipping!\n");
 			continue;
 		}
 		new_argv.push_back(curr_string);
