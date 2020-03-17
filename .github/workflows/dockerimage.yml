@@ -22,3 +22,6 @@ jobs:
 
     - name: Build the pdfium demo Docker image
       run: docker build . --file examples/Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium
+    
+    - name: Build the poppler demo Docker image
+      run: docker build . --file examples/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
