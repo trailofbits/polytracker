@@ -3,22 +3,17 @@ name: Build Docker Images
 on: [push]
 
 jobs:
-
-  build:
-
-    runs-on: ubuntu-latest
-
+  build_base:
+    runs-on: ubuntu-latest 
     steps:
-    - uses: actions/checkout@v1
-
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag trailofbits/polytracker
-
-    - name: Build the mupdf demo Docker image
-      run: docker build . --file Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
-
-    - name: Build the qpdf demo Docker image
-      run: docker build . --file Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
-
-    - name: Build the pdfium demo Docker image
-      run: docker build . --file Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium
+      - uses: actions/checkout@v1
+      - name: Build the base image 
+        run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
+      - name: Build the pdfium demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium --no-cache
+      - name: Build the mupdf demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
+      - name: Build the poppler demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
+      - name: Build the qpdf demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf

@@ -21,7 +21,7 @@ This will create a Docker container with PolyTracker built, and the `CC` environ
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
+docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
 Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running mutool will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
@@ -29,7 +29,7 @@ Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running m
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
 
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile-poppler.demo .
+docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
@@ -46,7 +46,7 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
-## Building PolyTracker from Source (DEPRICATED - Please use Docker to build and run polytracker)
+## Building PolyTracker from Source (DEPRECATED - Please use Docker to build and run polytracker)
 
 NOTE: While you can build PolyTracker from source, at the moment it only runs in Docker, this will be fixed soon
 
@@ -92,9 +92,9 @@ Or if you would like to build the debug version, as we do in our Dockerfile:
 make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin debug
 ```
 
-## Enviornment Variables 
+## Environment Variables 
 
-PolyTracker accepts configuration paramters in the form of enviornment variables to avoid recompiling target programs. The current enviornment variables PolyTracker supports is: 
+PolyTracker accepts configuration paramters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
 
 ```
 POLYPATH: The path to the file to mark as tainted 
@@ -116,7 +116,7 @@ POLYPATH=input.pdf POLYTTL=32 ./mutool info input.pdf
 ```
 On program exit, `polytracker.json` will be created in the current directory.
 
-Alternatively, if you want to examine the results to process yourself, there is an option to dump the tracked results to disk. Simply set the `POLYDUMP` enviornment variable to `TRUE`. 
+Alternatively, if you want to examine the results to process yourself, there is an option to dump the tracked results to disk. Simply set the `POLYDUMP` environment variable to `TRUE`. 
 
 ```
 POLYPATH=input.pdf POLYTTL=2048 POLYDUMP=TRUE ./mutool info input.pdf
@@ -147,7 +147,7 @@ however, operations performed by unsupported library calls will not
 propagate taint. We are currently working on adding robust support for
 C++ programs, but currently the best results will be from C programs.
 
-Snapshotting is currently depricated and not supported in the latest version. 
+Snapshotting is currently deprecated and not supported in the latest version. 
 
 If there are issues with Docker please do a system prune and build with --no-cache for both PolyTracker 
 and whatever demo you are trying to run. 

@@ -68,6 +68,10 @@ def test_test1_no_polypath(tmpdir) -> None:
         assert p.stderr == EXPECTED_STDERR_NO_POLYPATH
         assert p.returncode == 1
 
+#TODO Check compile C, compile C++ 
+#TODO Check indexing 0 
+#TODO Check setjmp/longjmp 
+
 def test_test1(tmpdir) -> None:
     f = join(TESTS_DIR, 'test1.c')
     env = os.environ.copy()
@@ -91,16 +95,3 @@ def test_test2(tmpdir) -> None:
     with chdir(tmpdir):
         check_call([PCPP, '-Wall', '-O2', join(TESTS_DIR, 'test2.cpp'), '-o', 'test2'])
         check_call(['./test2'], env=env)
-
-def test_build_mupdf(tmpdir) -> None:
-    os.makedirs('downloads', exist_ok=True)
-    mupdf_dirname = 'mupdf-1.16.1-source'
-    mupdf_tarball = join('downloads', f'{mupdf_dirname}.tar.gz')
-    check_call(['wget', '-qc', f'https://mupdf.com/downloads/archive/{mupdf_dirname}.tar.gz', '-O', mupdf_tarball])
-    run(['sha1sum', '-c'], input=f'ccbef63c3d43d6a866b7978db5674dc4b1719f0f  {mupdf_tarball}'.encode(), check=True)
-    pc_env = os.environ.copy()
-    pc_env['CC'] = PC
-    pc_env['CXX'] = PCPP
-    with chdir(tmpdir) as prev_dir:
-        check_call(['tar', '-xzf', join(prev_dir, mupdf_tarball)])
-        check_call(['make', '-C', mupdf_dirname, 'HAVE_GLUT=no', 'HAVE_X11=no', 'build=debug', '-j4'], env=pc_env)
