@@ -21,6 +21,7 @@
 //Amalgamated CRoaring files
 #include "polytracker.h"
 #include "json.hpp"
+#include <thread>
 
 using json = nlohmann::json; 
 
