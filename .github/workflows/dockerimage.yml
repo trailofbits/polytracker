@@ -6,8 +6,7 @@ jobs:
   build_base:
     runs-on: ubuntu-latest 
     steps:
-      - name: Prunen images 
-        run: docker system prune
+      - uses: actions/checkout@v1
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Build the pdfium demo Docker image
@@ -18,11 +17,3 @@ jobs:
         run: docker build . --file examples/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
       - name: Build the qpdf demo Docker image
         run: docker build . --file examples/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
-  
-  tests:
-    needs: build_base
-    runs-on: ubuntu-latest
-
-    steps: 
-      - name: Running tests 
-        run: docker run --rm -v $(pwd)/polytracker/tests:/test trailofbits/polytracker /test/py.test
