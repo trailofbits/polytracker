@@ -138,7 +138,8 @@ taintLogManager::utilityPartitionSet(Roaring label_set) {
 	for (auto it = label_set.begin(); it != label_set.end(); it++) {
 		taint_node_t * curr_node = map_manager->getTaintNode(*it); 
 		std::string source_name = info_manager->getTaintSource(curr_node->taint_source); 
-		source_set_map[source_name].insert(*it); 
+		//Reset to 0 based indexing
+		source_set_map[source_name].insert(*it - 1);
 	}	
 	return source_set_map;	
 }

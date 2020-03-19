@@ -21,7 +21,7 @@ This will create a Docker container with PolyTracker built, and the `CC` environ
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile-mupdf.demo .
+docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
 Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running mutool will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
@@ -29,7 +29,7 @@ Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running m
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
 
 ```
-docker build -t trailofbits/polytracker-demo -f Dockerfile-poppler.demo .
+docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
