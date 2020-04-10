@@ -398,9 +398,22 @@ void dfsan_late_init() {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "File is %s\n", target_file);
 #endif
-	fseek(temp_file, 0L, SEEK_END);
 	int byte_start = 0;
+	const char * poly_start = dfsan_getenv("POLYSTART");
+	if (poly_start != nullptr) {
+		byte_start = atoi(poly_start);
+	}
+
+#ifdef DEBUG_INFO
+	fprintf(stderr, "BYTE_START IS: %d\n", byte_start);
+#endif
+
+	fseek(temp_file, 0L, SEEK_END);
 	uint64_t byte_end = ftell(temp_file);
+	const char * poly_end = dfsan_getenv("POLYEND");
+	if (poly_end != nullptr) {
+		byte_end = atoi(poly_end);
+	}
 #ifdef DEBUG_INFO
 	fprintf(stderr, "BYTE_END IS: %d\n", byte_end);
 #endif	
