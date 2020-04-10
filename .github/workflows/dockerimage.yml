@@ -3,7 +3,17 @@ name: Build Docker Images
 on: [push]
 
 jobs:
-  build_base:
+  build_native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1 
+      - name: Create build dir
+        run: mkdir build && cd build 
+      - name: Configure with cmake
+        run: cmake .. 
+      - name: Build native 
+        run: make -j$(nproc)
+  build_docker_images:
     runs-on: ubuntu-latest 
     steps:
       - uses: actions/checkout@v1
