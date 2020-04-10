@@ -6,17 +6,20 @@ jobs:
   build_native:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1 
+      - uses: actions/checkout@v1
+      - name: try installing llvm-7 
+        run: sudo apt update -y && sudo apt install clang-7 llvm-7
       - name: Build native
-        run: mkdir build && cd build && cmake .. && make -j$(nproc) 
+        run: mkdir build && cd build && cmake .. && make -j$(nproc)
+        env: 
+          CC: clang 
+          CXX: clang++ 
   build_docker_images:
     runs-on: ubuntu-latest 
     steps:
       - uses: actions/checkout@v1
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Build the pdfium demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium --no-cache
       - name: Build the mupdf demo Docker image
         run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
       - name: Build the poppler demo Docker image
