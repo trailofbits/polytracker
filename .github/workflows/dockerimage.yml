@@ -9,8 +9,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Build the pdfium demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-pdfium.demo --tag trailofbits/polytracker-demo-pdfium --no-cache
       - name: Build the mupdf demo Docker image
         run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
       - name: Build the poppler demo Docker image
