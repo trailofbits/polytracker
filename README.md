@@ -102,6 +102,10 @@ POLYPATH: The path to the file to mark as tainted
 POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
 
 POLYDUMP: Instead of dumping json, if this is set to TRUE it will dump the contents of shadow memory to a file. 
+
+POLYSTART: Start offset to track 
+
+POLYEND: End offset to track
 ```
 
 ## Running an Instrumented Program
