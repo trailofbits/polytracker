@@ -18,14 +18,17 @@
 // functions are prefixed dfsan_ while the compiler interface functions are
 // prefixed __dfsan_.
 //===----------------------------------------------------------------------===//
-#include "../sanitizer_common/sanitizer_atomic.h"
-#include "../sanitizer_common/sanitizer_common.h"
-#include "../sanitizer_common/sanitizer_file.h"
-#include "../sanitizer_common/sanitizer_flags.h"
-#include "../sanitizer_common/sanitizer_flag_parser.h"
-#include "../sanitizer_common/sanitizer_libc.h"
-#include "polytracker.h" 
-#include "dfsan_log_mgmt.h" 
+#include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_file.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_libc.h"
+#include "polyclang/polytracker.h" 
+#include "dfsan/dfsan_log_mgmt.h" 
+#include "dfsan/dfsan.h"
+//Only include this in here, headers are shared via dfsan.h
+#include "dfsan/roaring.c" 
 
 #include <vector> 
 #include <string> 
@@ -41,11 +44,9 @@
 #include <algorithm>
 #include <stack> 
 #include <thread> 
-#include "dfsan/dfsan.h"
 #include <stdint.h> 
 #include <mutex> 
-//Only include this in here, headers are shared via dfsan.h
-#include "roaring.c" 
+
 using json = nlohmann::json;
 using namespace __dfsan;
 
