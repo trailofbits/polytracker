@@ -5,4 +5,5 @@ set(CMAKE_CXX_STANDARD 11)
 add_library(TaintSources STATIC taint_sources.cpp taint_management.cpp)
 target_link_libraries(TaintSources "./libc++.a" "./libc++abi.a")
 install (TARGETS TaintSources DESTINATION ${POLYTRACK_LIB_DIR}) 
-
+install (FILES "./libc++.a" DESTINATION ${POLYTRACK_LIB_DIR})
+install (FILES "./libc++abi.a" DESTINATION ${POLYTRACK_LIB_DIR})

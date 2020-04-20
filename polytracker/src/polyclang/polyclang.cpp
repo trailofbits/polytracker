@@ -125,8 +125,8 @@ static void PolyInstrument(int old_argc, char * old_argv[],
 		new_argv.push_back(compiler_meta.compiler_dir + "/lib/libTaintSources.a");
 
 		//This is the "private" libcxx for dfsan, its uninstrumented so we don't hurt
-		new_argv.push_back("/polytracker/polytracker/dfsan/dfsan_rt/dfsan_private_headers/lib/libc++.a");
-		new_argv.push_back("/polytracker/polytracker/dfsan/dfsan_rt/dfsan_private_headers/lib/libc++abi.a");
+		new_argv.push_back(compiler_meta.compiler_dir + "/lib/libc++.a");
+		new_argv.push_back(compiler_meta.compiler_dir + "/lib/libc++abi.a");
 		new_argv.push_back("-Wl,--end-group");
 	}
 
