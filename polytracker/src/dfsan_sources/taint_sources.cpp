@@ -28,7 +28,6 @@
 #ifdef DEBUG_INFO
 #include <iostream>
 #endif
-#define DEBUG_INFO 
 
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
@@ -59,6 +58,7 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 
 EXT_C_FUNC int
 __dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
+              dfsan_label flag_label, dfsan_label *va_labels,
               dfsan_label *ret_label, ...) {
 	va_list args;
 	va_start(args, ret_label);

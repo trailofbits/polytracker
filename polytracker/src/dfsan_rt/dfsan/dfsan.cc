@@ -24,8 +24,8 @@
 #include "../sanitizer_common/sanitizer_flags.h"
 #include "../sanitizer_common/sanitizer_flag_parser.h"
 #include "../sanitizer_common/sanitizer_libc.h"
-#include "polyclang/polytracker.h" 
-#include "dfsan/dfsan_log_mgmt.h" 
+#include "polytracker.h" 
+#include "dfsan_log_mgmt.h" 
 
 #include <vector> 
 #include <string> 
@@ -45,7 +45,7 @@
 #include <stdint.h> 
 #include <mutex> 
 //Only include this in here, headers are shared via dfsan.h
-#include "dfsan/roaring.c" 
+#include "roaring.c" 
 using json = nlohmann::json;
 using namespace __dfsan;
 
@@ -252,9 +252,8 @@ __dfsw_dfsan_get_label(long data, dfsan_label data_label,
 
 SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 dfsan_read_label(const void *addr, uptr size) {
-	if (size == 0) {
+	if (size == 0)
 		return 0;
-	}
 	return __dfsan_union_load(shadow_for(addr), size);
 }
 
@@ -268,14 +267,14 @@ dfsan_get_label_count(void) {
 
 void Flags::SetDefaults() {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
-#include "dfsan/dfsan_flags.inc"
+#include "dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
 static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) \
 	RegisterFlag(parser, #Name, Description, &f->Name);
-#include "dfsan/dfsan_flags.inc"
+#include "dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
@@ -399,9 +398,22 @@ void dfsan_late_init() {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "File is %s\n", target_file);
 #endif
-	fseek(temp_file, 0L, SEEK_END);
 	int byte_start = 0;
+	const char * poly_start = dfsan_getenv("POLYSTART");
+	if (poly_start != nullptr) {
+		byte_start = atoi(poly_start);
+	}
+
+#ifdef DEBUG_INFO
+	fprintf(stderr, "BYTE_START IS: %d\n", byte_start);
+#endif
+
+	fseek(temp_file, 0L, SEEK_END);
 	uint64_t byte_end = ftell(temp_file);
+	const char * poly_end = dfsan_getenv("POLYEND");
+	if (poly_end != nullptr) {
+		byte_end = atoi(poly_end);
+	}
 #ifdef DEBUG_INFO
 	fprintf(stderr, "BYTE_END IS: %d\n", byte_end);
 #endif	

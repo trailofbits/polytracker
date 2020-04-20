@@ -3,6 +3,7 @@
 #include <iostream>
 #include "dfsan/taint_management.hpp" 
 #include "dfsan/dfsan_interface.h"
+#define DEBUG_INFO
 
 targetInfo::targetInfo(std::string fname, 
 		int start, 
