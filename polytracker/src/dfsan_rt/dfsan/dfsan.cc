@@ -268,14 +268,14 @@ dfsan_get_label_count(void) {
 
 void Flags::SetDefaults() {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
-#include "dfsan_flags.inc"
+#include "dfsan/dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
 static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) \
 	RegisterFlag(parser, #Name, Description, &f->Name);
-#include "dfsan_flags.inc"
+#include "dfsan/dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
 
