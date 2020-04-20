@@ -3,7 +3,18 @@ name: Build Docker Images
 on: [push]
 
 jobs:
-  build_base:
+  build_native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: try installing llvm-7 
+        run: sudo apt update -y && sudo apt install clang-7 llvm-7
+      - name: Build native
+        run: mkdir build && cd build && cmake .. && make -j$(nproc)
+        env: 
+          CC: clang 
+          CXX: clang++ 
+  build_docker_images:
     runs-on: ubuntu-latest 
     steps:
       - uses: actions/checkout@v1
