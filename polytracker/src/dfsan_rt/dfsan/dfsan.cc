@@ -442,10 +442,12 @@ void dfsan_late_init() {
 #endif
 	}
 	
-	/* byte_end + 1 because labels are offset by 1 because the zero label is reserved for
-	 * "no label". So, the start of union_labels is at (# bytes in the input file) + 1.
+	/* byte_end + 2 because labels are offset by 1 because the zero label is reserved for
+	 * "no label". For example, if we are tracking bytes 5 - 10. When we create taint labels,
+	 * they will be the canonical bytes plus 1, meaning the original label range will be 6-11.
+	 * This means that the start of the union bytes will be 12, or byte_end + 2. (byte_end isnt 1 indexed yet)
 	 */
-	atomic_store(&__dfsan_last_label, byte_end + 1, memory_order_release);
+	atomic_store(&__dfsan_last_label, byte_end + 2, memory_order_release);
 	
   taint_map_mgr = new taintMappingManager((char*)ShadowAddr(), (char*)ForestAddr());  
 	if (taint_map_mgr == nullptr) {
