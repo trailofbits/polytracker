@@ -249,10 +249,10 @@ taintLogManager::writeJson() {
 
 void
 taintLogManager::outputJson() {
-	addJsonVersion(); 
-	addJsonRuntimeCFG(); 	
-	addJsonBytesMappings();
-	writeJson(); 
+	//addJsonVersion();
+	//addJsonRuntimeCFG();
+	//addJsonBytesMappings();
+	//writeJson();
 }
 
 void
@@ -264,7 +264,7 @@ taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 		exit(1);
 	}
 	taint_node_t * curr = nullptr;
-	for (int i = 0; i < max_label; i++) {
+	for (int i = 1; i <= max_label; i++) {
 		curr = map_manager->getTaintNode(i);
 		dfsan_label node_p1 = map_manager->getTaintLabel(curr->p1);
 		dfsan_label node_p2 = map_manager->getTaintLabel(curr->p2);
@@ -289,6 +289,7 @@ taintLogManager::outputRawTaintSets() {
 		std::unordered_set<taint_node_t*> ptr_set;
 		ptr_set = it->second;
 		for (auto ptr_it = ptr_set.begin(); ptr_it != ptr_set.end(); ptr_it++) {
+			//NOTE this is still 1 based index because its the raw label, not byte
 			large_set.insert(map_manager->getTaintLabel(*ptr_it));
 		}
 		json j_set(large_set);
@@ -304,14 +305,20 @@ void
 taintLogManager::output(dfsan_label max) {
 	taint_log_lock.lock();
 	max_label = max;
-	if (dump_raw_taint_info) {
-		outputRawTaintForest(max_label); 
-		outputRawTaintSets();
-		taint_log_lock.unlock(); 
-		return; 
-	}
-	outputJson();
-	taint_log_lock.unlock(); 	
+	//if (dump_raw_taint_info) {
+	std::cout << "MAX LABEL IS: " << max_label << std::endl;
+	//TODO Output header with settings for POLYSTART and POLYEND etc etc
+	//This allows us to interpret the forest properly
+	//TODO output taint source mappings (not needed right now)
+	//TODO maybe even prefix the node mappings with the "current" node
+	//That allows us to process it when doing
+	outputRawTaintForest(max_label);
+	outputRawTaintSets();
+	taint_log_lock.unlock();
+	return;
+	//}
+	//outputJson();
+	//taint_log_lock.unlock();
 }
 
 //PROPAGATION MANAGER
