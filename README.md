@@ -139,6 +139,28 @@ We use this when we do not want to track information going through a specific li
  
 This script is a slightly tweaked version of what DataFlowSanitizer has, which focuses on ignoring system libraries. The original script can be found in `dfsan_rt`. 
 
+## Polytracker.json schema 
+
+version: x.x.x, 
+tainted_functions: {
+	PREFIX_function_name: {
+		input_bytes: {
+			taint_source {
+				actual_bytes 
+      }
+    }
+		cmp_bytes: {
+			taint_source {
+				actual_bytes
+			}
+		}
+  },
+	PREFIX_function_two....
+},
+runtime_cfg {
+	function_name: [caller1, caller2, etc], 
+}
+
 ## Current Status and Known Issues
 
 Taints will not propagate through dynamically loaded libraries unless
