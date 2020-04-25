@@ -154,8 +154,10 @@ void taintInfoManager::createNewTaintInfo(int fd, std::string path, targetInfo *
 
 void taintInfoManager::createNewTaintInfo(FILE * ffd, std::string path, targetInfo *targ_info) {
 	taint_info_mutex.lock();
-	taintInfo * new_info = new taintInfo(ffd, path, true, getNewId());
-	taint_source_info.push_back(new_info);
+	taint_source_id new_id = getNewId();
+	taintInfo * taint_info = new taintInfo(ffd, path, true, new_id);
+	id_info_map[new_id] = std::pair<targetInfo*, taintInfo*>(targ_info, taint_info);
+	taint_source_info.push_back(taint_info);
 	taint_info_mutex.unlock();
 }
 

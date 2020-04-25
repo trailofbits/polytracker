@@ -285,6 +285,7 @@ taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 
 	auto test_map = info_manager->getIdInfoMap();
 	int test_size = test_map.size();
+	std::cout << "test size is: " << test_size;
 	fwrite(&(test_size), sizeof(test_size), 1, forest_file);
 	for (auto it = test_map.begin(); it != test_map.end(); it++) {
 		auto pair = it->second;
