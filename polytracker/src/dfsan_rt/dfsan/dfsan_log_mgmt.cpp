@@ -9,6 +9,7 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "dfsan/dfsan_log_mgmt.h"
+#include "dfsan/taint_management.hpp"
 
 using namespace __dfsan; 
 
@@ -283,6 +284,17 @@ taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 	// [ How many taint sources ] [source id] [taint source 0 start] [taint source 0 end]....
 
 	auto test_map = info_manager->getIdInfoMap();
+	int test_size = test_map.size();
+	fwrite(&(test_size), sizeof(test_size), 1, forest_file);
+	for (auto it = test_map.begin(); it != test_map.end(); it++) {
+		auto pair = it->second;
+		auto id = it->first;
+		targetInfo * targ_info = pair.first;
+		taintInfo * taint_info = pair.second;
+		fwrite(&(id), sizeof(id), 1, forest_file);
+		fwrite(&(targ_info->byte_start), sizeof(targ_info->byte_start), 1, forest_file);
+		fwrite(&(targ_info->byte_end), sizeof(targ_info->byte_end), 1, forest_file);
+	}
 	/*
 	uint32_t taint_size = taint_sources.size();
 	fwrite(&(taint_size), sizeof(taint_size), 1, forest_file);
