@@ -1,12 +1,12 @@
 #ifndef DFSAN_LOG_TAINT
 #define DFSAN_LOG_TAINT
 
-#include "../sanitizer_common/sanitizer_atomic.h"
-#include "../sanitizer_common/sanitizer_common.h"
-#include "../sanitizer_common/sanitizer_file.h"
-#include "../sanitizer_common/sanitizer_flags.h"
-#include "../sanitizer_common/sanitizer_flag_parser.h"
-#include "../sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_common/sanitizer_atomic.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_file.h"
+#include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_flag_parser.h"
+#include "sanitizer_common/sanitizer_libc.h"
 
 #include <vector>
 #include <string>
@@ -71,6 +71,8 @@ class taintLogManager {
 		void writeJson(); 
 		void addJsonBytesMappings(); 
 		std::unordered_map<std::string, std::set<dfsan_label>> utilityPartitionSet(Roaring set);
+		std::unordered_map<std::string, std::set<dfsan_label>> utilityCreateTaintSourceLabelMap(
+				std::unordered_set<taint_node_t *> set);
 		Roaring processAll(std::unordered_set<taint_node_t *> * nodes);
 		Roaring iterativeDFS(taint_node_t * node);
 		

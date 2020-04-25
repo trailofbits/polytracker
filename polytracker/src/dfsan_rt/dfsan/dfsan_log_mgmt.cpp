@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <set>
 #include <stack>
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -144,6 +145,18 @@ taintLogManager::utilityPartitionSet(Roaring label_set) {
 	return source_set_map;	
 }
 
+std::unordered_map<std::string, std::set<dfsan_label>>
+taintLogManager::utilityCreateTaintSourceLabelMap(std::unordered_set<taint_node_t *> nodes) {
+	std::unordered_map<std::string, std::set<dfsan_label>> source_set_map;
+	for (auto it = nodes.begin(); it != nodes.end(); it++) {
+		dfsan_label curr_label = map_manager->getTaintLabel(*it);
+		std::string source_name = info_manager->getTaintSource((*it)->taint_source);
+		//Maintain 1 based indexing
+		source_set_map[source_name].insert(curr_label);
+	}
+	return source_set_map;
+}
+
 Roaring
 taintLogManager::iterativeDFS(taint_node_t * node) {
 	//Stack instead of using call stack 
@@ -255,6 +268,7 @@ taintLogManager::outputJson() {
 	//writeJson();
 }
 
+//TODO Document this
 void
 taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 	std::string forest_fname = outfile + "_forest.bin";
@@ -263,6 +277,21 @@ taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 		std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
 		exit(1);
 	}
+	//This writes down the track range for canonical bytes (0 indexed)
+	//The format is this
+	//            4 bytes            1 byte        4 bytes              4 bytes
+	// [ How many taint sources ] [source id] [taint source 0 start] [taint source 0 end]....
+
+	auto test_map = info_manager->getIdInfoMap();
+	/*
+	uint32_t taint_size = taint_sources.size();
+	fwrite(&(taint_size), sizeof(taint_size), 1, forest_file);
+	for (auto it = taint_sources.begin(); it != taint_sources.end(); it++) {
+		taint_source_id curr_id = *it;
+		fwrite(&(curr_id), sizeof(curr_id), 1, forest_file);
+		std::vector<targetInfo>::iterator targ_it = info_manager->getT
+	}
+	*/
 	taint_node_t * curr = nullptr;
 	for (int i = 1; i <= max_label; i++) {
 		curr = map_manager->getTaintNode(i);
@@ -276,6 +305,38 @@ taintLogManager::outputRawTaintForest(dfsan_label max_label) {
 	fclose(forest_file);	
 }
 
+void
+taintLogManager::outputRawTaintSets() {
+	string_node_map::iterator it;
+
+	addJsonVersion();
+	addJsonRuntimeCFG();
+
+	//NOTE This could be improved later by having a single mapping from name --> pair<all_set, cmp_set>
+	//Instead of 2 maps
+	//TODO Document and change the json schemata
+	for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
+		auto source_set_map = utilityCreateTaintSourceLabelMap(it->second);
+		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
+			json byte_set(map_it->second);
+			std::string source_name = "POLYTRACKER " + map_it->first;
+			output_json["tainted_functions"][it->first]["input_bytes"][source_name] = byte_set;
+		}
+	}
+	for (it = function_to_cmp_bytes.begin(); it != function_to_cmp_bytes.end(); it++) {
+		auto source_set_map = utilityCreateTaintSourceLabelMap(it->second);
+		for (auto map_it = source_set_map.begin(); map_it != source_set_map.end(); map_it++) {
+			json byte_set(map_it->second);
+			std::string source_name = "POLYTRACKER " + map_it->first;
+			output_json["tainted_functions"][it->first]["cmp_bytes"][source_name] = byte_set;
+		}
+	}
+	std::string output_string = outfile + "_process_set.json";
+	std::ofstream o(output_string);
+	o << std::setw(4) << output_json;
+	o.close();
+}
+/*
 void
 taintLogManager::outputRawTaintSets() {
 	std::unordered_map<std::string, std::unordered_set<taint_node_t*>>::iterator it;
@@ -300,7 +361,7 @@ taintLogManager::outputRawTaintSets() {
 	o << std::setw(4) << output_json;
 	o.close();
 }
-
+*/
 void
 taintLogManager::output(dfsan_label max) {
 	taint_log_lock.lock();

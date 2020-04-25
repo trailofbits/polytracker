@@ -50,7 +50,8 @@ __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 		#ifdef DEBUG_INFO
 		std::cout << "open: adding new taint info!" << std::endl; 
 		#endif	
-		taint_info_manager->createNewTaintInfo(fd, path);
+		auto targInfo = taint_info_manager->getTarget(path);
+		taint_info_manager->createNewTaintInfo(fd, path, targInfo);
 	}
 	*ret_label = 0;
 	return fd;
@@ -71,7 +72,8 @@ __dfsw_openat(int dirfd, const char *path, int oflags, dfsan_label path_label,
 		#ifdef DEBUG_INFO
 		std::cout << "openat: adding new taint info!" << std::endl; 
 		#endif	
-		taint_info_manager->createNewTaintInfo(fd, path);
+		auto targInfo = taint_info_manager->getTarget(path);
+		taint_info_manager->createNewTaintInfo(fd, path, targInfo);
 	}
 	*ret_label = 0;
 	return fd;
@@ -88,8 +90,9 @@ __dfsw_fopen64(const char *filename, const char *mode, dfsan_label fn_label,
 	if (fd != NULL && taint_info_manager->isTargetSource(filename)) {
 		#ifdef DEBUG_INFO
 		std::cout << "fopen64: adding new taint info!" << std::endl; 
-		#endif	
-		taint_info_manager->createNewTaintInfo(fd, filename);
+		#endif
+		auto targInfo = taint_info_manager->getTarget(filename);
+		taint_info_manager->createNewTaintInfo(fd, filename, targInfo);
 	}
 	*ret_label = 0;
 	return fd;
@@ -106,7 +109,8 @@ __dfsw_fopen(const char *filename, const char *mode, dfsan_label fn_label,
 		#ifdef DEBUG_INFO
 		std::cout << "fopen: adding new taint info!" << std::endl; 
 		#endif	
-		taint_info_manager->createNewTaintInfo(fd, filename);
+		auto targInfo = taint_info_manager->getTarget(filename);
+		taint_info_manager->createNewTaintInfo(fd, filename, targInfo);
 	}
 
 	*ret_label = 0;

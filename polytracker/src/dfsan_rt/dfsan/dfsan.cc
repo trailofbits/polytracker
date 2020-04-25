@@ -421,13 +421,14 @@ void dfsan_late_init() {
 	fclose(temp_file);
 	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
 	//Special tracking for standard input
-	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS); 
-	taint_info_manager->createNewTaintInfo(stdin, "stdin");  
+	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
+	auto targInfo = taint_info_manager->getTarget("stdin");
+	taint_info_manager->createNewTaintInfo(stdin, "stdin", targInfo);
 	const char * poly_output = dfsan_getenv("POLYOUTPUT");
 	if (poly_output != NULL) {
 		polytracker_output_json_filename = poly_output;
 	} else {
-		polytracker_output_json_filename = "polytracker.json";
+		polytracker_output_json_filename = "polytracker";
 	}
 	if (dfsan_getenv("POLYDUMP") != NULL) {
 		dump_forest_and_sets = true;
@@ -445,7 +446,7 @@ void dfsan_late_init() {
 	/* byte_end + 2 because labels are offset by 1 because the zero label is reserved for
 	 * "no label". For example, if we are tracking bytes 5 - 10. When we create taint labels,
 	 * they will be the canonical bytes plus 1, meaning the original label range will be 6-11.
-	 * This means that the start of the union bytes will be 12, or byte_end + 2. (byte_end isnt 1 indexed yet)
+	 * This means that the start of the union bytes will be 12, or byte_end + 2. (byte_end isn't 1 indexed yet)
 	 */
 	atomic_store(&__dfsan_last_label, byte_end + 2, memory_order_release);
 	

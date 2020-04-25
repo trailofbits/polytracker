@@ -4,6 +4,8 @@
 #include <vector> 
 #include <string> 
 #include <thread> 
+#include <tuple>
+#include <unordered_map>
 #include "dfsan_types.h" 
 
 #define TAINT_GRANULARITY 1
@@ -50,13 +52,23 @@ class taintInfoManager {
 	private:
 		//For ease of use we have a mono lock on all things here
 		std::mutex taint_info_mutex;
+		//TODO Document that this is for mixing taint sources, we can OR them together.
+		//TODO check for memory leaks
 		taint_source_id id_nonce; 
-		std::vector<taintInfo> taint_source_info;
-		std::vector<targetInfo> taint_targets; 		
-		std::vector<taintInfo>::iterator findTaintInfo(int fd); 
-		std::vector<taintInfo>::iterator findTaintInfo(FILE * fd); 
-		std::vector<taintInfo>::iterator findTaintInfo(taint_source_id id); 
-		std::vector<targetInfo>::iterator  findTargetInfo(std::string path);
+		std::vector<taintInfo*> taint_source_info;
+		std::vector<targetInfo*> taint_targets;
+
+		//Maps taint source to info
+		std::unordered_map<taint_source_id, std::pair<targetInfo*, taintInfo*>> id_info_map;
+
+		//Bijective map that maps target_ids to taint_ids?
+		//TODO Some C++ logging library please
+
+		//TODO Try returning a reference instead
+		std::vector<taintInfo*>::iterator findTaintInfo(int fd);
+		std::vector<taintInfo*>::iterator findTaintInfo(FILE * fd);
+		std::vector<taintInfo*>::iterator findTaintInfo(taint_source_id id);
+		std::vector<targetInfo*>::iterator findTargetInfo(std::string path);
 		taint_source_id getId();
 		taint_source_id getNewId();
 	public:
@@ -64,19 +76,20 @@ class taintInfoManager {
 		~taintInfoManager();
 		void createNewTargetInfo(std::string fname, 
 				int start, int end); 
-		void createNewTaintInfo(int fd, std::string path);
-		void createNewTaintInfo(FILE * ffd, std::string path);
+		void createNewTaintInfo(int fd, std::string path, targetInfo* targ);
+		void createNewTaintInfo(FILE * ffd, std::string path, targetInfo* targ);
 		void closeSource(int fd); 
 		void closeSource(FILE * ffd);
 		bool isTracking(FILE * ffd); 
 		bool isTracking(int fd);
 	 	bool isTargetSource(std::string path);
+	 	targetInfo* getTarget(std::string path);
 		taint_source_id getTaintId(int fd); 
 		taint_source_id getTaintId(FILE * ffd); 
 		std::string getTaintSource(taint_source_id id); 
 		void taintData(int fd, char * mem, int offset, int len); 
-		void taintData(FILE* fd, char * mem, int offset, int len); 
-			
+		void taintData(FILE* fd, char * mem, int offset, int len);
+		std::unordered_map<taint_source_id, std::pair<targetInfo*, taintInfo*>> getIdInfoMap();
 };
 
 
