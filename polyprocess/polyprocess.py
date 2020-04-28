@@ -184,7 +184,5 @@ class Polyprocess:
                         set(processed_sets[function]["input_bytes"][source]))
 
         self.polytracker_json["tainted_functions"] = processed_sets
-        output_json = json.dumps(self.polytracker_json, indent=4)
-        out_fd = open(self.outfile, "w")
-        out_fd.write(output_json)
-        out_fd.close()
+        with open(self.outfile, 'w') as out_fd:
+            json.dump(self.polytracker_json, out_fd, indent=4)
