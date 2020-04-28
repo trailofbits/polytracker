@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='polyprocess',
-    description='A utility to diff tree-like files such as JSON and XML.',
+    description='A library and utility for processing and analyzing PolyTracker output',
     url='https://github.com/trailofbits/polytracker',
     author='Trail of Bits',
     version="0.1.0",
