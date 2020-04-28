@@ -8,7 +8,7 @@ from subprocess import check_call
 import networkx as nx
 import json
 from networkx.drawing.nx_pydot import write_dot
-from typing import List, Dict
+from typing import cast, Dict, List, Set, Union
 from typing_extensions import Final
 
 logger: Logger = logging.getLogger("PolyProcess")
@@ -155,7 +155,7 @@ class Polyprocess:
         write_dot(self.taint_forest, "taint_forest.dot")
         check_call(['dot', '-Tpng', 'taint_forest.dot', '-o', 'taint_forest.pdf'])
 
-    def is_canonical(self, label):
+    def is_canonical(self, label: int):
         # Taint source id
         taint_id = self.taint_metadata[label].taint_source
         # Taint range
@@ -164,21 +164,20 @@ class Polyprocess:
 
     def process_taint_sets(self):
         taint_sets = tqdm(self.taint_sets)
-        processed_sets = {}
+        processed_sets: Dict[str, Dict[str, Dict[str, Union[Set[int], List[int]]]]] = {}
         for function in taint_sets:
             taint_sets.set_description(f"Processing {function}")
             for source in self.taint_sets[function]["input_bytes"]:
                 label_set: List[int] = self.taint_sets[function]["input_bytes"][source]
-                processed_sets[function] = {"input_bytes": {source: list()}}
+                processed_sets[function] = {"input_bytes": {cast(str, source): set()}}
                 for label in label_set:
-                    preds = list(set(
-                        label for label in nx.dfs_preorder_nodes(self.taint_forest, label)
+                    processed_sets[function]["input_bytes"][source] |= set(
+                        label - 1 for label in nx.dfs_preorder_nodes(self.taint_forest, label)
                         if self.is_canonical(label)
-                    ))
-                    canonical_labels = [x - 1 for x in preds]
-                    processed_sets[function]["input_bytes"][source] += canonical_labels
-                    processed_sets[function]["input_bytes"][source] = list(
-                        set(processed_sets[function]["input_bytes"][source]))
+                    )
+                # Now that we have constructed the input_bytes sources, convert it to a sorted list:
+                processed_sets[function]["input_bytes"][source] = list(sorted(
+                    processed_sets[function]["input_bytes"][source]))
 
         self.polytracker_json["tainted_functions"] = processed_sets
         with open(self.outfile, 'w') as out_fd:
