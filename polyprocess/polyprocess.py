@@ -171,13 +171,10 @@ class Polyprocess:
                 label_set: List[int] = self.taint_sets[function]["input_bytes"][source]
                 processed_sets[function] = {"input_bytes": {source: list()}}
                 for label in label_set:
-                    preds = list(
-                        set(
-                            filter(
-                                self.is_canonical, nx.dfs_preorder_nodes(self.taint_forest, label)
-                                )
-                        )
-                    )
+                    preds = list(set(
+                        label for label in nx.dfs_preorder_nodes(self.taint_forest, label)
+                        if self.is_canonical(label)
+                    ))
                     canonical_labels = [x - 1 for x in preds]
                     processed_sets[function]["input_bytes"][source] += canonical_labels
                     processed_sets[function]["input_bytes"][source] = list(
