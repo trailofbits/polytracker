@@ -178,7 +178,7 @@ class Polyprocess:
                                 )
                         )
                     )
-                    canonical_labels = list(map(lambda x: x - 1, preds))
+                    canonical_labels = [x - 1 for x in preds]
                     processed_sets[function]["input_bytes"][source] += canonical_labels
                     processed_sets[function]["input_bytes"][source] = list(
                         set(processed_sets[function]["input_bytes"][source]))
