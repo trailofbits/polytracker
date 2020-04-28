@@ -34,24 +34,21 @@ class SourceMetadata:
     taint_range_end: int
 
 
-"""
-This is the PolyProcess class
-
-This class takes two arguments
-
-1. PolyTracker produced json containing CFG, taint sets, and version number. (PolyMerge has better version parsing)
-
-2. PolyTracker raw taint forest
-
-PolyProcess will take these files and: 
-
-1. Reconstruct the CFG, taint forest and taint sets 
-
-2. Process the taint sets to produce a final json containing the byte offsets touched in each function   
-"""
-
-
 class Polyprocess:
+    """This is the PolyProcess class
+
+    This class takes two arguments
+
+    1. PolyTracker produced json containing CFG, taint sets, and version number. (PolyMerge has better version parsing)
+
+    2. PolyTracker raw taint forest
+
+    PolyProcess will take these files and:
+
+    1. Reconstruct the CFG, taint forest and taint sets
+
+    2. Process the taint sets to produce a final json containing the byte offsets touched in each function
+    """
     def __init__(self, polytracker_json_path: str, polytracker_forest_path: str):
         if polytracker_json_path is None or polytracker_forest_path is None:
             raise ValueError("Error: Path cannot be None")
@@ -114,22 +111,20 @@ class Polyprocess:
             taint_source_end: int = taint_header_entry[2]
             self.source_metadata[taint_source_id] = SourceMetadata(taint_source_start, taint_source_end)
 
-    """
-    This function reads the taint forest file and converts it to a networkX graph
-    
-    The taint forest file is a bunch of raw bytes, where each sizeof(dfsan_label) chunk 
-    represents a taint_node struct. The actual definition of the struct can be found in 
-    include/dfsan_types.h 
-    
-    The function that produces this taint forest is outputRawTaintForest
-    
-    Note that the taint info here (and anything of type label) is 1 indexed, because 0 is the null index. 
-    
-    The way we convert back to canonical bytes is by travelling up the forest to a node with two null parents
-    Then subtract one from that label, which gets you the original offset. 
-    """
-
     def process_forest(self):
+        """This function reads the taint forest file and converts it to a networkX graph
+
+        The taint forest file is a bunch of raw bytes, where each sizeof(dfsan_label) chunk
+        represents a taint_node struct. The actual definition of the struct can be found in
+        include/dfsan_types.h
+
+        The function that produces this taint forest is outputRawTaintForest
+
+        Note that the taint info here (and anything of type label) is 1 indexed, because 0 is the null index.
+
+        The way we convert back to canonical bytes is by travelling up the forest to a node with two null parents
+        Then subtract one from that label, which gets you the original offset.
+        """
         logger.log(logging.DEBUG, "Processing taint forest!")
         # Add the null node
         self.taint_forest.add_node(0)
