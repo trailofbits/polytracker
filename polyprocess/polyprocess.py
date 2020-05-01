@@ -153,7 +153,7 @@ class Polyprocess:
         pos = nx.nx_agraph.graphviz_layout(self.taint_forest)
         nx.draw(self.taint_forest, pos=pos)
         write_dot(self.taint_forest, "taint_forest.dot")
-        check_call(['dot', '-Tpng', 'taint_forest.dot', '-o', 'taint_forest.pdf'])
+        check_call(['dot', '-Tpdf', 'taint_forest.dot', '-o', 'taint_forest.pdf'])
 
     def is_canonical(self, label: int):
         # Taint source id
