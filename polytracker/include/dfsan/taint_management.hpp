@@ -36,6 +36,10 @@ typedef uint32_t taint_source_id;
 
 //How do we allocate labels from a source?
 //Ask ourselves, how do we discover if a label is canonical
+//If its canonical how do we discover what offset it is from?
+//^^ we maintain a table that maps label to offset, i think we have to.
+//If we do selective offset tracking, how does this affect things?
+
 //How do we union labels and maintain provenonce?
 
 //I think the only thing we need to store is what labels are canonical.
@@ -47,56 +51,103 @@ typedef uint32_t taint_source_id;
 //Every node has some taint_id
 
 class targetInfo {
-	public: 
-		std::string target_file; 
-		int byte_start; 
-		int byte_end;
-		bool is_open;
-		targetInfo(std::string fname, 
-				int start, 
-				int end); 
-		~targetInfo();
-		bool isTargetFile(std::string file_path);
+public:
+	std::string target_name;
+	int byte_start;
+	int byte_end;
+	bool is_open;
+	targetInfo(std::string fname,
+			int start,
+			int end);
+	~targetInfo();
 };
 
 
 class taintInfoManager {
-	private:
-		//For ease of use we have a mono lock on all things here
-		std::mutex taint_info_mutex;
-		std::unordered_map<std::string, targetInfo*> name_targ_map;
-		std::unordered_map<int, targetInfo*> fd_target_map;
-		std::unordered_map<FILE*, targetInfo*> file_target_map;
-		//Canonical byte tree goes here
-		//log_mgmt will need to grab
-		targetInfo* findTargetInfo(std::string name) {
-			if (name_targ_map.find(name) != name_targ_map.end()) {
-				return name_targ_map[name];
-			}
-			return nullptr;
-		}
+private:
+	//For ease of use we have a mono lock on all things here
+	std::mutex taint_info_mutex;
+	std::unordered_map<std::string, targetInfo*> name_target_map;
+	std::unordered_map<int, targetInfo*> fd_target_map;
+	std::unordered_map<FILE*, targetInfo*> file_target_map;
+	std::unordered_map<int, std::string> fd_metadata;
+	std::unordered_map<FILE*, std::string> file_metadata;
+	//The size of this is O(l) where l is the file size
+	//So if the PDF is multiple GB this would be annoying
+	std::unordered_map<dfsan_label, dfsan_label> canonical_mapping;
 
-	public:
-		taintInfoManager();
-		~taintInfoManager();
-		void createNewTargetInfo(std::string fname, 
-				int start, int end); 
-		void createNewTaintInfo(int fd, std::string path, targetInfo* targ);
-		void createNewTaintInfo(FILE * ffd, std::string path, targetInfo* targ);
-		void closeSource(int fd) {
+public:
+	taintInfoManager();
+	~taintInfoManager();
+	void createNewTargetInfo(std::string fname,
+			int start, int end);
+	void createNewTaintInfo(int fd, targetInfo* targ);
+	void createNewTaintInfo(FILE * ffd, targetInfo* targ);
 
+	//These functions handle the case where a taint source is assigned an fd
+	//Then that fd is closed and reassigned to something we don't want to track
+	void closeSource(int fd) {
+		taint_info_mutex.lock();
+		if (fd_target_map.find(fd) != fd_target_map.end()) {
+			fd_target_map[fd]->is_open = false;
+			fd_target_map.erase(fd);
 		}
-		void closeSource(FILE * ffd) {
+		taint_info_mutex.unlock();
 
+	}
+	void closeSource(FILE * fd) {
+		taint_info_mutex.lock();
+
+		if (file_target_map.find(fd) != file_target_map.end()) {
+			file_target_map[fd]->is_open = false;
+			file_target_map.erase(fd);
 		}
-		bool isTracking(FILE * ffd) {
-			if (file_target_map)
+		taint_info_mutex.unlock();
+
+
+	}
+	bool isTracking(FILE * ffd) {
+		taint_info_mutex.lock();
+		if (file_target_map.find(ffd) != file_target_map.end()) {
+			taint_info_mutex.unlock();
+			return true;
 		}
-		bool isTracking(int fd);
-	 	bool isTargetSource(std::string path);
-	 	targetInfo* getTarget(std::string path);
-		void taintData(int fd, char * mem, int offset, int len); 
-		void taintData(FILE* fd, char * mem, int offset, int len);
+		taint_info_mutex.unlock();
+		return false;
+	}
+	bool isTracking(int fd) {
+		taint_info_mutex.lock();
+
+		if (fd_target_map.find(fd) != fd_target_map.end()) {
+			taint_info_mutex.unlock();
+			return true;
+		}
+		taint_info_mutex.unlock();
+		return false;
+	}
+	bool isTracking(std::string name) {
+		taint_info_mutex.lock();
+
+		if (name_target_map.find(name) != name_target_map.end()) {
+			taint_info_mutex.unlock();
+			return true;
+		}
+		taint_info_mutex.unlock();
+		return false;
+	}
+	targetInfo* findTargetInfo(std::string name) {
+		taint_info_mutex.lock();
+		if (name_target_map.find(name) != name_target_map.end()) {
+			taint_info_mutex.unlock();
+			return name_target_map[name];
+		}
+		taint_info_mutex.unlock();
+		return nullptr;
+	}
+
+	bool taintData(int fd, char * mem, int offset, int len);
+	bool taintData(FILE * ffd, char * mem, int offset, int len);
+	void taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end);
 };
 
 

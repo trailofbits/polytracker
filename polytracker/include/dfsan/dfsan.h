@@ -26,9 +26,6 @@
 #include "json.hpp"
 
 #define DEFAULT_TTL 16 
-#define DEFAULT_CACHE 1000
-// MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
-#define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
 
 using __sanitizer::uptr;
 using __sanitizer::u16;

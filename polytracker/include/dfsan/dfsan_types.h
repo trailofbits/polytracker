@@ -15,6 +15,8 @@ using namespace __dfsan;
  */
 #define DFSAN_LABEL_BITS 32
 #define DFSAN_MAX_TAINT_ID 128 
+// MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2 = 2^31 - 2 = 0x7FFFFFFE
+#define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
 
 #define PPCAT_NX(A, B) A ## B
 #define PPCAT(A, B) PPCAT_NX(A, B)
