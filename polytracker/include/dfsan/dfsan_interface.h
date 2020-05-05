@@ -14,10 +14,10 @@
 #ifndef DFSAN_INTERFACE_H
 #define DFSAN_INTERFACE_H
 
+#include "common_interface_defs.h"
+#include "dfsan_types.h"
 #include <stddef.h>
 #include <stdint.h>
-#include "common_interface_defs.h"
-#include "dfsan_types.h" 
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,8 +31,8 @@ typedef void (*dfsan_write_callback_t)(int fd, const void *buf, size_t count);
 dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
 
 /// Creates and returns a base label with the given description and user data.
-//TODO delete
-//dfsan_label dfsan_create_canonical_label();
+// TODO delete
+// dfsan_label dfsan_create_canonical_label();
 
 /// Sets the label for each address in [addr,addr+size) to \c label.
 void dfsan_set_label(dfsan_label label, void *addr, size_t size);
@@ -63,7 +63,6 @@ size_t dfsan_get_label_count(void);
 /// callback executes.  Pass in NULL to remove any callback.
 void dfsan_set_write_callback(dfsan_write_callback_t labeled_write_callback);
 
-
 /// Interceptor hooks.
 /// Whenever a dfsan's custom function is called the corresponding
 /// hook is called it non-zero. The hooks should be defined by the user.
@@ -77,13 +76,13 @@ void dfsan_weak_hook_strncmp(void *caller_pc, const char *s1, const char *s2,
                              size_t n, dfsan_label s1_label,
                              dfsan_label s2_label, dfsan_label n_label);
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 
 template <typename T>
-void dfsan_set_label(dfsan_label label, T &data) {  // NOLINT
+void dfsan_set_label(dfsan_label label, T &data) { // NOLINT
   dfsan_set_label(label, (void *)&data, sizeof(T));
 }
 
 #endif
 
-#endif  // DFSAN_INTERFACE_H
+#endif // DFSAN_INTERFACE_H

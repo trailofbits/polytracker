@@ -1,28 +1,26 @@
 name: Build Docker Images
 
-on: [push]
+on: push
 
 jobs:
-  build_native:
+  cpp_lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: try installing llvm-7 
-        run: sudo apt update -y && sudo apt install clang-7 llvm-7
-      - name: Build native
-        run: mkdir build && cd build && cmake .. && make -j$(nproc)
-        env: 
-          CC: clang 
-          CXX: clang++ 
-  build_docker_images:
-    runs-on: ubuntu-latest 
-    steps:
-      - uses: actions/checkout@v1
+      - name: try install clang-format-10
+        run: |
+          sudo apt install -y software-properties-common gnupg wget
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
+          sudo apt-get update -y 
+          sudo apt-get install -y clang-format-10
+      - name: update submodules 
+        run: git submodule update --init --recursive
+      - name: lint 
+        run: |
+          python3 third_party/run-clang-format/run-clang-format.py \
+          polytracker/include/dfsan/*.h  polytracker/src/*/*.cpp \
+          --exclude 'polytracker/src/dfsan_rt/sanitizer_common/*' \
+          --exclude 'polytracker/src/dfsan_rt/interception/*'
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Build the mupdf demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
-      - name: Build the poppler demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
-      - name: Build the qpdf demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf

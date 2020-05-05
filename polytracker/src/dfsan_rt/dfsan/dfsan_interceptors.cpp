@@ -21,7 +21,7 @@ using namespace __sanitizer;
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {
   void *res = REAL(mmap)(addr, length, prot, flags, fd, offset);
-  if (res != (void*)-1)
+  if (res != (void *)-1)
     dfsan_set_label(0, res, RoundUpTo(length, GetPageSize()));
   return res;
 }
@@ -29,7 +29,7 @@ INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
 INTERCEPTOR(void *, mmap64, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF64_T offset) {
   void *res = REAL(mmap64)(addr, length, prot, flags, fd, offset);
-  if (res != (void*)-1)
+  if (res != (void *)-1)
     dfsan_set_label(0, res, RoundUpTo(length, GetPageSize()));
   return res;
 }
