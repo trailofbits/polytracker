@@ -31,13 +31,8 @@ typedef void (*dfsan_write_callback_t)(int fd, const void *buf, size_t count);
 dfsan_label dfsan_union(dfsan_label l1, dfsan_label l2);
 
 /// Creates and returns a base label with the given description and user data.
-dfsan_label dfsan_create_label(uint32_t offset, taint_source_id taint_source);
-
-/// Creates a label specifically for string lenghts
-dfsan_label dfsan_create_len_label(dfsan_label label);
-
-/// Creates a label specifically for reads
-dfsan_label dfsan_create_read_label(uint32_t start, uint32_t end);
+//TODO delete
+//dfsan_label dfsan_create_canonical_label();
 
 /// Sets the label for each address in [addr,addr+size) to \c label.
 void dfsan_set_label(dfsan_label label, void *addr, size_t size);
@@ -68,11 +63,6 @@ size_t dfsan_get_label_count(void);
 /// callback executes.  Pass in NULL to remove any callback.
 void dfsan_set_write_callback(dfsan_write_callback_t labeled_write_callback);
 
-/// Writes the labels currently used by the program to the given file
-/// descriptor. The lines of the output have the following format:
-///
-/// <label> <parent label 1> <parent label 2> <label description if any>
-void dfsan_dump_labels(int fd);
 
 /// Interceptor hooks.
 /// Whenever a dfsan's custom function is called the corresponding

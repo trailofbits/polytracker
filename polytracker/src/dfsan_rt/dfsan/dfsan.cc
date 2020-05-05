@@ -51,19 +51,15 @@ using json = nlohmann::json;
 using namespace __dfsan;
 
 //This keeps track of the current taint label we are on 
-static atomic_dfsan_label __dfsan_last_label;
+//static atomic_dfsan_label __dfsan_last_label;
 
 Flags __dfsan::flags_data;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_retval_tls;
 SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL dfsan_label __dfsan_arg_tls[64];
 SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 
-//This is a boundry we use when setting up the address space
+//This is a boundary we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-
-//These are some configuration options set via some enviornment variables to change resource usage 
-//And tracking behavior dump_forest dumps shadow memory content and function_to_bytes map, see above 
-static bool dump_forest_and_sets = false;
 
 //This is a decay value, its a practical choice made due to the inherent problems when using taint analysis 
 //Specifically, when analyzing functions that manipulate a lot of data, like decompression functions, youll get way too much data 
@@ -72,16 +68,10 @@ static bool dump_forest_and_sets = false;
 static decay_val taint_node_ttl = DEFAULT_TTL;
 
 //This is the output file name
-static const char * polytracker_output_json_filename;
+static const char * polytracker_output_filename;
 
-//Used by taint sources
-taintInfoManager * taint_info_manager;
-
-//This is left here because its shared by prop_mgr and log_mgr 
-//Should be deleted after both of them, should not be used directly!    
-taintMappingManager * taint_map_mgr; 
-taintPropagationManager * taint_prop_manager; 
-taintLogManager * taint_log_manager; 
+//Manages taint info/propagation
+taintManager * taint_manager;
 
 static bool is_init = false; 
 std::mutex init_lock; 
@@ -121,7 +111,7 @@ static uptr UnusedAddr() {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_reset_frame(int* index) {
-	taint_log_manager->resetFrame(index);
+	taint_manager->resetFrame(index);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -132,22 +122,22 @@ int __dfsan_func_entry(char * fname) {
 		is_init = true; 	
 	}
 	init_lock.unlock(); 
-	return taint_log_manager->logFunctionEntry(fname);
+	return taint_manager->logFunctionEntry(fname);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint_cmp(dfsan_label some_label) {
-	taint_log_manager->logCompare(some_label); 
+	taint_manager->logCompare(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_log_taint(dfsan_label some_label) {
-	taint_log_manager->logOperation(some_label); 
+	taint_manager->logOperation(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_func_exit() {
-	taint_log_manager->logFunctionExit(); 
+	taint_manager->logFunctionExit();
 }
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
@@ -155,7 +145,7 @@ void __dfsan_func_exit() {
 // The union table prevents there from being dupilcate labels
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
-	return taint_prop_manager->unionLabels(l1, l2);
+	return taint_manager->createUnionLabel(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
@@ -206,10 +196,12 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
 	return __dfsan_union(l1, l2);
 }
 
+/*
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-dfsan_label dfsan_create_label(uint_dfsan_label_t offset, taint_source_id taint_id) {
-	return taint_prop_manager->createNewLabel(offset, taint_id);
+dfsan_label dfsan_create_canonical_label(int offset) {
+	return taint_prop_manager->createCanonicalLabel(offset);
 }
+*/
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 void __dfsan_set_label(dfsan_label label, void *addr, uptr size) {
@@ -258,13 +250,6 @@ dfsan_read_label(const void *addr, uptr size) {
 	return __dfsan_union_load(shadow_for(addr), size);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr
-dfsan_get_label_count(void) {
-	dfsan_label max_label_allocated =
-		atomic_load(&__dfsan_last_label, memory_order_relaxed);
-
-	return static_cast<uptr>(max_label_allocated);
-}
 
 void Flags::SetDefaults() {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
@@ -274,7 +259,7 @@ void Flags::SetDefaults() {
 
 static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #define DFSAN_FLAG(Type, Name, DefaultValue, Description) \
-	RegisterFlag(parser, #Name, Description, &f->Name);
+		RegisterFlag(parser, #Name, Description, &f->Name);
 #include "dfsan/dfsan_flags.inc"
 #undef DFSAN_FLAG
 }
@@ -296,7 +281,7 @@ static void InitializePlatformEarly() {
 	AvoidCVE_2016_2143();
 #ifdef DFSAN_RUNTIME_VMA
 	__dfsan::vmaSize =
-		(MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
+			(MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 	if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42 ||
 			__dfsan::vmaSize == 48) {
 		__dfsan_shadow_ptr_mask = ShadowMask();
@@ -308,19 +293,14 @@ static void InitializePlatformEarly() {
 #endif
 }
 
-
 static void dfsan_fini() {
 #ifdef DEBUG_INFO
 	fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
 			dfsan_get_label_count(), polytracker_output_json_filename);
 	fflush(stderr);
 #endif
-	dfsan_label max_label = taint_prop_manager->getMaxLabel();
-	taint_log_manager->output(max_label); 
-	delete taint_info_manager;
-	delete taint_map_mgr; 
-	delete taint_prop_manager;
-	delete taint_log_manager;
+	taint_manager->output();
+	delete taint_manager;
 }
 
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
@@ -338,7 +318,7 @@ static char * dfsan_getenv(const char * name) {
 	while (*p != '\0') {  // will happen at the \0\0 that terminates the buffer
 		// proc file has the format NAME=value\0NAME=value\0NAME=value\0...
 		char* endp =
-			(char*)memchr(p, '\0', len - (p - environ));
+				(char*)memchr(p, '\0', len - (p - environ));
 		if (!endp) { // this entry isn't NUL terminated
 			fprintf(stderr, "Something in the env is not null terminated, exiting!\n"); 
 			return NULL;
@@ -355,13 +335,66 @@ static char * dfsan_getenv(const char * name) {
 	return NULL;
 }
 
+void dfsan_parse_env() {
+	//Check for path to input file
+	const char * target_file = dfsan_getenv("POLYPATH");
+	if (target_file == NULL) {
+		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
+		exit(1);
+	}
+	//Check if we have an output file name
+	const char * output_file = dfsan_getenv("POLYOUTPUT");
+	if (output_file == NULL) {
+		output_file = "polytracker";
+	}
+
+	FILE * temp_file = fopen(target_file, "r");
+	if (temp_file == NULL) {
+		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
+				target_file, strerror(errno));
+		exit(1);
+	}
+
+	uint64_t byte_start, byte_end = 0;
+	const char * poly_start = dfsan_getenv("POLYSTART");
+	if (poly_start != nullptr) {
+		byte_start = atoi(poly_start);
+	}
+
+	fseek(temp_file, 0L, SEEK_END);
+	byte_end = ftell(temp_file);
+	const char * poly_end = dfsan_getenv("POLYEND");
+	if (poly_end != nullptr) {
+		byte_end = atoi(poly_end);
+	}
+	fclose(temp_file);
+
+	const char * poly_output = dfsan_getenv("POLYOUTPUT");
+	if (poly_output != NULL) {
+		polytracker_output_filename = poly_output;
+	} else {
+		polytracker_output_filename = "polytracker";
+	}
+
+	const char * env_ttl = dfsan_getenv("POLYTTL");
+	decay_val taint_node_ttl = DEFAULT_TTL;
+	if (env_ttl != NULL) {
+		taint_node_ttl = atoi(env_ttl);
+	}
+
+	taint_manager->createNewTargetInfo(target_file, byte_start, byte_end);
+	//Special tracking for standard input
+	taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
+	taint_manager->createNewTaintInfo("stdin", stdin);
+}
+
 void dfsan_late_init() {
 	InitializeFlags();
 	InitializePlatformEarly();
-	//Note for some reason this original mmap call also mapped in the union table
-	//I don't think we need to make any changes to this 
-	if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
+
+	if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr())) {
 		Die();
+	}
 
 	// Protect the region of memory we don't use, to preserve the one-to-one
 	// mapping from application to shadow memory. But if ASLR is disabled, Linux
@@ -369,105 +402,23 @@ void dfsan_late_init() {
 	// works so long as the program doesn't use too much memory. We support this
 	// case by disabling memory protection when ASLR is disabled.
 	uptr init_addr = (uptr)&dfsan_late_init;
-	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
+	if (!(init_addr >= UnusedAddr() && init_addr < AppAddr())) {
 		MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+	}
 
 	InitializeInterceptors();
 
-	taint_info_manager = new taintInfoManager(); 
-	if (taint_info_manager == NULL) {
-		fprintf(stderr, "Error! Unable to create taint info manager, dying!\n"); 
-		exit(1);
-	}
-	
-	const char * target_file = dfsan_getenv("POLYPATH");
-	if (target_file == NULL) {
-		fprintf(stderr, "Unable to get required POLYPATH environment variable -- perhaps it's not set?\n");
-		exit(1);
-	}
-	const char * output_file = dfsan_getenv("POLYOUTPUT"); 
-	if (output_file == NULL) {
-		output_file = "polytracker"; 
-	}	
-	//Get file size start and end
-	FILE * temp_file = fopen(target_file, "r");
-	if (temp_file == NULL) {
-		fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-				target_file, strerror(errno));
-		exit(1);
-	}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "File is %s\n", target_file);
-#endif
-	int byte_start = 0;
-	const char * poly_start = dfsan_getenv("POLYSTART");
-	if (poly_start != nullptr) {
-		byte_start = atoi(poly_start);
-	}
-
-#ifdef DEBUG_INFO
-	fprintf(stderr, "BYTE_START IS: %d\n", byte_start);
-#endif
-
-	fseek(temp_file, 0L, SEEK_END);
-	uint64_t byte_end = ftell(temp_file);
-	const char * poly_end = dfsan_getenv("POLYEND");
-	if (poly_end != nullptr) {
-		byte_end = atoi(poly_end);
-	}
-#ifdef DEBUG_INFO
-	fprintf(stderr, "BYTE_END IS: %d\n", byte_end);
-#endif	
-	fclose(temp_file);
-	taint_info_manager->createNewTargetInfo(target_file, byte_start, byte_end); 
-	//Special tracking for standard input
-	taint_info_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
-	auto targInfo = taint_info_manager->getTarget("stdin");
-	taint_info_manager->createNewTaintInfo(stdin, "stdin", targInfo);
-	const char * poly_output = dfsan_getenv("POLYOUTPUT");
-	if (poly_output != NULL) {
-		polytracker_output_json_filename = poly_output;
-	} else {
-		polytracker_output_json_filename = "polytracker";
-	}
-	if (dfsan_getenv("POLYDUMP") != NULL) {
-		dump_forest_and_sets = true;
-	}
-
-	const char * env_ttl = dfsan_getenv("POLYTTL");
-	decay_val taint_node_ttl = DEFAULT_TTL; 
-	if (env_ttl != NULL) {
-		taint_node_ttl = atoi(env_ttl);
-#ifdef DEBUG_INFO
-		fprintf(stderr, "Taint node TTL is: %d\n", taint_node_ttl);
-#endif
-	}
-	
-	/* byte_end + 2 because labels are offset by 1 because the zero label is reserved for
-	 * "no label". For example, if we are tracking bytes 5 - 10. When we create taint labels,
-	 * they will be the canonical bytes plus 1, meaning the original label range will be 6-11.
-	 * This means that the start of the union bytes will be 12, or byte_end + 2. (byte_end isn't 1 indexed yet)
-	 */
-	atomic_store(&__dfsan_last_label, byte_end + 2, memory_order_release);
-	
-  taint_map_mgr = new taintMappingManager((char*)ShadowAddr(), (char*)ForestAddr());  
-	if (taint_map_mgr == nullptr) {
-		fprintf(stderr, "Taint mapping manager null!\n"); 
-		exit(1);
-	}
-	
-	taint_prop_manager = new taintPropagationManager(taint_map_mgr, taint_node_ttl, byte_end + 1);	
-	if (taint_prop_manager == nullptr) {
+	taint_manager = new taintManager(
+			taint_node_ttl, (char*)ShadowAddr(), (char*)ForestAddr()
+	);
+	if (taint_manager == nullptr) {
 		fprintf(stderr, "Taint prop manager null!\n"); 
 		exit(1); 
 	}
 
-	taint_log_manager = new taintLogManager(taint_map_mgr, taint_info_manager,
-		 	polytracker_output_json_filename, dump_forest_and_sets); 
-	if (taint_log_manager == nullptr) {
-		fprintf(stderr, "Taint log manager is null!\n"); 
-		exit(1);
-	}	
+	dfsan_parse_env();
+
+
 	// Register the fini callback to run when the program terminates
 	// successfully or it is killed by the runtime.
 	//
@@ -476,8 +427,4 @@ void dfsan_late_init() {
 	// `dfsan_fini` from a partially-initialized state.
 	Atexit(dfsan_fini);
 	AddDieCallback(dfsan_fini);
-
-#ifdef DEBUG_INFO
-	fprintf(stderr, "Done init\n");
-#endif
 }

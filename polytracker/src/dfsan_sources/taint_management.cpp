@@ -4,8 +4,8 @@
 //TODO remove unused headers
 #include <utility>
 #include <unordered_map>
-#include "dfsan/taint_management.hpp" 
-#include "dfsan/dfsan_interface.h"
+#include "dfsan/dfsan_log_mgmt.h"
+//#include "dfsan/dfsan_interface.h"
 
 targetInfo::targetInfo(std::string name,
 		int start, 
@@ -18,13 +18,12 @@ targetInfo::targetInfo(std::string name,
 
 targetInfo::~targetInfo() {}
 
+taintSourceManager::taintSourceManager() {}
 
-taintInfoManager::taintInfoManager() {}
-
-taintInfoManager::~taintInfoManager() {}
+taintSourceManager::~taintSourceManager() {}
 
 
-void taintInfoManager::createNewTargetInfo(std::string fname, int start, int end) {
+void taintSourceManager::createNewTargetInfo(std::string fname, int start, int end) {
 	taint_info_mutex.lock();
 	targetInfo * target_info = new targetInfo(fname, start, end);
 	name_target_map[fname] = target_info;
@@ -32,71 +31,129 @@ void taintInfoManager::createNewTargetInfo(std::string fname, int start, int end
 }	
 
 
-void taintInfoManager::createNewTaintInfo(int fd, targetInfo *targ_info) {
+bool taintSourceManager::createNewTaintInfo(std::string name, int fd) {
 	taint_info_mutex.lock();
+	if (name_target_map.find(name) == name_target_map.end()) {
+		taint_info_mutex.unlock();
+		return false;
+	}
+	targetInfo * targ_info = name_target_map[name];
+	targ_info->is_open = true;
 	fd_target_map[fd] = targ_info;
 	taint_info_mutex.unlock();
+	return true;
 }
 
-void taintInfoManager::createNewTaintInfo(FILE * ffd, targetInfo *targ_info) {
+bool taintSourceManager::createNewTaintInfo(std::string name, FILE * ffd) {
 	taint_info_mutex.lock();
+	if (name_target_map.find(name) == name_target_map.end()) {
+		taint_info_mutex.unlock();
+		return false;
+	}
+	targetInfo * targ_info = name_target_map[name];
+	targ_info->is_open = true;
 	file_target_map[ffd] = targ_info;
 	taint_info_mutex.unlock();
+	return true;
 }
 
-
-bool taintInfoManager::taintData(int fd, char * mem, int offset, int len) {
+targetInfo *
+taintSourceManager::getTargetInfo(std::string name) {
 	taint_info_mutex.lock();
-	if (!isTracking(fd)) {
+	if (name_target_map.find(name) == name_target_map.end()) {
 		taint_info_mutex.unlock();
-		return false;
+		return nullptr;
+	}
+	targetInfo * targ_info = name_target_map[name];
+	taint_info_mutex.unlock();
+	return targ_info;
+}
+targetInfo *
+taintSourceManager::getTargetInfo(int fd) {
+	taint_info_mutex.lock();
+	if (fd_target_map.find(fd) == fd_target_map.end()) {
+		taint_info_mutex.unlock();
+		return nullptr;
 	}
 	targetInfo * targ_info = fd_target_map[fd];
-	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end);
 	taint_info_mutex.unlock();
-	return true;
+	return targ_info;
 }
-
-bool taintInfoManager::taintData(FILE * fd, char * mem, int offset, int len) {
+targetInfo *
+taintSourceManager::getTargetInfo(FILE* fd) {
 	taint_info_mutex.lock();
-	if (!isTracking(fd)) {
+	if (file_target_map.find(fd) == file_target_map.end()) {
 		taint_info_mutex.unlock();
-		return false;
+		return nullptr;
 	}
 	targetInfo * targ_info = file_target_map[fd];
-	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end);
 	taint_info_mutex.unlock();
-	return true;
+	return targ_info;
 }
-/*
- * This function is responsible for marking memory locations as tainted, and is called when taint is processed
- * by functions like read, pread, mmap, recv, etc.
- *
- * Mem is a pointer to the data we want to taint
- * Offset tells us at what point in the stream/file we are in (before we read)
- * Len tells us how much we just read in
- * byte_start and byte_end are target specific options that allow us to only taint specific regions
- * like (0-100) etc etc
- *
- * If a byte is supposed to be tainted we make a new taint label for it, these labels are assigned sequentially.
- *
- * Then, we keep track of what canonical labels map to what original file offsets.
- *
- * Then we update the shadow memory region with the new label
- */
-void taintInfoManager::taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end) {
-	int curr_byte_num = offset;
-	int taint_size_processed = 0;
-	for (char * curr_byte = (char*)mem; curr_byte_num < offset + len;
-			curr_byte_num++, curr_byte++)
-	{
-		//If byte end is < 0, then we don't care about ranges.
-		if (byte_end < 0 ||
-				(curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
-			dfsan_label new_label = dfsan_create_canonical_label();
-			dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
-			canonical_mapping[new_label] = curr_byte_num;
-			taint_size_processed++;
-		}
+void taintSourceManager::closeSource(int fd) {
+	taint_info_mutex.lock();
+	if (fd_target_map.find(fd) != fd_target_map.end()) {
+		fd_target_map[fd]->is_open = false;
+		fd_target_map.erase(fd);
 	}
+	taint_info_mutex.unlock();
+}
+void taintSourceManager::closeSource(FILE * fd) {
+	taint_info_mutex.lock();
+	if (file_target_map.find(fd) != file_target_map.end()) {
+		file_target_map[fd]->is_open = false;
+		file_target_map.erase(fd);
+	}
+	taint_info_mutex.unlock();
+}
+bool taintSourceManager::isTracking(FILE * ffd) {
+	taint_info_mutex.lock();
+	if (file_target_map.find(ffd) != file_target_map.end()) {
+		taint_info_mutex.unlock();
+		return true;
+	}
+	taint_info_mutex.unlock();
+	return false;
+}
+bool taintSourceManager::isTracking(int fd) {
+	taint_info_mutex.lock();
+	if (fd_target_map.find(fd) != fd_target_map.end()) {
+		taint_info_mutex.unlock();
+		return true;
+	}
+	taint_info_mutex.unlock();
+	return false;
+}
+bool taintSourceManager::isTracking(std::string name) {
+	taint_info_mutex.lock();
+	if (name_target_map.find(name) != name_target_map.end()) {
+		taint_info_mutex.unlock();
+		return true;
+	}
+	taint_info_mutex.unlock();
+	return false;
+}
+targetInfo*
+taintSourceManager::findTargetInfo(std::string name) {
+	taint_info_mutex.lock();
+	if (name_target_map.find(name) != name_target_map.end()) {
+		taint_info_mutex.unlock();
+		return name_target_map[name];
+	}
+	taint_info_mutex.unlock();
+	return nullptr;
+}
+
+std::map<std::string, targetInfo*>
+taintSourceManager::getTargets() {
+	return name_target_map;
+}
+
+json
+taintSourceManager::getMetadata(targetInfo * targ_info) {
+	if (taint_metadata.find(targ_info) == taint_metadata.end()) {
+		return json();
+	}
+	return taint_metadata[targ_info];
+
 }
