@@ -355,7 +355,7 @@ void dfsan_parse_env() {
 		exit(1);
 	}
 
-	uint64_t byte_start, byte_end = 0;
+	uint64_t byte_start = 0, byte_end = 0;
 	const char * poly_start = dfsan_getenv("POLYSTART");
 	if (poly_start != nullptr) {
 		byte_start = atoi(poly_start);
@@ -375,6 +375,8 @@ void dfsan_parse_env() {
 	} else {
 		polytracker_output_filename = "polytracker";
 	}
+
+	taint_manager->setOutputFilename(std::string(polytracker_output_filename));
 
 	const char * env_ttl = dfsan_getenv("POLYTTL");
 	decay_val taint_node_ttl = DEFAULT_TTL;

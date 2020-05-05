@@ -107,7 +107,8 @@ class taintManager : public taintMappingManager, public taintSourceManager {
 		bool taintData(FILE * fd, char * mem, int offset, int len);
 		bool taintData(int fd, char * mem, int offset, int len);
 	 	dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2);
-	 	dfsan_label createReturnLabel(int file_byte_offset);
+	 	dfsan_label createReturnLabel(int file_byte_offset, std::string name);
+	 	void setOutputFilename(std::string outfile);
 	private:
 		void checkMaxLabel(dfsan_label label);
 		void outputRawTaintForest();
@@ -117,8 +118,8 @@ class taintManager : public taintMappingManager, public taintSourceManager {
 		void addJsonRuntimeCFG();
 		void addCanonicalMapping();
 		void addTaintedBlocks();
-	 	dfsan_label createCanonicalLabel(int file_byte_offset);
-		void taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end);
+	 	dfsan_label createCanonicalLabel(int file_byte_offset, std::string source_name);
+		void taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end, std::string name);
 
 		dfsan_label _unionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay);
 		std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table; 	
@@ -126,8 +127,9 @@ class taintManager : public taintMappingManager, public taintSourceManager {
 		std::mutex taint_prop_lock;
 		dfsan_label next_label;
 		//TODO map LABEL to <offset, std::string (source)>
-		std::map<dfsan_label, dfsan_label> canonical_mapping;
-		std::list<std::pair<int, int>> taint_bytes_processed;
+		//TODO change to list
+		std::unordered_map<std::string, std::list<std::pair<dfsan_label, int>>> canonical_mapping;
+		std::unordered_map<std::string, std::list<std::pair<int, int>>> taint_bytes_processed;
 		thread_id_map thread_stack_map;
 		string_node_map function_to_bytes;
 		string_node_map function_to_cmp_bytes;

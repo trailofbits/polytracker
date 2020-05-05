@@ -254,7 +254,7 @@ __dfsw_fgetc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	fprintf(stderr, "### fgetc %p, range is %ld, 1 \n", fd, offset);
 #endif
 	if (c != EOF && taint_manager->isTracking(fd)) {
-		*ret_label = taint_manager->createReturnLabel(offset);
+		*ret_label = taint_manager->createReturnLabel(offset, taint_manager->getTargetInfo(fd)->target_name);
 	}
 	return c;
 }
@@ -267,7 +267,7 @@ __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 	fprintf(stderr, "### fgetc_unlocked %p, range is %ld, 1 \n", fd, offset);
 #endif
 	if (c != EOF && taint_manager->isTracking(fd)) {
-		*ret_label = taint_manager->createReturnLabel(offset);
+		*ret_label = taint_manager->createReturnLabel(offset, taint_manager->getTargetInfo(fd)->target_name);
 	}
 	return c;
 }
@@ -281,7 +281,7 @@ __dfsw__IO_getc(FILE *fd, dfsan_label fd_label, dfsan_label *ret_label) {
 			c);
 #endif
 	if (taint_manager->isTracking(fd) && c != EOF) {
-		*ret_label = taint_manager->createReturnLabel(offset);
+		*ret_label = taint_manager->createReturnLabel(offset, taint_manager->getTargetInfo(fd)->target_name);
 	}
 	return c;
 }
@@ -295,7 +295,7 @@ __dfsw_getchar(dfsan_label *ret_label) {
 	fprintf(stderr, "### getchar stdin, range is %ld, 1 \n", offset);
 #endif
 	if (c != EOF) {
-		*ret_label = taint_manager->createReturnLabel(offset);
+		*ret_label = taint_manager->createReturnLabel(offset, taint_manager->getTargetInfo(stdin)->target_name);
 	}
 	return c;
 }

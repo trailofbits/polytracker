@@ -1,11 +1,9 @@
 #include <string>
 #include <vector> 
 #include <iostream>
-//TODO remove unused headers
 #include <utility>
 #include <unordered_map>
 #include "dfsan/dfsan_log_mgmt.h"
-//#include "dfsan/dfsan_interface.h"
 
 targetInfo::targetInfo(std::string name,
 		int start, 

@@ -98,7 +98,6 @@ taintManager::resetFrame(int * index) {
 		abort(); 
 	}
 	std::thread::id this_id = std::this_thread::get_id(); 
-	//NOTE this could use some testing 
 	//Get the function before we reset the frame (should be the one that called longjmp) 
 	std::string caller_func = thread_stack_map[this_id].back();
 	//Reset the frame 	
@@ -122,6 +121,11 @@ taintManager::addJsonRuntimeCFG() {
 		json j_set(cfg_it->second);
 		output_json["runtime_cfg"][cfg_it->first] = j_set;
 	}
+}
+
+void
+taintManager::setOutputFilename(std::string out) {
+	outfile = out;
 }
 
 //TODO Document this
@@ -163,13 +167,17 @@ taintManager::addTaintSources() {
 void
 taintManager::addCanonicalMapping() {
 	for (auto it = canonical_mapping.begin(); it != canonical_mapping.end(); it++) {
-		output_json["canonical_mapping"][it->first] = it->second;
+		auto map_list = it->second;
+		json canonical_map(map_list);
+		output_json["canonical_mapping"][it->first] = canonical_map;
 	}
 }
 
 void taintManager::addTaintedBlocks() {
-	json tainted_chunks(taint_bytes_processed);
-	output_json["tainted_input_blocks"] = tainted_chunks;
+	for (auto it = taint_bytes_processed.begin(); it != taint_bytes_processed.end(); it++) {
+		json tainted_chunks(it->second);
+		output_json["tainted_input_blocks"][it->first] = tainted_chunks;
+	}
 }
 
 void
@@ -196,6 +204,8 @@ taintManager::outputRawTaintSets() {
 			for (auto it = cmp_set.begin(); it != cmp_set.end(); it++) {
 				cmp_label_set.insert(getTaintLabel(*it));
 			}
+			json cmp_byte_set(cmp_label_set);
+			output_json["tainted_functions"][it->first]["cmp_bytes"] = cmp_byte_set;
 		}
 	}
 	std::string output_string = outfile + "_process_set.json";
@@ -207,8 +217,6 @@ taintManager::outputRawTaintSets() {
 void
 taintManager::output() {
 	taint_prop_lock.lock();
-	//TODO Output header with settings for POLYSTART and POLYEND etc etc
-	//This allows us to interpret the forest properly
 	//TODO output taint source mappings (not needed right now)
 	//TODO maybe even prefix the node mappings with the "current" node
 	//That allows us to process it when doing
@@ -226,22 +234,23 @@ taintManager::taintManager(decay_val init_decay, char* shad_mem,
 taintManager::~taintManager() {}
 
 dfsan_label
-taintManager::createReturnLabel(int file_byte_offset) {
+taintManager::createReturnLabel(int file_byte_offset, std::string name) {
 	taint_prop_lock.lock();
-	dfsan_label ret_label = createCanonicalLabel(file_byte_offset);
+	dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
 	taint_prop_lock.unlock();
 	return ret_label;
 }
 
 dfsan_label 
-taintManager::createCanonicalLabel(int file_byte_offset) {
+taintManager::createCanonicalLabel(int file_byte_offset, std::string name) {
 	dfsan_label new_label = next_label;
+	next_label += 1;
 	checkMaxLabel(new_label);
 	taint_node_t * new_node = getTaintNode(new_label);
 	new_node->p1 = NULL; 
 	new_node->p2 = NULL; 
 	new_node->decay = taint_node_ttl; 
-	canonical_mapping[new_label] = file_byte_offset;
+	canonical_mapping[name].push_back(std::pair<dfsan_label, int>(new_label, file_byte_offset));
 	return new_label; 
 }
 
@@ -252,7 +261,7 @@ bool taintManager::taintData(int fd, char * mem, int offset, int len) {
 		return false;
 	}
 	targetInfo * targ_info = getTargetInfo(fd);
-	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end);
+	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end, targ_info->target_name);
 	taint_prop_lock.unlock();
 	return true;
 }
@@ -264,7 +273,7 @@ bool taintManager::taintData(FILE * fd, char * mem, int offset, int len) {
 		return false;
 	}
 	targetInfo * targ_info = getTargetInfo(fd);
-	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end);
+	taintTargetRange(mem, offset, len, targ_info->byte_start, targ_info->byte_end, targ_info->target_name);
 	taint_prop_lock.unlock();
 	return true;
 }
@@ -284,25 +293,18 @@ bool taintManager::taintData(FILE * fd, char * mem, int offset, int len) {
  *
  * Then we update the shadow memory region with the new label
  */
-void taintManager::taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end) {
+void taintManager::taintTargetRange(char * mem, int offset, int len, int byte_start, int byte_end, std::string name) {
 	int curr_byte_num = offset;
 	int taint_offset_start = -1, taint_offset_end = -1;
+	bool processed_bytes = false;
 	for (char * curr_byte = (char*)mem; curr_byte_num < offset + len;
 			curr_byte_num++, curr_byte++)
 	{
 		//If byte end is < 0, then we don't care about ranges.
 		if (byte_end < 0 ||
 				(curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
-			/*
-			 * Thoughts: When creating the canonical label we need to pass the byte
-			 * it over to the taintProp manager
-			 * Because during runtime we also create some more canonical bytes, which goes back into the prop
-			 * manager, and because it misses the infomanager it means that we don't store it in the canonical
-			 * label mapping REEEEEEEEEE
-			 */
-			dfsan_label new_label = createCanonicalLabel(curr_byte_num);
+			dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
 			dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
-			canonical_mapping[new_label] = curr_byte_num;
 			if (taint_offset_start == -1) {
 				taint_offset_start = curr_byte_num;
 				taint_offset_end = curr_byte_num;
@@ -310,15 +312,18 @@ void taintManager::taintTargetRange(char * mem, int offset, int len, int byte_st
 			else if (curr_byte_num > taint_offset_end) {
 				taint_offset_end = curr_byte_num;
 			}
+			processed_bytes = true;
 		}
 	}
-	taint_bytes_processed.push_back(std::pair<int, int>(taint_offset_start, taint_offset_end));
+	if (processed_bytes) {
+		taint_bytes_processed[name].push_back(std::pair<int, int>(taint_offset_start, taint_offset_end));
+	}
 }
 
 dfsan_label
 taintManager::_unionLabel(dfsan_label l1, dfsan_label l2, decay_val init_decay) {
 	dfsan_label ret_label = next_label + 1;
-	next_label++;
+	next_label += 1;
 	checkMaxLabel(ret_label);
 	taint_node_t * new_node = getTaintNode(ret_label);
 	new_node->p1 = getTaintNode(l1);

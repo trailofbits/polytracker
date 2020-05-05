@@ -15,7 +15,6 @@
 #ifndef DFSAN_H
 #define DFSAN_H
 #include "dfsan_types.h"
-#include "taint_management.hpp"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "dfsan_platform.h"
 #include <stdint.h> 
