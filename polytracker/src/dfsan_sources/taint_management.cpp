@@ -16,7 +16,13 @@ targetInfo::~targetInfo() {}
 
 taintSourceManager::taintSourceManager() {}
 
-taintSourceManager::~taintSourceManager() {}
+taintSourceManager::~taintSourceManager() {
+  // The taint source manager maintains the map of target infos
+  // We need to free this memory when the object dies
+  for (auto it = name_target_map.begin(); it != name_target_map.end(); it++) {
+    delete it->second;
+  }
+}
 
 void taintSourceManager::createNewTargetInfo(std::string fname, int start,
                                              int end) {

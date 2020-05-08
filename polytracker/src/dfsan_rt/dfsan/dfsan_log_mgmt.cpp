@@ -124,7 +124,6 @@ void taintManager::addJsonRuntimeCFG() {
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
 
-// TODO Document this
 void taintManager::outputRawTaintForest() {
   std::string forest_fname = outfile + "_forest.bin";
   FILE* forest_file = fopen(forest_fname.c_str(), "w");
@@ -132,15 +131,19 @@ void taintManager::outputRawTaintForest() {
     std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
     exit(1);
   }
-
+  // Output file offset 0 will have data for node 1 etc etc
   taint_node_t* curr = nullptr;
-  for (int i = 1; i < next_label; i++) {
+  for (int i = 0; i < next_label; i++) {
     curr = getTaintNode(i);
     dfsan_label node_p1 = getTaintLabel(curr->p1);
     dfsan_label node_p2 = getTaintLabel(curr->p2);
     fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
     fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
-    fwrite(&(curr->decay), sizeof(curr->decay), 1, forest_file);
+    if (i == 4097 || i == 4096) {
+      std::cout << "====WRITING =====: " << i << std::endl;
+      std::cout << "Parent 1: " << node_p1 << std::endl;
+      std::cout << "Parent 2: " << node_p2 << std::endl;
+    }
   }
   fclose(forest_file);
 }
@@ -178,19 +181,18 @@ void taintManager::addTaintedBlocks() {
 
 void taintManager::outputRawTaintSets() {
   string_node_map::iterator it;
-
   addJsonVersion();
   addJsonRuntimeCFG();
   addTaintSources();
   addCanonicalMapping();
   addTaintedBlocks();
-
   for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
     auto set = it->second;
     std::set<dfsan_label> label_set;
     for (auto it = set.begin(); it != set.end(); it++) {
       label_set.insert(getTaintLabel(*it));
     }
+    // Take label set and create a json based on source.
     json byte_set(label_set);
     output_json["tainted_functions"][it->first]["input_bytes"] = byte_set;
     if (function_to_cmp_bytes.find(it->first) != function_to_cmp_bytes.end()) {
@@ -211,9 +213,6 @@ void taintManager::outputRawTaintSets() {
 
 void taintManager::output() {
   taint_prop_lock.lock();
-  // TODO output taint source mappings (not needed right now)
-  // TODO maybe even prefix the node mappings with the "current" node
-  // That allows us to process it when doing
   outputRawTaintForest();
   outputRawTaintSets();
   taint_prop_lock.unlock();
@@ -324,7 +323,7 @@ void taintManager::taintTargetRange(char* mem, int offset, int len,
 
 dfsan_label taintManager::_unionLabel(dfsan_label l1, dfsan_label l2,
                                       decay_val init_decay) {
-  dfsan_label ret_label = next_label + 1;
+  dfsan_label ret_label = next_label;
   next_label += 1;
   checkMaxLabel(ret_label);
   taint_node_t* new_node = getTaintNode(ret_label);
@@ -381,7 +380,7 @@ void taintManager::checkMaxLabel(dfsan_label label) {
 
 dfsan_label taintManager::getLastLabel() {
   taint_prop_lock.lock();
-  dfsan_label last_label = next_label;
+  dfsan_label last_label = next_label - 1;
   taint_prop_lock.unlock();
   return last_label;
 }

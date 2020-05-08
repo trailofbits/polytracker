@@ -16,8 +16,6 @@
 #include <unordered_set>
 #include <vector>
 
-// TODO rename file
-
 #define TAINT_GRANULARITY 1
 #define MAX_NONCE 128
 using json = nlohmann::json;
@@ -47,12 +45,9 @@ private:
   std::unordered_map<FILE *, targetInfo *> file_target_map;
   // TODO use these
   std::unordered_map<targetInfo *, json> taint_metadata;
-  // std::unordered_map<int, std::string> fd_metadata;
-  // std::unordered_map<FILE*, std::string> file_metadata;
 
 public:
   taintSourceManager();
-  // TODO Free memory here
   ~taintSourceManager();
   void createNewTargetInfo(std::string fname, int start, int end);
   bool createNewTaintInfo(std::string name, int fd);
@@ -70,11 +65,6 @@ public:
   json getMetadata(targetInfo *targ_info);
 };
 
-/*
- * This manages the mapping between taint_label <--> taint_node
- * NOTE an instance of this class is shared between the log manager and prop
- * manager It has its own lock to prevent concurrency issues
- */
 class taintMappingManager {
 public:
   taintMappingManager(char *shad_mem_ptr, char *taint_forest_ptr);
@@ -128,8 +118,6 @@ private:
   decay_val taint_node_ttl;
   std::mutex taint_prop_lock;
   dfsan_label next_label;
-  // TODO map LABEL to <offset, std::string (source)>
-  // TODO change to list
   std::unordered_map<std::string, std::list<std::pair<dfsan_label, int>>>
       canonical_mapping;
   std::unordered_map<std::string, std::list<std::pair<int, int>>>
