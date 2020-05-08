@@ -12,6 +12,7 @@ setup(
         'matplotlib',
         'networkX',
         'tqdm',
+        'pygraphviz',
         'pydot'
     ],
     entry_points={

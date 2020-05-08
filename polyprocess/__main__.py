@@ -1,5 +1,5 @@
 import argparse
-from polyprocess import Polyprocess
+from polyprocess import PolyProcess
 import logging
 import sys
 
@@ -31,14 +31,17 @@ def main():
         print("Error: Path to forest bin not specified")
         return
 
-    polyprocess = Polyprocess(args.json, args.forest)
+    poly_process = PolyProcess(args.json, args.forest)
+    poly_process.process_taint_sets()
+
+    if args.outfile is not None:
+        poly_process.set_output_filepath(args.outfile)
+
     # Output the processed json
-    #polyprocess.process_forest()
-    #polyprocess.print_header()
-    polyprocess.process_taint_sets()
+    poly_process.output_processed_json()
     # Output optional taint forest diagram
     if draw_forest:
-        polyprocess.draw_forest()
+        poly_process.draw_forest()
 
 
 if __name__ == "__main__":

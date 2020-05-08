@@ -8,24 +8,16 @@ from subprocess import check_call
 import networkx as nx
 import json
 from networkx.drawing.nx_pydot import write_dot
-from typing import cast, Dict, List, Set, Union
+from typing import Dict, List, Set, Union, Tuple
 from typing_extensions import Final
 
 logger: Logger = logging.getLogger("PolyProcess")
 
 """
-This "Final" type means this is just a const 13
-Final is in python 3.8, currently this is 3.7
-This 13 is the size (bytes) of the taint node struct defined in dfsan_types.h
+This "Final" type means this is just a const 
+The 8 comes from two uint32_t's representing a nodes parents
 """
-taint_node_size: Final[int] = 13
-taint_header_size: Final[int] = 9
-
-
-@dataclass
-class TaintMetadata:
-    decay_val: int
-    taint_source: int
+taint_node_size: Final[int] = 8
 
 
 @dataclass
@@ -34,7 +26,7 @@ class SourceMetadata:
     taint_range_end: int
 
 
-class Polyprocess:
+class PolyProcess:
     """This is the PolyProcess class
 
     This class takes two arguments
@@ -60,56 +52,43 @@ class Polyprocess:
         self.json_file = open(polytracker_json_path, "r")
         self.json_size = os.path.getsize(polytracker_json_path)
         self.polytracker_json = json.loads(self.json_file.read(self.json_size))
+        self.processed_json = self.polytracker_json
         self.taint_sets = self.polytracker_json["tainted_functions"]
         self.forest_file = open(polytracker_forest_path, "rb")
         self.forest_file_size = os.path.getsize(polytracker_forest_path)
-        # Actual taint forest
         self.taint_forest: nx.DiGraph = nx.DiGraph()
-
-        # Stores info about taint source.
-        self.taint_metadata: Dict[int, TaintMetadata] = {}
-        self.source_metadata: Dict[int, SourceMetadata] = {}
+        self.source_metadata: Dict[str, SourceMetadata] = {}
+        self.canonical_mapping: Dict[int, Tuple[str, int]] = {}
+        self.process_source_metadata()
+        self.process_canonical_mapping()
         self.process_forest()
         self.outfile = "polytracker.json"
 
-    def print_header(self):
-        self.forest_file.seek(0)
-        num_taint_sources = struct.unpack("=I", self.forest_file.read(4))
-        print("=" * 9, "TAINT HEADER", "=" * 9)
-        print(f"num taint sources: {num_taint_sources[0]}")
-        for i in range(num_taint_sources[0]):
-            taint_header_entry = struct.unpack("=cII", self.forest_file.read(taint_header_size))
-            taint_source_id: int = taint_header_entry[0]
-            taint_source_start: int = taint_header_entry[1]
-            taint_source_end: int = taint_header_entry[2]
-            print("TAINT_ENTRY: ", taint_source_id, taint_source_start, taint_source_end)
-        print("="*32)
+    def process_source_metadata(self):
+        source_info = self.polytracker_json["taint_sources"]
+        source_prog_bar = tqdm(source_info)
+        source_prog_bar.set_description("Processing source metadata")
+        for source in source_prog_bar:
+            self.source_metadata[source] = SourceMetadata(
+                source_info[source]["start_byte"],
+                source_info[source]["end_byte"])
 
-    def validate_forest(self, num_taint_sources) -> bool:
-        header_size = (num_taint_sources * taint_header_size) + 4
-        forest_size = taint_node_size * self.max_node()
-        res = self.forest_file_size - (header_size + forest_size) == 0
-        return res
+    def process_canonical_mapping(self):
+        canonical_map = self.polytracker_json["canonical_mapping"]
+        source_prog_bar = tqdm(canonical_map)
+        source_prog_bar.set_description("Processing canonical mapping")
+        for source in source_prog_bar:
+            for label_offset_pair in canonical_map[source]:
+                self.canonical_mapping[label_offset_pair[0]] = (source, label_offset_pair[1])
 
-    def max_node(self):
-        return (self.forest_file_size // taint_node_size) - 1
+    def set_output_filepath(self, filepath: str):
+        self.outfile = filepath
 
-    def process_taint_header(self):
-        logger.debug("Processing taint header")
-        self.forest_file.seek(0)
-        num_taint_sources = struct.unpack("=I", self.forest_file.read(4))
-        num_taint_sources = num_taint_sources[0]
-        is_valid = self.validate_forest(num_taint_sources)
-        if not is_valid:
-            raise Exception("Invalid taint forest")
-        if num_taint_sources <= 0:
-            raise Exception("Invalid taint header - no sources!")
-        for i in range(num_taint_sources):
-            taint_header_entry = struct.unpack("=cII", self.forest_file.read(taint_header_size))
-            taint_source_id: int = taint_header_entry[0]
-            taint_source_start: int = taint_header_entry[1]
-            taint_source_end: int = taint_header_entry[2]
-            self.source_metadata[taint_source_id] = SourceMetadata(taint_source_start, taint_source_end)
+    def validate_forest(self) -> bool:
+        return self.forest_file_size % taint_node_size == 0
+
+    def max_node(self) -> int:
+        return self.forest_file_size // taint_node_size
 
     def process_forest(self):
         """This function reads the taint forest file and converts it to a networkX graph
@@ -126,27 +105,21 @@ class Polyprocess:
         Then subtract one from that label, which gets you the original offset.
         """
         logger.log(logging.DEBUG, "Processing taint forest!")
-        # Add the null node
-        self.taint_forest.add_node(0)
-        self.taint_metadata[0] = TaintMetadata(0, 0)
-
-        try:
-            self.process_taint_header()
-        except Exception:
-            raise
-
-        for curr_node in range(self.max_node()):
-            taint_forest_entry = struct.unpack("=IIcI", self.forest_file.read(taint_node_size))
+        is_valid = self.validate_forest()
+        if not is_valid:
+            raise Exception("Invalid taint forest!")
+        nodes_to_process = tqdm(range(self.max_node()))
+        nodes_to_process.set_description("Processing taint forest")
+        for curr_node in nodes_to_process:
+            taint_forest_entry = struct.unpack("=II", self.forest_file.read(taint_node_size))
             parent_1: int = taint_forest_entry[0]
             parent_2: int = taint_forest_entry[1]
-            taint_source = taint_forest_entry[2]
-            decay: int = taint_forest_entry[3]
-            self.taint_forest.add_node(curr_node + 1)
+            self.taint_forest.add_node(curr_node)
             # Parents for canonical labels should have parents of label 0
-            self.taint_metadata[curr_node + 1] = TaintMetadata(decay, taint_source)
+            assert parent_1 == parent_2 == 0 or (parent_1 != 0 and parent_2 != 0)
             if parent_1 != 0 and parent_2 != 0:
-                self.taint_forest.add_edge(curr_node + 1, parent_1)
-                self.taint_forest.add_edge(curr_node + 1, parent_2)
+                self.taint_forest.add_edge(curr_node, parent_1)
+                self.taint_forest.add_edge(curr_node, parent_2)
 
     def draw_forest(self):
         logger.log(logging.DEBUG, "Drawing forest")
@@ -155,30 +128,48 @@ class Polyprocess:
         write_dot(self.taint_forest, "taint_forest.dot")
         check_call(['dot', '-Tpdf', 'taint_forest.dot', '-o', 'taint_forest.pdf'])
 
-    def is_canonical(self, label: int):
-        # Taint source id
-        taint_id = self.taint_metadata[label].taint_source
-        # Taint range
-        source_data = self.source_metadata[taint_id]
-        return source_data.taint_range_start <= (label - 1) <= source_data.taint_range_end
+    def is_canonical_label(self, label: int) -> bool:
+        try:
+            out_edges = self.taint_forest.edges(label)
+            if len(out_edges) == 0:
+                return True
+        except nx.exception.NetworkXError:
+            raise
+        return False
+
+    def get_canonical_offset(self, label: int) -> int:
+        return self.canonical_mapping[label][1]
+
+    def get_canonical_source(self, label: int) -> str:
+        return self.canonical_mapping[label][0]
 
     def process_taint_sets(self):
         taint_sets = tqdm(self.taint_sets)
-        processed_sets: Dict[str, Dict[str, Dict[str, Union[Set[int], List[int]]]]] = {}
+        processed_labels: Dict[str, Dict[str, Dict[str, Union[Set[int], List[int]]]]] = {}
         for function in taint_sets:
+            processed_labels[function] = {"input_bytes": {}}
             taint_sets.set_description(f"Processing {function}")
-            for source in self.taint_sets[function]["input_bytes"]:
-                label_set: List[int] = self.taint_sets[function]["input_bytes"][source]
-                processed_sets[function] = {"input_bytes": {cast(str, source): set()}}
-                for label in label_set:
-                    processed_sets[function]["input_bytes"][source] |= set(
-                        label - 1 for label in nx.dfs_preorder_nodes(self.taint_forest, label)
-                        if self.is_canonical(label)
-                    )
-                # Now that we have constructed the input_bytes sources, convert it to a sorted list:
-                processed_sets[function]["input_bytes"][source] = list(sorted(
-                    processed_sets[function]["input_bytes"][source]))
+            label_list = self.taint_sets[function]["input_bytes"]
+            # Function --> Input_bytes/Cmp bytes --> Source --> labels
+            for label in label_list:
+                # Canonical labels
+                canonical_labels = set(
+                    label for label in nx.dfs_preorder_nodes(self.taint_forest, label)
+                    if self.is_canonical_label(label)
+                )
+                # Now partition based on taint source
+                for can_label in canonical_labels:
+                    offset = self.get_canonical_offset(can_label)
+                    source = self.get_canonical_source(can_label)
+                    if source not in processed_labels[function]["input_bytes"]:
+                        processed_labels[function]["input_bytes"] = {source: set()}
+                    processed_labels[function]["input_bytes"][source].add(offset)
+            # Now that we have constructed the input_bytes sources, convert it to a sorted list:
+            for source in processed_labels[function]["input_bytes"]:
+                processed_labels[function]["input_bytes"][source] = list(sorted(
+                    processed_labels[function]["input_bytes"][source]))
+            self.processed_json["tainted_functions"] = processed_labels
 
-        self.polytracker_json["tainted_functions"] = processed_sets
+    def output_processed_json(self):
         with open(self.outfile, 'w') as out_fd:
-            json.dump(self.polytracker_json, out_fd, indent=4)
+            json.dump(self.processed_json, out_fd, indent=4)
