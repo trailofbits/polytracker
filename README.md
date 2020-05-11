@@ -39,6 +39,12 @@ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 POLYPATH=some_pdf.pdf ./pdfinfo some_pdf.pdf
 ```
 
+Install PolyProcess 
+
+```
+pip3 install .
+```
+
 ## Dependencies and Prerequisites
 
 PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
