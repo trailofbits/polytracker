@@ -171,5 +171,6 @@ under the [Apache 2.0 lisense](LICENSE). © 2019, Trail of Bits.
 ## Maintainers
 [Carson Harmon](https://github.com/notBD)<br />
 [Evan Sultanik](https://github.com/ESultanik)<br />
+[Brad Larsen](https://github.com/bradlarsen)<br />
 <br />
 `firstname.lastname@trailofbits.com`
