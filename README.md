@@ -46,9 +46,7 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
-## Building PolyTracker from Source (DEPRECATED - Please use Docker to build and run polytracker)
-
-NOTE: While you can build PolyTracker from source, at the moment it only runs in Docker, this will be fixed soon
+## Building PolyTracker from Source 
 
 The following tools are required to build PolyTracker:
 * [CMake](https://cmake.org)
@@ -101,8 +99,6 @@ POLYPATH: The path to the file to mark as tainted
 
 POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
 
-POLYDUMP: Instead of dumping json, if this is set to TRUE it will dump the contents of shadow memory to a file. 
-
 POLYSTART: Start offset to track 
 
 POLYEND: End offset to track
@@ -112,22 +108,23 @@ POLYEND: End offset to track
 
 The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in a future release.)
 
-The instrumented software will write its output to `polytracker.json` in the current directory.
+The instrumented software will write its output to `polytracker_process_sets.json` and 
+`polytracker_forest.bin` in the current directory.
 
 For example, with our instrumented version of MuPDF, run
 ```
 POLYPATH=input.pdf POLYTTL=32 ./mutool info input.pdf
 ```
-On program exit, `polytracker.json` will be created in the current directory.
+On program exit, those artifacts will be created in the current directory.
+These are intended to be consumed by PolyProcess to produce a final `polytracker.json` file,
+but can be consumed by other tools. The artifacts are documented [here.](docs/ARTIFACTS.md)
 
-Alternatively, if you want to examine the results to process yourself, there is an option to dump the tracked results to disk. Simply set the `POLYDUMP` environment variable to `TRUE`. 
-
+To create the final JSON, run `polyprocess` 
 ```
-POLYPATH=input.pdf POLYTTL=2048 POLYDUMP=TRUE ./mutool info input.pdf
+polyprocess --json path/to/polytracker_process_set.json --forest path/to/polytracker_forest.bin
 ```
 
-This will produce two files, one is the contents of the in memory taint forest, and the other is a json that maps function names to a set of taint nodes touched in a comparison. The schema for the taint forest can be found in `dfsan_types.h`, which is just the node structure that is written to disk.  
-
+By default this produces a polytracker.json file, which can then be given to PolyFile. 
 
 ## Creating custom ignore lists from pre-built libraries 
 
@@ -138,28 +135,6 @@ There is a script located in `polytracker/scripts` that you can run on any ELF l
 We use this when we do not want to track information going through a specific library like libpng, or other sub components of a program. The `Dockerfile-listgen.demo` exists to build common open source libraries so we can create these lists. 
  
 This script is a slightly tweaked version of what DataFlowSanitizer has, which focuses on ignoring system libraries. The original script can be found in `dfsan_rt`. 
-
-## Polytracker.json schema 
-
-version: x.x.x, 
-tainted_functions: {
-	PREFIX_function_name: {
-		input_bytes: {
-			taint_source {
-				actual_bytes 
-      }
-    }
-		cmp_bytes: {
-			taint_source {
-				actual_bytes
-			}
-		}
-  },
-	PREFIX_function_two....
-},
-runtime_cfg {
-	function_name: [caller1, caller2, etc], 
-}
 
 ## Current Status and Known Issues
 
@@ -196,6 +171,5 @@ under the [Apache 2.0 lisense](LICENSE). © 2019, Trail of Bits.
 ## Maintainers
 [Carson Harmon](https://github.com/notBD)<br />
 [Evan Sultanik](https://github.com/ESultanik)<br />
-[Brad Larsen](https://github.com/bradlarsen)<br />
 <br />
 `firstname.lastname@trailofbits.com`
