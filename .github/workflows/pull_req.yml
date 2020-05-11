@@ -1,28 +1,23 @@
 on: pull_request
 
 jobs:
-  build_native:
+  integration_tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: install dependencies
+      - uses: actions/checkout@v2
+      - name: Install dependencies
         run: sudo apt update -y && sudo apt install clang-7 llvm-7
       - name: Build native
         run: mkdir build && cd build && cmake .. && make -j$(nproc)
         env:
           CC: clang
           CXX: clang++
-
-    build_parser_images:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v1
-        - name: Build the base image
-          run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-        - name: Build the mupdf demo Docker image
-          run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
-        - name: Build the poppler demo Docker image
-          run: docker build . --file examples/pdf/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
-        - name: Build the qpdf demo Docker image
-          run: docker build . --file examples/pdf/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
+      - name: Build the base image
+        run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
+      - name: Build the mupdf demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
+      - name: Build the poppler demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
+      - name: Build the qpdf demo Docker image
+        run: docker build . --file examples/pdf/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
 

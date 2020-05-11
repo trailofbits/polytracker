@@ -1,1 +1,1 @@
-from .polyprocess import *
+from .polyprocess import PolyProcess

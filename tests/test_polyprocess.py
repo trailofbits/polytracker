@@ -4,6 +4,7 @@ import logging
 from typing import List
 import networkx as nx
 import os
+import json
 
 logger = logging.getLogger("polyprocess_test:")
 cwd = os.getcwd()
@@ -12,6 +13,7 @@ cwd = os.getcwd()
 #############################
 #      Tests go here        #
 #############################
+
 
 def test_polyprocess_creation(json_path, forest_path):
     logger.info("Testing PolyProcess object creation")
@@ -52,12 +54,6 @@ def test_polyprocess_forest(json_path, forest_path):
         nx.find_cycle(poly_proc.taint_forest)
 
 
-def test_polyprocess_has_version(json_path, forest_path):
-    poly_proc = PolyProcess(json_path, forest_path)
-    assert "version" in poly_proc.polytracker_json
-    assert "runtime_cfg" in poly_proc.polytracker_json
-
-
 def test_polyprocess_taint_sets(json_path, forest_path):
     logger.info("Testing taint set processing")
     poly_proc = PolyProcess(json_path, forest_path)
@@ -65,3 +61,20 @@ def test_polyprocess_taint_sets(json_path, forest_path):
     poly_proc.set_output_filepath("/tmp/polytracker.json")
     poly_proc.output_processed_json()
     assert os.path.exists("/tmp/polytracker.json") is True
+    with open("/tmp/polytracker.json", "r") as poly_json:
+        json_size = os.path.getsize("/tmp/polytracker.json")
+        polytracker_json = json.loads(poly_json.read(json_size))
+        if "tainted_functions" in poly_proc.polytracker_json:
+            assert "tainted_functions" in polytracker_json
+            for func in poly_proc.polytracker_json["tainted_functions"]:
+                if "cmp_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
+                    assert "cmp_bytes" in polytracker_json["tainted_functions"][func]
+                if "input_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
+                    assert "input_bytes" in polytracker_json["tainted_functions"][func]
+        assert "version" in polytracker_json
+        assert polytracker_json["version"] == poly_proc.polytracker_json["version"]
+        assert "runtime_cfg" in polytracker_json
+        assert len(polytracker_json["runtime_cfg"]["main"]) == 1
+        assert "taint_sources" in polytracker_json
+        assert "canonical_mapping" not in polytracker_json
+        assert "tainted_input_blocks" in polytracker_json
