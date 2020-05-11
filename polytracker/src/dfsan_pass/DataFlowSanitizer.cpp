@@ -56,7 +56,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -79,7 +78,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
-//For out of source registration
+#include "llvm/Transforms/Utils/Local.h"
+// For out of source registration
 #include "llvm/IR/LegacyPassManager.h"
 
 #include "llvm/IR/MDBuilder.h"
@@ -92,22 +92,22 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SpecialCaseList.h"
-//For out of source registration
+// For out of source registration
+#include "dfsan/dfsan_types.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "dfsan/dfsan_types.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include <iostream> 
 
 using namespace llvm;
 
@@ -141,32 +141,32 @@ static cl::list<std::string> ClABIListFiles(
 
 // Controls whether the pass uses IA_Args or IA_TLS as the ABI for instrumented
 // functions (see DataFlowSanitizer::InstrumentedABI below).
-static cl::opt<bool> ClArgsABI(
-    "polytrack-dfsan-args-abi",
-    cl::desc("Use the argument ABI rather than the TLS ABI"),
-    cl::Hidden);
+static cl::opt<bool>
+    ClArgsABI("polytrack-dfsan-args-abi",
+              cl::desc("Use the argument ABI rather than the TLS ABI"),
+              cl::Hidden);
 
 // Controls whether the pass includes or ignores the labels of pointers in load
 // instructions.
 static cl::opt<bool> ClCombinePointerLabelsOnLoad(
     "polytrack-dfsan-combine-pointer-labels-on-load",
     cl::desc("Combine the label of the pointer with the label of the data when "
-        "loading from memory."),
-        cl::Hidden, cl::init(true));
+             "loading from memory."),
+    cl::Hidden, cl::init(true));
 
 // Controls whether the pass includes or ignores the labels of pointers in
 // stores instructions.
 static cl::opt<bool> ClCombinePointerLabelsOnStore(
     "polytrack-dfsan-combine-pointer-labels-on-store",
     cl::desc("Combine the label of the pointer with the label of the data when "
-        "storing in memory."),
-        cl::Hidden, cl::init(false));
+             "storing in memory."),
+    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> ClDebugNonzeroLabels(
     "polytrack-dfsan-debug-nonzero-labels",
     cl::desc("Insert calls to __dfsan_nonzero_label on observing a parameter, "
-        "load or return with a nonzero label"),
-        cl::Hidden);
+             "load or return with a nonzero label"),
+    cl::Hidden);
 
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.
@@ -193,7 +193,7 @@ public:
   /// given category.
   bool isIn(const Function &F, StringRef Category) const {
     return isIn(*F.getParent(), Category) ||
-        SCL->inSection("dataflow", "fun", F.getName(), Category);
+           SCL->inSection("dataflow", "fun", F.getName(), Category);
   }
 
   /// Returns whether this global alias is listed in the given category.
@@ -208,8 +208,8 @@ public:
       return SCL->inSection("dataflow", "fun", GA.getName(), Category);
 
     return SCL->inSection("dataflow", "global", GA.getName(), Category) ||
-        SCL->inSection("dataflow", "type", GetGlobalTypeString(GA),
-            Category);
+           SCL->inSection("dataflow", "type", GetGlobalTypeString(GA),
+                          Category);
   }
 
   /// Returns whether this module is listed in the given category.
@@ -222,26 +222,24 @@ public:
 /// function type into another.  This struct is immutable.  It holds metadata
 /// useful for updating calls of the old function to the new type.
 struct TransformedFunction {
-  TransformedFunction(FunctionType* OriginalType,
-      FunctionType* TransformedType,
-      std::vector<unsigned> ArgumentIndexMapping)
-  : OriginalType(OriginalType),
-    TransformedType(TransformedType),
-    ArgumentIndexMapping(ArgumentIndexMapping) {}
+  TransformedFunction(FunctionType *OriginalType, FunctionType *TransformedType,
+                      std::vector<unsigned> ArgumentIndexMapping)
+      : OriginalType(OriginalType), TransformedType(TransformedType),
+        ArgumentIndexMapping(ArgumentIndexMapping) {}
 
   // Disallow copies.
-  TransformedFunction(const TransformedFunction&) = delete;
-  TransformedFunction& operator=(const TransformedFunction&) = delete;
+  TransformedFunction(const TransformedFunction &) = delete;
+  TransformedFunction &operator=(const TransformedFunction &) = delete;
 
   // Allow moves.
-  TransformedFunction(TransformedFunction&&) = default;
-  TransformedFunction& operator=(TransformedFunction&&) = default;
+  TransformedFunction(TransformedFunction &&) = default;
+  TransformedFunction &operator=(TransformedFunction &&) = default;
 
   /// Type of the function before the transformation.
-  FunctionType* const OriginalType;
+  FunctionType *const OriginalType;
 
   /// Type of the function after the transformation.
-  FunctionType* const TransformedType;
+  FunctionType *const TransformedType;
 
   /// Transforming a function may change the position of arguments.  This
   /// member records the mapping from each argument's old position to its new
@@ -254,9 +252,9 @@ struct TransformedFunction {
 /// Given function attributes from a call site for the original function,
 /// return function attributes appropriate for a call to the transformed
 /// function.
-AttributeList TransformFunctionAttributes(
-    const TransformedFunction& TransformedFunction,
-    LLVMContext& Ctx, AttributeList CallSiteAttrs) {
+AttributeList
+TransformFunctionAttributes(const TransformedFunction &TransformedFunction,
+                            LLVMContext &Ctx, AttributeList CallSiteAttrs) {
 
   // Construct a vector of AttributeSet for each function argument.
   std::vector<llvm::AttributeSet> ArgumentAttributes(
@@ -265,32 +263,29 @@ AttributeList TransformFunctionAttributes(
   // Copy attributes from the parameter of the original function to the
   // transformed version.  'ArgumentIndexMapping' holds the mapping from
   // old argument position to new.
-  for (unsigned i=0, ie = TransformedFunction.ArgumentIndexMapping.size();
-      i < ie; ++i) {
+  for (unsigned i = 0, ie = TransformedFunction.ArgumentIndexMapping.size();
+       i < ie; ++i) {
     unsigned TransformedIndex = TransformedFunction.ArgumentIndexMapping[i];
     ArgumentAttributes[TransformedIndex] = CallSiteAttrs.getParamAttributes(i);
   }
 
   // Copy annotations on varargs arguments.
   for (unsigned i = TransformedFunction.OriginalType->getNumParams(),
-      ie = CallSiteAttrs.getNumAttrSets(); i<ie; ++i) {
+                ie = CallSiteAttrs.getNumAttrSets();
+       i < ie; ++i) {
     ArgumentAttributes.push_back(CallSiteAttrs.getParamAttributes(i));
   }
 
-  return AttributeList::get(
-      Ctx,
-      CallSiteAttrs.getFnAttributes(),
-      CallSiteAttrs.getRetAttributes(),
-      llvm::makeArrayRef(ArgumentAttributes));
+  return AttributeList::get(Ctx, CallSiteAttrs.getFnAttributes(),
+                            CallSiteAttrs.getRetAttributes(),
+                            llvm::makeArrayRef(ArgumentAttributes));
 }
 
 class DataFlowSanitizer : public ModulePass {
   friend struct DFSanFunction;
   friend class DFSanVisitor;
 
-  enum {
-    ShadowWidth = DFSAN_LABEL_BITS
-  };
+  enum { ShadowWidth = DFSAN_LABEL_BITS };
 
   /// Which ABI should be used for instrumented functions?
   enum InstrumentedABI {
@@ -350,11 +345,11 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanNonzeroLabelFnTy;
   FunctionType *DFSanVarargWrapperFnTy;
 
-	//General for all taint 
+  // General for all taint
   FunctionType *DFSanLogTaintFnTy;
   Constant *DFSanLogTaintFn;
 
-	//Function to log cmps
+  // Function to log cmps
   FunctionType *DFSanLogCmpFnTy;
   Constant *DFSanLogCmpFn;
 
@@ -364,7 +359,6 @@ class DataFlowSanitizer : public ModulePass {
   Constant *DFSanEntryFn;
   Constant *DFSanExitFn;
   Constant *DFSanResetFrameFn;
-
 
   Constant *DFSanUnionFn;
   Constant *DFSanCheckedUnionFn;
@@ -389,8 +383,8 @@ class DataFlowSanitizer : public ModulePass {
   WrapperKind getWrapperKind(Function *F);
   void addGlobalNamePrefix(GlobalValue *GV);
   Function *buildWrapperFunction(Function *F, StringRef NewFName,
-      GlobalValue::LinkageTypes NewFLink,
-      FunctionType *NewFT);
+                                 GlobalValue::LinkageTypes NewFLink,
+                                 FunctionType *NewFT);
   Constant *getOrBuildTrampolineFunction(FunctionType *FT, StringRef FName);
 
 public:
@@ -425,11 +419,11 @@ struct DFSanFunction {
     Value *Shadow;
   };
   DenseMap<std::pair<Value *, Value *>, CachedCombinedShadow>
-  CachedCombinedShadows;
+      CachedCombinedShadows;
   DenseMap<Value *, std::set<Value *>> ShadowElements;
 
   DFSanFunction(DataFlowSanitizer &DFS, Function *F, bool IsNativeABI)
-  : DFS(DFS), F(F), IA(DFS.getInstrumentedABI()), IsNativeABI(IsNativeABI) {
+      : DFS(DFS), F(F), IA(DFS.getInstrumentedABI()), IsNativeABI(IsNativeABI) {
     DT.recalculate(*F);
     // FIXME: Need to track down the register allocator issue which causes poor
     // performance in pathological cases with large numbers of basic blocks.
@@ -444,9 +438,9 @@ struct DFSanFunction {
   Value *combineShadows(Value *V1, Value *V2, Instruction *Pos);
   Value *combineOperandShadows(Instruction *Inst);
   Value *loadShadow(Value *ShadowAddr, uint64_t Size, uint64_t Align,
-      Instruction *Pos);
+                    Instruction *Pos);
   void storeShadow(Value *Addr, uint64_t Size, uint64_t Align, Value *Shadow,
-      Instruction *Pos);
+                   Instruction *Pos);
 };
 
 class DFSanVisitor : public InstVisitor<DFSanVisitor> {
@@ -458,8 +452,8 @@ public:
   const DataLayout &getDataLayout() const {
     return DFSF.F->getParent()->getDataLayout();
   }
-  void logTaintedCmp(Instruction * InsertPoint, Value * Shadow);
-  void logTaintedOps(Instruction * InsertPoint, Value * Shadow);
+  void logTaintedCmp(Instruction *InsertPoint, Value *Shadow);
+  void logTaintedOps(Instruction *InsertPoint, Value *Shadow);
 
   void visitOperandShadowInst(Instruction &I);
   void visitBinaryOperator(BinaryOperator &BO);
@@ -487,22 +481,22 @@ public:
 char DataFlowSanitizer::ID;
 
 INITIALIZE_PASS(DataFlowSanitizer, "dfsan",
-    "DataFlowSanitizer: dynamic data flow analysis.", false, false)
+                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
 
 ModulePass *
 llvm::createDataFlowSanitizerPass(const std::vector<std::string> &ABIListFiles,
-    void *(*getArgTLS)(),
-    void *(*getRetValTLS)()) {
+                                  void *(*getArgTLS)(),
+                                  void *(*getRetValTLS)()) {
   return new DataFlowSanitizer(ABIListFiles, getArgTLS, getRetValTLS);
 }
 
 DataFlowSanitizer::DataFlowSanitizer(
     const std::vector<std::string> &ABIListFiles, void *(*getArgTLS)(),
     void *(*getRetValTLS)())
-: ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS) {
+    : ModulePass(ID), GetArgTLSPtr(getArgTLS), GetRetvalTLSPtr(getRetValTLS) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
-      ClABIListFiles.end());
+                         ClABIListFiles.end());
   ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles));
 }
 
@@ -538,10 +532,11 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
   // at call sites can be updated.
   std::vector<unsigned> ArgumentIndexMapping;
   for (unsigned i = 0, ie = T->getNumParams(); i != ie; ++i) {
-    Type* param_type = T->getParamType(i);
+    Type *param_type = T->getParamType(i);
     FunctionType *FT;
-    if (isa<PointerType>(param_type) && (FT = dyn_cast<FunctionType>(
-        cast<PointerType>(param_type)->getElementType()))) {
+    if (isa<PointerType>(param_type) &&
+        (FT = dyn_cast<FunctionType>(
+             cast<PointerType>(param_type)->getElementType()))) {
       ArgumentIndexMapping.push_back(ArgTypes.size());
       ArgTypes.push_back(getTrampolineFunctionType(FT)->getPointerTo());
       ArgTypes.push_back(Type::getInt8PtrTy(*Ctx));
@@ -567,7 +562,7 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   bool IsMIPS64 = TargetTriple.isMIPS64();
   bool IsAArch64 = TargetTriple.getArch() == Triple::aarch64 ||
-      TargetTriple.getArch() == Triple::aarch64_be;
+                   TargetTriple.getArch() == Triple::aarch64_be;
 
   const DataLayout &DL = M.getDataLayout();
 
@@ -588,34 +583,38 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   else
     report_fatal_error("unsupported triple");
 
-  Type *DFSanUnionArgs[2] = { ShadowTy, ShadowTy };
+  Type *DFSanUnionArgs[2] = {ShadowTy, ShadowTy};
   DFSanUnionFnTy =
-      FunctionType::get(ShadowTy, DFSanUnionArgs, /*isVarArg=*/ false);
-  Type *DFSanUnionLoadArgs[2] = { ShadowPtrTy, IntptrTy };
+      FunctionType::get(ShadowTy, DFSanUnionArgs, /*isVarArg=*/false);
+  Type *DFSanUnionLoadArgs[2] = {ShadowPtrTy, IntptrTy};
   DFSanUnionLoadFnTy =
-      FunctionType::get(ShadowTy, DFSanUnionLoadArgs, /*isVarArg=*/ false);
+      FunctionType::get(ShadowTy, DFSanUnionLoadArgs, /*isVarArg=*/false);
   DFSanUnimplementedFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
-  
-	Type * DFSanLogTaintArgs[1] = {ShadowTy};
- 	DFSanLogTaintFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogTaintArgs, false);
-  
-	Type * DFSanLogCmpArgs[1] = {ShadowTy};
- 	DFSanLogCmpFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogCmpArgs, false);
-	
-	Type * DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
- 	DFSanEntryFnTy = FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
-  
-	DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
-  Type * DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
-  DFSanResetFrameFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
 
-  Type *DFSanSetLabelArgs[3] = { ShadowTy, Type::getInt8PtrTy(*Ctx), IntptrTy };
+  Type *DFSanLogTaintArgs[1] = {ShadowTy};
+  DFSanLogTaintFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogTaintArgs, false);
+
+  Type *DFSanLogCmpArgs[1] = {ShadowTy};
+  DFSanLogCmpFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogCmpArgs, false);
+
+  Type *DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
+  DFSanEntryFnTy =
+      FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
+
+  DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
+  Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
+  DFSanResetFrameFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
+
+  Type *DFSanSetLabelArgs[3] = {ShadowTy, Type::getInt8PtrTy(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
-      DFSanSetLabelArgs, /*isVarArg=*/false);
+                                        DFSanSetLabelArgs, /*isVarArg=*/false);
 
-  DFSanNonzeroLabelFnTy = FunctionType::get(
-      Type::getVoidTy(*Ctx), None, /*isVarArg=*/false);
+  DFSanNonzeroLabelFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), None, /*isVarArg=*/false);
   DFSanVarargWrapperFnTy = FunctionType::get(
       Type::getVoidTy(*Ctx), Type::getInt8PtrTy(*Ctx), /*isVarArg=*/false);
 
@@ -676,18 +675,17 @@ void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
     Asm.replace(Pos, SearchStr.size(),
-        ".symver " + Prefix + GVName + "," + Prefix);
+                ".symver " + Prefix + GVName + "," + Prefix);
     GV->getParent()->setModuleInlineAsm(Asm);
   }
 }
 
 Function *
 DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
-    GlobalValue::LinkageTypes NewFLink,
-    FunctionType *NewFT) {
+                                        GlobalValue::LinkageTypes NewFLink,
+                                        FunctionType *NewFT) {
   FunctionType *FT = F->getFunctionType();
-  Function *NewF = Function::Create(NewFT, NewFLink, NewFName,
-      F->getParent());
+  Function *NewF = Function::Create(NewFT, NewFLink, NewFName, F->getParent());
   NewF->copyAttributesFrom(F);
   NewF->removeAttributes(
       AttributeList::ReturnIndex,
@@ -696,10 +694,10 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", NewF);
   if (F->isVarArg()) {
     NewF->removeAttributes(AttributeList::FunctionIndex,
-        AttrBuilder().addAttribute("split-stack"));
+                           AttrBuilder().addAttribute("split-stack"));
     CallInst::Create(DFSanVarargWrapperFn,
-        IRBuilder<>(BB).CreateGlobalStringPtr(F->getName()), "",
-        BB);
+                     IRBuilder<>(BB).CreateGlobalStringPtr(F->getName()), "",
+                     BB);
     new UnreachableInst(*Ctx, BB);
   } else {
     std::vector<Value *> Args;
@@ -717,7 +715,7 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
 }
 
 Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
-    StringRef FName) {
+                                                          StringRef FName) {
   FunctionType *FTT = getTrampolineFunctionType(FT);
   Constant *C = Mod->getOrInsertFunction(FName, FTT);
   Function *F = dyn_cast<Function>(C);
@@ -725,7 +723,8 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
     F->setLinkage(GlobalValue::LinkOnceODRLinkage);
     BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", F);
     std::vector<Value *> Args;
-    Function::arg_iterator AI = F->arg_begin(); ++AI;
+    Function::arg_iterator AI = F->arg_begin();
+    ++AI;
     for (unsigned N = FT->getNumParams(); N != 0; ++AI, --N)
       Args.push_back(&*AI);
     CallInst *CI = CallInst::Create(&*F->arg_begin(), Args, "", BB);
@@ -736,13 +735,14 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
       RI = ReturnInst::Create(*Ctx, CI, BB);
 
     DFSanFunction DFSF(*this, F, /*IsNativeABI=*/true);
-    Function::arg_iterator ValAI = F->arg_begin(), ShadowAI = AI; ++ValAI;
+    Function::arg_iterator ValAI = F->arg_begin(), ShadowAI = AI;
+    ++ValAI;
     for (unsigned N = FT->getNumParams(); N != 0; ++ValAI, ++ShadowAI, --N)
       DFSF.ValShadowMap[&*ValAI] = &*ShadowAI;
     DFSanVisitor(DFSF).visitCallInst(*CI);
     if (!FT->getReturnType()->isVoidTy())
       new StoreInst(DFSF.getShadow(RI->getReturnValue()),
-          &*std::prev(F->arg_end()), RI);
+                    &*std::prev(F->arg_end()), RI);
   }
 
   return C;
@@ -801,34 +801,24 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanNonzeroLabelFn =
       Mod->getOrInsertFunction("__dfsan_nonzero_label", DFSanNonzeroLabelFnTy);
   DFSanVarargWrapperFn = Mod->getOrInsertFunction("__dfsan_vararg_wrapper",
-      DFSanVarargWrapperFnTy);
+                                                  DFSanVarargWrapperFnTy);
   DFSanLogTaintFn =
       Mod->getOrInsertFunction("__dfsan_log_taint", DFSanLogTaintFnTy);
   DFSanLogCmpFn =
       Mod->getOrInsertFunction("__dfsan_log_taint_cmp", DFSanLogCmpFnTy);
-  DFSanEntryFn =
-      Mod->getOrInsertFunction("__dfsan_func_entry", DFSanEntryFnTy);
-  DFSanExitFn =
-      Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
+  DFSanEntryFn = Mod->getOrInsertFunction("__dfsan_func_entry", DFSanEntryFnTy);
+  DFSanExitFn = Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
-
 
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   for (Function &i : M) {
-    if (!i.isIntrinsic() &&
-        &i != DFSanUnionFn &&
-        &i != DFSanCheckedUnionFn &&
-        &i != DFSanUnionLoadFn &&
-        &i != DFSanUnimplementedFn &&
-        &i != DFSanSetLabelFn &&
-        &i != DFSanNonzeroLabelFn &&
-        &i != DFSanVarargWrapperFn &&
-        &i != DFSanLogTaintFn &&
-				&i != DFSanLogCmpFn && 
-        &i != DFSanEntryFn &&
-        &i != DFSanExitFn &&
+    if (!i.isIntrinsic() && &i != DFSanUnionFn && &i != DFSanCheckedUnionFn &&
+        &i != DFSanUnionLoadFn && &i != DFSanUnimplementedFn &&
+        &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
+        &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
+        &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
         &i != DFSanResetFrameFn)
       FnsToInstrument.push_back(&i);
   }
@@ -859,18 +849,18 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   }
 
   ReadOnlyNoneAttrs.addAttribute(Attribute::ReadOnly)
-          .addAttribute(Attribute::ReadNone);
+      .addAttribute(Attribute::ReadNone);
 
   // First, change the ABI of every function in the module.  ABI-listed
   // functions keep their original ABI and get a wrapper function.
   for (std::vector<Function *>::iterator i = FnsToInstrument.begin(),
-      e = FnsToInstrument.end();
-      i != e; ++i) {
+                                         e = FnsToInstrument.end();
+       i != e; ++i) {
     Function &F = **i;
     FunctionType *FT = F.getFunctionType();
 
     bool IsZeroArgsVoidRet = (FT->getNumParams() == 0 && !FT->isVarArg() &&
-        FT->getReturnType()->isVoidTy());
+                              FT->getReturnType()->isVoidTy());
 
     if (isInstrumented(&F)) {
       // Instrumented functions get a 'dfs$' prefix.  This allows us to more
@@ -883,15 +873,15 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
             AttributeList::ReturnIndex,
             AttributeFuncs::typeIncompatible(NewFT->getReturnType()));
         for (Function::arg_iterator FArg = F.arg_begin(),
-            NewFArg = NewF->arg_begin(),
-            FArgEnd = F.arg_end();
-            FArg != FArgEnd; ++FArg, ++NewFArg) {
+                                    NewFArg = NewF->arg_begin(),
+                                    FArgEnd = F.arg_end();
+             FArg != FArgEnd; ++FArg, ++NewFArg) {
           FArg->replaceAllUsesWith(&*NewFArg);
         }
         NewF->getBasicBlockList().splice(NewF->begin(), F.getBasicBlockList());
 
         for (Function::user_iterator UI = F.user_begin(), UE = F.user_end();
-            UI != UE;) {
+             UI != UE;) {
           BlockAddress *BA = dyn_cast<BlockAddress>(*UI);
           ++UI;
           if (BA) {
@@ -909,43 +899,41 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       } else {
         addGlobalNamePrefix(&F);
       }
-    } 
-		//Was !isZeroArgsRetVoid, but when we specify 
-		//Uninstrumented and Discard we MEAN dont touch 
-		else if (getWrapperKind(&F) == WK_Custom) {
+    }
+    // Was !isZeroArgsRetVoid, but when we specify
+    // Uninstrumented and Discard we MEAN dont touch
+    else if (getWrapperKind(&F) == WK_Custom) {
       // Build a wrapper function for F.  The wrapper simply calls F, and is
       // added to FnsToInstrument so that any instrumentation according to its
       // WrapperKind is done in the second pass below.
-      FunctionType *NewFT = getInstrumentedABI() == IA_Args
-          ? getArgsFunctionType(FT)
-              : FT;
+      FunctionType *NewFT =
+          getInstrumentedABI() == IA_Args ? getArgsFunctionType(FT) : FT;
 
       // If the function being wrapped has local linkage, then preserve the
       // function's linkage in the wrapper function.
       GlobalValue::LinkageTypes wrapperLinkage =
-          F.hasLocalLinkage()
-          ? F.getLinkage()
-              : GlobalValue::LinkOnceODRLinkage;
+          F.hasLocalLinkage() ? F.getLinkage()
+                              : GlobalValue::LinkOnceODRLinkage;
 
 #ifdef DEBUG_INFO
-		 //Looking for open and reads we might not have hooked  	
-			std::string test_fname = F.getName(); 
-			size_t found_place = test_fname.find("open"); 
-			if (found_place != std::string::npos) {
-				std::cout << "Getting OPEN fname " << test_fname << std::endl;
-				bool is_custom = getWrapperKind(&F) == WK_Custom; 
-				std::cout << "Is custom func: " << is_custom << std::endl;
-			}	
-			found_place = test_fname.find("read"); 
-			if (found_place != std::string::npos) {
-				std::cout << "Getting READ fname " << test_fname << std::endl;
-				bool is_custom = getWrapperKind(&F) == WK_Custom; 
-				std::cout << "Is custom func: " << is_custom << std::endl;
-			}	
+      // Looking for open and reads we might not have hooked
+      std::string test_fname = F.getName();
+      size_t found_place = test_fname.find("open");
+      if (found_place != std::string::npos) {
+        std::cout << "Getting OPEN fname " << test_fname << std::endl;
+        bool is_custom = getWrapperKind(&F) == WK_Custom;
+        std::cout << "Is custom func: " << is_custom << std::endl;
+      }
+      found_place = test_fname.find("read");
+      if (found_place != std::string::npos) {
+        std::cout << "Getting READ fname " << test_fname << std::endl;
+        bool is_custom = getWrapperKind(&F) == WK_Custom;
+        std::cout << "Is custom func: " << is_custom << std::endl;
+      }
 #endif
       Function *NewF = buildWrapperFunction(
-          &F, std::string("dfsw$") + std::string(F.getName()),
-          wrapperLinkage, NewFT);
+          &F, std::string("dfsw$") + std::string(F.getName()), wrapperLinkage,
+          NewFT);
       if (getInstrumentedABI() == IA_TLS)
         NewF->removeAttributes(AttributeList::FunctionIndex, ReadOnlyNoneAttrs);
 
@@ -967,7 +955,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         // by the push_back, taking care that the new range does not include
         // any functions added by this code.
         size_t N = i - FnsToInstrument.begin(),
-            Count = e - FnsToInstrument.begin();
+               Count = e - FnsToInstrument.begin();
         FnsToInstrument.push_back(&F);
         i = FnsToInstrument.begin() + N;
         e = FnsToInstrument.begin() + Count;
@@ -986,29 +974,27 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
     removeUnreachableBlocks(*i);
 
-		std::string curr_fname = i->getName();
-		if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
-			if (curr_fname != "main") {
-			#ifdef DEBUG_INFO
-				std::cout << "SKIPPING: " << curr_fname << std::endl; 
-			#endif
-				continue; 
-			}
-			else {
-			#ifdef DEBUG_INFO
-				std::cout << "ADDING ENTRY: " << curr_fname << std::endl;
-			#endif
-			}
-		}	
-    //Instrument function entry here
+    std::string curr_fname = i->getName();
+    if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
+      if (curr_fname != "main") {
+#ifdef DEBUG_INFO
+        std::cout << "SKIPPING: " << curr_fname << std::endl;
+#endif
+        continue;
+      } else {
+#ifdef DEBUG_INFO
+        std::cout << "ADDING ENTRY: " << curr_fname << std::endl;
+#endif
+      }
+    }
+    // Instrument function entry here
     BasicBlock *BB = &(i->getEntryBlock());
     Instruction *InsertPoint = &(*(BB->getFirstInsertionPt()));
     IRBuilder<> IRB(InsertPoint);
-    Value * FuncName = IRB.CreateGlobalStringPtr(i->getName());
-    Value * FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
-    auto store_inst = IRB.CreateStore(
-        IRB.CreateCall(DFSanEntryFn, FuncName),
-        FrameIndex);
+    Value *FuncName = IRB.CreateGlobalStringPtr(i->getName());
+    Value *FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
+    auto store_inst =
+        IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, FuncName), FrameIndex);
 
 #ifdef DEBUG_INFO
     llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
@@ -1036,21 +1022,20 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Inst = Next;
       }
     }
-    //Add instrumentation for handling setjmp/longjmp here 
-		//This adds a function that resets the shadow call stack 
-		//When a longjmp is called. 
-		for (BasicBlock * curr_bb : BBList) {
+    // Add instrumentation for handling setjmp/longjmp here
+    // This adds a function that resets the shadow call stack
+    // When a longjmp is called.
+    for (BasicBlock *curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
       while (true) {
         Instruction *Next = Inst->getNextNode();
-        CallInst * potential_call = dyn_cast<CallInst>(Inst);
+        CallInst *potential_call = dyn_cast<CallInst>(Inst);
         if (potential_call != nullptr) {
           Function *F = potential_call->getCalledFunction();
           if (F != nullptr) {
-            if (F->getName() == "setjmp"
-                || F->getName() == "sigsetjump"
-                    || F->getName() == "_setjmp") {
-              //Insert before the next inst.
+            if (F->getName() == "setjmp" || F->getName() == "sigsetjump" ||
+                F->getName() == "_setjmp") {
+              // Insert before the next inst.
               IRBuilder<> IRB(Next);
               IRB.CreateCall(DFSanResetFrameFn, FrameIndex);
             }
@@ -1061,7 +1046,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           break;
         Inst = Next;
       }
-
     }
 
     // We will not necessarily be able to compute the shadow for every phi node
@@ -1069,11 +1053,11 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     // nodes adds them to the PHIFixups list so that they can be properly
     // handled here.
     for (std::vector<std::pair<PHINode *, PHINode *>>::iterator
-        i = DFSF.PHIFixups.begin(),
-        e = DFSF.PHIFixups.end();
-        i != e; ++i) {
+             i = DFSF.PHIFixups.begin(),
+             e = DFSF.PHIFixups.end();
+         i != e; ++i) {
       for (unsigned val = 0, n = i->first->getNumIncomingValues(); val != n;
-          ++val) {
+           ++val) {
         i->second->setIncomingValue(
             val, DFSF.getShadow(i->first->getIncomingValue(val)));
       }
@@ -1143,7 +1127,7 @@ Value *DFSanFunction::getShadow(Value *V) {
         Value *ArgTLSPtr = getArgTLSPtr();
         Instruction *ArgTLSPos =
             DFS.ArgTLS ? &*F->getEntryBlock().begin()
-                : cast<Instruction>(ArgTLSPtr)->getNextNode();
+                       : cast<Instruction>(ArgTLSPtr)->getNextNode();
         IRBuilder<> IRB(ArgTLSPos);
         Shadow = IRB.CreateLoad(getArgTLS(A->getArgNo(), ArgTLSPos));
         break;
@@ -1183,9 +1167,9 @@ Value *DataFlowSanitizer::getShadowAddress(Value *Addr, Instruction *Pos) {
   return IRB.CreateIntToPtr(
       IRB.CreateMul(
           IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-              IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy)),
-              ShadowPtrMul),
-              ShadowPtrTy);
+                        IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy)),
+          ShadowPtrMul),
+      ShadowPtrTy);
 }
 
 // Generates IR to compute the union of the two given shadows, inserting it
@@ -1202,10 +1186,10 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
   auto V2Elems = ShadowElements.find(V2);
   if (V1Elems != ShadowElements.end() && V2Elems != ShadowElements.end()) {
     if (std::includes(V1Elems->second.begin(), V1Elems->second.end(),
-        V2Elems->second.begin(), V2Elems->second.end())) {
+                      V2Elems->second.begin(), V2Elems->second.end())) {
       return V1;
     } else if (std::includes(V2Elems->second.begin(), V2Elems->second.end(),
-        V1Elems->second.begin(), V1Elems->second.end())) {
+                             V1Elems->second.begin(), V1Elems->second.end())) {
       return V2;
     }
   } else if (V1Elems != ShadowElements.end()) {
@@ -1268,8 +1252,7 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
   return CCS.Shadow;
 }
 
-
-void DFSanVisitor::logTaintedOps(Instruction * InsertPoint, Value * Shadow) {
+void DFSanVisitor::logTaintedOps(Instruction *InsertPoint, Value *Shadow) {
   IRBuilder<> IRB(InsertPoint);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogTaintFn, Shadow);
   Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
@@ -1299,7 +1282,7 @@ void DFSanVisitor::visitOperandShadowInst(Instruction &I) {
 // Generates IR to load shadow corresponding to bytes [Addr, Addr+Size), where
 // Addr has alignment Align, and take the union of each of those shadows.
 Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
-    Instruction *Pos) {
+                                 Instruction *Pos) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Addr)) {
     const auto i = AllocaShadowMap.find(AI);
     if (i != AllocaShadowMap.end()) {
@@ -1336,9 +1319,9 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   case 2: {
     IRBuilder<> IRB(Pos);
     Value *ShadowAddr1 = IRB.CreateGEP(DFS.ShadowTy, ShadowAddr,
-        ConstantInt::get(DFS.IntptrTy, 1));
+                                       ConstantInt::get(DFS.IntptrTy, 1));
     return combineShadows(IRB.CreateAlignedLoad(ShadowAddr, ShadowAlign),
-        IRB.CreateAlignedLoad(ShadowAddr1, ShadowAlign), Pos);
+                          IRB.CreateAlignedLoad(ShadowAddr1, ShadowAlign), Pos);
   }
   }
   if (!AvoidNewBlocks && Size % (64 / DFS.ShadowWidth) == 0) {
@@ -1384,12 +1367,12 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     DT.addNewBlock(FallbackBB, Head);
 
     for (uint64_t Ofs = 64 / DFS.ShadowWidth; Ofs != Size;
-        Ofs += 64 / DFS.ShadowWidth) {
+         Ofs += 64 / DFS.ShadowWidth) {
       BasicBlock *NextBB = BasicBlock::Create(*DFS.Ctx, "", F);
       DT.addNewBlock(NextBB, LastBr->getParent());
       IRBuilder<> NextIRB(NextBB);
       WideAddr = NextIRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
-          ConstantInt::get(DFS.IntptrTy, 1));
+                                   ConstantInt::get(DFS.IntptrTy, 1));
       Value *NextWideShadow = NextIRB.CreateAlignedLoad(WideAddr, ShadowAlign);
       ShadowsEq = NextIRB.CreateICmpEQ(WideShadow, NextWideShadow);
       LastBr->setSuccessor(0, NextBB);
@@ -1440,7 +1423,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
 }
 
 void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, uint64_t Align,
-    Value *Shadow, Instruction *Pos) {
+                                Value *Shadow, Instruction *Pos) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Addr)) {
     const auto i = AllocaShadowMap.find(AI);
     if (i != AllocaShadowMap.end()) {
@@ -1506,7 +1489,7 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Align = 1;
   }
 
-  Value* Shadow = DFSF.getShadow(SI.getValueOperand());
+  Value *Shadow = DFSF.getShadow(SI.getValueOperand());
   if (ClCombinePointerLabelsOnStore) {
     Value *PtrShadow = DFSF.getShadow(SI.getPointerOperand());
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &SI);
@@ -1600,28 +1583,30 @@ void DFSanVisitor::visitSelectInst(SelectInst &I) {
 void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
   IRBuilder<> IRB(&I);
   Value *ValShadow = DFSF.getShadow(I.getValue());
-  IRB.CreateCall(DFSF.DFS.DFSanSetLabelFn,
-      {ValShadow, IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(
-          *DFSF.DFS.Ctx)),
-          IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
+  IRB.CreateCall(
+      DFSF.DFS.DFSanSetLabelFn,
+      {ValShadow,
+       IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(*DFSF.DFS.Ctx)),
+       IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
 }
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   IRBuilder<> IRB(&I);
   Value *DestShadow = DFSF.DFS.getShadowAddress(I.getDest(), &I);
   Value *SrcShadow = DFSF.DFS.getShadowAddress(I.getSource(), &I);
-  Value *LenShadow = IRB.CreateMul(
-      I.getLength(),
-      ConstantInt::get(I.getLength()->getType(), DFSF.DFS.ShadowWidth / 8));
+  Value *LenShadow =
+      IRB.CreateMul(I.getLength(), ConstantInt::get(I.getLength()->getType(),
+                                                    DFSF.DFS.ShadowWidth / 8));
   Type *Int8Ptr = Type::getInt8PtrTy(*DFSF.DFS.Ctx);
   DestShadow = IRB.CreateBitCast(DestShadow, Int8Ptr);
   SrcShadow = IRB.CreateBitCast(SrcShadow, Int8Ptr);
   auto *MTI = cast<MemTransferInst>(
       IRB.CreateCall(I.getCalledValue(),
-          {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
+                     {DestShadow, SrcShadow, LenShadow, I.getVolatileCst()}));
   if (ClPreserveAlignment) {
     MTI->setDestAlignment(I.getDestAlignment() * (DFSF.DFS.ShadowWidth / 8));
-    MTI->setSourceAlignment(I.getSourceAlignment() * (DFSF.DFS.ShadowWidth / 8));
+    MTI->setSourceAlignment(I.getSourceAlignment() *
+                            (DFSF.DFS.ShadowWidth / 8));
   } else {
     MTI->setDestAlignment(DFSF.DFS.ShadowWidth / 8);
     MTI->setSourceAlignment(DFSF.DFS.ShadowWidth / 8);
@@ -1650,7 +1635,7 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
     }
   }
   IRBuilder<> IRB(&RI);
-  CallInst * ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {});
+  CallInst *ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {});
 }
 
 void DFSanVisitor::visitCallSite(CallSite CS) {
@@ -1675,7 +1660,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     case DataFlowSanitizer::WK_Warning:
       CS.setCalledFunction(F);
       IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
-          IRB.CreateGlobalStringPtr(F->getName()));
+                     IRB.CreateGlobalStringPtr(F->getName()));
       DFSF.setShadow(CS.getInstruction(), DFSF.DFS.ZeroShadow);
       return;
     case DataFlowSanitizer::WK_Discard:
@@ -1703,7 +1688,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
           // Custom functions returning non-void will write to the return label.
           if (!FT->getReturnType()->isVoidTy()) {
             CustomFn->removeAttributes(AttributeList::FunctionIndex,
-                DFSF.DFS.ReadOnlyNoneAttrs);
+                                       DFSF.DFS.ReadOnlyNoneAttrs);
           }
         }
 
@@ -1715,7 +1700,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
           FunctionType *ParamFT;
           if (isa<PointerType>(T) &&
               (ParamFT = dyn_cast<FunctionType>(
-                  cast<PointerType>(T)->getElementType()))) {
+                   cast<PointerType>(T)->getElementType()))) {
             std::string TName = "dfst";
             TName += utostr(FT->getNumParams() - n);
             TName += "$";
@@ -1736,10 +1721,10 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
         if (FT->isVarArg()) {
           auto *LabelVATy = ArrayType::get(DFSF.DFS.ShadowTy,
-              CS.arg_size() - FT->getNumParams());
-          auto *LabelVAAlloca = new AllocaInst(
-              LabelVATy, getDataLayout().getAllocaAddrSpace(),
-              "labelva", &DFSF.F->getEntryBlock().front());
+                                           CS.arg_size() - FT->getNumParams());
+          auto *LabelVAAlloca =
+              new AllocaInst(LabelVATy, getDataLayout().getAllocaAddrSpace(),
+                             "labelva", &DFSF.F->getEntryBlock().front());
 
           for (unsigned n = 0; i != CS.arg_end(); ++i, ++n) {
             auto LabelVAPtr = IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, n);
@@ -1751,10 +1736,9 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
         if (!FT->getReturnType()->isVoidTy()) {
           if (!DFSF.LabelReturnAlloca) {
-            DFSF.LabelReturnAlloca =
-                new AllocaInst(DFSF.DFS.ShadowTy,
-                    getDataLayout().getAllocaAddrSpace(),
-                    "labelreturn", &DFSF.F->getEntryBlock().front());
+            DFSF.LabelReturnAlloca = new AllocaInst(
+                DFSF.DFS.ShadowTy, getDataLayout().getAllocaAddrSpace(),
+                "labelreturn", &DFSF.F->getEntryBlock().front());
           }
           Args.push_back(DFSF.LabelReturnAlloca);
         }
@@ -1764,8 +1748,8 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
 
         CallInst *CustomCI = IRB.CreateCall(CustomF, Args);
         CustomCI->setCallingConv(CI->getCallingConv());
-        CustomCI->setAttributes(TransformFunctionAttributes(CustomFn,
-            CI->getContext(), CI->getAttributes()));
+        CustomCI->setAttributes(TransformFunctionAttributes(
+            CustomFn, CI->getContext(), CI->getAttributes()));
 
         // Update the parameter attributes of the custom call instruction to
         // zero extend the shadow parameters. This is required for targets
@@ -1794,7 +1778,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
   if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
     for (unsigned i = 0, n = FT->getNumParams(); i != n; ++i) {
       IRB.CreateStore(DFSF.getShadow(CS.getArgument(i)),
-          DFSF.getArgTLS(i, CS.getInstruction()));
+                      DFSF.getArgTLS(i, CS.getInstruction()));
     }
   }
 
@@ -1843,7 +1827,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
       ArrayType *VarArgArrayTy = ArrayType::get(DFSF.DFS.ShadowTy, VarArgSize);
       AllocaInst *VarArgShadow =
           new AllocaInst(VarArgArrayTy, getDataLayout().getAllocaAddrSpace(),
-              "", &DFSF.F->getEntryBlock().front());
+                         "", &DFSF.F->getEntryBlock().front());
       Args.push_back(IRB.CreateConstGEP2_32(VarArgArrayTy, VarArgShadow, 0, 0));
       for (unsigned n = 0; i != e; ++i, ++n) {
         IRB.CreateStore(
@@ -1856,7 +1840,7 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     CallSite NewCS;
     if (InvokeInst *II = dyn_cast<InvokeInst>(CS.getInstruction())) {
       NewCS = IRB.CreateInvoke(Func, II->getNormalDest(), II->getUnwindDest(),
-          Args);
+                               Args);
     } else {
       NewCS = IRB.CreateCall(Func, Args);
     }
@@ -1889,7 +1873,7 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   // Give the shadow phi node valid predecessors to fool SplitEdge into working.
   Value *UndefShadow = UndefValue::get(DFSF.DFS.ShadowTy);
   for (PHINode::block_iterator i = PN.block_begin(), e = PN.block_end(); i != e;
-      ++i) {
+       ++i) {
     ShadowPN->addIncoming(UndefShadow, *i);
   }
 
@@ -1897,17 +1881,18 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   DFSF.setShadow(&PN, ShadowPN);
 }
 
-static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass"); 
+static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass");
 
-static void registerAflDFSanPass(const PassManagerBuilder&, legacy::PassManagerBase &PM) {
+static void registerAflDFSanPass(const PassManagerBuilder &,
+                                 legacy::PassManagerBase &PM) {
 
   PM.add(new DataFlowSanitizer());
 }
 
 static RegisterStandardPasses
-RegisterAflDFSanPass(PassManagerBuilder::EP_OptimizerLast,
-    registerAflDFSanPass);
+    RegisterAflDFSanPass(PassManagerBuilder::EP_OptimizerLast,
+                         registerAflDFSanPass);
 
 static RegisterStandardPasses
-RegisterAflDFSanPass0(PassManagerBuilder::EP_EnabledOnOptLevel0,
-    registerAflDFSanPass);
+    RegisterAflDFSanPass0(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                          registerAflDFSanPass);

@@ -1,6 +1,6 @@
 project(polytracker LANGUAGES C CXX ASM)
 
-include_directories(includes)
+include_directories(include)
 
 set(POLYTRACK_BIN_DIR "${CMAKE_INSTALL_PREFIX}/polytracker")
 set(POLYTRACK_LIB_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/lib")

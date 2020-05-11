@@ -2,9 +2,9 @@
 
 # Runtime library sources and build flags.
 set(DFSAN_RTL_SOURCES
-	dfsan.cc
-	dfsan_custom.cc
-	dfsan_interceptors.cc
+	dfsan.cpp
+	dfsan_custom.cpp
+	dfsan_interceptors.cpp
 	dfsan_log_mgmt.cpp)
 
 set(DFSAN_RTL_HEADERS

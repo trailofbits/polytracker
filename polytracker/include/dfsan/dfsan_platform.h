@@ -15,6 +15,8 @@
 #ifndef DFSAN_PLATFORM_H
 #define DFSAN_PLATFORM_H
 
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
 namespace __dfsan {
 
 #if defined(__x86_64__)
@@ -54,9 +56,9 @@ struct Mapping48 {
 };
 
 extern int vmaSize;
-# define DFSAN_RUNTIME_VMA 1
+#define DFSAN_RUNTIME_VMA 1
 #else
-# error "DFSan not supported for this platform!"
+#error "DFSan not supported for this platform!"
 #endif
 
 enum MappingType {
@@ -66,23 +68,28 @@ enum MappingType {
   MAPPING_SHADOW_MASK,
 };
 
-template<typename Mapping, int Type>
-uptr MappingImpl(void) {
+template <typename Mapping, int Type> uptr MappingImpl(void) {
   switch (Type) {
-    case MAPPING_SHADOW_ADDR: return Mapping::kShadowAddr;
-    case MAPPING_TAINT_FOREST_ADDR: return Mapping::kTaintForestAddr;
-    case MAPPING_APP_ADDR: return Mapping::kAppAddr;
-    case MAPPING_SHADOW_MASK: return Mapping::kShadowMask;
+  case MAPPING_SHADOW_ADDR:
+    return Mapping::kShadowAddr;
+  case MAPPING_TAINT_FOREST_ADDR:
+    return Mapping::kTaintForestAddr;
+  case MAPPING_APP_ADDR:
+    return Mapping::kAppAddr;
+  case MAPPING_SHADOW_MASK:
+    return Mapping::kShadowMask;
   }
 }
 
-template<int Type>
-uptr MappingArchImpl(void) {
+template <int Type> uptr MappingArchImpl(void) {
 #ifdef __aarch64__
   switch (vmaSize) {
-    case 39: return MappingImpl<Mapping39, Type>();
-    case 42: return MappingImpl<Mapping42, Type>();
-    case 48: return MappingImpl<Mapping48, Type>();
+  case 39:
+    return MappingImpl<Mapping39, Type>();
+  case 42:
+    return MappingImpl<Mapping42, Type>();
+  case 48:
+    return MappingImpl<Mapping48, Type>();
   }
   DCHECK(0);
   return 0;
@@ -92,30 +99,20 @@ uptr MappingArchImpl(void) {
 }
 
 ALWAYS_INLINE
-uptr ShadowAddr() {
-  return MappingArchImpl<MAPPING_SHADOW_ADDR>();
-}
+uptr ShadowAddr() { return MappingArchImpl<MAPPING_SHADOW_ADDR>(); }
 
 ALWAYS_INLINE
-uptr ForestAddr() {
-	return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-}
+uptr ForestAddr() { return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>(); }
 
 ALWAYS_INLINE
-uptr TaintForestAddr() {
-  return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
-}
+uptr TaintForestAddr() { return MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>(); }
 
 ALWAYS_INLINE
-uptr AppAddr() {
-  return MappingArchImpl<MAPPING_APP_ADDR>();
-}
+uptr AppAddr() { return MappingArchImpl<MAPPING_APP_ADDR>(); }
 
 ALWAYS_INLINE
-uptr ShadowMask() {
-  return MappingArchImpl<MAPPING_SHADOW_MASK>();
-}
+uptr ShadowMask() { return MappingArchImpl<MAPPING_SHADOW_MASK>(); }
 
-}  // namespace __dfsan
+} // namespace __dfsan
 
 #endif
