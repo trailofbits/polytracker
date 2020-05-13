@@ -35,11 +35,8 @@ def test_polyprocess_forest(json_path, forest_path):
     logger.info("Testing forest processing")
     poly_proc = PolyProcess(json_path, forest_path)
 
-    # Validate that the process sets conform to the taint forest given
-    # Meaning that the polyprocess max label should be == to the highest val in the canonical map
-    # If this fails, it could mean that there is an error in polytracker with label keeping
-    # I am writing this test specifically to catch an off by one error caused by a taint union refactor
-    max_node = poly_proc.max_node()
+    con_comp = list(nx.strongly_connected_components(poly_proc.taint_forest))
+    assert len(con_comp) == poly_proc.max_node()
     # for every canonical label, confirm it has no parents.
     for function in poly_proc.taint_sets:
         label_set: List[int] = poly_proc.taint_sets[function]["input_bytes"]
@@ -48,10 +45,6 @@ def test_polyprocess_forest(json_path, forest_path):
             if poly_proc.is_canonical_label(label):
                 parents = list(nx.dfs_preorder_nodes(poly_proc.taint_forest, label))
                 assert len(parents) == 1
-
-    # Check for cycles in the graph
-    with pytest.raises(nx.exception.NetworkXNoCycle):
-        nx.find_cycle(poly_proc.taint_forest)
 
 
 def test_polyprocess_taint_sets(json_path, forest_path):
