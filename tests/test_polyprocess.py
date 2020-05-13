@@ -41,7 +41,7 @@ def test_polyprocess_forest(json_path, forest_path):
     for function in poly_proc.taint_sets:
         label_set: List[int] = poly_proc.taint_sets[function]["input_bytes"]
         for label in label_set:
-            assert label <= max_node
+            assert label <= poly_proc.max_node()
             if poly_proc.is_canonical_label(label):
                 parents = list(nx.dfs_preorder_nodes(poly_proc.taint_forest, label))
                 assert len(parents) == 1
