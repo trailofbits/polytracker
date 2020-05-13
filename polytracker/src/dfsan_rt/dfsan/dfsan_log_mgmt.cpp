@@ -139,11 +139,6 @@ void taintManager::outputRawTaintForest() {
     dfsan_label node_p2 = getTaintLabel(curr->p2);
     fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
     fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
-    if (i == 4097 || i == 4096) {
-      std::cout << "====WRITING =====: " << i << std::endl;
-      std::cout << "Parent 1: " << node_p1 << std::endl;
-      std::cout << "Parent 2: " << node_p2 << std::endl;
-    }
   }
   fclose(forest_file);
 }
