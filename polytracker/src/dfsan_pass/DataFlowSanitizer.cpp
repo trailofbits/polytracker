@@ -1255,8 +1255,6 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
 void DFSanVisitor::logTaintedOps(Instruction *InsertPoint, Value *Shadow) {
   IRBuilder<> IRB(InsertPoint);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogTaintFn, Shadow);
-  Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-  Call->addParamAttr(0, Attribute::ZExt);
 }
 
 // A convenience function which folds the shadows of each of the operands
@@ -1509,8 +1507,6 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   DFSF.setShadow(&CI, CombinedShadow);
   IRBuilder<> IRB(&CI);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogCmpFn, CombinedShadow);
-  Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-  Call->addParamAttr(0, Attribute::ZExt);
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
