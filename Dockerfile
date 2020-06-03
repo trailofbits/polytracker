@@ -18,13 +18,29 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       git                                             \
       lld-7                                           \
       llvm-7                                          \
+			libc++abi-dev																		\
       ninja-build                                     \
-      python3-pip                                     \
-      python3.7
+			python3-pip																			\
+      python3.7-dev																		\
+			golang																					\
+			libgraphviz-dev
+
+RUN python3.7 -m pip install pip
+
+RUN go get github.com/SRI-CSL/gllvm/cmd/...
+
+ENV PATH="$PATH:/root/go/bin"
 
 COPY . /polytracker
 
 WORKDIR /polytracker
+
+RUN python3.7 -m pip install pytest
+
+RUN python3.7 -m pip install .
+
+RUN rm /usr/bin/python3 
+RUN cp /usr/bin/python3.7 /usr/bin/python3
 
 RUN rm -rf build && mkdir -p build
 
@@ -36,4 +52,4 @@ RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE
 ENV CC=/polytracker/build/bin/polytracker/polyclang
 ENV CXX=/polytracker/build/bin/polytracker/polyclang++
 
-WORKDIR / 
+WORKDIR /polytracker 
