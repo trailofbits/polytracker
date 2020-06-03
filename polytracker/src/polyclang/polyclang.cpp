@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <unordered_set>
 #include <vector>
-
 using namespace std;
 
 static struct {
@@ -85,10 +84,11 @@ static void PolyInstrument(int old_argc, char *old_argv[], int &new_argc,
                            vector<std::string> &new_argv) {
 
   if (compiler_meta.is_cxx) {
-    new_argv.push_back("clang++");
+    new_argv.push_back("gclang++");
   } else {
-    new_argv.push_back("clang");
+    new_argv.push_back("gclang");
   }
+  /*
   new_argv.push_back("-Xclang");
   new_argv.push_back("-load");
   new_argv.push_back("-Xclang");
@@ -100,18 +100,25 @@ static void PolyInstrument(int old_argc, char *old_argv[], int &new_argc,
   new_argv.push_back("-mllvm");
   new_argv.push_back("-polytrack-dfsan-abilist=" + compiler_meta.compiler_dir +
                      "/abi_lists/dfsan_abilist.txt");
+                     */
   new_argv.push_back("-pie");
   new_argv.push_back("-fPIC");
   //TODO Optimize flags
 
   if (compiler_meta.is_cxx && compiler_meta.is_libcxx == false) {
-	  printf("SHOULD NOT BE HERE\n");
-	  new_argv.push_back("-L" + compiler_meta.compiler_dir + "/lib");
 	  new_argv.push_back("-stdlib=libc++");
+	  new_argv.push_back("-nostdinc++");
+	  new_argv.push_back("-I" + compiler_meta.compiler_dir + "cxx_libs/include/c++/v1/");
+	  new_argv.push_back("-L" + compiler_meta.compiler_dir + "cxx_libs/lib/");
   }
   // Push back the rest of args to clang
   // Here we catch some args that clang 7.1 does not support,
   // That build systems like PDFium use
+  for (int i = 1; i < old_argc; i++) {
+	  std::string curr_string = old_argv[i];
+	  new_argv.push_back(curr_string);
+  }
+  /*
   for (int i = 1; i < old_argc; i++) {
     std::string curr_string = old_argv[i];
     if (curr_string.find("-ftrivial-auto-var-init") != std::string::npos ||
@@ -125,40 +132,50 @@ static void PolyInstrument(int old_argc, char *old_argv[], int &new_argc,
     }
     new_argv.push_back(curr_string);
   }
+  */
 
   // The last args to the compiler should be for linking
   // Here we bundle our own required libs as a "group" to prevent circ
   // dependencies
   if (compiler_meta.is_linking) {
+	  /*
     new_argv.push_back("-Wl,--start-group");
     new_argv.push_back("-lpthread");
     new_argv.push_back("-ldl");
     new_argv.push_back("-lrt");
     new_argv.push_back("-lm");
+    */
     /*
      * While there are usually implicitly linked, complex build systems
      * might specify -nostdlibs -nostdinc++, we just link them manually
      */
     if (compiler_meta.is_cxx && compiler_meta.is_libcxx == false) {
-    	new_argv.push_back("-lc++polyabi");
+    	new_argv.push_back("-lc++");
+    	new_argv.push_back("-lc++abipoly");
     	new_argv.push_back("-lc++abi");
     }
     if (compiler_meta.is_cxx == false) {
     	new_argv.push_back("-lstdc++");
     }
-    new_argv.push_back("-lgcc_s");
-    new_argv.push_back("-lc");
+    new_argv.push_back("-lpthread");
+    new_argv.push_back("-ldl");
+    new_argv.push_back("-lrt");
+    new_argv.push_back("-lm");
+    //new_argv.push_back("-lgcc_s");
+    //new_argv.push_back("-lc");
     //if (compiler_meta.is_cxx) {
     //	new_argv.push_back("-lstdc++");
     //}
     // Force the linker to include all of our instrumentation
+    /*
     new_argv.push_back("-Wl,--whole-archive");
     new_argv.push_back(compiler_meta.compiler_dir +
                        "/lib/libdfsan_rt-x86_64.a");
     new_argv.push_back("-Wl,--no-whole-archive");
-
+	*/
     // Tell the linker what we should export (important, instrumented code needs
     // the symbols)
+    /*
     new_argv.push_back("-Wl,--dynamic-list=" + compiler_meta.compiler_dir +
                        "/lib/libdfsan_rt-x86_64.a.syms");
 
@@ -169,7 +186,8 @@ static void PolyInstrument(int old_argc, char *old_argv[], int &new_argc,
     //Carson - We should not need this if we are actually linking properly
     new_argv.push_back(compiler_meta.compiler_dir + "/lib/libc++.a");
     new_argv.push_back(compiler_meta.compiler_dir + "/lib/libc++abi.a");
-    new_argv.push_back("-Wl,--end-group");
+    */
+    //new_argv.push_back("-Wl,--end-group");
     // You need to compile with -pie -fPIC, otherwise the sanitizer stuff wont
     // work This is because the sanitizer creates the area and arranges everything
     // in its own way If its not PIE, you cant move it, so you'll segfault on
@@ -209,14 +227,17 @@ int main(int argc, char *argv[]) {
 
   const char **final_argv = new const char *[new_argv.size() + 1];
   int i;
+  std::string final_command;
   for (i = 0; i < new_argc; i++) {
 #ifdef DEBUG_INFO
     fprintf(stderr, "Arg is: %s\n", new_argv[i].c_str());
+    final_command += new_argv[i] + " ";
 #endif
     final_argv[i] = new_argv[i].c_str();
   }
 #ifdef DEBUG_INFO
   fprintf(stderr, "I IS: %d\n", i);
+  std::cout << final_command << std::endl;
   fprintf(stderr, "====================\n");
 #endif
   final_argv[i] = NULL;
