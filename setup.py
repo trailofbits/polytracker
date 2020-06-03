@@ -7,13 +7,14 @@ setup(
     author='Trail of Bits',
     version="0.1.0",
     packages=find_packages(),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
         'matplotlib',
         'networkX',
         'tqdm',
         'pygraphviz',
-        'pydot'
+        'pydot',
+        'typing_extensions'
     ],
     entry_points={
         'console_scripts': [
