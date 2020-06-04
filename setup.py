@@ -13,7 +13,8 @@ setup(
         'networkX',
         'tqdm',
         'pygraphviz',
-        'pydot'
+        'pydot',
+        'typing_extensions'
     ],
     entry_points={
         'console_scripts': [
