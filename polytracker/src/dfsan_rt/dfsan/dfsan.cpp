@@ -46,6 +46,7 @@
 #include <unordered_set>
 #include <vector>
 
+#define DEBUG_INFO
 #include "dfsan/roaring.c"
 
 using json = nlohmann::json;
@@ -75,8 +76,7 @@ static decay_val taint_node_ttl = DEFAULT_TTL;
 static const char *polytracker_output_filename;
 
 // Manages taint info/propagation
-taintManager *taint_manager;
-
+taintManager *taint_manager = nullptr;
 static bool is_init = false;
 std::mutex init_lock;
 
@@ -118,13 +118,25 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
   taint_manager->resetFrame(index);
 }
 
+void dfsan_late_late_init();
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
-  init_lock.lock();
+  /*
+	init_lock.lock();
   if (is_init == false) {
     dfsan_late_init();
     is_init = true;
   }
   init_lock.unlock();
+  */
+
+	init_lock.lock();
+	if (is_init == false) {
+		dfsan_late_late_init();
+		is_init = true;
+	}
+	init_lock.unlock();
+
   return taint_manager->logFunctionEntry(fname);
 }
 
@@ -296,11 +308,9 @@ static void InitializePlatformEarly() {
 }
 
 static void dfsan_fini() {
-#ifdef DEBUG_INFO
-  fprintf(stderr, "FINISHED TRACKING, max label %lu, dumping json to %s!\n",
-          dfsan_get_label_count(), polytracker_output_json_filename);
-  fflush(stderr);
-#endif
+	if (taint_manager == nullptr) {
+		return;
+	}
   taint_manager->output();
   delete taint_manager;
 }
@@ -393,15 +403,25 @@ void dfsan_parse_env() {
   taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
   taint_manager->createNewTaintInfo("stdin", stdin);
 }
-
+void dfsan_late_late_init() {
+	fprintf(stderr, "LATE LATE INIT");
+	  taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
+	                                   (char *)ForestAddr());
+	  if (taint_manager == nullptr) {
+	    fprintf(stderr, "Taint prop manager null!\n");
+	    exit(1);
+	  }
+	  dfsan_parse_env();
+}
 void dfsan_late_init() {
+	fprintf(stderr, "TRYING TO INIT\n");
   InitializeFlags();
   InitializePlatformEarly();
 
   if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr())) {
     Die();
   }
-
+  fprintf(stderr, "MAPPED MEM\n");
   // Protect the region of memory we don't use, to preserve the one-to-one
   // mapping from application to shadow memory. But if ASLR is disabled, Linux
   // will load our executable in the middle of our unused region. This mostly
@@ -413,16 +433,6 @@ void dfsan_late_init() {
   }
 
   InitializeInterceptors();
-
-  taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
-                                   (char *)ForestAddr());
-  if (taint_manager == nullptr) {
-    fprintf(stderr, "Taint prop manager null!\n");
-    exit(1);
-  }
-
-  dfsan_parse_env();
-
   // Register the fini callback to run when the program terminates
   // successfully or it is killed by the runtime.
   //
@@ -431,4 +441,11 @@ void dfsan_late_init() {
   // `dfsan_fini` from a partially-initialized state.
   Atexit(dfsan_fini);
   AddDieCallback(dfsan_fini);
+
+#ifdef DEBUG_INFO
+  fprintf(stderr, "INIT DONE\n");
+#endif
 }
+
+__attribute__((section(".preinit_array"),
+		used)) static void (*dfsan_init_ptr)() = dfsan_late_init;
