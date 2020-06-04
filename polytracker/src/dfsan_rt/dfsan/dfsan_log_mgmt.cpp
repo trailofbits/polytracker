@@ -226,6 +226,8 @@ dfsan_label taintManager::createReturnLabel(int file_byte_offset,
                                             std::string name) {
   taint_prop_lock.lock();
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
+  taint_bytes_processed[name].push_back(
+        std::pair<int, int>(file_byte_offset, file_byte_offset));
   taint_prop_lock.unlock();
   return ret_label;
 }
