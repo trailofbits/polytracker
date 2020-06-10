@@ -11,5 +11,6 @@ set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/pass")
 set(POLYTRACK_CXX_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/")
 
 add_subdirectory(src)
-add_subdirectory(custom_abi)
+#add_subdirectory(custom_abi)
 install(DIRECTORY "./cxx_libs" DESTINATION ${POLYTRACK_CXX_DIR})
+install(DIRECTORY "./abi_lists" DESTINATION ${POLYTRACK_CXX_DIR})
