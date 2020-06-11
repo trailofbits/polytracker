@@ -26,8 +26,6 @@ jobs:
           python3.7 -m pip install --upgrade pip
           python3.7 -m pip install setuptools
           python3.7 -m pip install mypy
-          python3.7 -m pip install .[dev]
-          python3.7 -m pip install pytest
           python3.7 -m pip install black
       - name: Update git submodules 
         run: git submodule update --init --recursive
@@ -41,8 +39,9 @@ jobs:
         run: |
           black --check polybuild polyprocess tests --line-length=127
           mypy --ignore-missing-imports polybuild polyprocess tests
-      - name: Poly* tests 
-        run: |
-          pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
+      - name: Poly* tests 
+        run: |
+          docker run --rm -it trailofbits/polytracker pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
+
