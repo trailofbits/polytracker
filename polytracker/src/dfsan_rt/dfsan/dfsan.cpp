@@ -45,6 +45,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
 #include "dfsan/roaring.c"
 
 using json = nlohmann::json;
@@ -120,7 +121,7 @@ void dfsan_late_late_init();
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   /*
-	init_lock.lock();
+        init_lock.lock();
   if (is_init == false) {
     dfsan_late_init();
     is_init = true;
@@ -128,12 +129,12 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   init_lock.unlock();
   */
 
-	init_lock.lock();
-	if (is_init == false) {
-		dfsan_late_late_init();
-		is_init = true;
-	}
-	init_lock.unlock();
+  init_lock.lock();
+  if (is_init == false) {
+    dfsan_late_late_init();
+    is_init = true;
+  }
+  init_lock.unlock();
 
   return taint_manager->logFunctionEntry(fname);
 }
@@ -306,9 +307,9 @@ static void InitializePlatformEarly() {
 }
 
 static void dfsan_fini() {
-	if (taint_manager == nullptr) {
-		return;
-	}
+  if (taint_manager == nullptr) {
+    return;
+  }
   taint_manager->output();
   delete taint_manager;
 }
@@ -397,13 +398,13 @@ void dfsan_parse_env() {
   taint_manager->createNewTaintInfo("stdin", stdin);
 }
 void dfsan_late_late_init() {
-	  taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
-	                                   (char *)ForestAddr());
-	  if (taint_manager == nullptr) {
-	    fprintf(stderr, "Taint prop manager null!\n");
-	    exit(1);
-	  }
-	  dfsan_parse_env();
+  taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
+                                   (char *)ForestAddr());
+  if (taint_manager == nullptr) {
+    fprintf(stderr, "Taint prop manager null!\n");
+    exit(1);
+  }
+  dfsan_parse_env();
 }
 void dfsan_late_init() {
   InitializeFlags();
@@ -438,4 +439,4 @@ void dfsan_late_init() {
 }
 
 __attribute__((section(".preinit_array"),
-		used)) static void (*dfsan_init_ptr)() = dfsan_late_init;
+               used)) static void (*dfsan_init_ptr)() = dfsan_late_init;
