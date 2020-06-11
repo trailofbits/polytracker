@@ -129,15 +129,18 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   }
   init_lock.unlock();
   */
-
-	init_lock.lock();
-	if (is_init == false) {
+	//FIXME This is a temporary hack for C++ support
+	if (strcmp(fname, "main") == 0 && is_init == false) {
+	//init_lock.lock();
+	//if (is_init == false) {
 		dfsan_late_late_init();
 		is_init = true;
-	}
-	init_lock.unlock();
+	//}
+	//init_lock.unlock();
 
-  return taint_manager->logFunctionEntry(fname);
+	return taint_manager->logFunctionEntry(fname);
+	}
+	return 0;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
@@ -356,11 +359,6 @@ void dfsan_parse_env() {
             "it's not set?\n");
     exit(1);
   }
-  // Check if we have an output file name
-  const char *output_file = dfsan_getenv("POLYOUTPUT");
-  if (output_file == NULL) {
-    output_file = "polytracker";
-  }
 
   FILE *temp_file = fopen(target_file, "r");
   if (temp_file == NULL) {
@@ -397,8 +395,8 @@ void dfsan_parse_env() {
   if (env_ttl != NULL) {
     taint_node_ttl = atoi(env_ttl);
   }
-
-  taint_manager->createNewTargetInfo(target_file, byte_start, byte_end);
+  std::cout << "Trying to create new target info!" << target_file << std::endl;
+  taint_manager->createNewTargetInfo(std::string(target_file), byte_start, byte_end);
   // Special tracking for standard input
   taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
   taint_manager->createNewTaintInfo("stdin", stdin);
