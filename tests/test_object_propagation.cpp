@@ -40,7 +40,8 @@ void copied_tainted_object(Container c) {
  * Should have whatever the mapping for byte 0 is in the cmp bytes.
  */
 void tainted_string(std::string str) {
-	if (str[0] == 'a') {
+	char s = str[0];
+	if (s == 'a') {
 		std::cout << "first char is a!" << std::endl;
 	}
 	std::cout << str << std::endl;

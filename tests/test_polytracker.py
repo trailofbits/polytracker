@@ -103,8 +103,8 @@ def test_cxx_object_propagation():
     target_name = "test_object_propagation.cpp"
     pp = validate_execute_target(target_name)
     object_processed_sets = pp.processed_taint_sets
-    assert "no_tainted_string" not in object_processed_sets
-    #assert "tainted_string" in object_processed_sets
+    fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
+    assert len(fnames) > 0
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
