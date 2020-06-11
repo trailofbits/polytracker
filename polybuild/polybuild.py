@@ -37,8 +37,7 @@ class CompilerMeta:
 
 class PolyBuilder:
     def __init__(self, is_cxx):
-        self.meta = CompilerMeta(is_cxx,
-                                 self.poly_find_dir(os.path.realpath(__file__)) + "/")
+        self.meta = CompilerMeta(is_cxx, self.poly_find_dir(os.path.realpath(__file__)) + "/")
 
     def poly_check_cxx(self, compiler: str) -> bool:
         """
@@ -97,7 +96,7 @@ class PolyBuilder:
         optimize = os.getenv("POLYCLANG_OPTIMIZE")
         if optimize is not None:
             compile_command.append("-O3")
-        #-lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
+        # -lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
         compile_command.append("-g -o " + output_path + " " + bitcode_path)
         compile_command.append("-lpthread")
         compile_command.append("-Wl,--whole-archive")
@@ -105,7 +104,7 @@ class PolyBuilder:
         compile_command.append("-Wl,--no-whole-archive")
         compile_command.append(source_dir)
         compile_command.append("-ldl -lrt")
-        #if not self.meta.is_cxx:
+        # if not self.meta.is_cxx:
         compile_command.append("-lstdc++")
         for lib in libs:
             compile_command.append(lib)
@@ -119,11 +118,11 @@ class PolyBuilder:
 
     def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
         opt_command = ["opt -O0 -load", self.meta.compiler_dir + "../pass/libDataFlowSanitizerPass.so"]
-        ignore_list_files: List[str] = self.poly_add_inst_lists("ignore_lists")
+        ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
         if ignore_list_files is None:
             print("Error! Failed to add ignore lists")
             return False
-        track_list_files: List[str] = self.poly_add_inst_lists("track_lists")
+        track_list_files: Optional[List[str]] = self.poly_add_inst_lists("track_lists")
         if track_list_files is None:
             print("Error! Failed to add track_lists")
             return False
@@ -178,7 +177,7 @@ class PolyBuilder:
             else:
                 compile_command.append("-lstdc++")
             compile_command.append("-lpthread")
-            #compile_command.append("-lpthread -ldl -lrt -lm")
+            # compile_command.append("-lpthread -ldl -lrt -lm")
         print(" ".join(compile_command))
         res = os.system(" ".join(compile_command))
         if res != 0:
@@ -203,16 +202,25 @@ def main():
     polybuild --instrument -f <bitcode_file.bc> -o <output_file> 
     """
     )
-    parser.add_argument("--instrument", action='store_true', help="Specify to add polytracker instrumentation")
+    parser.add_argument("--instrument", action="store_true", help="Specify to add polytracker instrumentation")
     parser.add_argument("--input-file", "-f", type=str, default=None, help="Path to the whole program bitcode file")
-    parser.add_argument("--output-bitcode-file", "-b", type=str,
-                        default="/tmp/temp_bitcode.bc",
-                        help="Outputs the bitcode file produced by opt, useful for debugging")
+    parser.add_argument(
+        "--output-bitcode-file",
+        "-b",
+        type=str,
+        default="/tmp/temp_bitcode.bc",
+        help="Outputs the bitcode file produced by opt, useful for debugging",
+    )
     parser.add_argument("--output-file", "-o", type=str, default=None, help="Specify binary output path")
-    parser.add_argument("--target-instrument", action='store_true', help="Specify to build a single source file "
-                                                                         "with instrumentation")
-    parser.add_argument("--libs", nargs='+', default=[], help="Specify libraries to link with the instrumented target"
-                                                              "--libs -llib1 -llib2 -llib3 etc")
+    parser.add_argument(
+        "--target-instrument", action="store_true", help="Specify to build a single source file " "with instrumentation"
+    )
+    parser.add_argument(
+        "--libs",
+        nargs="+",
+        default=[],
+        help="Specify libraries to link with the instrumented target" "--libs -llib1 -llib2 -llib3 etc",
+    )
 
     poly_build = PolyBuilder("++" in sys.argv[0])
     if sys.argv[1] == "--instrument":
