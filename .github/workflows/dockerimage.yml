@@ -23,24 +23,24 @@ jobs:
           sudo apt-get install -y clang-format-10 libgraphviz-dev
       - name: Install black and pytest
         run: |
-          python -m pip install --upgrade pip
-          pip install setuptools
-          pip install mypy
-          pip install .[dev]
-          pip install pytest
-          pip install black
+          python3.7 -m pip install --upgrade pip
+          python3.7 -m pip install setuptools
+          python3.7 -m pip install mypy
+          python3.7 -m pip install .[dev]
+          python3.7 -m pip install pytest
+          python3.7 -m pip install black
       - name: Update git submodules 
         run: git submodule update --init --recursive
       - name: C++ lint
         run: |
-          python3 third_party/run-clang-format/run-clang-format.py \
+          python3.7 third_party/run-clang-format/run-clang-format.py \
           polytracker/include/dfsan/*.h  polytracker/src/*/*.cpp \
           --exclude 'polytracker/src/dfsan_rt/sanitizer_common/*' \
           --exclude 'polytracker/src/dfsan_rt/interception/*'
       - name: Python lint/typecheck 
         run: |
-          black --check polyprocess tests --line-length=127
-          mypy --ignore-missing-imports polyprocess tests
+          black --check polybuild polyprocess tests --line-length=127
+          mypy --ignore-missing-imports polybuild polyprocess tests
       - name: Poly* tests 
         run: |
           pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
