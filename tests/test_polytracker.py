@@ -2,11 +2,11 @@ import pytest
 import os
 from polyprocess import PolyProcess
 
-cwd = os.getcwd()
-test_dir = cwd + "/tests/"
-bin_dir = test_dir + "/bin/"
-test_results_dir = bin_dir + "/test_results/"
-bitcode_dir = test_dir + "/bitcode/"
+cwd: str = os.getcwd()
+test_dir: str = cwd + "/tests/"
+bin_dir: str = test_dir + "/bin/"
+test_results_dir: str = bin_dir + "/test_results/"
+bitcode_dir: str = test_dir + "/bitcode/"
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -35,12 +35,16 @@ def polyclang_compile_target(target_name: str) -> int:
         is_cxx = True
     if is_cxx:
         cxx = os.getenv("CXX")
-        ret_val = os.system(
-            cxx + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        if cxx is None:
+            print("Error! Could not find CXX")
+            return -1
+        ret_val = os.system(cxx + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
     else:
         cc = os.getenv("CC")
-        ret_val = os.system(
-            cc + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        if cc is None:
+            print("Error! Could not find CC")
+            return -1
+        ret_val = os.system(cc + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
     return ret_val
 
 
