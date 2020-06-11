@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-#===- lib/dfsan/scripts/build-libc-list.py ---------------------------------===#
+# ===- lib/dfsan/scripts/build-libc-list.py ---------------------------------===#
 #
 #                     The LLVM Compiler Infrastructure
 #
 # This file is distributed under the University of Illinois Open Source
 # License. See LICENSE.TXT for details.
 #
-#===------------------------------------------------------------------------===#
+# ===------------------------------------------------------------------------===#
 # The purpose of this script is to identify every function symbol in a set of
 # libraries (in this case, libc and libgcc) so that they can be marked as
 # uninstrumented, thus allowing the instrumentation pass to treat calls to those
@@ -16,22 +16,25 @@ import os
 import subprocess
 import sys
 from optparse import OptionParser
-import glob 
+import glob
+
 
 def defined_function_list(object):
-  functions = []
-  readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
-                                  stdout=subprocess.PIPE)
-  readelf = readelf_proc.communicate()[0].decode(errors='replace').split('\n')
-  if readelf_proc.returncode != 0:
-    raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
-  for line in readelf:
-    if (line[31:35] == 'FUNC' or line[31:36] == 'IFUNC') and \
-       line[39:44] != 'LOCAL' and \
-       line[55:58] != 'UND':
-      function_name = line[59:].split('@')[0]
-      functions.append(function_name)
-  return functions
+    functions = []
+    readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
+                                    stdout=subprocess.PIPE)
+    readelf = readelf_proc.communicate()[0].decode(errors='replace').split('\n')
+    if readelf_proc.returncode != 0:
+        raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
+    # NOTE For something like the ABI if you are stubbing it out you might want locally defined functions
+    for line in readelf:
+        if (line[31:35] == 'FUNC' or line[31:36] == 'IFUNC') and \
+                line[39:44] != 'LOCAL' and \
+                line[55:58] != 'UND':
+            function_name = line[59:].split('@')[0]
+            functions.append(function_name)
+    return functions
+
 
 p = OptionParser()
 
@@ -59,7 +62,7 @@ p.add_option('--libstdcxx-dso-path', metavar='PATH',
 """
 
 (options, args) = p.parse_args()
-#libs = glob.glob("/polytracker/the_klondike/pdfium/out/pdfium/obj/third_party/libjpeg_turbo/simd_asm/*.o")
+# libs = glob.glob("/polytracker/the_klondike/pdfium/out/pdfium/obj/third_party/libjpeg_turbo/simd_asm/*.o")
 libs = [sys.argv[1]]
 """
 libs = [os.path.join(options.libc_dso_path, name) for name in
@@ -90,16 +93,16 @@ if options.with_libstdcxx:
 """
 functions = []
 for l in libs:
-  if os.path.exists(l):
-    functions += defined_function_list(l)
-  else:
-    print >> sys.stderr, 'warning: library %s not found' % l
+    if os.path.exists(l):
+        functions += defined_function_list(l)
+    else:
+        print >> sys.stderr, 'warning: library %s not found' % l
 
 functions = list(set(functions))
 functions.sort()
 
 for f in functions:
-  f = f.replace("dfsw$", "")
-  f = f.replace("dfs$", "")
-  print('fun:%s=uninstrumented' % f)
-  print('fun:%s=discard' % f)
+    f = f.replace("dfsw$", "")
+    f = f.replace("dfs$", "")
+    print('fun:%s=uninstrumented' % f)
+    print('fun:%s=discard' % f)
