@@ -35,11 +35,10 @@ class CompilerMeta:
     compiler_dir: str
 
 
-class PolyBuild:
-    def __init__(self, argv):
-        self.meta = CompilerMeta(self.poly_check_cxx(argv[0]),
+class PolyBuilder:
+    def __init__(self):
+        self.meta = CompilerMeta(self.poly_check_cxx(os.path.realpath(__file__)),
                                  self.poly_find_dir(os.path.realpath(__file__)) + "/")
-        self.argv = argv
 
     def poly_check_cxx(self, compiler: str) -> bool:
         """
@@ -100,8 +99,8 @@ class PolyBuild:
             compile_command.append("-O3")
         compile_command.append("-g -o " + output_path + " " + bitcode_path)
         compile_command.append("-lpthread")
-        compile_command.append(source_dir)
         compile_command.append("-Wl,--whole-archive")
+        compile_command.append(source_dir)
         compile_command.append(rt_dir)
         compile_command.append("-Wl,--no-whole-archive -Wl,--no-as-needed -ldl -lrt -lm")
         if not self.meta.is_cxx:
@@ -153,7 +152,7 @@ class PolyBuild:
             return False
         return True
 
-    def poly_build(self) -> bool:
+    def poly_build(self, argv) -> bool:
         compile_command = []
         if self.meta.is_cxx:
             compile_command.append("gclang++")
@@ -165,9 +164,9 @@ class PolyBuild:
             compile_command.append("-nostdinc++")
             compile_command.append("-I" + self.meta.compiler_dir + "/../cxx_libs/include/c++/v1/")
             compile_command.append("-L" + self.meta.compiler_dir + "/../cxx_libs/lib/")
-        for arg in self.argv[1:]:
+        for arg in argv[1:]:
             compile_command.append(arg)
-        is_linking = self.poly_is_linking(self.argv)
+        is_linking = self.poly_is_linking(argv)
         if is_linking:
             # If its cxx, link in our c++ libs
             if self.meta.is_cxx:
@@ -210,9 +209,10 @@ def main():
                                                                          "with instrumentation")
     parser.add_argument("--libs", nargs='+', default=[], help="Specify libraries to link with the instrumented target"
                                                               "--libs -llib1 -llib2 -llib3 etc")
-    poly_build = PolyBuild(sys.argv)
 
-    if sys.argv[1] == "--instrument" or sys.argv[1] == "--target-instrument":
+    poly_build = PolyBuilder()
+
+    if sys.argv[1] == "--instrument":
         args = parser.parse_args(sys.argv[1:])
         # Do polyOpt/Compile
         if args.instrument:
@@ -228,12 +228,31 @@ def main():
             res = poly_build.poly_instrument(args.input_file, args.output_file, args.output_bitcode_file, args.libs)
             if not res:
                 sys.exit(1)
-        # do Build and opt/Compile
-        elif args.target_instrument:
-            pass
+        # do Build and opt/Compile for simple C/C++ program with no libs, just ease of use
+    elif sys.argv[1] == "--target-instrument":
+        # Find the output file
+        output_file = ""
+        for i, arg in enumerate(sys.argv):
+            if arg == "-o":
+                output_file = sys.argv[i + 1]
+        if output_file == "":
+            print("Error! Output file could not be found! Try specifying with -o")
+            sys.exit(1)
+        # Build the output file
+        new_argv = [arg for arg in sys.argv if arg != "--target-instrument"]
+        res = poly_build.poly_build(new_argv)
+        if not res:
+            print("Error! Building target failed!")
+            sys.exit(1)
+        os.system("get-bc -b " + output_file)
+        input_bitcode_file = output_file + ".bc"
+        res = poly_build.poly_instrument(input_bitcode_file, output_file, "/tmp/temp_bitcode.bc", [])
+        if not res:
+            print(f"Error! Failed to instrument bitcode {input_bitcode_file}")
+            sys.exit(1)
     # Do gllvm build
     else:
-        res = poly_build.poly_build()
+        res = poly_build.poly_build(sys.argv)
         if not res:
             sys.exit(1)
 
