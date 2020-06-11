@@ -41,7 +41,7 @@ jobs:
         run: |
           black --check polyprocess tests --line-length=127
           mypy --ignore-missing-imports polyprocess tests
-      - name: Polyprocess tests 
+      - name: Poly* tests 
         run: |
           pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
       - name: Build the base image 
