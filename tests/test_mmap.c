@@ -12,7 +12,8 @@
 
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
-		printf("Error, no file specified!");
+		printf("Error, no file specified!\n");
+		return -1;
 	}
 	int fd = open(argv[1], O_RDONLY);
 	if (fd == -1) {

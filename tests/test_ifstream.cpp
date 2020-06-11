@@ -25,5 +25,8 @@ int main(int argc, const char * argv[]) {
 		std::cout << "Error, file not open!" << std::endl;
 		return -1;
 	}
+	if (data[0] == 'a') {
+		std::cout << "Touched first tainted byte" << std::endl;
+	}
 	return 0;
 }
