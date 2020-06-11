@@ -36,8 +36,8 @@ class CompilerMeta:
 
 
 class PolyBuilder:
-    def __init__(self):
-        self.meta = CompilerMeta(self.poly_check_cxx(os.path.realpath(__file__)),
+    def __init__(self, is_cxx):
+        self.meta = CompilerMeta(is_cxx,
                                  self.poly_find_dir(os.path.realpath(__file__)) + "/")
 
     def poly_check_cxx(self, compiler: str) -> bool:
@@ -97,14 +97,16 @@ class PolyBuilder:
         optimize = os.getenv("POLYCLANG_OPTIMIZE")
         if optimize is not None:
             compile_command.append("-O3")
+        #-lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
         compile_command.append("-g -o " + output_path + " " + bitcode_path)
         compile_command.append("-lpthread")
         compile_command.append("-Wl,--whole-archive")
-        compile_command.append(source_dir)
         compile_command.append(rt_dir)
-        compile_command.append("-Wl,--no-whole-archive -Wl,--no-as-needed -ldl -lrt -lm")
-        if not self.meta.is_cxx:
-            compile_command.append("-lstdc++")
+        compile_command.append("-Wl,--no-whole-archive")
+        compile_command.append(source_dir)
+        compile_command.append("-ldl -lrt")
+        #if not self.meta.is_cxx:
+        compile_command.append("-lstdc++")
         for lib in libs:
             compile_command.append(lib)
         command = " ".join(compile_command)
@@ -132,6 +134,7 @@ class PolyBuilder:
         opt_command.append(input_file)
         opt_command.append("-o")
         opt_command.append(bitcode_file)
+        print(" ".join(opt_command))
         ret_code = os.system(" ".join(opt_command))
         if ret_code != 0:
             print("Error! opt command failed!")
@@ -174,7 +177,8 @@ class PolyBuilder:
             # Else, we still need stdc++ for our runtime
             else:
                 compile_command.append("-lstdc++")
-            compile_command.append("-lpthread -ldl -lrt -lm")
+            compile_command.append("-lpthread")
+            #compile_command.append("-lpthread -ldl -lrt -lm")
         print(" ".join(compile_command))
         res = os.system(" ".join(compile_command))
         if res != 0:
@@ -210,8 +214,7 @@ def main():
     parser.add_argument("--libs", nargs='+', default=[], help="Specify libraries to link with the instrumented target"
                                                               "--libs -llib1 -llib2 -llib3 etc")
 
-    poly_build = PolyBuilder()
-
+    poly_build = PolyBuilder("++" in sys.argv[0])
     if sys.argv[1] == "--instrument":
         args = parser.parse_args(sys.argv[1:])
         # Do polyOpt/Compile

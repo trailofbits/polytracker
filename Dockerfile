@@ -49,7 +49,8 @@ WORKDIR /polytracker/build
 ENV PATH="/usr/lib/llvm-7/bin:${PATH}"
 
 RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE .. && ninja install
-ENV CC=/polytracker/build/bin/polytracker/polyclang
-ENV CXX=/polytracker/build/bin/polytracker/polyclang++
+ENV CC=/polytracker/build/bin/polytracker/polybuild/polybuild.py
+ENV CXX=/polytracker/build/bin/polytracker/polybuild/polybuild++.py
+RUN chmod +x ${CC}
 
 WORKDIR /polytracker 
