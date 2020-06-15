@@ -38,13 +38,13 @@ def polyclang_compile_target(target_name: str) -> int:
         if cxx is None:
             print("Error! Could not find CXX")
             return -1
-        ret_val = os.system(cxx + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        ret_val = os.system(cxx + " --instrument-target -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
     else:
         cc = os.getenv("CC")
         if cc is None:
             print("Error! Could not find CC")
             return -1
-        ret_val = os.system(cc + " --target-instrument -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        ret_val = os.system(cc + " --instrument-target -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
     return ret_val
 
 
