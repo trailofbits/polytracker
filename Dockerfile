@@ -53,4 +53,7 @@ ENV CC=/polytracker/build/bin/polytracker/polybuild/polybuild.py
 ENV CXX=/polytracker/build/bin/polytracker/polybuild/polybuild++.py
 RUN chmod +x ${CC}
 
+# Set the BC store path to the <install_path>/cxx_libs/bitcode/bitcode_store}
+ENV WLLVM_BC_STORE="/polytracker/build/bin/polytracker/cxx_libs/bitcode/bitcode_store"
+
 WORKDIR /polytracker 
