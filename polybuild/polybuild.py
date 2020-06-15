@@ -202,10 +202,10 @@ def main():
     polybuild --instrument -f <bitcode_file.bc> -o <output_file> 
     """
     )
-    parser.add_argument("--instrument", action="store_true", help="Specify to add polytracker instrumentation")
+    parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
     parser.add_argument("--input-file", "-f", type=str, default=None, help="Path to the whole program bitcode file")
     parser.add_argument(
-        "--output-bitcode-file",
+        "--output-bitcode",
         "-b",
         type=str,
         default="/tmp/temp_bitcode.bc",
@@ -213,8 +213,9 @@ def main():
     )
     parser.add_argument("--output-file", "-o", type=str, default=None, help="Specify binary output path")
     parser.add_argument(
-        "--target-instrument", action="store_true", help="Specify to build a single source file " "with instrumentation"
+        "--instrument-target", action="store_true", help="Specify to build a single source file " "with instrumentation"
     )
+
     parser.add_argument(
         "--libs",
         nargs="+",
@@ -223,24 +224,29 @@ def main():
     )
 
     poly_build = PolyBuilder("++" in sys.argv[0])
-    if sys.argv[1] == "--instrument":
+    if sys.argv[1] == "--instrument" or sys.argv[1] == "--link-cxx-bitcode":
         args = parser.parse_args(sys.argv[1:])
         # Do polyOpt/Compile
+        if args.output_file is None:
+            print("Error! Outfile not specified, please specify with -o")
+            sys.exit(1)
+        if args.input_file is None:
+            print("Error! Input file not specified, please specify with -f")
+            sys.exit(1)
+        if not os.path.exists(args.input_file):
+            print("Error! Input file could not be found!")
+            sys.exit(1)
         if args.instrument:
-            if args.output_file is None:
-                print("Error! Outfile not specified, please specify with -o")
-                sys.exit(1)
-            if args.input_file is None:
-                print("Error! Input file not specified, please specify with -f")
-                sys.exit(1)
-            if not os.path.exists(args.input_file):
-                print("Error! Input file could not be found!")
-                sys.exit(1)
             res = poly_build.poly_instrument(args.input_file, args.output_file, args.output_bitcode_file, args.libs)
             if not res:
                 sys.exit(1)
+        else:
+            res = poly_build.poly_link_cxx(args.input_file, args.output_file)
+            if not res:
+                print("Error! Failed linking cxx")
+                sys.exit(1)
         # do Build and opt/Compile for simple C/C++ program with no libs, just ease of use
-    elif sys.argv[1] == "--target-instrument":
+    elif sys.argv[1] == "--instrument-target":
         # Find the output file
         output_file = ""
         for i, arg in enumerate(sys.argv):
@@ -250,12 +256,14 @@ def main():
             print("Error! Output file could not be found! Try specifying with -o")
             sys.exit(1)
         # Build the output file
-        new_argv = [arg for arg in sys.argv if arg != "--target-instrument"]
+        new_argv = [arg for arg in sys.argv if arg != "--instrument-target"]
         res = poly_build.poly_build(new_argv)
         if not res:
             print("Error! Building target failed!")
             sys.exit(1)
-        os.system("get-bc -b " + output_file)
+        ret = os.system("get-bc -b " + output_file)
+        if not ret:
+            print(f"Error! Failed to extract bitcode from {output_file}")
         input_bitcode_file = output_file + ".bc"
         res = poly_build.poly_instrument(input_bitcode_file, output_file, "/tmp/temp_bitcode.bc", [])
         if not res:
