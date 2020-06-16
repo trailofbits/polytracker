@@ -174,7 +174,7 @@ class PolyBuilder:
                 compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
 
         command = shlex.split(' '.join(shlex.quote(arg) for arg in compile_command))
-        print(command)
+        #print(command)
         res = subprocess.call(command)
         if res != 0:
             return False
@@ -335,8 +335,6 @@ def main():
                 for build_target in build_manifest:
                     artifacts = "TARGET: " + build_target + " ".join(build_manifest[outfile]["artifacts"])
                     cmds = "TARGET: " + build_target + " ".join(build_manifest[outfile]["cmd"])
-                    print(artifacts)
-                    print(cmds)
                     manifest_file.write(artifacts)
                     manifest_file.write(cmds)
 
