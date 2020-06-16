@@ -103,7 +103,6 @@ class PolyBuilder:
         compile_command.append("-lpthread")
         compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir]
         compile_command += ["-ldl", "-lrt"]
-        # if not self.meta.is_cxx:
         compile_command.append("-lstdc++")
         for lib in libs:
             if ".a" not in lib and ".o" not in lib:
@@ -131,9 +130,7 @@ class PolyBuilder:
             opt_command.append("-polytrack-dfsan-abilist=" + file)
         for file in track_list_files:
             opt_command.append("-polytrack-dfsan-abilist=" + file)
-        opt_command.append(input_file)
-        opt_command.append("-o")
-        opt_command.append(bitcode_file)
+        opt_command += [input_file, "-o", bitcode_file]
         command = shlex.split(' '.join(shlex.quote(arg) for arg in opt_command))
         ret_code = subprocess.call(command)
         if ret_code != 0:
@@ -175,10 +172,7 @@ class PolyBuilder:
             # If its cxx, link in our c++ libs
             if self.meta.is_cxx:
                 compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
-                compile_command.append("-lc++")
-                compile_command.append("-lc++abipoly")
-                compile_command.append("-lc++abi")
-                compile_command.append("-lpthread")
+
         command = shlex.split(' '.join(shlex.quote(arg) for arg in compile_command))
         print(command)
         res = subprocess.call(command)
@@ -195,8 +189,15 @@ Store a build artifact to the artifact storage via copy
 def store_artifact(file_path, artifact_path) -> bool:
     filename = get_file_name(file_path)
     artifact_file_path = artifact_path + "/" + filename
-    ret = subprocess.call(["cp", file_path, artifact_file_path])
-    if not ret:
+    cwd = os.getcwd()
+    targ_path = cwd + "/" + file_path
+    if not os.path.exists(targ_path):
+        print(f"Error! cannot find {targ_path}")
+        return False
+    ret = subprocess.call(["cp", targ_path, artifact_file_path])
+    if ret != 0:
+        print(f"Error! failed to store {targ_path}, error was {ret}")
+        print(f"Artifact path: {artifact_file_path}")
         return False
     return True
 
@@ -251,8 +252,6 @@ def main():
         help="Specify libraries to link with the instrumented target, without the -l" "--libs lib1 lib2 lib3 etc",
     )
 
-
-    # TODO replace raw strings with variables
     poly_build = PolyBuilder("++" in sys.argv[0])
     if sys.argv[1] == "--instrument-bitcode":
         args = parser.parse_args(sys.argv[1:])
@@ -312,22 +311,34 @@ def main():
         if not os.path.exists(artifact_store_path):
             print(f"Error! Path {artifact_store_path} not found!")
             sys.exit(1)
-        # TODO Add vars here instead of raw strings
+        res = poly_build.poly_build(sys.argv)
+        if not res:
+            sys.exit(1)
         outfile = ""
         if "-o" in sys.argv:
             for i, arg in enumerate(sys.argv):
                 if arg == "-o":
                     outfile = sys.argv[i + 1]
-                if "-l" in arg or ".a" in arg or ".o" in arg:
+                    # Focus on object files/archives/libraries
+                if (("-l" in arg) or (".a" in arg) or (".o" in arg)) and \
+                        not (arg.endswith(".c") or arg.endswith(".cc") or arg.endswith(".cpp")):
                     build_manifest[outfile]["artifacts"] += [arg]
-                    ret = store_artifact(arg, artifact_store_path)
-                    if not ret:
-                        print(f"Error! Failed to store {arg}")
-                        sys.exit(1)
+                    # Dont store the shared libraries
+                    if "-l" not in arg:
+                        ret = store_artifact(arg, artifact_store_path)
+                        if not ret:
+                            print(f"Warning! Failed to store {arg}")
             build_manifest[outfile]["cmd"] = sys.argv
-        res = poly_build.poly_build(sys.argv)
-        if not res:
-            sys.exit(1)
+            if not os.path.exists(artifact_store_path + "/manifest.md"):
+                os.system("touch " + artifact_store_path + "/manifest.md")
+            with open(artifact_store_path + "/manifest.md", mode="w+") as manifest_file:
+                for build_target in build_manifest:
+                    artifacts = "TARGET: " + build_target + " ".join(build_manifest[outfile]["artifacts"])
+                    cmds = "TARGET: " + build_target + " ".join(build_manifest[outfile]["cmd"])
+                    print(artifacts)
+                    print(cmds)
+                    manifest_file.write(artifacts)
+                    manifest_file.write(cmds)
 
 
 if __name__ == "__main__":
