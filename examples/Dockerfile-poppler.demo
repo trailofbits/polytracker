@@ -3,8 +3,8 @@ MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
 
 WORKDIR /polytracker/the_klondike
 
-ENV CC=clang
-ENV CXX=clang++
+#ENV CC=clang
+#ENV CXX=clang++
 
 #Update pkg-config/util-linux (needed for FontConfig)
 RUN apt update && apt install pkg-config \
@@ -60,15 +60,15 @@ WORKDIR /polytracker/the_klondike
 RUN wget http://xmlsoft.org/sources/libxml2-2.9.10.tar.gz
 RUN tar -xvf libxml2-2.9.10.tar.gz 
 WORKDIR libxml2-2.9.10 
-RUN ./configure --prefix=/usr --with-python=/usr/bin/python3
-RUN make -j10
+RUN ./configure --prefix=/usr --disable-dependency-tracking --with-python=/usr/bin/python3
+RUN make -j5 install
 RUN make install
 
 
 #=================================
 WORKDIR /polytracker/the_klondike
 
-#Fontconfig (depends on FreeType), note that the linux from scratch version is broken
+##Fontconfig (depends on FreeType), note that the linux from scratch version is broken
 #The gitlab version is up to date, and has a PR merged from a year ago with the bug fix
 #https://gitlab.freedesktop.org/fontconfig/fontconfig/merge_requests/2/diffs?commit_id=8208f99fa1676c42bfd8d74de3e9dac5366c150c
 
@@ -76,15 +76,15 @@ RUN git clone https://gitlab.freedesktop.org/fontconfig/fontconfig.git
 
 WORKDIR fontconfig
 RUN ./autogen.sh --sysconfdir=/etc --prefix=/usr --enable-libxml2 --mandir=/usr/share/man
-RUN make -j10 install 
+RUN make -j5 install 
 
 #=================================
 WORKDIR /polytracker/the_klondike
 
 #Poppler 0.84.0
 
-ENV CC=/polytracker/build/bin/polytracker/polyclang
-ENV CXX=/polytracker/build/bin/polytracker/polyclang++
+#ENV CC=/polytracker/build/bin/polytracker/polyclang
+#ENV CXX=/polytracker/build/bin/polytracker/polyclang++
 
 RUN wget https://poppler.freedesktop.org/poppler-0.84.0.tar.xz
 RUN tar -xvf poppler-0.84.0.tar.xz
@@ -97,7 +97,7 @@ RUN cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_GTK_TESTS=OFF -DBUILD_QT4_TESTS=OFF -D
 RUN make -j5 install 
 
 #=================================
-WORKDIR /polytracker/the_klondike
+#WORKDIR /polytracker/the_klondike
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]

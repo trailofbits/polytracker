@@ -11,6 +11,14 @@ RUN git submodule update --init
 
 RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
 
+WORKDIR /polytracker/the_klondike/mupdf/build/debug 
+
+#Extract bitcode from mutool 
+RUN get-bc -b mutool 
+
+#Instrument and link libs
+RUN ${CC} --instrument-bitcode -f mutool.bc -o mutool_track --libs libmupdf.a m pthread
+
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
 WORKDIR /workdir
