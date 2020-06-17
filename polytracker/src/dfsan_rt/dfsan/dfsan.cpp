@@ -120,15 +120,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
 void dfsan_late_late_init();
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
-  /*
-        init_lock.lock();
-  if (is_init == false) {
-    dfsan_late_init();
-    is_init = true;
-  }
-  init_lock.unlock();
-  */
-
   init_lock.lock();
   if (is_init == false) {
     dfsan_late_late_init();
@@ -209,13 +200,6 @@ SANITIZER_INTERFACE_ATTRIBUTE dfsan_label dfsan_union(dfsan_label l1,
     return l1;
   return __dfsan_union(l1, l2);
 }
-
-/*
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-dfsan_label dfsan_create_canonical_label(int offset) {
-        return taint_prop_manager->createCanonicalLabel(offset);
-}
-*/
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
     dfsan_label label, void *addr, uptr size) {
@@ -392,7 +376,7 @@ void dfsan_parse_env() {
     taint_node_ttl = atoi(env_ttl);
   }
 
-  taint_manager->createNewTargetInfo(target_file, byte_start, byte_end);
+  taint_manager->createNewTargetInfo(target_file, byte_start, byte_end - 1);
   // Special tracking for standard input
   taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
   taint_manager->createNewTaintInfo("stdin", stdin);

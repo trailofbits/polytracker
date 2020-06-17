@@ -3,7 +3,6 @@ import os
 from polyprocess import PolyProcess
 import subprocess
 
-
 TEST_DIR = os.path.realpath(os.path.dirname(__file__))
 BIN_DIR = os.path.join(TEST_DIR, "bin")
 TEST_RESULTS_DIR = os.path.join(BIN_DIR, "test_results")
@@ -105,6 +104,33 @@ def test_source_open():
     pp = validate_execute_target(target_name)
     open_processed_sets = pp.processed_taint_sets
     assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
+
+
+def test_memcpy_propagate():
+    target_name = "test_memcpy.c"
+    pp = validate_execute_target(target_name)
+    raw_taint_sets = pp.taint_sets
+    print(raw_taint_sets)
+    assert 1 in raw_taint_sets["dfs$touch_copied_byte"]["input_bytes"]
+
+
+def test_no_taint():
+    target_name = "test_no_taint.c"
+    pp = validate_execute_target(target_name)
+    raw_taint_sets = pp.taint_sets
+    assert raw_taint_sets is None
+
+
+# This is a bad name for this test
+# This test compares the taint sources info with the tainted block info
+# When reading an entire file in a single block
+# Basically make sure the start/end match to prevent off-by-one errors
+# TODO
+def test_block_target_values():
+    target_name = "test_memcpy.c"
+    test_filename = "/polytracker/tests/test_data/test_data.txt"
+    pp = validate_execute_target(target_name)
+    assert 0 == 0
 
 
 def test_source_fopen():
