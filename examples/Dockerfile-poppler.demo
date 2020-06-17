@@ -96,6 +96,9 @@ WORKDIR /polytracker/the_klondike/poppler-0.84.0/build/utils
 RUN get-bc -b pdftotext 
 RUN ${CXX} --instrument-bitcode -f pdftotext.bc -o pdftotext_track --output-bitcode pdftotext_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
+RUN get-bc -b pdfinfo
+RUN ${CXX} --instrument-bitcode -f pdfinfo.bc -o pdfinfo_track --output-bitcode pdfinfo_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
 WORKDIR /workdir
