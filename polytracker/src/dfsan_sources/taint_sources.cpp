@@ -257,6 +257,7 @@ EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
   }
   return c;
 }
+
 EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
                                      dfsan_label *ret_label) {
   long offset = ftell(fd);

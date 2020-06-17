@@ -35,7 +35,11 @@ COPY . /polytracker
 
 WORKDIR /polytracker
 
+<<<<<<< HEAD
 RUN python3.7 -m pip install pytest wllvm
+=======
+RUN python3.7 -m pip install pytest
+>>>>>>> master
 
 RUN python3.7 -m pip install .
 
