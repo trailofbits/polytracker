@@ -178,7 +178,7 @@ Store a build artifact to the artifact storage via copy
 
 
 def store_artifact(file_path, artifact_path) -> bool:
-    filename = get_file_name(file_path)
+    filename = os.path.basename(file_path)
     artifact_file_path = os.path.join(artifact_path, filename)
     # Check if its an absolute path
     if file_path[0] != "/":
@@ -195,15 +195,6 @@ def store_artifact(file_path, artifact_path) -> bool:
         print(f"Artifact path: {artifact_file_path}")
         return False
     return True
-
-
-def get_file_name(file_path: str) -> str:
-    last_slash: int = file_path.rfind("/")
-    # If not path just return the file
-    if last_slash == -1:
-        return file_path
-    # Return the file name from last path
-    return file_path[last_slash + 1 :]
 
 
 def main():
