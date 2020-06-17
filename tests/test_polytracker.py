@@ -5,9 +5,9 @@ import subprocess
 
 
 TEST_DIR = os.path.realpath(os.path.dirname(__file__))
-BIN_DIR = os.path.join(TEST_DIR, 'bin')
-TEST_RESULTS_DIR = os.path.join(BIN_DIR, 'test_results')
-BITCODE_DIR = os.path.join(TEST_DIR, 'bitcode')
+BIN_DIR = os.path.join(TEST_DIR, "bin")
+TEST_RESULTS_DIR = os.path.join(BIN_DIR, "test_results")
+BITCODE_DIR = os.path.join(TEST_DIR, "bitcode")
 
 """
 Pytest fixture to init testing env (building tests) 
