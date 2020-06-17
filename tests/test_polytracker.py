@@ -1,12 +1,13 @@
 import pytest
 import os
 from polyprocess import PolyProcess
+import subprocess
 
-cwd: str = os.getcwd()
-test_dir: str = cwd + "/tests/"
-bin_dir: str = test_dir + "/bin/"
-test_results_dir: str = bin_dir + "/test_results/"
-bitcode_dir: str = test_dir + "/bitcode/"
+
+TEST_DIR = os.path.realpath(os.path.dirname(__file__))
+BIN_DIR = os.path.join(TEST_DIR, 'bin')
+TEST_RESULTS_DIR = os.path.join(BIN_DIR, 'test_results')
+BITCODE_DIR = os.path.join(TEST_DIR, 'bitcode')
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -18,13 +19,13 @@ This runs before any test is executed
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
     # Check if bin dir exists
-    if os.path.exists(bin_dir):
-        subprocess.call(["rm", "-r", bin_dir])
-    os.system("mkdir -p " + test_results_dir)
-    if os.path.exists(bitcode_dir):
-        os.system("rm -r " + bitcode_dir)
-    os.system("mkdir " + bitcode_dir)
-    target_files = [f for f in os.listdir(test_dir) if f.endswith(".c") or f.endswith(".cpp")]
+    if os.path.exists(BIN_DIR):
+        subprocess.call(["rm", "-r", BIN_DIR])
+    subprocess.call(["mkdir", "-p ", TEST_RESULTS_DIR])
+    if os.path.exists(BITCODE_DIR):
+        subprocess.call(["rm", "-r", BITCODE_DIR])
+    subprocess.call(["mkdir", BITCODE_DIR])
+    target_files = [f for f in os.listdir(TEST_DIR) if f.endswith(".c") or f.endswith(".cpp")]
     for file in target_files:
         assert polyclang_compile_target(file) == 0
 
@@ -38,13 +39,13 @@ def polyclang_compile_target(target_name: str) -> int:
         if cxx is None:
             print("Error! Could not find CXX")
             return -1
-        ret_val = os.system(cxx + " --instrument-target -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        ret_val = os.system(cxx + " --instrument-target -g -o " + BIN_DIR + target_name + ".bin " + TEST_DIR + target_name)
     else:
         cc = os.getenv("CC")
         if cc is None:
             print("Error! Could not find CC")
             return -1
-        ret_val = os.system(cc + " --instrument-target -g -o " + bin_dir + target_name + ".bin " + test_dir + target_name)
+        ret_val = os.system(cc + " --instrument-target -g -o " + BIN_DIR + target_name + ".bin " + TEST_DIR + target_name)
     return ret_val
 
 
@@ -52,16 +53,16 @@ def polyclang_compile_target(target_name: str) -> int:
 
 # Returns the Polyprocess object
 def validate_execute_target(target_name):
-    target_bin_path = bin_dir + target_name + ".bin"
+    target_bin_path = BIN_DIR + target_name + ".bin"
     assert os.path.exists(target_bin_path) is True
     test_filename = "/polytracker/tests/test_data/test_data.txt"
     os.environ["POLYPATH"] = test_filename
-    os.environ["POLYOUTPUT"] = test_results_dir + target_name
+    os.environ["POLYOUTPUT"] = TEST_RESULTS_DIR + target_name
     ret_val = os.system(target_bin_path + " " + test_filename)
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = test_results_dir + "/" + target_name + "_forest.bin"
-    json_path = test_results_dir + "/" + target_name + "_process_set.json"
+    forest_path = TEST_RESULTS_DIR + "/" + target_name + "_forest.bin"
+    json_path = TEST_RESULTS_DIR + "/" + target_name + "_process_set.json"
     assert os.path.exists(forest_path) is True
     assert os.path.exists(json_path) is True
     pp = PolyProcess(json_path, forest_path)
