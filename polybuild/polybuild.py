@@ -93,8 +93,9 @@ class PolyBuilder:
             compile_command.append("clang++")
         else:
             compile_command.append("clang")
-        compile_command.append("-pie")
-        compile_command.append("-fPIC")
+        compile_command += ["-pie", "-fPIC"]
+        # compile_command.append("-pie")
+        # compile_command.append("-fPIC")
         optimize = os.getenv("POLYCLANG_OPTIMIZE")
         if optimize is not None:
             compile_command.append("-O3")
@@ -152,6 +153,7 @@ class PolyBuilder:
             return False
         return True
 
+    # TODO add qUnusedArgs here
     def poly_build(self, argv) -> bool:
         compile_command = []
         if self.meta.is_cxx:
@@ -189,8 +191,12 @@ Store a build artifact to the artifact storage via copy
 def store_artifact(file_path, artifact_path) -> bool:
     filename = get_file_name(file_path)
     artifact_file_path = artifact_path + "/" + filename
-    cwd = os.getcwd()
-    targ_path = cwd + "/" + file_path
+    # Check if its an absolute path
+    if file_path[0] != "/":
+        cwd = os.getcwd()
+        targ_path = cwd + "/" + file_path
+    else:
+        targ_path = file_path
     if not os.path.exists(targ_path):
         print(f"Error! cannot find {targ_path}")
         return False
@@ -234,7 +240,7 @@ def main():
     parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
     parser.add_argument("--input-file", "-f", type=str, default=None, help="Path to the whole program bitcode file")
     parser.add_argument(
-        "--output-bitcode-file",
+        "--output-bitcode",
         "-b",
         type=str,
         default="/tmp/temp_bitcode.bc",
@@ -251,7 +257,7 @@ def main():
         default=[],
         help="Specify libraries to link with the instrumented target, without the -l" "--libs lib1 lib2 lib3 etc",
     )
-
+    # TODO add verbosity flag
     poly_build = PolyBuilder("++" in sys.argv[0])
     if sys.argv[1] == "--instrument-bitcode":
         args = parser.parse_args(sys.argv[1:])
@@ -266,12 +272,12 @@ def main():
             print("Error! Input file could not be found!")
             sys.exit(1)
         if args.instrument_bitcode:
-            if args.output_bitcode_file is None:
+            if args.output_bitcode is None:
                 res = poly_build.poly_instrument(args.input_file, args.output_file, "/tmp/temp_bitcode.bc", args.libs)
                 if not res:
                     sys.exit(1)
             else:
-                res = poly_build.poly_instrument(args.input_file, args.output_file, args.output_bitcode_file, args.libs)
+                res = poly_build.poly_instrument(args.input_file, args.output_file, args.output_bitcode, args.libs)
                 if not res:
                     sys.exit(1)
 
@@ -302,6 +308,7 @@ def main():
             sys.exit(1)
     # Do gllvm build
     else:
+        # Init the dictionary that contains info about file --> artifacts and file --> command line args
         build_manifest = defaultdict(lambda: defaultdict(list))
         # This is the path that stores build artifacts.
         artifact_store_path = os.getenv("WLLVM_ARTIFACT_STORE")
@@ -311,33 +318,47 @@ def main():
         if not os.path.exists(artifact_store_path):
             print(f"Error! Path {artifact_store_path} not found!")
             sys.exit(1)
+
+        # This actually builds the thing, we die if we fail a build.
         res = poly_build.poly_build(sys.argv)
         if not res:
             sys.exit(1)
+
+        # Check to see if we are creating an object
         outfile = ""
+        # TODO Archives not copying still
         if "-o" in sys.argv:
             for i, arg in enumerate(sys.argv):
+                # Find the object we are trying to build
                 if arg == "-o":
                     outfile = sys.argv[i + 1]
-                    # Focus on object files/archives/libraries
+                # Focus on object files/archives/libraries
+                # The parsing here isnt that good, some files have -l in the name, like color-label.c ...
+                # So make sure they are not c files, and end in .a/.o etc.
                 if (("-l" in arg) or (".a" in arg) or (".o" in arg)) and not (
                     arg.endswith(".c") or arg.endswith(".cc") or arg.endswith(".cpp")
                 ):
                     build_manifest[outfile]["artifacts"] += [arg]
                     # Dont store the shared libraries
                     if "-l" not in arg:
+                        # Store a .o and a .a file
                         ret = store_artifact(arg, artifact_store_path)
                         if not ret:
+                            # .a files seem to not be found, and some .o files? But others work fine. idk why
                             print(f"Warning! Failed to store {arg}")
+            # Write some output to a file storing command line args/artifacts used.
             build_manifest[outfile]["cmd"] = sys.argv
             if not os.path.exists(artifact_store_path + "/manifest.md"):
                 os.system("touch " + artifact_store_path + "/manifest.md")
-            with open(artifact_store_path + "/manifest.md", mode="w+") as manifest_file:
-                for build_target in build_manifest:
-                    artifacts = "TARGET: " + build_target + " ".join(build_manifest[outfile]["artifacts"])
-                    cmds = "TARGET: " + build_target + " ".join(build_manifest[outfile]["cmd"])
-                    manifest_file.write(artifacts)
-                    manifest_file.write(cmds)
+            # TODO This should just become a json.
+            with open(artifact_store_path + "/manifest.md", mode="a") as manifest_file:
+                artifacts = " ".join(build_manifest[outfile]["artifacts"]) + "\n"
+                cmds = " ".join(build_manifest[outfile]["cmd"]) + "\n"
+                manifest_file.write(f"======= TARGET: {outfile} ========\n")
+                manifest_file.write(artifacts)
+                manifest_file.write("-----------------------------------\n")
+                manifest_file.write(cmds)
+                manifest_file.write("===================================\n")
 
 
 if __name__ == "__main__":
