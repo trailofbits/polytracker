@@ -109,7 +109,7 @@ class PolyBuilder:
                 compile_command.append("-l" + lib)
             else:
                 compile_command.append(lib)
-        command = shlex.split(' '.join(shlex.quote(arg) for arg in compile_command))
+        command = shlex.split(" ".join(shlex.quote(arg) for arg in compile_command))
         ret_code = subprocess.call(command)
         if ret_code != 0:
             print(f"Error! Failed to execute compile command: {compile_command}")
@@ -131,7 +131,7 @@ class PolyBuilder:
         for file in track_list_files:
             opt_command.append("-polytrack-dfsan-abilist=" + file)
         opt_command += [input_file, "-o", bitcode_file]
-        command = shlex.split(' '.join(shlex.quote(arg) for arg in opt_command))
+        command = shlex.split(" ".join(shlex.quote(arg) for arg in opt_command))
         ret_code = subprocess.call(command)
         if ret_code != 0:
             print("Error! opt command failed!")
@@ -173,8 +173,8 @@ class PolyBuilder:
             if self.meta.is_cxx:
                 compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
 
-        command = shlex.split(' '.join(shlex.quote(arg) for arg in compile_command))
-        #print(command)
+        command = shlex.split(" ".join(shlex.quote(arg) for arg in compile_command))
+        # print(command)
         res = subprocess.call(command)
         if res != 0:
             return False
@@ -208,7 +208,7 @@ def get_file_name(file_path: str) -> str:
     if last_slash == -1:
         return file_path
     # Return the file name from last path
-    return file_path[last_slash + 1:]
+    return file_path[last_slash + 1 :]
 
 
 def main():
@@ -320,8 +320,9 @@ def main():
                 if arg == "-o":
                     outfile = sys.argv[i + 1]
                     # Focus on object files/archives/libraries
-                if (("-l" in arg) or (".a" in arg) or (".o" in arg)) and \
-                        not (arg.endswith(".c") or arg.endswith(".cc") or arg.endswith(".cpp")):
+                if (("-l" in arg) or (".a" in arg) or (".o" in arg)) and not (
+                    arg.endswith(".c") or arg.endswith(".cc") or arg.endswith(".cpp")
+                ):
                     build_manifest[outfile]["artifacts"] += [arg]
                     # Dont store the shared libraries
                     if "-l" not in arg:
