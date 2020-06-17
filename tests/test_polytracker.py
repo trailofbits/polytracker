@@ -19,7 +19,7 @@ This runs before any test is executed
 def setup_targets():
     # Check if bin dir exists
     if os.path.exists(bin_dir):
-        os.system("rm -r " + bin_dir)
+        subprocess.call(["rm", "-r", bin_dir])
     os.system("mkdir -p " + test_results_dir)
     if os.path.exists(bitcode_dir):
         os.system("rm -r " + bitcode_dir)
