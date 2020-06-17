@@ -55,7 +55,14 @@ class PolyProcess:
         self.json_size = os.path.getsize(polytracker_json_path)
         self.polytracker_json = json.loads(self.json_file.read(self.json_size))
         self.processed_taint_sets: Dict[str, Dict[str, Dict[str, List[int]]]] = {}
-        self.taint_sets = self.polytracker_json["tainted_functions"]
+        if "tainted_functions" not in self.polytracker_json:
+            self.taint_sets = None
+        else:
+            self.taint_sets = self.polytracker_json["tainted_functions"]
+        if "tainted_input_blocks" not in self.polytracker_json:
+            self.tainted_input_blocks = None
+        else:
+            self.tainted_input_blocks = self.polytracker_json["tainted_input_blocks"]
         self.forest_file = open(polytracker_forest_path, "rb")
         self.forest_file_size = os.path.getsize(polytracker_forest_path)
         self.taint_forest: nx.DiGraph = nx.DiGraph()
@@ -144,6 +151,9 @@ class PolyProcess:
         return self.canonical_mapping[label][0]
 
     def process_taint_sets(self):
+        if self.taint_sets is None:
+            print("Warning! No taint information to process")
+            return
         taint_sets = tqdm(self.taint_sets)
         processed_labels = defaultdict(lambda: defaultdict(lambda: defaultdict(set)))
         for function in taint_sets:
