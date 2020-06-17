@@ -21,7 +21,10 @@ def setup_targets():
     # Check if bin dir exists
     if os.path.exists(BIN_DIR):
         subprocess.call(["rm", "-r", BIN_DIR])
-    subprocess.call(["mkdir", "-p ", TEST_RESULTS_DIR])
+    subprocess.call(["mkdir", "-p", BIN_DIR])
+    if os.path.exists(TEST_RESULTS_DIR):
+        subprocess.call(["rm", "-r", TEST_RESULTS_DIR])
+    subprocess.call(["mkdir", "-p", TEST_RESULTS_DIR])
     if os.path.exists(BITCODE_DIR):
         subprocess.call(["rm", "-r", BITCODE_DIR])
     subprocess.call(["mkdir", BITCODE_DIR])
@@ -39,13 +42,29 @@ def polyclang_compile_target(target_name: str) -> int:
         if cxx is None:
             print("Error! Could not find CXX")
             return -1
-        ret_val = os.system(cxx + " --instrument-target -g -o " + BIN_DIR + target_name + ".bin " + TEST_DIR + target_name)
+        compile_command = [
+            cxx,
+            "--instrument-target",
+            "-g",
+            "-o",
+            os.path.join(BIN_DIR, target_name) + ".bin",
+            os.path.join(TEST_DIR, target_name),
+        ]
+        ret_val = subprocess.call(compile_command)
     else:
         cc = os.getenv("CC")
         if cc is None:
             print("Error! Could not find CC")
             return -1
-        ret_val = os.system(cc + " --instrument-target -g -o " + BIN_DIR + target_name + ".bin " + TEST_DIR + target_name)
+        compile_command = [
+            cc,
+            "--instrument-target",
+            "-g",
+            "-o",
+            os.path.join(BIN_DIR, target_name) + ".bin",
+            os.path.join(TEST_DIR, target_name),
+        ]
+        ret_val = subprocess.call(compile_command)
     return ret_val
 
 
@@ -53,16 +72,16 @@ def polyclang_compile_target(target_name: str) -> int:
 
 # Returns the Polyprocess object
 def validate_execute_target(target_name):
-    target_bin_path = BIN_DIR + target_name + ".bin"
+    target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
     assert os.path.exists(target_bin_path) is True
     test_filename = "/polytracker/tests/test_data/test_data.txt"
     os.environ["POLYPATH"] = test_filename
-    os.environ["POLYOUTPUT"] = TEST_RESULTS_DIR + target_name
-    ret_val = os.system(target_bin_path + " " + test_filename)
+    os.environ["POLYOUTPUT"] = os.path.join(TEST_RESULTS_DIR, target_name)
+    ret_val = subprocess.call([target_bin_path, test_filename])
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = TEST_RESULTS_DIR + "/" + target_name + "_forest.bin"
-    json_path = TEST_RESULTS_DIR + "/" + target_name + "_process_set.json"
+    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "_forest.bin")
+    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "_process_set.json")
     assert os.path.exists(forest_path) is True
     assert os.path.exists(json_path) is True
     pp = PolyProcess(json_path, forest_path)

@@ -271,8 +271,9 @@ def main():
             print("Error! Building target failed!")
             sys.exit(1)
         ret = subprocess.call(["get-bc", "-b", output_file])
-        if not ret:
+        if ret != 0:
             print(f"Error! Failed to extract bitcode from {output_file}")
+            sys.exit(1)
         input_bitcode_file = output_file + ".bc"
         res = poly_build.poly_instrument(input_bitcode_file, output_file, "/tmp/temp_bitcode.bc", [])
         if not res:
