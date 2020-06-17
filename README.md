@@ -17,14 +17,14 @@ container, simply run the following from the root of this repository:
 docker build -t trailofbits/polytracker . 
 ```
 
-This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polyclang`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
+This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polybuild`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
 ```
 docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
-Mutool will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running mutool will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
+`Mutool_track` will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running `mutool_track` will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
 
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
 
@@ -36,18 +36,35 @@ All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84
 
 ```
 cd /polytracker/the_klondike/poppler-0.84.0/build/utils
-POLYPATH=some_pdf.pdf ./pdfinfo some_pdf.pdf
+POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf
 ```
 
-Install PolyProcess 
+## Quickstart: Instrumenting a simple C/C++ program 
 
+First build the base docker image 
 ```
-pip3 install .
+docker build -t trailofbits/polytracker .
+``` 
+
+Next, enter the docker image and mount your target as a volume 
 ```
+docker run --rm -it -v /path/to/your/target:/workdir trailofbits/polytracker:latest /bin/bash
+```
+
+If you have a C target, you can instrument it by invoking the C compiler and passing the `--instrument-target` before your cflags 
+```
+${CC} --instrument-target -g -o my_target my_target.c 
+```
+
+Repeat the same steps above for a cxx file by invoking `${CXX}` instead of `${CC}`
 
 ## Dependencies and Prerequisites
 
 PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
+
+PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets. 
+
+PolyTracker depends on python3.7+ 
 
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
@@ -69,16 +86,16 @@ mkdir build && cd build
 cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && ninja install
 ```
 
-This builds and installs two compilers: `polyclang` and
-`polyclang++`. These are wrappers around `clang` and `clang++`,
+This builds and installs two compilers: `polybuild` and
+`polybuild++`. These are wrappers around `gclang` and `gclang++`,
 respectively, and will add the PolyTracker instrumentation.
 
 ## Instrumenting a Program with PolyTracker
 
-All that is required is to modify the program's build system to use `polyclang`/`polyclang++` instead of its default compiler. The easiest way to do this is to set the compiler environment variables to them:
+All that is required is to modify the program's build system to use `polybuild`/`polybuild++` instead of its default compiler. The easiest way to do this is to set the compiler environment variables to them:
 ```
-export CC=`which polyclang`
-export CXX=`which polyclang++`
+export CC=`which polybuild`
+export CXX=`which polybuild++`
 ```
 
 For example, let's work through how to build MuPDF with PolyTracker instrumentation:
@@ -96,6 +113,15 @@ Or if you would like to build the debug version, as we do in our Dockerfile:
 make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin debug
 ```
 
+Then, find the build util you want to instrument, run gllvm's `get-bc` to extract the bitcode from the target, then instrument it with polybuild
+```
+get-bc -b target
+${CC}/{CXX} --instrument-bitcode target.bc -o target_track --libs <any libs go here> 
+```
+
+If you aren't sure about what libraries you might need to link for a complex target, the enviornment variable `WLLVM_ARTIFACT_STORE` sets a directory that contains a mainfest that logs all build commands and artifacts used. You should be able to rebuild the target completely using information in the mantifest and the artifacts. 
+
+
 ## Environment Variables 
 
 PolyTracker accepts configuration paramters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
@@ -108,6 +134,10 @@ POLYTTL: This value is an initial "strength" value for taint nodes, when new nod
 POLYSTART: Start offset to track 
 
 POLYEND: End offset to track
+
+POLYOUTPUT: Provides a a path/prefix to output polytracker information too
+
+WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
 ```
 
 ## Running an Instrumented Program
@@ -119,7 +149,7 @@ The instrumented software will write its output to `polytracker_process_sets.jso
 
 For example, with our instrumented version of MuPDF, run
 ```
-POLYPATH=input.pdf POLYTTL=32 ./mutool info input.pdf
+POLYPATH=input.pdf POLYTTL=32 ./mutool_track info input.pdf
 ```
 On program exit, those artifacts will be created in the current directory.
 These are intended to be consumed by PolyProcess to produce a final `polytracker.json` file,
