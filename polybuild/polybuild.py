@@ -183,7 +183,7 @@ def store_artifact(file_path, artifact_path) -> bool:
     # Check if its an absolute path
     if file_path[0] != "/":
         cwd = os.getcwd()
-        targ_path = cwd + "/" + file_path
+        targ_path = os.path.join(cwd, file_path)
     else:
         targ_path = file_path
     if not os.path.exists(targ_path):
