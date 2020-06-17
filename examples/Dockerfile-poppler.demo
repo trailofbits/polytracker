@@ -3,9 +3,6 @@ MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
 
 WORKDIR /polytracker/the_klondike
 
-#ENV CC=clang
-#ENV CXX=clang++
-
 #Update pkg-config/util-linux (needed for FontConfig)
 RUN apt update && apt install pkg-config \
 	uuid-dev \
@@ -83,13 +80,9 @@ WORKDIR /polytracker/the_klondike
 
 #Poppler 0.84.0
 
-#ENV CC=/polytracker/build/bin/polytracker/polyclang
-#ENV CXX=/polytracker/build/bin/polytracker/polyclang++
-
 RUN wget https://poppler.freedesktop.org/poppler-0.84.0.tar.xz
 RUN tar -xvf poppler-0.84.0.tar.xz
 WORKDIR poppler-0.84.0
-#RUN cmake -DBUILD_SHARED_LIBS=OFF -DENABLE_LIBOPENJPEG=unmaintained -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang ..
 RUN mkdir build
 WORKDIR build
 RUN cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_GTK_TESTS=OFF -DBUILD_QT4_TESTS=OFF -DBUILD_QT5_TESTS=OFF -DBUILD_CPP_TESTS=OFF -DENABLE_SPLASH=OFF -DENABLE_CPP=OFF -DENABLE_GLIB=OFF -DENABLE_GTK_DOC=OFF -DENABLE_QT4=OFF -DENABLE_QT5=OFF -DENABLE_LIBOPENJPEG=unmaintained -DENABLE_CMS=none -DENABLE_LIBCURL=OFF -DENABLE_ZLIB=OFF -DENABLE_DCTDECODER=unmaintained -DENABLE_ZLIB_UNCOMPRESS=OFF -DSPLASH_CMYK=OFF -DWITH_JPEG=OFF -DWITH_PNG=OFF -DWITH_TIFF=OFF -DWITH_NSS3=OFF -DWITH_Cairo=OFF -DWITH_FONTCONFIGURATION_FONTCONFIG=OFF -DCMAKE_EXE_LINKER_FLAGS="-pthread" ../
@@ -97,7 +90,11 @@ RUN cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_GTK_TESTS=OFF -DBUILD_QT4_TESTS=OFF -D
 RUN make -j5 install 
 
 #=================================
-#WORKDIR /polytracker/the_klondike
+WORKDIR /polytracker/the_klondike/poppler-0.84.0/build/utils
+
+#Extract and instrument pdftotext, other poppler tools should work the same 
+RUN get-bc -b pdftotext 
+RUN ${CXX} --instrument-bitcode -f pdftotext.bc -o pdftotext_track --output-bitcode pdftotext_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
