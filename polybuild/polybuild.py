@@ -21,14 +21,12 @@
   able to easily include other libraries they did not want tracking in.
 """
 from collections import defaultdict
-
 import argparse
 import os
 import sys
 import subprocess
 import shlex
 from typing import List, Optional
-
 from dataclasses import dataclass
 
 
@@ -94,8 +92,6 @@ class PolyBuilder:
         else:
             compile_command.append("clang")
         compile_command += ["-pie", "-fPIC"]
-        # compile_command.append("-pie")
-        # compile_command.append("-fPIC")
         optimize = os.getenv("POLYCLANG_OPTIMIZE")
         if optimize is not None:
             compile_command.append("-O3")
@@ -160,8 +156,7 @@ class PolyBuilder:
             compile_command.append("gclang++")
         else:
             compile_command.append("gclang")
-        compile_command.append("-pie")
-        compile_command.append("-fPIC")
+        compile_command += ["-pie", "-fPIC"]
         if self.meta.is_cxx:
             compile_command.append("-stdlib=libc++")
             compile_command.append("-nostdinc++")
@@ -176,7 +171,6 @@ class PolyBuilder:
                 compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
 
         command = shlex.split(" ".join(shlex.quote(arg) for arg in compile_command))
-        # print(command)
         res = subprocess.call(command)
         if res != 0:
             return False
@@ -326,7 +320,6 @@ def main():
 
         # Check to see if we are creating an object
         outfile = ""
-        # TODO Archives not copying still
         if "-o" in sys.argv:
             for i, arg in enumerate(sys.argv):
                 # Find the object we are trying to build
@@ -350,7 +343,7 @@ def main():
             build_manifest[outfile]["cmd"] = sys.argv
             if not os.path.exists(artifact_store_path + "/manifest.md"):
                 os.system("touch " + artifact_store_path + "/manifest.md")
-            # TODO This should just become a json.
+            # TODO This should just become a json like compile_commands.json
             with open(artifact_store_path + "/manifest.md", mode="a") as manifest_file:
                 artifacts = " ".join(build_manifest[outfile]["artifacts"]) + "\n"
                 cmds = " ".join(build_manifest[outfile]["cmd"]) + "\n"
