@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5.1)
-
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include_directories(interception)
 include_directories(sanitizer_common)
 # Add path for custom compiler-rt modules.

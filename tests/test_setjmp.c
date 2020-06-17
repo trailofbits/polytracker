@@ -29,41 +29,46 @@ void foo() {
 	bar();
 }
 
-int main() {
+/*
+ * This tests how setjmp/longjmp interacts with our resetFrame instrumentation
+ * It should show that main has touched tainted bytes 0, 1
+ */
+int main(int argc, char * argv[]) {
+	if (argc < 2) {
+		printf("ERROR no file given!");
+		return -1;
+	}
 	int res = setjmp(env);
+	//Should touch byte 0
 	if (res == 0) {
-		printf("Just set jmp! Reading tainted byte 0\n");
-		FILE * fp = fopen("test_data.txt", "r");
+		FILE * fp = fopen(argv[1], "r");
 		if (fp == NULL) {
-			printf("ERROR: Could not find test_data.txt, exiting!\n");
+			printf("ERROR: Could not find file!, exiting!\n");
 			return -1;
 		}
 		char buff[1];
 		int read_val = fread(buff, 1, 1, fp);
-		//Touch buff[0]
 		char convert_string = buff[0];
-		if (convert_string == '8') {
-			printf("Convert string is 8!\n");
+		if (convert_string == 'a') {
+			printf("");
 		}
 		fclose(fp);
 		foo();
 	}
+	//On the jump back should touch byte 1
 	else {
-		printf("Just set jmp! Reading tainted byte 1\n");
-		FILE * fp = fopen("test_data.txt", "r");
+		FILE * fp = fopen(argv[1], "r");
 		if (fp == NULL) {
 			printf("ERROR: Could not find test_data.txt, exiting!\n");
 			return -1;
 		}
 		char buff[2];
 		int read_val = fread(buff, 1, 2, fp);
-		//Touch buff[0]
 		char convert_string = buff[1];
-		if (convert_string == '9') {
-			printf("Convert string is 9!\n");
+		if (convert_string == 'a') {
+			printf("");
 		}
 		fclose(fp);
-
 	}
 	return 0;
 }

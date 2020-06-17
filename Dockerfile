@@ -49,7 +49,13 @@ WORKDIR /polytracker/build
 ENV PATH="/usr/lib/llvm-7/bin:${PATH}"
 
 RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE .. && ninja install
-ENV CC=/polytracker/build/bin/polytracker/polyclang
-ENV CXX=/polytracker/build/bin/polytracker/polyclang++
+ENV CC=/polytracker/build/bin/polytracker/polybuild/polybuild.py
+ENV CXX=/polytracker/build/bin/polytracker/polybuild/polybuild++.py
+ENV LLVM_COMPILER=clang
+RUN chmod +x ${CC}
+RUN mkdir -p "/build_artifacts"
 
+# Set the BC store path to the <install_path>/cxx_libs/bitcode/bitcode_store}
+ENV WLLVM_BC_STORE="/polytracker/build/bin/polytracker/cxx_libs/bitcode/bitcode_store"
+ENV WLLVM_ARTIFACT_STORE="/build_artifacts"
 WORKDIR /polytracker 

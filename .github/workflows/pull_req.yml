@@ -15,9 +15,9 @@ jobs:
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Build the mupdf demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
+        run: docker build . --file examples/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
       - name: Build the poppler demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
+        run: docker build . --file examples/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
       - name: Build the qpdf demo Docker image
-        run: docker build . --file examples/pdf/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
+        run: docker build . --file examples/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
 

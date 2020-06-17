@@ -1,6 +1,8 @@
 FROM trailofbits/polytracker
 MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
 
+WORKDIR /
+
 RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
 RUN wget https://www.ijg.org/files/jpegsrc.v9c.tar.gz
 
@@ -8,8 +10,8 @@ RUN echo "temp" > PLACEHOLDER
 ENV POLYPATH=/PLACEHOLDER
 ENV LD=ld
 
-ENV CC=clang
-ENV CXX=clang++
+#ENV CC=clang
+#ENV CXX=clang++
 
 RUN tar -xzvf zlib-1.2.11.tar.gz
 WORKDIR zlib-1.2.11
@@ -17,8 +19,8 @@ RUN ./configure && make -j$(nproc) test && make -j$(nproc) install
 
 WORKDIR / 
 
-ENV CC=/polytracker/build/bin/polytracker/polyclang
-ENV CXX=/polytracker/build/bin/polytracker/polyclang++
+#ENV CC=/polytracker/build/bin/polytracker/polyclang
+#ENV CXX=/polytracker/build/bin/polytracker/polyclang++
 
 RUN tar -xzvf jpegsrc.v9c.tar.gz
 WORKDIR jpeg-9c
@@ -30,4 +32,10 @@ RUN git clone https://github.com/qpdf/qpdf.git
 WORKDIR  qpdf
 RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
 
-WORKDIR /workdir
+WORKDIR /usr/local/bin/
+
+#Extract BC 
+RUN get-bc -b qpdf 
+
+#Instrument and build track target
+RUN ${CXX} --instrument-bitcode -f qpdf.bc -o qpdf_track --output-bitcode qpdf_track.bc --libs /polytracker/the_klondike/qpdf/libqpdf/build/.libs/libqpdf.a atomic z /usr/local/lib/libjpeg.a

@@ -651,12 +651,12 @@ DataFlowSanitizer::InstrumentedABI DataFlowSanitizer::getInstrumentedABI() {
 }
 
 DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
+  if (ABIList.isIn(*F, "custom"))
+    return WK_Custom;
   if (ABIList.isIn(*F, "functional"))
     return WK_Functional;
   if (ABIList.isIn(*F, "discard"))
     return WK_Discard;
-  if (ABIList.isIn(*F, "custom"))
-    return WK_Custom;
 
   return WK_Warning;
 }
@@ -998,6 +998,9 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
 #ifdef DEBUG_INFO
     llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
+    if (i->getName().find("is_equal") != std::string::npos) {
+      std::cout << "RIGHT HERE" << std::endl;
+    }
 #endif
     DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
@@ -1255,8 +1258,6 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
 void DFSanVisitor::logTaintedOps(Instruction *InsertPoint, Value *Shadow) {
   IRBuilder<> IRB(InsertPoint);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogTaintFn, Shadow);
-  Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-  Call->addParamAttr(0, Attribute::ZExt);
 }
 
 // A convenience function which folds the shadows of each of the operands
@@ -1509,8 +1510,6 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   DFSF.setShadow(&CI, CombinedShadow);
   IRBuilder<> IRB(&CI);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogCmpFn, CombinedShadow);
-  Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
-  Call->addParamAttr(0, Attribute::ZExt);
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {

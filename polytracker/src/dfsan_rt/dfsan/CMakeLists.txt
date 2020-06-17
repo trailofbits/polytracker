@@ -13,10 +13,9 @@ set(DFSAN_RTL_HEADERS
 	dfsan_platform.h
 	dfsan_log_mgmt.h)
 
-list(APPEND ${SANITIZER_COMMON_CFLAGS} "-g" "-fno-asynchronous-unwind-tables" "-lpthread")
-include_directories("../dfsan_private_headers/include/c++/v1")
+list(APPEND ${SANITIZER_COMMON_CFLAGS} "-g" "-pie" "-fPIC" "-fno-asynchronous-unwind-tables")
+#include_directories("../dfsan_private_headers/include/c++/v1")
 set(DFSAN_COMMON_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-set(CMAKE_CXX_STANDARD 11)
 
 append_rtti_flag(OFF DFSAN_COMMON_CFLAGS)
 # Prevent clang from generating libc calls.
@@ -24,7 +23,8 @@ append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding DFSAN_COMMON_CF
 
 # Static runtime library.
 add_compiler_rt_component(dfsan)
-
+#FIXME 
+message(STATUS ${DFSAN_CFLAGS})
 foreach(arch ${DFSAN_SUPPORTED_ARCH})
 	set(DFSAN_CFLAGS ${DFSAN_COMMON_CFLAGS})
 	append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE DFSAN_CFLAGS)
@@ -35,7 +35,6 @@ foreach(arch ${DFSAN_SUPPORTED_ARCH})
 		$<TARGET_OBJECTS:RTInterception.${arch}>
 		$<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
 		$<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-		#$<TARGET_OBJECTS:RTSanitizerCommonNoTermination.${arch}>
 		CFLAGS ${DFSAN_CFLAGS}
 		PARENT_TARGET dfsan)
 	add_sanitizer_rt_symbols(dfsan_rt
