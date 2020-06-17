@@ -179,7 +179,7 @@ Store a build artifact to the artifact storage via copy
 
 def store_artifact(file_path, artifact_path) -> bool:
     filename = get_file_name(file_path)
-    artifact_file_path = artifact_path + "/" + filename
+    artifact_file_path = os.path.join(artifact_path, filename)
     # Check if its an absolute path
     if file_path[0] != "/":
         cwd = os.getcwd()
