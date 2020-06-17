@@ -25,7 +25,6 @@ import argparse
 import os
 import sys
 import subprocess
-import shlex
 from typing import List, Optional
 from dataclasses import dataclass
 
@@ -106,8 +105,7 @@ class PolyBuilder:
                 compile_command.append("-l" + lib)
             else:
                 compile_command.append(lib)
-        command = shlex.split(" ".join(shlex.quote(arg) for arg in compile_command))
-        ret_code = subprocess.call(command)
+        ret_code = subprocess.call(compile_command)
         if ret_code != 0:
             print(f"Error! Failed to execute compile command: {compile_command}")
             return False
@@ -128,8 +126,7 @@ class PolyBuilder:
         for file in track_list_files:
             opt_command.append("-polytrack-dfsan-abilist=" + file)
         opt_command += [input_file, "-o", bitcode_file]
-        command = shlex.split(" ".join(shlex.quote(arg) for arg in opt_command))
-        ret_code = subprocess.call(command)
+        ret_code = subprocess.call(opt_command)
         if ret_code != 0:
             print("Error! opt command failed!")
             return False
@@ -169,9 +166,7 @@ class PolyBuilder:
             # If its cxx, link in our c++ libs
             if self.meta.is_cxx:
                 compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
-
-        command = shlex.split(" ".join(shlex.quote(arg) for arg in compile_command))
-        res = subprocess.call(command)
+        res = subprocess.call(compile_command)
         if res != 0:
             return False
         return True
@@ -232,7 +227,7 @@ def main():
     """
     )
     parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
-    parser.add_argument("--input-file", "-f", type=str, default=None, help="Path to the whole program bitcode file")
+    parser.add_argument("--input-file", "-f", type=str, help="Path to the whole program bitcode file")
     parser.add_argument(
         "--output-bitcode",
         "-b",
@@ -240,7 +235,7 @@ def main():
         default="/tmp/temp_bitcode.bc",
         help="Outputs the bitcode file produced by opt, useful for debugging",
     )
-    parser.add_argument("--output-file", "-o", type=str, default=None, help="Specify binary output path")
+    parser.add_argument("--output-file", "-o", type=str, help="Specify binary output path")
     parser.add_argument(
         "--instrument-target", action="store_true", help="Specify to build a single source file " "with instrumentation"
     )
@@ -255,13 +250,6 @@ def main():
     poly_build = PolyBuilder("++" in sys.argv[0])
     if sys.argv[1] == "--instrument-bitcode":
         args = parser.parse_args(sys.argv[1:])
-        # Do polyOpt/Compile
-        if args.output_file is None:
-            print("Error! Outfile not specified, please specify with -o")
-            sys.exit(1)
-        if args.input_file is None:
-            print("Error! Input file not specified, please specify with -f")
-            sys.exit(1)
         if not os.path.exists(args.input_file):
             print("Error! Input file could not be found!")
             sys.exit(1)
@@ -291,8 +279,7 @@ def main():
         if not res:
             print("Error! Building target failed!")
             sys.exit(1)
-        command = shlex.split(" ".join(["get-bc -b", output_file]))
-        ret = subprocess.call(command)
+        ret = subprocess.call(["get-bc", "-b", output_file])
         if not ret:
             print(f"Error! Failed to extract bitcode from {output_file}")
         input_bitcode_file = output_file + ".bc"
