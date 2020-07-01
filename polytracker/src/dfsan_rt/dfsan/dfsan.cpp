@@ -74,6 +74,9 @@ static decay_val taint_node_ttl = DEFAULT_TTL;
 // This is the output file name
 static const char *polytracker_output_filename;
 
+// Whether or not to perform a full program trace
+static bool polytracker_trace = false;
+
 // Manages taint info/propagation
 taintManager *taint_manager = nullptr;
 static bool is_init = false;
@@ -130,6 +133,11 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   return taint_manager->logFunctionEntry(fname);
 }
 
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *bbname) {
+  //fprintf(stderr, "Entering BB: %s\n", bbname);
+  //taint_manager->logBBEntry(bbname);
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
     dfsan_label some_label) {
   taint_manager->logCompare(some_label);
@@ -143,6 +151,12 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint(
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
   taint_manager->logFunctionExit();
 }
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_exit() {
+	//fprintf(stderr, "Exiting BB\n");
+	//taint_manager->logBBExit();
+}
+
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
@@ -368,7 +382,22 @@ void dfsan_parse_env() {
     polytracker_output_filename = "polytracker";
   }
 
+  const char *poly_trace = dfsan_getenv("POLYTRACE");
+  if (poly_trace == NULL) {
+    polytracker_trace = false;
+  } else {
+	auto trace_str = std::string(poly_trace);
+	std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+	    [](unsigned char c){ return std::tolower(c); });
+	if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+		polytracker_trace = false;
+	} else {
+		polytracker_trace = true;
+	}
+  }
+
   taint_manager->setOutputFilename(std::string(polytracker_output_filename));
+  taint_manager->setTrace(polytracker_trace);
 
   const char *env_ttl = dfsan_getenv("POLYTTL");
   decay_val taint_node_ttl = DEFAULT_TTL;

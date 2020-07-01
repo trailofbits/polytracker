@@ -97,6 +97,8 @@ public:
   dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2);
   dfsan_label createReturnLabel(int file_byte_offset, std::string name);
   void setOutputFilename(std::string outfile);
+  void setTrace(bool doTrace);
+  bool recordTrace() const { return trace; }
 
 private:
   void checkMaxLabel(dfsan_label label);
@@ -127,6 +129,7 @@ private:
   string_node_map function_to_cmp_bytes;
   std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
   std::string outfile;
+  bool trace;
   json output_json;
 };
 

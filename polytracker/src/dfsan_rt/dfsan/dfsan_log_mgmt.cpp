@@ -125,6 +125,8 @@ void taintManager::addJsonRuntimeCFG() {
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
 
+void taintManager::setTrace(bool doTrace) { trace = doTrace; }
+
 void taintManager::outputRawTaintForest() {
   std::string forest_fname = outfile + "_forest.bin";
   FILE* forest_file = fopen(forest_fname.c_str(), "w");
@@ -219,6 +221,7 @@ taintManager::taintManager(decay_val init_decay, char* shad_mem,
                            char* forest_ptr)
     : taintMappingManager(shad_mem, forest_ptr), taint_node_ttl(init_decay) {
   next_label = 1;
+  trace = false;
 }
 
 taintManager::~taintManager() {}

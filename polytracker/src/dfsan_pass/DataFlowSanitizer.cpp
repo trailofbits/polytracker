@@ -105,6 +105,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -355,9 +356,13 @@ class DataFlowSanitizer : public ModulePass {
 
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
+  FunctionType *DFSanEntryBBTy;
+  FunctionType *DFSanExitBBTy;
   FunctionType *DFSanResetFrameFnTy;
   Constant *DFSanEntryFn;
+  Constant *DFSanEntryBB;
   Constant *DFSanExitFn;
+  Constant *DFSanExitBB;
   Constant *DFSanResetFrameFn;
 
   Constant *DFSanUnionFn;
@@ -605,6 +610,8 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
+  DFSanEntryBBTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
+  DFSanExitBBTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
   DFSanResetFrameFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
@@ -808,6 +815,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_log_taint_cmp", DFSanLogCmpFnTy);
   DFSanEntryFn = Mod->getOrInsertFunction("__dfsan_func_entry", DFSanEntryFnTy);
   DFSanExitFn = Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
+  DFSanEntryBB = Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBTy);
+  DFSanExitBB = Mod->getOrInsertFunction("__dfsan_bb_exit", DFSanExitBBTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
 
@@ -819,6 +828,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
+		&i != DFSanEntryBB && &i != DFSanExitBB &&
         &i != DFSanResetFrameFn)
       FnsToInstrument.push_back(&i);
   }
@@ -1028,9 +1038,24 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     // Add instrumentation for handling setjmp/longjmp here
     // This adds a function that resets the shadow call stack
     // When a longjmp is called.
+    size_t bbIndex = 0;
     for (BasicBlock *curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
-      while (true) {
+
+      // Add a callback for BB entry
+      {
+    	  std::stringstream rawBBName;
+    	  rawBBName << i->getName().str() << "_bb" << ++bbIndex;
+		  Value *BBName = IRB.CreateGlobalStringPtr(StringRef(rawBBName.str().c_str()));
+		  Instruction *InsertBefore = Inst;
+		  while (isa<PHINode>(InsertBefore)) {
+			  // This is a PHI node, so we need to add the callback afterward
+			  InsertBefore = InsertBefore->getNextNode();
+		  }
+		  IRBuilder<> IRB(InsertBefore);
+		  IRB.CreateCall(DFSanEntryBB, BBName);
+      }
+	  while (true) {
         Instruction *Next = Inst->getNextNode();
         CallInst *potential_call = dyn_cast<CallInst>(Inst);
         if (potential_call != nullptr) {
@@ -1049,6 +1074,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           break;
         Inst = Next;
       }
+      IRBuilder<>(Inst).CreateCall(DFSanExitBB);
     }
 
     // We will not necessarily be able to compute the shadow for every phi node
