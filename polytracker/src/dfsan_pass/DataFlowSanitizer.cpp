@@ -610,7 +610,8 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
-  DFSanEntryBBTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
+  DFSanEntryBBTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
   DFSanExitBBTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
   DFSanResetFrameFnTy =
@@ -828,8 +829,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-		&i != DFSanEntryBB && &i != DFSanExitBB &&
-        &i != DFSanResetFrameFn)
+        &i != DFSanEntryBB && &i != DFSanExitBB && &i != DFSanResetFrameFn)
       FnsToInstrument.push_back(&i);
   }
 
@@ -1044,18 +1044,19 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 
       // Add a callback for BB entry
       {
-    	  std::stringstream rawBBName;
-    	  rawBBName << i->getName().str() << "_bb" << ++bbIndex;
-		  Value *BBName = IRB.CreateGlobalStringPtr(StringRef(rawBBName.str().c_str()));
-		  Instruction *InsertBefore = Inst;
-		  while (isa<PHINode>(InsertBefore)) {
-			  // This is a PHI node, so we need to add the callback afterward
-			  InsertBefore = InsertBefore->getNextNode();
-		  }
-		  IRBuilder<> IRB(InsertBefore);
-		  IRB.CreateCall(DFSanEntryBB, BBName);
+        std::stringstream rawBBName;
+        rawBBName << i->getName().str() << "_bb" << ++bbIndex;
+        Value *BBName =
+            IRB.CreateGlobalStringPtr(StringRef(rawBBName.str().c_str()));
+        Instruction *InsertBefore = Inst;
+        while (isa<PHINode>(InsertBefore)) {
+          // This is a PHI node, so we need to add the callback afterward
+          InsertBefore = InsertBefore->getNextNode();
+        }
+        IRBuilder<> IRB(InsertBefore);
+        IRB.CreateCall(DFSanEntryBB, BBName);
       }
-	  while (true) {
+      while (true) {
         Instruction *Next = Inst->getNextNode();
         CallInst *potential_call = dyn_cast<CallInst>(Inst);
         if (potential_call != nullptr) {
