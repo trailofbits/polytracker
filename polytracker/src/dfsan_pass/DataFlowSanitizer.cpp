@@ -1049,8 +1049,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Value *BBName =
             IRB.CreateGlobalStringPtr(StringRef(rawBBName.str().c_str()));
         Instruction *InsertBefore = Inst;
-        while (isa<PHINode>(InsertBefore)) {
-          // This is a PHI node, so we need to add the callback afterward
+        while (isa<PHINode>(InsertBefore) ||
+               isa<LandingPadInst>(InsertBefore)) {
+          // This is a PHI or landing pad instruction,
+          // so we need to add the callback afterward
           InsertBefore = InsertBefore->getNextNode();
         }
         IRBuilder<> IRB(InsertBefore);
