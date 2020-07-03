@@ -9,6 +9,7 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <stdint.h>
 #include <string>
 #include <thread>
@@ -80,6 +81,8 @@ private:
 
 struct TraceEvent {
   TraceEvent *previous;
+  TraceEvent() : previous(nullptr){};
+  virtual ~TraceEvent() = default;
 };
 
 struct FunctionCall : public TraceEvent {};
@@ -125,7 +128,7 @@ public:
                 * = nullptr,
             typename... Ts>
   T *emplace(Ts &&... args) {
-    auto t = new (*this) T(std::forward<Ts>(args)...);
+    auto t = new T(std::forward<Ts>(args)...);
     push(t);
     return t;
   }

@@ -78,6 +78,10 @@ int taintManager::logFunctionEntry(char* fname) {
     (runtime_cfg)[new_str].insert(caller);
   }
   (thread_stack_map)[this_id].push_back(new_str);
+  if (recordTrace()) {
+    // TODO: Need to create a separate event stack for each thread
+    eventStack.emplace<FunctionCall>();
+  }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
 }
@@ -86,12 +90,65 @@ void taintManager::logFunctionExit() {
   taint_prop_lock.lock();
   std::thread::id this_id = std::this_thread::get_id();
   (thread_stack_map)[this_id].pop_back();
+  if (recordTrace()) {
+    // TODO: Need to create a separate event stack for each thread
+    bool foundFunction = false;
+    for (TraceEvent* event = eventStack.peek();
+        event != nullptr;
+        event = event->previous) {
+      if (auto func = dynamic_cast<FunctionCall*>(event)) {
+        foundFunction = true;
+        eventStack.pop();
+        break;
+      }
+      eventStack.pop();
+    }
+    if (!foundFunction) {
+      std::cout
+          << "Error finding matching function call in the event trace stack!"
+          << std::endl;
+    }
+  }
   taint_prop_lock.unlock();
 }
 
+/**
+ * Calculates and memoizes the "count" of this basic block.
+ * That is the number of times this block has been entered in this stack frame.
+ * The first entry will return a count of 1.
+ */
+size_t BasicBlockEntry::entryCount() const {
+  if (entryCounter == 0) {
+    entryCounter = 1;
+    for (TraceEvent* event = previous;
+        event != nullptr && !dynamic_cast<FunctionCall*>(event);
+        event = event->previous) {
+      if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
+        if (bb->index == index) {
+          ++entryCounter;
+        }
+      }
+    }
+  }
+  return entryCounter;
+}
+
+std::string BasicBlockEntry::str() const {
+  std::stringstream s;
+  s << fname << " @ BB" << index << " #" << entryCount();
+  return s.str();
+}
+
+/**
+ * This function will be called on the entry of every basic block.
+ * It will only be called if taintManager::recordTrace() is true,
+ * which will only be set if the POLYTRACE environment variable is set.
+ */
 void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
-  std::cout << fname << " @ BB" << bbIndex << std::endl;
+  // TODO: Need to have separate stacks for each thread
+  auto event = eventStack.emplace<BasicBlockEntry>(fname, bbIndex);
+  std::cout << event->str() << std::endl;
   taint_prop_lock.unlock();
 }
 
