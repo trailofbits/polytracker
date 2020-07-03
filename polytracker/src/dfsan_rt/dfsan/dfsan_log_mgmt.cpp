@@ -79,8 +79,7 @@ int taintManager::logFunctionEntry(char* fname) {
   }
   (thread_stack_map)[this_id].push_back(new_str);
   if (recordTrace()) {
-    // TODO: Need to create a separate event stack for each thread
-    eventStack.emplace<FunctionCall>();
+    eventStacks[this_id].emplace<FunctionCall>();
   }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
@@ -91,17 +90,17 @@ void taintManager::logFunctionExit() {
   std::thread::id this_id = std::this_thread::get_id();
   (thread_stack_map)[this_id].pop_back();
   if (recordTrace()) {
-    // TODO: Need to create a separate event stack for each thread
+    auto& stack = eventStacks[this_id];
     bool foundFunction = false;
-    for (TraceEvent* event = eventStack.peek();
+    for (TraceEvent* event = stack.peek();
         event != nullptr;
         event = event->previous) {
       if (auto func = dynamic_cast<FunctionCall*>(event)) {
         foundFunction = true;
-        eventStack.pop();
+        stack.pop();
         break;
       }
-      eventStack.pop();
+      stack.pop();
     }
     if (!foundFunction) {
       std::cout
@@ -146,8 +145,8 @@ std::string BasicBlockEntry::str() const {
  */
 void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
-  // TODO: Need to have separate stacks for each thread
-  auto event = eventStack.emplace<BasicBlockEntry>(fname, bbIndex);
+  const auto this_id = std::this_thread::get_id();
+  auto event = eventStacks[this_id].emplace<BasicBlockEntry>(fname, bbIndex);
   std::cout << event->str() << std::endl;
   taint_prop_lock.unlock();
 }

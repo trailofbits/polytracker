@@ -193,7 +193,7 @@ private:
       canonical_mapping;
   std::unordered_map<std::string, std::list<std::pair<int, int>>>
       taint_bytes_processed;
-  TraceEventStack eventStack;
+  std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;
   string_node_map function_to_cmp_bytes;
