@@ -49,6 +49,13 @@ void taintManager::logCompare(dfsan_label some_label) {
   std::vector<std::string> func_stack = thread_stack_map[this_id];
   (function_to_cmp_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
   (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
+  if (auto bb = currentBB()) {
+    // we are recording a full trace, and we know the current basic block
+    if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
+      // this is a canonical label
+      lastUsages[some_label] = *bb;
+    }
+  }
   taint_prop_lock.unlock();
 }
 
@@ -147,7 +154,7 @@ void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
   const auto this_id = std::this_thread::get_id();
   auto event = eventStacks[this_id].emplace<BasicBlockEntry>(fname, bbIndex);
-  std::cout << event->str() << std::endl;
+  //std::cout << event->str() << std::endl;
   taint_prop_lock.unlock();
 }
 
@@ -185,6 +192,12 @@ void taintManager::addJsonRuntimeCFG() {
     json j_set(cfg_it->second);
     output_json["runtime_cfg"][cfg_it->first] = j_set;
   }
+}
+
+void taintManager::addJsonRuntimeTrace() {
+  if (!recordTrace()) { return; }
+  output_json["method_map_fmt"] = "method_call_id, method_name, children";
+  //output_json["trace"]["comparisons_fmt"] = "idx, char, method_call_id";
 }
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
@@ -245,6 +258,7 @@ void taintManager::outputRawTaintSets() {
   string_node_map::iterator it;
   addJsonVersion();
   addJsonRuntimeCFG();
+  addJsonRuntimeTrace();
   addTaintSources();
   addCanonicalMapping();
   addTaintedBlocks();

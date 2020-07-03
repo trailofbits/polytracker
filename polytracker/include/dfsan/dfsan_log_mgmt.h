@@ -87,6 +87,33 @@ struct TraceEvent {
 
 struct FunctionCall : public TraceEvent {};
 
+struct BasicBlockTrace {
+  const char *fname;
+  BBIndex index;
+  size_t entryCount;
+
+  bool operator==(const BasicBlockTrace &other) const {
+    return (fname == other.fname /* these are globals, so it should be fine
+                                  * to skip a string compare and just compare
+                                  * pointers */
+            && index == other.index && entryCount == other.entryCount);
+  }
+};
+
+struct BasicBlockTraceHasher {
+  std::size_t operator()(const BasicBlockTrace &bb) const {
+    using std::hash;
+    using std::size_t;
+    using std::string;
+
+    return ((hash<decltype(::BasicBlockTrace::fname)>()(bb.fname) ^
+             (hash<::BBIndex>()(bb.index) << 1)) >>
+            1) ^
+           (hash<decltype(::BasicBlockTrace::entryCount)>()(bb.entryCount)
+            << 1);
+  }
+};
+
 class BasicBlockEntry : public TraceEvent {
   mutable size_t entryCounter;
 
@@ -98,6 +125,12 @@ public:
       : entryCounter(0), fname(fname), index(index) {}
 
   size_t entryCount() const;
+
+  operator BasicBlockTrace() const { return bb(); }
+
+  BasicBlockTrace bb() const {
+    return BasicBlockTrace{fname, index, entryCount()};
+  }
 
   std::string str() const;
 };
@@ -168,6 +201,21 @@ public:
   void setOutputFilename(std::string outfile);
   void setTrace(bool doTrace);
   bool recordTrace() const { return trace; }
+  TraceEvent *lastEvent() const {
+    auto stackIter = eventStacks.find(std::this_thread::get_id());
+    if (stackIter != eventStacks.end()) {
+      return stackIter->second.peek();
+    } else {
+      return nullptr;
+    }
+  }
+  /**
+   * Returns the current basic block for the calling thread
+   * if recordTrace() == true
+   */
+  BasicBlockEntry *currentBB() const {
+    return dynamic_cast<BasicBlockEntry *>(lastEvent());
+  }
 
 private:
   void checkMaxLabel(dfsan_label label);
@@ -176,6 +224,7 @@ private:
   void addJsonVersion();
   void addTaintSources();
   void addJsonRuntimeCFG();
+  void addJsonRuntimeTrace();
   void addCanonicalMapping();
   void addTaintedBlocks();
   dfsan_label createCanonicalLabel(int file_byte_offset,
@@ -194,6 +243,9 @@ private:
   std::unordered_map<std::string, std::list<std::pair<int, int>>>
       taint_bytes_processed;
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
+  /* lastUsages maps canonical byte offsets to the last basic block trace
+   * in which they were used */
+  std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;
   string_node_map function_to_cmp_bytes;
