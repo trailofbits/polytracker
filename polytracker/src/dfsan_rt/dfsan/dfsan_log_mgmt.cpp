@@ -13,6 +13,10 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
+using polytracker::BasicBlockEntry;
+using polytracker::FunctionCall;
+using polytracker::TraceEvent;
+
 using namespace __dfsan;
 
 // MAPPING MANAGER
@@ -49,11 +53,11 @@ void taintManager::logCompare(dfsan_label some_label) {
   std::vector<std::string> func_stack = thread_stack_map[this_id];
   (function_to_cmp_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
   (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
-  if (auto bb = currentBB()) {
+  if (auto bb = trace.currentBB()) {
     // we are recording a full trace, and we know the current basic block
     if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
       // this is a canonical label
-      lastUsages[some_label] = *bb;
+      trace.setLastUsage(some_label, *bb);
     }
   }
   taint_prop_lock.unlock();
@@ -86,7 +90,7 @@ int taintManager::logFunctionEntry(char* fname) {
   }
   (thread_stack_map)[this_id].push_back(new_str);
   if (recordTrace()) {
-    eventStacks[this_id].emplace<FunctionCall>();
+    trace.getStack(this_id).emplace<FunctionCall>();
   }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
@@ -97,7 +101,7 @@ void taintManager::logFunctionExit() {
   std::thread::id this_id = std::this_thread::get_id();
   (thread_stack_map)[this_id].pop_back();
   if (recordTrace()) {
-    auto& stack = eventStacks[this_id];
+    auto& stack = trace.getStack(this_id);
     bool foundFunction = false;
     for (TraceEvent* event = stack.peek();
         event != nullptr;
@@ -125,8 +129,7 @@ void taintManager::logFunctionExit() {
  */
 void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
-  const auto this_id = std::this_thread::get_id();
-  auto event = eventStacks[this_id].emplace<BasicBlockEntry>(fname, bbIndex);
+  auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex);
   //std::cout << event->str() << std::endl;
   taint_prop_lock.unlock();
 }
@@ -175,7 +178,7 @@ void taintManager::addJsonRuntimeTrace() {
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
 
-void taintManager::setTrace(bool doTrace) { trace = doTrace; }
+void taintManager::setTrace(bool doTrace) { this->doTrace = doTrace; }
 
 void taintManager::outputRawTaintForest() {
   std::string forest_fname = outfile + "_forest.bin";
@@ -272,7 +275,7 @@ taintManager::taintManager(decay_val init_decay, char* shad_mem,
                            char* forest_ptr)
     : taintMappingManager(shad_mem, forest_ptr), taint_node_ttl(init_decay) {
   next_label = 1;
-  trace = false;
+  doTrace = false;
 }
 
 taintManager::~taintManager() {}

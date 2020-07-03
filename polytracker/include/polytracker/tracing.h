@@ -8,8 +8,12 @@
 #define POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 
 #include <string>
+#include <thread>
+#include <unordered_map>
 
 #include "dfsan/dfsan_types.h"
+
+namespace polytracker {
 
 struct TraceEvent {
   TraceEvent *previous;
@@ -38,10 +42,10 @@ struct BasicBlockTraceHasher {
     using std::size_t;
     using std::string;
 
-    return ((hash<decltype(::BasicBlockTrace::fname)>()(bb.fname) ^
+    return ((hash<decltype(BasicBlockTrace::fname)>()(bb.fname) ^
              (hash<::BBIndex>()(bb.index) << 1)) >>
             1) ^
-           (hash<decltype(::BasicBlockTrace::entryCount)>()(bb.entryCount)
+           (hash<decltype(BasicBlockTrace::entryCount)>()(bb.entryCount)
             << 1);
   }
 };
@@ -71,13 +75,13 @@ class TraceEventStack {
   TraceEvent *head;
 
 public:
-  /* disallow copying to avoid the memory management headache
-   * and avoid the runtime overhead of using shared pointers */
   TraceEventStack() : head(nullptr) {}
   ~TraceEventStack() {
     while (pop())
       ;
   }
+  /* disallow copying to avoid the memory management headache
+   * and avoid the runtime overhead of using shared pointers */
   TraceEventStack(const TraceEventStack &) = delete;
   operator bool() const { return head != nullptr; }
   bool empty() const { return head != nullptr; }
@@ -109,5 +113,53 @@ public:
     }
   }
 };
+
+class Trace {
+  std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
+  /* lastUsages maps canonical byte offsets to the last basic block trace
+   * in which they were used */
+  std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
+public:
+  TraceEventStack &getStack(std::thread::id thread) {
+    return eventStacks[std::this_thread::get_id()];
+  }
+  TraceEventStack *currentStack() {
+    return &eventStacks[std::this_thread::get_id()];
+  }
+  const TraceEventStack *currentStack() const {
+    auto stackIter = eventStacks.find(std::this_thread::get_id());
+    if (stackIter != eventStacks.end()) {
+      return &stackIter->second;
+    } else {
+      return nullptr;
+    }
+  }
+  TraceEvent *lastEvent() const {
+    if (auto stack = currentStack()) {
+      return stack->peek();
+    } else {
+      return nullptr;
+    }
+  }
+  /**
+   * Returns the current basic block for the calling thread
+   */
+  BasicBlockEntry *currentBB() const {
+    return dynamic_cast<BasicBlockEntry *>(lastEvent());
+  }
+  void setLastUsage(dfsan_label canonicalByte, BasicBlockTrace bb) {
+    lastUsages[canonicalByte] = bb;
+  }
+  const BasicBlockTrace *getLastUsage(dfsan_label label) const {
+    auto luIter = lastUsages.find(label);
+    if (luIter != lastUsages.end()) {
+      return &luIter->second;
+    } else {
+      return nullptr;
+    }
+  }
+};
+
+} /* namespace polytracker */
 
 #endif /* POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_ */

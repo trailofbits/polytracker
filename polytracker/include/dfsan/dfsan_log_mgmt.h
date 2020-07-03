@@ -2,9 +2,9 @@
 #define DFSAN_LOG_TAINT
 
 #include "dfsan/dfsan.h"
-#include "polytracker/tracing.h"
 #include "json.hpp"
 #include "polyclang/polytracker.h"
+#include "polytracker/tracing.h"
 #include <iostream>
 #include <list>
 #include <map>
@@ -102,22 +102,7 @@ public:
   dfsan_label createReturnLabel(int file_byte_offset, std::string name);
   void setOutputFilename(std::string outfile);
   void setTrace(bool doTrace);
-  bool recordTrace() const { return trace; }
-  TraceEvent *lastEvent() const {
-    auto stackIter = eventStacks.find(std::this_thread::get_id());
-    if (stackIter != eventStacks.end()) {
-      return stackIter->second.peek();
-    } else {
-      return nullptr;
-    }
-  }
-  /**
-   * Returns the current basic block for the calling thread
-   * if recordTrace() == true
-   */
-  BasicBlockEntry *currentBB() const {
-    return dynamic_cast<BasicBlockEntry *>(lastEvent());
-  }
+  bool recordTrace() const { return doTrace; }
 
 private:
   void checkMaxLabel(dfsan_label label);
@@ -144,16 +129,13 @@ private:
       canonical_mapping;
   std::unordered_map<std::string, std::list<std::pair<int, int>>>
       taint_bytes_processed;
-  std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
-  /* lastUsages maps canonical byte offsets to the last basic block trace
-   * in which they were used */
-  std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;
   string_node_map function_to_cmp_bytes;
+  bool doTrace;
+  polytracker::Trace trace;
   std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
   std::string outfile;
-  bool trace;
   json output_json;
 };
 

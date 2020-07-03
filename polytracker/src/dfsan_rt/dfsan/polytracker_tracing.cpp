@@ -2,6 +2,8 @@
 
 #include "polytracker/tracing.h"
 
+namespace polytracker {
+
 /**
  * Calculates and memoizes the "count" of this basic block.
  * That is the number of times this block has been entered in this stack frame.
@@ -28,3 +30,5 @@ std::string BasicBlockEntry::str() const {
   s << fname << " @ BB" << index << " #" << entryCount();
   return s.str();
 }
+
+} /* namespace polytracker */
