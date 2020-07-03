@@ -133,9 +133,18 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   return taint_manager->logFunctionEntry(fname);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *bbname) {
-  //fprintf(stderr, "Entering BB: %s\n", bbname);
-  //taint_manager->logBBEntry(bbname);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
+    size_t bbIndex) {
+  init_lock.lock();
+  if (is_init == false) {
+    dfsan_late_late_init();
+    is_init = true;
+  }
+  init_lock.unlock();
+
+  if (taint_manager->recordTrace()) {
+    taint_manager->logBBEntry(fname, bbIndex);
+  }
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
@@ -153,8 +162,9 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_exit() {
-	//fprintf(stderr, "Exiting BB\n");
-	//taint_manager->logBBExit();
+  if (taint_manager->recordTrace()) {
+    taint_manager->logBBExit();
+  }
 }
 
 

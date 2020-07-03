@@ -41,4 +41,6 @@ typedef struct taint_node {
   decay_val decay;
 } taint_node_t;
 
+typedef uint64_t BBIndex;
+
 #endif

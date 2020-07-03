@@ -78,6 +78,70 @@ private:
   char *forest_mem;
 };
 
+struct TraceEvent {
+  TraceEvent *previous;
+};
+
+struct FunctionCall : public TraceEvent {};
+
+class BasicBlockEntry : public TraceEvent {
+  mutable size_t entryCounter;
+
+public:
+  const char *fname;
+  BBIndex index;
+
+  BasicBlockEntry(const char *fname, BBIndex index)
+      : entryCounter(0), fname(fname), index(index) {}
+
+  size_t entryCount() const;
+
+  std::string str() const;
+};
+
+class TraceEventStack {
+  TraceEvent *head;
+
+public:
+  /* disallow copying to avoid the memory management headache
+   * and avoid the runtime overhead of using shared pointers */
+  TraceEventStack() : head(nullptr) {}
+  ~TraceEventStack() {
+    while (pop())
+      ;
+  }
+  TraceEventStack(const TraceEventStack &) = delete;
+  operator bool() const { return head != nullptr; }
+  bool empty() const { return head != nullptr; }
+  /**
+   * This object will assume ownership of the memory pointed to by event.
+   */
+  void push(TraceEvent *event) {
+    event->previous = head;
+    head = event;
+  }
+  template <typename T,
+            typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
+                * = nullptr,
+            typename... Ts>
+  T *emplace(Ts &&... args) {
+    auto t = new (*this) T(std::forward<Ts>(args)...);
+    push(t);
+    return t;
+  }
+  TraceEvent *peek() const { return head; }
+  bool pop() {
+    if (head) {
+      auto oldHead = head;
+      head = head->previous;
+      delete oldHead;
+      return true;
+    } else {
+      return false;
+    }
+  }
+};
+
 /*
  * Create labels and union labels together
  */
@@ -89,6 +153,8 @@ public:
   void logOperation(dfsan_label some_label);
   int logFunctionEntry(char *fname);
   void logFunctionExit();
+  void logBBEntry(char *fname, BBIndex bbIndex);
+  void logBBExit();
   void resetFrame(int *index);
   void output();
   dfsan_label getLastLabel();
@@ -124,6 +190,7 @@ private:
       canonical_mapping;
   std::unordered_map<std::string, std::list<std::pair<int, int>>>
       taint_bytes_processed;
+  TraceEventStack eventStack;
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;
   string_node_map function_to_cmp_bytes;
