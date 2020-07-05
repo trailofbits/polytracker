@@ -7,9 +7,14 @@
 #ifndef POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 #define POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 
+#include <functional>
+#include <set>
 #include <string>
+#include <string.h>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "dfsan/dfsan_types.h"
 
@@ -34,10 +39,28 @@ struct BasicBlockTrace {
                                   * pointers */
             && index == other.index && entryCount == other.entryCount);
   }
+
+  bool operator<(const BasicBlockTrace &rhs) const {
+    auto fnameCmp = strcmp(fname, rhs.fname);
+    if (fnameCmp == 0) {
+      // these BBs are in the same function
+      if (index == rhs.index) {
+        // they are the same BB, so compare their entry counter
+        return entryCount < rhs.entryCount;
+      } else {
+        return index < rhs.index;
+      }
+    } else {
+      return fnameCmp < 0;
+    }
+  }
+
+  std::string str() const;
 };
 
+template<typename BB>
 struct BasicBlockTraceHasher {
-  std::size_t operator()(const BasicBlockTrace &bb) const {
+  std::size_t operator()(BB bb) const {
     using std::hash;
     using std::size_t;
     using std::string;
@@ -47,6 +70,12 @@ struct BasicBlockTraceHasher {
             1) ^
            (hash<decltype(BasicBlockTrace::entryCount)>()(bb.entryCount)
             << 1);
+  }
+};
+
+struct BasicBlockTraceComparator {
+  std::size_t operator()(std::reference_wrapper<const BasicBlockTrace> lhs, std::reference_wrapper<const BasicBlockTrace> rhs) const {
+    return lhs.get() < rhs.get();
   }
 };
 
@@ -68,7 +97,7 @@ public:
     return BasicBlockTrace{fname, index, entryCount()};
   }
 
-  std::string str() const;
+  std::string str() const { return BasicBlockTrace(*this).str(); }
 };
 
 class TraceEventStack {
@@ -114,12 +143,55 @@ public:
   }
 };
 
+class CFG {
+  mutable std::unordered_map<BasicBlockTrace, size_t, BasicBlockTraceHasher<const BasicBlockTrace &>>
+    bbIds;
+  mutable std::vector<BasicBlockTrace> bbsById;
+  mutable std::unordered_map<size_t, std::unordered_set<size_t>> cfg;
+
+public:
+  size_t id(const BasicBlockTrace &bb) const {
+    auto bbId = bbIds.find(bb);
+    if (bbId != bbIds.end()) {
+      return bbId->second;
+    } else {
+      size_t newId = bbsById.size();
+      bbsById.push_back(bb);
+      bbIds[bb] = newId;
+      return newId;
+    }
+  }
+  const std::set<std::reference_wrapper<const BasicBlockTrace>, BasicBlockTraceComparator>
+      children(const BasicBlockTrace &bb) const {
+    std::set<std::reference_wrapper<const BasicBlockTrace>, BasicBlockTraceComparator> ret;
+    for (auto& childId : cfg[id(bb)]) {
+      ret.insert(std::cref(bbsById[childId]));
+    }
+    return ret;
+  }
+  std::set<size_t> childIds(size_t bbId) const {
+    const auto& children = cfg[bbId];
+    return std::set<size_t>(children.begin(), children.end());
+  }
+  std::set<size_t> childIds(const BasicBlockTrace &bb) const {
+    return childIds(id(bb));
+  }
+  void addChild(const BasicBlockTrace &parent, const BasicBlockTrace &child) {
+    cfg[id(parent)].emplace(id(child));
+  }
+  const std::vector<BasicBlockTrace> bbs() const {
+    return bbsById;
+  }
+};
+
 class Trace {
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
   /* lastUsages maps canonical byte offsets to the last basic block trace
    * in which they were used */
   std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
 public:
+  CFG cfg;
+
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
   }
@@ -157,6 +229,9 @@ public:
     } else {
       return nullptr;
     }
+  }
+  decltype(lastUsages) taints() const {
+    return lastUsages;
   }
 };
 

@@ -25,9 +25,9 @@ size_t BasicBlockEntry::entryCount() const {
   return entryCounter;
 }
 
-std::string BasicBlockEntry::str() const {
+std::string BasicBlockTrace::str() const {
   std::stringstream s;
-  s << fname << " @ BB" << index << " #" << entryCount();
+  s << fname << " @ BB" << index << " #" << entryCount;
   return s.str();
 }
 

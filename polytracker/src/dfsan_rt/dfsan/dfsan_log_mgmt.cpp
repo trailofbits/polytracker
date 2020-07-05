@@ -5,6 +5,7 @@
 #include <iostream>
 #include <set>
 #include <stack>
+#include <tuple>
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -129,8 +130,11 @@ void taintManager::logFunctionExit() {
  */
 void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
+  auto currentBB = trace.currentBB();
   auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex);
-  //std::cout << event->str() << std::endl;
+  if (currentBB) {
+    trace.cfg.addChild(*currentBB, *event);
+  }
   taint_prop_lock.unlock();
 }
 
@@ -170,10 +174,67 @@ void taintManager::addJsonRuntimeCFG() {
   }
 }
 
+json escapeChar(int c) {
+  std::stringstream s;
+  s << '"';
+  if (c >= 32 && c <= 126 && c != '"' && c != '\\') {
+    s << (char)c;
+  } else if (c != EOF) {
+    s << "\\u" << std::hex << std::setw(4) << std::setfill('0') << c;
+  }
+  s << '"';
+  return json::parse(s.str());
+}
+
 void taintManager::addJsonRuntimeTrace() {
   if (!recordTrace()) { return; }
-  output_json["method_map_fmt"] = "method_call_id, method_name, children";
-  //output_json["trace"]["comparisons_fmt"] = "idx, char, method_call_id";
+  output_json["trace"]["method_map_fmt"] = "method_call_id, method_name, children";
+  size_t id = 0;
+  for (auto& bb : trace.cfg.bbs()) {
+    json entry(std::make_tuple(id, bb.str(), trace.cfg.childIds(id)));
+    output_json["trace"]["method_map"][std::to_string(id)] = entry;
+    ++id;
+  }
+  output_json["trace"]["comparisons_fmt"] = "idx, char, method_call_id";
+  std::vector<std::tuple<size_t, std::string, size_t>> cmps;
+  /* FIXME: this is somewhat of a hack. The Mimid code's JSON input format
+   * requires the character from each canonical byte of the input file, not
+   * just its offset. Therefore, we open the file passed as POLYPATH and read
+   * the bytes from it here.
+   *
+   * TODO: Find a better way to do this without re-opening the file!
+   *
+   * FIXME: This assumes that there is a single key in this->canonical_mapping
+   * that corresponds to POLYPATH. If/when we support multiple taint sources,
+   * this code will have to be updated!
+   */
+  if (canonical_mapping.size() < 1) {
+    std::cout << "Unexpected number of taint sources: " <<
+        canonical_mapping.size() << std::endl;
+    exit(1);
+  } else if (canonical_mapping.size() > 1) {
+    std::cout << "Warning: More than one taint source found! The resulting "
+        << "runtime trace will likely be incorrect!" << std::endl;
+  }
+  const std::string polyPath = canonical_mapping.begin()->first;
+  auto polyPathFile = fopen(polyPath.c_str(), "rb");
+  if (polyPathFile == nullptr) {
+    std::cout << "Unable to open file \"" << polyPath << "\" for generating "
+        << "the runtime trace!" << std::endl;
+    exit(1);
+  }
+  for (const auto& taint : trace.taints()) {
+    const auto& label = taint.first;
+    const auto& lastBB = taint.second;
+    if (fseek(polyPathFile, label - 1, SEEK_SET) == 0) {
+      auto c = fgetc(polyPathFile);
+      if (c != EOF) {
+        cmps.emplace_back(label, escapeChar(c), trace.cfg.id(lastBB));
+      }
+    }
+  }
+  fclose(polyPathFile);
+  output_json["trace"]["comparisons"] = cmps;
 }
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
