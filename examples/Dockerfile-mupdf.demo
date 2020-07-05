@@ -1,13 +1,23 @@
+FROM ubuntu:bionic AS sources
+
+RUN mkdir -p /polytracker/the_klondike
+
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
+
+RUN git clone --recursive git://git.ghostscript.com/mupdf.git
+WORKDIR /polytracker/the_klondike/mupdf
+RUN git submodule update --init
+
 FROM trailofbits/polytracker
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 
 WORKDIR /polytracker/the_klondike
 
-RUN apt-get install -y git pkg-config
+COPY --from=sources /polytracker/the_klondike/mupdf /polytracker/the_klondike/mupdf
 
-RUN git clone --recursive git://git.ghostscript.com/mupdf.git
 WORKDIR /polytracker/the_klondike/mupdf
-RUN git submodule update --init
 
 RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
 
