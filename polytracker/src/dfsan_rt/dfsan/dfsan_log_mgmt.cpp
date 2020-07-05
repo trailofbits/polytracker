@@ -73,6 +73,13 @@ void taintManager::logOperation(dfsan_label some_label) {
   std::thread::id this_id = std::this_thread::get_id();
   std::vector<std::string> func_stack = thread_stack_map[this_id];
   (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(new_node);
+  if (auto bb = trace.currentBB()) {
+    // we are recording a full trace, and we know the current basic block
+    if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
+      // this is a canonical label
+      trace.setLastUsage(some_label, *bb);
+    }
+  }
   taint_prop_lock.unlock();
 }
 
@@ -188,7 +195,8 @@ json escapeChar(int c) {
 
 void taintManager::addJsonRuntimeTrace() {
   if (!recordTrace()) { return; }
-  output_json["trace"]["method_map_fmt"] = "method_call_id, method_name, children";
+  output_json["trace"]["method_map_fmt"] =
+      "method_call_id, method_name, children";
   size_t id = 0;
   for (auto& bb : trace.cfg.bbs()) {
     json entry(std::make_tuple(id, bb.str(), trace.cfg.childIds(id)));
