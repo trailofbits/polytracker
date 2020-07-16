@@ -7,7 +7,7 @@ from .mimid.treeminer import miner
 
 class BasicBlockInvocation:
     def __init__(self, method_call_id: int, name: Optional[str], children: Iterable[int]):
-        self.id = method_call_id
+        self.id: int = method_call_id
         self.name: Optional[str] = name
         self.children: List[int] = list(children)
 
@@ -24,9 +24,12 @@ class BasicBlockInvocation:
         else:
             raise ValueError(item)
 
+    def __iter__(self) -> Iterable[Union[int, Optional[str], List[int]]]:
+        return iter((self.id, self.name, self.children))
+
 
 class Comparison:
-    def __init__(self, idx: int, char: Union[int, str, bytes], method_call_id: BasicBlockInvocation):
+    def __init__(self, idx: int, char: Union[int, str, bytes], method_call_id: int):
         self.idx: int = idx
         if isinstance(char, bytes):
             if len(char) != 1:
@@ -38,7 +41,7 @@ class Comparison:
             self.char: bytes = bytes([ord(char[0])])
         else:
             self.char: bytes = bytes([char])
-        self.method_call_id: BasicBlockInvocation = method_call_id
+        self.method_call_id: int = method_call_id
 
     def __len__(self):
         return 3
@@ -52,6 +55,9 @@ class Comparison:
             return self.method_call_id
         else:
             raise KeyError(item)
+
+    def __iter__(self) -> Iterable[Union[int, bytes, int]]:
+        return iter((self.idx, self.char, self.method_call_id))
 
 
 class PolyTrackerTrace:

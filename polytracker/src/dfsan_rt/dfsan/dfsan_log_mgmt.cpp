@@ -141,6 +141,14 @@ void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex);
   if (currentBB) {
     trace.cfg.addChild(*currentBB, *event);
+  } else {
+    if (auto fCall = dynamic_cast<FunctionCall*>(trace.secondToLastEvent())) {
+      // currentBB is the first basic block in a function call
+      if (auto callingBB = dynamic_cast<BasicBlockEntry*>(fCall->previous)) {
+        // we know the basic block that called fCall
+        trace.cfg.addChild(*callingBB, *event);
+      }
+    }
   }
   taint_prop_lock.unlock();
 }
