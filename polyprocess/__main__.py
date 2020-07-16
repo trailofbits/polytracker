@@ -23,9 +23,9 @@ def main():
     parser.add_argument("--draw-forest", action="store_true", help="produces a taint forest dot file")
     commands.add_argument(
         "--extract-grammar",
-        nargs='+',
-        type=argparse.FileType('r'),
-        help="extract a grammar from the provided JSON trace files"
+        nargs="+",
+        type=argparse.FileType("r"),
+        help="extract a grammar from the provided JSON trace files",
     )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
@@ -58,7 +58,7 @@ def main():
             traces = [grammars.parse_polytracker_trace(json_file) for json_file in args.extract_grammar]
         except ValueError as e:
             sys.stderr.write(str(e))
-            sys.stderr.write('\n\n')
+            sys.stderr.write("\n\n")
             exit(1)
         grammars.extract(traces)
 
