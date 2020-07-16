@@ -23,15 +23,15 @@ jobs:
           sudo apt-get install -y clang-format-10 libgraphviz-dev
       - name: Install black and pytest
         run: |
-          python3.7 -m pip install --upgrade pip
-          python3.7 -m pip install setuptools
-          python3.7 -m pip install mypy
-          python3.7 -m pip install black
+          python -m pip install --upgrade pip
+          python -m pip install setuptools
+          python -m pip install mypy
+          python -m pip install black
       - name: Update git submodules 
         run: git submodule update --init --recursive
       - name: C++ lint
         run: |
-          python3.7 third_party/run-clang-format/run-clang-format.py \
+          python third_party/run-clang-format/run-clang-format.py \
           polytracker/include/dfsan/*.h  polytracker/src/*/*.cpp \
           --exclude 'polytracker/src/dfsan_rt/sanitizer_common/*' \
           --exclude 'polytracker/src/dfsan_rt/interception/*'
