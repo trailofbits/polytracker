@@ -14,6 +14,7 @@
 #include "sanitizer_common/sanitizer_libc.h"
 
 using namespace __dfsan;
+#define DEBUG_INFO
 
 // MAPPING MANAGER
 taintMappingManager::taintMappingManager(char* shad_mem_ptr, char* forest_ptr) {
@@ -132,12 +133,19 @@ void taintManager::outputRawTaintForest() {
     std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
     exit(1);
   }
+#ifdef DEBUG_INFO
+  std::cout << "NEXT_LABEL IS " << next_label << std::endl;
+#endif
   // Output file offset 0 will have data for node 1 etc etc
   taint_node_t* curr = nullptr;
   for (int i = 0; i < next_label; i++) {
     curr = getTaintNode(i);
     dfsan_label node_p1 = getTaintLabel(curr->p1);
     dfsan_label node_p2 = getTaintLabel(curr->p2);
+#ifdef DEBUG_INFO
+    std::cout << "LABEL 1: " << node_p1 << std::endl;
+    std::cout << "LABEL 2: " << node_p2 << std::endl;
+#endif
     fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
     fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
   }
@@ -222,7 +230,7 @@ taintManager::taintManager(decay_val init_decay, char* shad_mem,
 }
 
 taintManager::~taintManager() {}
-
+//TODO Change this to take the addr of the ret val?
 dfsan_label taintManager::createReturnLabel(int file_byte_offset,
                                             std::string name) {
   taint_prop_lock.lock();
