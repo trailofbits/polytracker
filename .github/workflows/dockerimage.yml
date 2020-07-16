@@ -38,10 +38,9 @@ jobs:
       - name: Python lint/typecheck 
         run: |
           black --check --exclude mimid polybuild polyprocess tests --line-length=127
-          mypy --ignore-missing-imports polybuild polyprocess tests
+          mypy --python-version ${{ matrix.python-version }} polybuild polyprocess tests
       - name: Build the base image 
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Poly* tests 
         run: |
           docker run --rm trailofbits/polytracker pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
-
