@@ -55,7 +55,20 @@ def main():
             poly_process.draw_forest()
     elif args.extract_grammar:
         try:
-            traces = [grammars.parse_polytracker_trace(json_file) for json_file in args.extract_grammar]
+            traces = []
+            for json_file in args.extract_grammar:
+                trace = grammars.PolyTrackerTrace.parse(json_file)
+                if not trace.is_cfg_connected():
+                    roots = trace.cfg_roots()
+                    if len(roots) == 0:
+                        sys.stderr.write(f"Error: Basic block trace of {json_file} has no roots!\n\n")
+                    else:
+                        sys.stderr.write(f"Error: Basic block trace of {json_file} has multiple roots:\n")
+                        for r in roots:
+                            sys.stderr.write(f"\t{ trace.method_map[r].name }\n")
+                        sys.stderr.write('\n')
+                    exit(1)
+                traces.append(trace)
         except ValueError as e:
             sys.stderr.write(str(e))
             sys.stderr.write("\n\n")
