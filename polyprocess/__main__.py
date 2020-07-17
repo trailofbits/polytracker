@@ -66,7 +66,7 @@ def main():
                         sys.stderr.write(f"Error: Basic block trace of {json_file} has multiple roots:\n")
                         for r in roots:
                             sys.stderr.write(f"\t{ trace.method_map[r].name }\n")
-                        sys.stderr.write('\n')
+                        sys.stderr.write("\n")
                     exit(1)
                 traces.append(trace)
         except ValueError as e:

@@ -62,10 +62,7 @@ class Comparison:
 
 class PolyTrackerTrace:
     def __init__(self, methods: Iterable[BasicBlockInvocation], comparisons: Iterable[Comparison]):
-        self.method_map: Dict[int, BasicBlockInvocation] = {
-            method.id: method
-            for method in methods
-        }
+        self.method_map: Dict[int, BasicBlockInvocation] = {method.id: method for method in methods}
         self.comparisons = list(comparisons)
 
     def cfg_roots(self) -> Tuple[int, ...]:
@@ -96,7 +93,7 @@ class PolyTrackerTrace:
             raise KeyError(item)
 
     @staticmethod
-    def parse(trace_file: TextIO) -> 'PolyTrackerTrace':
+    def parse(trace_file: TextIO) -> "PolyTrackerTrace":
         try:
             data = json.load(trace_file)
         except json.decoder.JSONDecodeError as de:
@@ -107,16 +104,16 @@ class PolyTrackerTrace:
 
         # mimid expects the first method (ID 0) to have a null method name, so transform the trace to correspond.
         # first, increase all of the method IDs by 1
-        mmap_fmt = {field.strip(): idx for idx, field in enumerate(trace["method_map_fmt"].split(','))}
+        mmap_fmt = {field.strip(): idx for idx, field in enumerate(trace["method_map_fmt"].split(","))}
         mmap = trace["method_map"]
-        cmp_fmt = {field.strip(): idx for idx, field in enumerate(trace["comparisons_fmt"].split(','))}
+        cmp_fmt = {field.strip(): idx for idx, field in enumerate(trace["comparisons_fmt"].split(","))}
         cmp = trace["comparisons"]
 
         comparisons = [
             Comparison(
                 idx=comparison[cmp_fmt["idx"]],
                 char=comparison[cmp_fmt["char"]],
-                method_call_id=comparison[cmp_fmt["method_call_id"]] + 1
+                method_call_id=comparison[cmp_fmt["method_call_id"]] + 1,
             )
             for comparison in cmp
         ]
@@ -145,9 +142,9 @@ def parse_polytracker_trace(trace_file: TextIO) -> Dict:
 
     # mimid expects the first method (ID 0) to have a null method name, so transform the trace to correspond.
     # first, increase all of the method IDs by 1
-    mmap_fmt = {field.strip(): idx for idx, field in enumerate(trace["method_map_fmt"].split(','))}
+    mmap_fmt = {field.strip(): idx for idx, field in enumerate(trace["method_map_fmt"].split(","))}
     mmap = trace["method_map"]
-    cmp_fmt = {field.strip(): idx for idx, field in enumerate(trace["comparisons_fmt"].split(','))}
+    cmp_fmt = {field.strip(): idx for idx, field in enumerate(trace["comparisons_fmt"].split(","))}
     cmp = trace["comparisons"]
     transformed = {
         "comparisons_fmt": "idx, char, method_call_id",
@@ -157,7 +154,8 @@ def parse_polytracker_trace(trace_file: TextIO) -> Dict:
         ],
         "method_map_fmt": "method_call_id, method_name, children",
         "method_map": {
-            int(method_id) + 1: [
+            int(method_id)
+            + 1: [
                 mapping[mmap_fmt["method_call_id"]] + 1,
                 mapping[mmap_fmt["method_name"]],
                 [cid + 1 for cid in mapping[mmap_fmt["children"]]],
