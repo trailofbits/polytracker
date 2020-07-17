@@ -14,7 +14,10 @@ class BasicBlockInvocation:
     def __len__(self):
         return 2
 
-    def __getitem__(self, item: int):
+    def __contains__(self, item):
+        return item in (0, 1, 2)
+
+    def __getitem__(self, item: int) -> Union[int, Optional[str], List[int]]:
         if item == 0:
             return self.id
         elif item == 1:
@@ -38,15 +41,18 @@ class Comparison:
         elif isinstance(char, str):
             if len(char) != 1:
                 raise ValueError(f"char must be a single character")
-            self.char: bytes = bytes([ord(char[0])])
+            self.char = bytes([ord(char[0])])
         else:
-            self.char: bytes = bytes([char])
+            self.char = bytes([char])
         self.method_call_id: int = method_call_id
 
     def __len__(self):
         return 3
 
-    def __getitem__(self, item: int):
+    def __contains__(self, item):
+        return item in (0, 1, 2)
+
+    def __getitem__(self, item: int) -> Union[int, bytes]:
         if item == 0:
             return self.idx
         elif item == 1:
@@ -80,7 +86,10 @@ class PolyTrackerTrace:
     def __len__(self):
         return 4
 
-    def __getitem__(self, item: str):
+    def __contains__(self, item):
+        return item in ("comparisons_fmt", "comparisons", "method_map_fmt", "method_map")
+
+    def __getitem__(self, item: str) -> Union[str, Dict[int, BasicBlockInvocation], List[Comparison]]:
         if item == "comparisons_fmt":
             return "idx, char, method_call_id"
         elif item == "method_map_fmt":
@@ -129,45 +138,6 @@ class PolyTrackerTrace:
         assert 0 not in transformed.method_map
         transformed.method_map[0] = BasicBlockInvocation(0, None, [1])
         return transformed
-
-
-def parse_polytracker_trace(trace_file: TextIO) -> Dict:
-    try:
-        data = json.load(trace_file)
-    except json.decoder.JSONDecodeError as de:
-        raise ValueError(f"Error parsing PolyTracker JSON file {trace_file.name}", de)
-    if "trace" not in data:
-        raise ValueError(f"File {trace_file.name} was not recorded with POLYTRACE=1!")
-    trace = data["trace"]
-
-    # mimid expects the first method (ID 0) to have a null method name, so transform the trace to correspond.
-    # first, increase all of the method IDs by 1
-    mmap_fmt = {field.strip(): idx for idx, field in enumerate(trace["method_map_fmt"].split(","))}
-    mmap = trace["method_map"]
-    cmp_fmt = {field.strip(): idx for idx, field in enumerate(trace["comparisons_fmt"].split(","))}
-    cmp = trace["comparisons"]
-    transformed = {
-        "comparisons_fmt": "idx, char, method_call_id",
-        "comparisons": [
-            [comparison[cmp_fmt["idx"]], comparison[cmp_fmt["char"]], comparison[cmp_fmt["method_call_id"]] + 1]
-            for comparison in cmp
-        ],
-        "method_map_fmt": "method_call_id, method_name, children",
-        "method_map": {
-            int(method_id)
-            + 1: [
-                mapping[mmap_fmt["method_call_id"]] + 1,
-                mapping[mmap_fmt["method_name"]],
-                [cid + 1 for cid in mapping[mmap_fmt["children"]]],
-            ]
-            for method_id, mapping in mmap.items()
-        },
-    }
-    # lastly, add a new null method with ID 0
-    assert "0" not in transformed["method_map"]
-    transformed["method_map"][0] = [0, None, [1]]
-
-    return transformed
 
 
 def extract(traces: List[Dict]):
