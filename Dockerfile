@@ -23,7 +23,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
 			python3-pip																			\
       python3.7-dev																		\
 			golang																					\
-			libgraphviz-dev
+			libgraphviz-dev																	\
+			graphviz
 
 RUN python3.7 -m pip install pip
 
