@@ -160,7 +160,7 @@ class PolyBuilder:
             compile_command.append("-I" + self.meta.compiler_dir + "/../cxx_libs/include/c++/v1/")
             compile_command.append("-L" + self.meta.compiler_dir + "/../cxx_libs/lib/")
         for arg in argv[1:]:
-            if arg == "-Wall" or arg == "-Wextra" or arg == "Wno-unused-parameter" or arg == "-Werror":
+            if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
                 continue
             compile_command.append(arg)
         is_linking = self.poly_is_linking(argv)
