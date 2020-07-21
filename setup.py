@@ -21,9 +21,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'polyprocess = polytracker.polyprocess.__main__:main',
-            'polybuild = polytracker.polybuild.__main__:main',
-            'polybuild++ = polytracker.polybuild.__main__:main'
+            'polyprocess = polytracker.polyprocess.__main__:main'
         ]
     },
     classifiers=[

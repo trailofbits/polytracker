@@ -10,5 +10,5 @@ clang-format -i polytracker/include/polyclang/*.h
 clang-format -i polytracker/include/dfsan/*.h
 
 # Black to auto format code, mypy for type checking
-black polybuild polyprocess tests --line-length=127
-mypy --ignore-missing-imports polybuild polyprocess tests
+black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/' --line-length=127
+mypy --ignore-missing-imports polytracker tests

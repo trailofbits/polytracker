@@ -46,6 +46,7 @@ WORKDIR /polytracker/build
 ENV PATH="/usr/lib/llvm-7/bin:${PATH}"
 
 RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE .. && ninja install
+ENV PATH="/polytracker/build/bin/:${PATH}"
 ENV CC=polybuild
 ENV CXX=polybuild++
 ENV LLVM_COMPILER=clang
