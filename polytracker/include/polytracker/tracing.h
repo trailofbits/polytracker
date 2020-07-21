@@ -213,6 +213,13 @@ public:
       return nullptr;
     }
   }
+  TraceEvent *secondToLastEvent() const {
+    if (auto last = lastEvent()) {
+      return last->previous;
+    } else {
+      return nullptr;
+    }
+  }
   /**
    * Returns the current basic block for the calling thread
    */
