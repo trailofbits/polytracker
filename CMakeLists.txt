@@ -17,6 +17,3 @@ set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/pass")
 set(POLYTRACK_CXX_DIR "${CMAKE_INSTALL_PREFIX}/polytracker/")
 
 add_subdirectory(polytracker)
-install(DIRECTORY "./polybuild" DESTINATION ${POLYTRACK_CXX_DIR})
-
-

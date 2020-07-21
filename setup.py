@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='polyprocess',
-    description='A library and utility for processing and analyzing PolyTracker output',
+    name='polytracker',
+    description='API and Library for operating and interacting with PolyTracker',
     url='https://github.com/trailofbits/polytracker',
     author='Trail of Bits',
     version="0.1.0",
@@ -16,9 +16,14 @@ setup(
         'pydot',
         'typing_extensions'
     ],
+    extras_require={
+        "dev": ["black", "mypy", "pytest"]
+    },
     entry_points={
         'console_scripts': [
-            'polyprocess = polyprocess.__main__:main'
+            'polyprocess = polytracker.polyprocess.__main__:main',
+            'polybuild = polytracker.polybuild.__main__:main',
+            'polybuild++ = polytracker.polybuild.__main__:main'
         ]
     },
     classifiers=[
