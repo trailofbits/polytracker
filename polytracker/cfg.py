@@ -62,10 +62,10 @@ class DiGraph(nx.DiGraph):
         node_ids = {node: i for i, node in enumerate(self.nodes)}
         for node in self.nodes:
             if node_filter is None or node_filter(node):
-                dot.node(f'func{node_ids[node]}', label=labeler(node))
+                dot.node(f"func{node_ids[node]}", label=labeler(node))
         for caller, callee in self.edges:
             if node_filter is None or (node_filter(caller) and node_filter(callee)):
-                dot.edge(f'func{node_ids[caller]}', f'func{node_ids[callee]}')
+                dot.edge(f"func{node_ids[caller]}", f"func{node_ids[callee]}")
         return dot
 
 
@@ -100,13 +100,9 @@ class CFG(DiGraph):
     def __init__(self):
         super().__init__()
 
-    def to_dot(self,
-               comment='PolyTracker Program Trace',
-               merged_json_obj=None,
-               only_labeled_functions=False,
-               labeler=None,
-               **kwargs
-               ) -> graphviz.Digraph:
+    def to_dot(
+        self, comment="PolyTracker Program Trace", merged_json_obj=None, only_labeled_functions=False, labeler=None, **kwargs
+    ) -> graphviz.Digraph:
         function_labels = {}
 
         def func_labeler(f):
