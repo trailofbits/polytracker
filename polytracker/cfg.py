@@ -1,20 +1,32 @@
 import math
 
-from typing import Any, Callable, Optional
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    FrozenSet,
+    Generic,
+    ItemsView,
+    Iterable,
+    KeysView,
+    List,
+    Optional,
+    Set,
+    TypeVar,
+)
 
 import graphviz
 import networkx as nx
 
-
-def roots(graph):
-    return (n for n, d in graph.in_degree() if d == 0)
+N = TypeVar("N")
 
 
-class DiGraph(nx.DiGraph):
+class DiGraph(nx.DiGraph, Generic[N]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._dominator_forest: Optional[DiGraph] = None
-        self._roots = None
+        self._dominator_forest: Optional[DiGraph[N]] = None
+        self._roots: Optional[Collection[N]] = None
         self._path_lengths = None
 
     def path_length(self, from_node, to_node):
@@ -25,26 +37,29 @@ class DiGraph(nx.DiGraph):
         else:
             return self._path_lengths[from_node][to_node]
 
-    def set_roots(self, roots):
+    def set_roots(self, roots: Collection[N]):
         self._roots = roots
 
+    def _find_roots(self) -> Iterable[N]:
+        return (n for n, d in self.in_degree() if d == 0)
+
     @property
-    def roots(self):
+    def roots(self) -> Collection[N]:
         if self._roots is None:
-            self._roots = tuple(roots(self))
+            self._roots = tuple(self._find_roots())
         return self._roots
 
-    def depth(self, node):
+    def depth(self, node) -> int:
         return min(self.path_length(root, node) for root in self.roots)
 
-    def ancestors(self, node) -> set:
+    def ancestors(self, node) -> Set[N]:
         return nx.ancestors(self, node)
 
-    def descendants(self, node) -> frozenset:
+    def descendants(self, node) -> FrozenSet[N]:
         return frozenset(nx.dfs_successors(self, node).keys())
 
     @property
-    def dominator_forest(self):
+    def dominator_forest(self) -> "DAG[N]":
         if self._dominator_forest is not None:
             return self._dominator_forest
         self._dominator_forest = DAG()
@@ -54,11 +69,15 @@ class DiGraph(nx.DiGraph):
                     self._dominator_forest.add_edge(dominated_by, node)
         return self._dominator_forest
 
-    def to_dot(self, comment: str = None, labeler=Callable[[Any], str], node_filter=None) -> graphviz.Digraph:
+    def to_dot(
+        self, comment: Optional[str] = None, labeler: Optional[Callable[[N], str]] = None, node_filter=None
+    ) -> graphviz.Digraph:
         if comment is not None:
             dot = graphviz.Digraph(comment=comment)
         else:
             dot = graphviz.Digraph()
+        if labeler is None:
+            labeler = str
         node_ids = {node: i for i, node in enumerate(self.nodes)}
         for node in self.nodes:
             if node_filter is None or node_filter(node):
@@ -69,8 +88,8 @@ class DiGraph(nx.DiGraph):
         return dot
 
 
-class DAG(DiGraph):
-    def vertex_induced_subgraph(self, vertices):
+class DAG(DiGraph[N], Generic[N]):
+    def vertex_induced_subgraph(self, vertices: Iterable[N]) -> "DAG[N]":
         vertices = frozenset(vertices)
         subgraph = self.copy()
         to_remove = set(self.nodes) - vertices
@@ -96,14 +115,56 @@ class DAG(DiGraph):
         return subgraph
 
 
-class CFG(DiGraph):
+class FunctionInfo:
+    def __init__(
+        self,
+        name: str,
+        cmp_bytes: Dict[str, List[int]],
+        input_bytes: Dict[str, List[int]] = None,
+        called_from: Iterable[str] = (),
+    ):
+        self.name: str = name
+        self.called_from: FrozenSet[str] = frozenset(called_from)
+        self.cmp_bytes: Dict[str, List[int]] = cmp_bytes
+        if input_bytes is None:
+            self.input_bytes: Dict[str, List[int]] = cmp_bytes
+        else:
+            self.input_bytes = input_bytes
+
+    @property
+    def taint_sources(self) -> KeysView[str]:
+        return self.input_bytes.keys()
+
+    def __getitem__(self, input_source_name: str) -> List[int]:
+        return self.input_bytes[input_source_name]
+
+    def __iter__(self) -> Iterable[str]:
+        return self.taint_sources
+
+    def items(self) -> ItemsView[str, List[int]]:
+        return self.input_bytes.items()
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
+
+
+class CFG(DiGraph[FunctionInfo]):
     def __init__(self):
         super().__init__()
 
     def to_dot(
-        self, comment="PolyTracker Program Trace", merged_json_obj=None, only_labeled_functions=False, labeler=None, **kwargs
+        self,
+        comment: Optional[str] = "PolyTracker Program Trace",
+        labeler: Optional[Callable[[FunctionInfo], str]] = None,
+        node_filter=None,
     ) -> graphviz.Digraph:
-        function_labels = {}
+        function_labels: Dict[str, str] = {}
 
         def func_labeler(f):
             if labeler is not None:
@@ -113,4 +174,4 @@ class CFG(DiGraph):
             else:
                 return f.name
 
-        return super().to_dot(comment, labeler=func_labeler, **kwargs)
+        return super().to_dot(comment, labeler=func_labeler, node_filter=node_filter)

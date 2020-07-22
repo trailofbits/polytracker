@@ -1,56 +1,18 @@
 import logging
-from typing import Dict, Iterable, List, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-from .cfg import CFG
-
+from .cfg import CFG, FunctionInfo
 
 log = logging.getLogger("PolyTracker")
 
-
-class FunctionInfo:
-    def __init__(
-        self,
-        name: str,
-        cmp_bytes: Dict[str, List[int]],
-        input_bytes: Dict[str, List[int]] = None,
-        called_from: Iterable[str] = (),
-    ):
-        self.name = name
-        self.called_from = frozenset(called_from)
-        self.cmp_bytes = cmp_bytes
-        if input_bytes is None:
-            self.input_bytes = cmp_bytes
-        else:
-            self.input_bytes = input_bytes
-
-    @property
-    def taint_sources(self) -> Set[str]:
-        return self.input_bytes.keys()
-
-    def __getitem__(self, input_source_name):
-        return self.input_bytes[input_source_name]
-
-    def __iter__(self):
-        return self.taint_sources
-
-    def items(self):
-        return self.input_bytes.items()
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
+VersionElement = Union[int, str]
 
 
 class ProgramTrace:
-    def __init__(self, polytracker_version: tuple, function_data: Iterable[FunctionInfo]):
-        self.polytracker_version = polytracker_version
+    def __init__(self, polytracker_version: Tuple[VersionElement, ...], function_data: Iterable[FunctionInfo]):
+        self.polytracker_version: Tuple[VersionElement, ...] = polytracker_version
         self.functions: Dict[str, FunctionInfo] = {f.name: f for f in function_data}
-        self._cfg = None
+        self._cfg: Optional[CFG] = None
 
     @property
     def cfg(self) -> CFG:
@@ -73,10 +35,10 @@ class ProgramTrace:
         return f"{self.__class__.__name__}(polytracker_version={self.polytracker_version!r}, function_data={list(self.functions.values())!r})"
 
 
-POLYTRACKER_JSON_FORMATS = []
+POLYTRACKER_JSON_FORMATS: List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
 
 
-def normalize_version(*version) -> Tuple[str]:
+def normalize_version(*version: Iterable[VersionElement]) -> Tuple[Any, ...]:
     version = tuple(str(v) for v in version)
     version = tuple(version) + ("0",) * (3 - len(version))
     version = tuple(version) + ("",) * (4 - len(version))
@@ -114,6 +76,7 @@ def parse(polytracker_json_obj: dict) -> ProgramTrace:
             return parse_format_v2(polytracker_json_obj)
         else:
             return parse_format_v1(polytracker_json_obj)
+    return parse_format_v1(polytracker_json_obj)
 
 
 @polytracker_version(0, 0, 1, "")
@@ -121,7 +84,7 @@ def parse_format_v1(polytracker_json_obj: dict) -> ProgramTrace:
     return ProgramTrace(
         polytracker_version=(0, 0, 1),
         function_data=[
-            FunctionInfo(function_name, {None: taint_bytes}) for function_name, taint_bytes in polytracker_json_obj.items()
+            FunctionInfo(function_name, {"": taint_bytes}) for function_name, taint_bytes in polytracker_json_obj.items()
         ],
     )
 
