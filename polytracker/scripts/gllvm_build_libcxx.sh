@@ -1,7 +1,12 @@
+#!/usr/bin/env bash
+
 mkdir build;
 cd build; 
 
-POLYROOT="/polytracker/build/bin/polytracker/"
+SCRIPT=$(realpath "$0")
+SCRIPTPATH=$(dirname "$SCRIPT")
+
+POLYROOT="$SCRIPTPATH/../../build/share/polytracker/"
 
 export CC="gclang -Xclang -disable-O0-optnone"
 echo $CC

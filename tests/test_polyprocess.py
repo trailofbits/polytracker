@@ -1,4 +1,4 @@
-from polyprocess import PolyProcess
+from polytracker.polyprocess import PolyProcess
 import pytest
 import logging
 from typing import List
