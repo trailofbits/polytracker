@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from . import grammars
+from .. import grammars
 from .polyprocess import PolyProcess
 
 logger = logging.getLogger("polyprocess")
