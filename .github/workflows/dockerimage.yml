@@ -37,9 +37,9 @@ jobs:
           --exclude 'polytracker/src/dfsan_rt/interception/*'
       - name: Python lint/typecheck 
         run: |
-          black --check polybuild polyprocess tests --line-length=127
-          mypy --ignore-missing-imports polybuild polyprocess tests
-      - name: Build the base image 
+          black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/' --line-length=127
+          mypy --ignore-missing-imports polytracker tests
+      - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Poly* tests 
         run: |

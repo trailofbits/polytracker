@@ -1,6 +1,6 @@
 import pytest
 import os
-from polyprocess import PolyProcess
+from polytracker.polyprocess import PolyProcess
 import subprocess
 
 TEST_DIR = os.path.realpath(os.path.dirname(__file__))

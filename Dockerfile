@@ -23,9 +23,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
 			python3-pip																			\
       python3.7-dev																		\
 			golang																					\
-			libgraphviz-dev
+			libgraphviz-dev																	\
+			graphviz
 
-RUN python3.7 -m pip install pip
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
+RUN python3 -m pip install pip
 
 RUN go get github.com/SRI-CSL/gllvm/cmd/...
 
@@ -37,10 +39,7 @@ COPY . /polytracker
 
 WORKDIR /polytracker
 
-RUN python3.7 -m pip install .
-
-RUN rm /usr/bin/python3 
-RUN cp /usr/bin/python3.7 /usr/bin/python3
+RUN pip3 install pytest .
 
 RUN rm -rf build && mkdir -p build
 
@@ -49,13 +48,13 @@ WORKDIR /polytracker/build
 ENV PATH="/usr/lib/llvm-7/bin:${PATH}"
 
 RUN cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE .. && ninja install
-ENV CC=/polytracker/build/bin/polytracker/polybuild/polybuild.py
-ENV CXX=/polytracker/build/bin/polytracker/polybuild/polybuild++.py
+ENV PATH="/polytracker/build/bin/:${PATH}"
+ENV CC=polybuild
+ENV CXX=polybuild++
 ENV LLVM_COMPILER=clang
-RUN chmod +x ${CC}
 RUN mkdir -p "/build_artifacts"
 
 # Set the BC store path to the <install_path>/cxx_libs/bitcode/bitcode_store}
-ENV WLLVM_BC_STORE="/polytracker/build/bin/polytracker/cxx_libs/bitcode/bitcode_store"
+ENV WLLVM_BC_STORE="/polytracker/build/share/polytracker/cxx_libs/bitcode/bitcode_store"
 ENV WLLVM_ARTIFACT_STORE="/build_artifacts"
 WORKDIR /polytracker 

@@ -309,6 +309,9 @@ void taintManager::addTaintedBlocks() {
 
 void taintManager::outputRawTaintSets() {
   string_node_map::iterator it;
+  // NOTE: Whenever the output JSON format changes, make sure to:
+  //       (1) Up the version number in /polytracker/include/polytracker/polytracker.h; and
+  //       (2) Add support for parsing the changes in /polytracker/polytracker.py
   addJsonVersion();
   addJsonRuntimeCFG();
   addJsonRuntimeTrace();

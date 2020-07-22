@@ -21,7 +21,7 @@
 #include "dfsan/dfsan.h"
 
 #include "dfsan/dfsan_log_mgmt.h"
-#include "polyclang/polytracker.h"
+#include "polytracker/polytracker.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
