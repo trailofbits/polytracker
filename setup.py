@@ -9,11 +9,12 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=[
+        'graphviz',
         'matplotlib',
-        'networkX',
-        'tqdm',
+        'networkx',
         'pygraphviz',
         'pydot',
+        'tqdm',
         'typing_extensions'
     ],
     extras_require={
