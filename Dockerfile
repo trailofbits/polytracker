@@ -53,6 +53,6 @@ ENV LLVM_COMPILER=clang
 RUN mkdir -p "/build_artifacts"
 
 # Set the BC store path to the <install_path>/cxx_libs/bitcode/bitcode_store}
-ENV WLLVM_BC_STORE="/polytracker/build/bin/polytracker/cxx_libs/bitcode/bitcode_store"
+ENV WLLVM_BC_STORE="/polytracker/build/share/polytracker/cxx_libs/bitcode/bitcode_store"
 ENV WLLVM_ARTIFACT_STORE="/build_artifacts"
 WORKDIR /polytracker 
