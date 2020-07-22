@@ -1,10 +1,10 @@
+import logging
 from typing import Dict, Iterable, List, Set, Tuple
-
-from polyfile import logger
 
 from .cfg import CFG
 
-log = logger.getStatusLogger('PolyTracker')
+
+log = logging.getLogger('PolyTracker')
 
 
 class FunctionInfo:
@@ -50,7 +50,7 @@ class ProgramTrace:
     def cfg(self) -> CFG:
         if self._cfg is not None:
             return self._cfg
-        self._cfg = CFG(self)
+        self._cfg = CFG()
         self._cfg.add_nodes_from(self.functions.values())
         for f in list(self.functions.values()):
             for caller in f.called_from:
@@ -89,12 +89,14 @@ def parse(polytracker_json_obj: dict) -> ProgramTrace:
     if 'version' in polytracker_json_obj:
         version = normalize_version(*polytracker_json_obj['version'].split('.'))
         if len(version) > 4:
-            log.warn(f"Unexpectedly long PolyTracker version: {polytracker_json_obj['version']!r}")
+            log.warning(f"Unexpectedly long PolyTracker version: {polytracker_json_obj['version']!r}")
         for i, (known_version, parser) in enumerate(POLYTRACKER_JSON_FORMATS):
             # POLYTRACKER_JSON_FORMATS is auto-sorted in decreasing order
             if version >= known_version:
                 if i == 0 and version > known_version:
-                    log.warn(f"PolyTracker version {polytracker_json_obj['version']!r} is newer than the latest supported by PolyMerge ({'.'.join(known_version)})")
+                    log.warning(f"PolyTracker version {polytracker_json_obj['version']!r} "
+                                "is newer than the latest supported by the polytracker Python module "
+                                f"({'.'.join(known_version)})")
                 return parser(polytracker_json_obj)
         raise ValueError(f"Unsupported PolyTracker version {polytracker_json_obj['version']!r}")
     for function_name, function_data in polytracker_json_obj.items():
@@ -148,6 +150,8 @@ def parse_format_v2(polytracker_json_obj: dict) -> ProgramTrace:
     )
 
 
+@polytracker_version(2, 0, 1)
+@polytracker_version(2, 0, 0)
 @polytracker_version(1, 0, 1)
 def parse_format_v3(polytracker_json_obj: dict) -> ProgramTrace:
     version = polytracker_json_obj['version'].split('.')
