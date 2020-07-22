@@ -17,6 +17,6 @@
 #define POLYTRACKER_VERSION                                                    \
   PF_MAKE_STR(POLYTRACKER_VERSION_MAJOR)                                       \
   "." PF_MAKE_STR(POLYTRACKER_VERSION_MINOR) "." PF_MAKE_STR(                  \
-      POLYTRACKER_VERSION_REVISION)
+      POLYTRACKER_VERSION_REVISION) POLYTRACKER_VERSION_SUFFIX
 
 #endif
