@@ -3,7 +3,7 @@
 
 #include "dfsan/dfsan.h"
 #include "json.hpp"
-#include "polyclang/polytracker.h"
+#include "polytracker/polytracker.h"
 #include <iostream>
 #include <list>
 #include <map>
