@@ -49,7 +49,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
             self._roots = tuple(self._find_roots())
         return self._roots
 
-    def depth(self, node: N) -> int:
+    def depth(self, node: N) -> Union[int, float]:
         return min(self.path_length(root, node) for root in self.roots)
 
     def ancestors(self, node: N) -> Set[N]:
