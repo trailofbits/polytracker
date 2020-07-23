@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 """
   This code is inspired by Angora's angora-clang
@@ -29,6 +29,15 @@ from typing import List, Optional
 from dataclasses import dataclass
 
 
+SCRIPT_DIR: str = os.path.dirname(os.path.realpath(__file__))
+COMPILER_DIR: str = os.path.realpath(os.path.join(SCRIPT_DIR, ".."))
+
+
+if not os.path.isdir(COMPILER_DIR):
+    sys.stderr.write(f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
+    sys.exit(1)
+
+
 @dataclass
 class CompilerMeta:
     is_cxx: bool
@@ -37,7 +46,7 @@ class CompilerMeta:
 
 class PolyBuilder:
     def __init__(self, is_cxx):
-        self.meta = CompilerMeta(is_cxx, self.poly_find_dir(os.path.realpath(__file__)) + "/")
+        self.meta = CompilerMeta(is_cxx, COMPILER_DIR)
 
     def poly_check_cxx(self, compiler: str) -> bool:
         """
@@ -46,16 +55,6 @@ class PolyBuilder:
         if compiler.find("++") != -1:
             return True
         return False
-
-    def poly_find_dir(self, compiler_path: str) -> str:
-        """
-        Discover compiler install directory
-        Checks to see if the path is local directory, if not gives the entire path
-        """
-        last_slash: int = compiler_path.rfind("/")
-        if last_slash == -1:
-            return "."
-        return compiler_path[0:last_slash]
 
     def poly_is_linking(self, argv) -> bool:
         nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
@@ -68,7 +67,7 @@ class PolyBuilder:
         """
         Adds a directory of lists to the instrumentation
         """
-        dir_path = self.meta.compiler_dir + "../abi_lists/" + directory + "/"
+        dir_path = os.path.join(self.meta.compiler_dir, "abi_lists", directory)
         file_list = []
         if not os.path.exists(dir_path):
             print(f"Error! {dir_path} not found!")
@@ -76,7 +75,7 @@ class PolyBuilder:
         dir_ents = os.listdir(dir_path)
         for file in dir_ents:
             if file != "." and file != "..":
-                file_list.append(dir_path + file)
+                file_list.append(os.path.join(dir_path, file))
         return file_list
 
     def poly_compile(self, bitcode_path: str, output_path: str, libs: List[str]) -> bool:
@@ -84,8 +83,8 @@ class PolyBuilder:
         This function builds the compile command to instrument the whole program bitcode
         """
         compile_command = []
-        source_dir = self.meta.compiler_dir + "../lib/libTaintSources.a"
-        rt_dir = self.meta.compiler_dir + "../lib/libdfsan_rt-x86_64.a"
+        source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
+        rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
         if self.meta.is_cxx:
             compile_command.append("clang++")
         else:
@@ -112,7 +111,8 @@ class PolyBuilder:
         return True
 
     def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
-        opt_command = ["opt", "-O0", "-load", self.meta.compiler_dir + "../pass/libDataFlowSanitizerPass.so"]
+        opt_command = ["opt", "-O0", "-load",
+                       os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
         ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
         if ignore_list_files is None:
             print("Error! Failed to add ignore lists")
@@ -157,8 +157,8 @@ class PolyBuilder:
         if self.meta.is_cxx:
             compile_command.append("-stdlib=libc++")
             compile_command.append("-nostdinc++")
-            compile_command.append("-I" + self.meta.compiler_dir + "/../cxx_libs/include/c++/v1/")
-            compile_command.append("-L" + self.meta.compiler_dir + "/../cxx_libs/lib/")
+            compile_command.append("-I" + os.path.join(self.meta.compiler_dir, "cxx_libs", "include", "c++", "v1"))
+            compile_command.append("-L" + os.path.join(self.meta.compiler_dir, "cxx_libs", "lib"))
         for arg in argv[1:]:
             if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
                 continue
@@ -241,7 +241,7 @@ def main():
     )
     # TODO add verbosity flag
     poly_build = PolyBuilder("++" in sys.argv[0])
-    if sys.argv[1] == "--instrument-bitcode":
+    if len(sys.argv) > 1 and sys.argv[1] == "--instrument-bitcode":
         args = parser.parse_args(sys.argv[1:])
         if not os.path.exists(args.input_file):
             print("Error! Input file could not be found!")
@@ -257,7 +257,7 @@ def main():
                     sys.exit(1)
 
     # do Build and opt/Compile for simple C/C++ program with no libs, just ease of use
-    elif sys.argv[1] == "--instrument-target":
+    elif len(sys.argv) > 1 and sys.argv[1] == "--instrument-target":
         # Find the output file
         output_file = ""
         for i, arg in enumerate(sys.argv):
