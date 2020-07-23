@@ -13,7 +13,7 @@ from typing import (
     Optional,
     Set,
     TypeVar,
-    Union
+    Union,
 )
 
 import graphviz
