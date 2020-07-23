@@ -1,7 +1,6 @@
 import math
 
 from typing import (
-    Any,
     Callable,
     Collection,
     Dict,
@@ -14,6 +13,7 @@ from typing import (
     Optional,
     Set,
     TypeVar,
+    Union
 )
 
 import graphviz
@@ -27,9 +27,9 @@ class DiGraph(nx.DiGraph, Generic[N]):
         super().__init__(*args, **kwargs)
         self._dominator_forest: Optional[DiGraph[N]] = None
         self._roots: Optional[Collection[N]] = None
-        self._path_lengths = None
+        self._path_lengths: Optional[Dict[N, Dict[N, int]]] = None
 
-    def path_length(self, from_node, to_node):
+    def path_length(self, from_node: N, to_node: N) -> Union[int, float]:
         if self._path_lengths is None:
             self._path_lengths = dict(nx.all_pairs_shortest_path_length(self, cutoff=None))
         if from_node not in self._path_lengths or to_node not in self._path_lengths[from_node]:
@@ -49,13 +49,13 @@ class DiGraph(nx.DiGraph, Generic[N]):
             self._roots = tuple(self._find_roots())
         return self._roots
 
-    def depth(self, node) -> int:
+    def depth(self, node: N) -> int:
         return min(self.path_length(root, node) for root in self.roots)
 
-    def ancestors(self, node) -> Set[N]:
+    def ancestors(self, node: N) -> Set[N]:
         return nx.ancestors(self, node)
 
-    def descendants(self, node) -> FrozenSet[N]:
+    def descendants(self, node: N) -> FrozenSet[N]:
         return frozenset(nx.dfs_successors(self, node).keys())
 
     @property
