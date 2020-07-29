@@ -61,6 +61,11 @@ public:
   constexpr uint64_t uid() const noexcept { return value; }
 
   /**
+   * Returns a unique ID for the function containing this BB
+   */
+  constexpr uint32_t functionIndex() const noexcept { return value >> 32; }
+
+  /**
    * Returns the index of this basic block within its function
    */
   constexpr uint32_t index() const noexcept { return value & 0xFFFFFFFF; }
