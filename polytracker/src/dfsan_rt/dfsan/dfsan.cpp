@@ -134,7 +134,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
-    size_t bbIndex) {
+    uint32_t functionIndex, uint32_t bbIndex) {
   init_lock.lock();
   if (is_init == false) {
     dfsan_late_late_init();
@@ -143,7 +143,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
   init_lock.unlock();
 
   if (taint_manager->recordTrace()) {
-    taint_manager->logBBEntry(fname, bbIndex);
+    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex));
   }
 }
 
