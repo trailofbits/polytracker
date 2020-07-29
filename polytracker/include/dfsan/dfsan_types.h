@@ -49,25 +49,21 @@ class BBIndex {
 
 public:
   constexpr BBIndex() : value(0) {}
-  constexpr BBIndex(uint32_t functionIndex, uint32_t indexInFunction) :
-    value((static_cast<uint64_t>(functionIndex) << 32) | indexInFunction) {}
+  constexpr BBIndex(uint32_t functionIndex, uint32_t indexInFunction)
+      : value((static_cast<uint64_t>(functionIndex) << 32) | indexInFunction) {}
   constexpr BBIndex(uint64_t uid) : value(uid) {}
-  constexpr BBIndex(const BBIndex& copy) : value(copy.value) {};
+  constexpr BBIndex(const BBIndex &copy) : value(copy.value){};
 
-  constexpr operator uint64_t() const noexcept {
-    return value;
-  }
+  constexpr operator bool() const noexcept { return value != 0; }
 
-  constexpr uint64_t uid() const noexcept {
-    return value;
-  }
+  constexpr operator uint64_t() const noexcept { return value; }
+
+  constexpr uint64_t uid() const noexcept { return value; }
 
   /**
    * Returns the index of this basic block within its function
    */
-  constexpr uint32_t index() const noexcept {
-    return value & 0xFFFFFFFF;
-  }
+  constexpr uint32_t index() const noexcept { return value & 0xFFFFFFFF; }
 
   constexpr bool operator==(const BBIndex other) const noexcept {
     return value == other.value;
