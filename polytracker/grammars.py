@@ -2,6 +2,7 @@ import json
 
 from typing import Dict, Iterable, List, Optional, TextIO, Tuple, Union
 
+from .cfg import DiGraph
 from .mimid.treeminer import miner
 
 
@@ -10,6 +11,12 @@ class BasicBlockInvocation:
         self.id: int = method_call_id
         self.name: Optional[str] = name
         self.children: List[int] = list(children)
+
+    def __hash__(self):
+        return self.id
+
+    def __eq__(self, other):
+        return self.id == other.id
 
     def __len__(self):
         return 2
@@ -70,6 +77,18 @@ class PolyTrackerTrace:
     def __init__(self, methods: Iterable[BasicBlockInvocation], comparisons: Iterable[Comparison]):
         self.method_map: Dict[int, BasicBlockInvocation] = {method.id: method for method in methods}
         self.comparisons = list(comparisons)
+        self._cfg: Optional[DiGraph[BasicBlockInvocation]] = None
+
+    @property
+    def cfg(self) -> DiGraph[BasicBlockInvocation]:
+        if self._cfg is None:
+            self._cfg = DiGraph()
+            for bb in self.method_map.values():
+                self._cfg.add_node(bb)
+            for bb in self.method_map.values():
+                for child in bb.children:
+                    self._cfg.add_edge(bb, self.method_map[child])
+        return self._cfg
 
     def cfg_roots(self) -> Tuple[int, ...]:
         roots = set(self.method_map.keys()) - {0}
@@ -140,5 +159,5 @@ class PolyTrackerTrace:
         return transformed
 
 
-def extract(traces: List[Dict]):
+def extract(traces: List[Union[Dict, PolyTrackerTrace]]):
     return miner(traces)
