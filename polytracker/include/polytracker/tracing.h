@@ -65,9 +65,7 @@ struct BasicBlockTraceHasher {
     using std::size_t;
     using std::string;
 
-    return ((hash<decltype(BasicBlockTrace::fname)>()(bb.fname) ^
-             (hash<::BBIndex>()(bb.index) << 1)) >>
-            1) ^
+    return (hash<uint64_t>()(bb.index) << 1) ^
            (hash<decltype(BasicBlockTrace::entryCount)>()(bb.entryCount)
             << 1);
   }

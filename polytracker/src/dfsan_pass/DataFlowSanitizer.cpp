@@ -609,8 +609,9 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
-  Type *DFSanEntryBBArgs[2] = {Type::getInt8PtrTy(*Ctx),
-                               IntegerType::getInt64Ty(*Ctx)};
+  Type *DFSanEntryBBArgs[3] = {Type::getInt8PtrTy(*Ctx),
+                               IntegerType::getInt32Ty(*Ctx),
+                               IntegerType::getInt32Ty(*Ctx)};
   DFSanEntryBBFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
   DFSanExitBBFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
@@ -980,9 +981,13 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
+  uint32_t functionIndex = 0;
   for (Function *i : FnsToInstrument) {
     if (!i || i->isDeclaration())
       continue;
+
+    Value *FuncIndex =
+        ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
     removeUnreachableBlocks(*i);
 
@@ -1040,14 +1045,14 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     // Add instrumentation for handling setjmp/longjmp here
     // This adds a function that resets the shadow call stack
     // When a longjmp is called.
-    uint64_t bbIndex = 0;
+    uint32_t bbIndex = 0;
     for (BasicBlock *curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
 
       // Add a callback for BB entry
       {
         Value *BBIndex =
-            ConstantInt::get(IntegerType::getInt64Ty(*Ctx), bbIndex++, false);
+            ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
         Instruction *InsertBefore = Inst;
         while (isa<PHINode>(InsertBefore) ||
                isa<LandingPadInst>(InsertBefore)) {
@@ -1056,7 +1061,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           InsertBefore = InsertBefore->getNextNode();
         }
         IRBuilder<> IRB(InsertBefore);
-        IRB.CreateCall(DFSanEntryBBFn, {FuncName, BBIndex});
+        IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex});
       }
       while (true) {
         Instruction *Next = Inst->getNextNode();
