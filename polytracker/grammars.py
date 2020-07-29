@@ -1,9 +1,10 @@
 import json
 
-from typing import Dict, Iterable, List, Optional, TextIO, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, TextIO, Tuple, Union
 
-from .cfg import DiGraph
-from .mimid.treeminer import miner
+from .cfg import DiGraph, non_disjoint_union_all
+
+from .mimid.treeminer import attach_comparisons, last_comparisons
 
 
 class BasicBlockInvocation:
@@ -159,5 +160,42 @@ class PolyTrackerTrace:
         return transformed
 
 
-def extract(traces: List[Union[Dict, PolyTrackerTrace]]):
+def reconstruct_method_tree(*traces: PolyTrackerTrace) -> Tuple[int, Dict[int, Dict[str, Any]]]:
+    if not traces:
+        raise ValueError("At least one trace is required to reconstruct the method tree!")
+    unified_graph: DiGraph[BasicBlockInvocation] = non_disjoint_union_all(*(trace.cfg for trace in traces))
+    tree = unified_graph.dominator_forest
+    if len(tree.roots) != 1:
+        raise ValueError("The unified dominator forest has multiple roots!"
+                         "This probably means one of the input traces was disconnected.")
+    tree_map: Dict[int, Dict[str, Any]] = {}
+    first_node: Optional[BasicBlockInvocation] = None
+    for n in tree.nodes:
+        if first_node is None or first_node.id > n.id:
+            first_node = n
+        assert n.id not in tree_map
+        tree_map[n.id] = {}
+        tree_map[n.id]['id'] = n.id
+        tree_map[n.id]['name'] = n.name
+        tree_map[n.id]['indexes'] = []
+        tree_map[n.id]['children'] = []
+    for n1, n2 in tree.edges:
+        tree_map[n1.id]['children'].append(n2.id)
+
+    return first_node.id, tree_map
+
+
+def miner(traces: List[PolyTrackerTrace]):
+    my_trees = []
+    for trace in traces:
+        first, method_tree = reconstruct_method_tree(trace)
+        comparisons = trace['comparisons']
+        attach_comparisons(method_tree, last_comparisons(comparisons))
+
+    return my_trees
+
+
+def extract(traces: List[PolyTrackerTrace]):
     return miner(traces)
+
+    #return miner(traces)

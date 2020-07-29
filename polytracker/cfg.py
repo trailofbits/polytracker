@@ -1,6 +1,7 @@
 import math
 
 from typing import (
+    Any,
     Callable,
     Collection,
     Dict,
@@ -12,6 +13,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     TypeVar,
     Union,
 )
@@ -175,3 +177,13 @@ class CFG(DiGraph[FunctionInfo]):
                 return f.name
 
         return super().to_dot(comment, labeler=func_labeler, node_filter=node_filter)
+
+
+G = TypeVar("G", bound=nx.DiGraph)
+
+
+def non_disjoint_union_all(first_graph: G, *graphs: G) -> G:
+    edges: Set[Tuple[Any, Any]] = set(first_graph.edges)
+    for graph in graphs:
+        edges |= graph.edges
+    return first_graph.__class__(list(edges))
