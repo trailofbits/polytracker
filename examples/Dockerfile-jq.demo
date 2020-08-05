@@ -1,0 +1,23 @@
+FROM trailofbits/polytracker
+MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike
+
+#ENV CC=clang
+#ENV CXX=clang++
+
+RUN apt-get update && apt-get install -y flex bison libtool make automake autoconf
+
+RUN git clone https://github.com/stedolan/jq.git
+
+WORKDIR /polytracker/the_klondike/jq
+
+RUN git submodule update --init
+RUN autoreconf -fi
+RUN ./configure --with-oniguruma=builtin --disable-valgrind --enable-all-static --prefix=/usr/local
+RUN make -j`nproc` && make check
+RUN get-bc -b jq && ${CC} --instrument-bitcode -f jq.bc -o jq_track --libs m && mv jq_track /usr/local/bin/
+
+# Note, the /workdir directory is intended to be mounted at runtime
+VOLUME ["/workdir"]
+WORKDIR /workdir
