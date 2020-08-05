@@ -16,7 +16,7 @@ RUN git submodule update --init
 RUN autoreconf -fi
 RUN ./configure --with-oniguruma=builtin --disable-valgrind --enable-all-static --prefix=/usr/local
 RUN make -j`nproc` && make check
-RUN get-bc -b jq && ${CC} --instrument-bitcode -f jq.bc -o jq_track --libs m && mv jq_track /usr/local/bin/
+RUN get-bc -b jq && ${CC} --instrument-bitcode -f jq.bc -o jq_track --libs m && mv jq_track /usr/local/bin/jq
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
