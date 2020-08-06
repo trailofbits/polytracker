@@ -23,9 +23,12 @@ def main():
     parser.add_argument("--draw-forest", action="store_true", help="produces a taint forest dot file")
     commands.add_argument(
         "--extract-grammar",
-        nargs="+",
-        type=argparse.FileType("r"),
-        help="extract a grammar from the provided JSON trace files",
+        nargs=2,
+        action='append',
+        metavar=('polytracker_json', 'input_file'),
+        type=argparse.FileType("rb"),
+        help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
+             "was sent to the instrumented parser to generate polytracker_json",
     )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
@@ -56,8 +59,8 @@ def main():
     elif args.extract_grammar:
         try:
             traces = []
-            for json_file in args.extract_grammar:
-                trace = grammars.PolyTrackerTrace.parse(json_file)
+            for json_file, input_file in args.extract_grammar:
+                trace = grammars.PolyTrackerTrace.parse(json_file, input_file=input_file)
                 if not trace.is_cfg_connected():
                     roots = trace.cfg_roots()
                     if len(roots) == 0:

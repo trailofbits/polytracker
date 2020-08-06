@@ -22,6 +22,7 @@ import graphviz
 import networkx as nx
 
 N = TypeVar("N")
+D = TypeVar("D", bound='DiGraph')
 
 
 class DiGraph(nx.DiGraph, Generic[N]):
@@ -56,6 +57,52 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
     def ancestors(self, node: N) -> Set[N]:
         return nx.ancestors(self, node)
+
+    def has_one_predecessor(self, node: N) -> bool:
+        """Returns whether the given node has exactly one predecessor"""
+        i = iter(self.predecessors(node))
+        try:
+            next(i)
+        except StopIteration:
+            # it has no predecessors
+            return False
+        try:
+            next(i)
+            # it has more than one predecessor
+            return False
+        except StopIteration:
+            # it has exactly one predecessor
+            return True
+
+    def contract(self: D, union: Optional[Callable[[N, N], N]] = lambda n, _: n) -> D:
+        """
+        Simplifies this graph by merging nodes with exactly one predecessor to its predecessor.
+
+        Args:
+            union: An optional callback function that returns the union of two merged nodes. If omitted, the first node
+                will be used.
+
+        Returns:
+            A new, simplified graph of the same type.
+
+        """
+        nodes: Set[N] = set(self.nodes)
+        ret: D[N] = self.__class__()
+        ret.add_edges_from(self.edges)
+        while nodes:
+            node = next(iter(nodes))
+            nodes.remove(node)
+            if self.has_one_predecessor(node):
+                pred: N = next(iter(self.predecessors(node)))
+                new_node: N = union(pred, node)
+                incoming_nodes = list(self.predecessors(pred))
+                outgoing_nodes = list(self.successors(node))
+                ret.remove_nodes_from([pred, node])
+                ret.add_edges_from([(i, new_node) for i in incoming_nodes] + [(new_node, o) for o in outgoing_nodes])
+                if new_node is not pred:
+                    nodes.remove(pred)
+                    nodes.add(new_node)
+        return ret
 
     def descendants(self, node: N) -> FrozenSet[N]:
         return frozenset(nx.dfs_successors(self, node).keys())
