@@ -5,6 +5,8 @@ from typing import BinaryIO, Dict, IO, ItemsView, Iterable, Iterator, List, Opti
 from .cfg import DiGraph, non_disjoint_union_all
 
 from .mimid.treeminer import attach_comparisons, indexes_to_children, last_comparisons, no_overlap, wrap_terminals
+from .mimid.grammarminer import check_empty_rules, collapse_rules, convert_spaces_in_keys, merge_grammar, to_grammar
+from .mimid import grammartools
 
 
 class BasicBlockInvocation:
@@ -330,40 +332,58 @@ def to_tree(node: MethodTree.Node, my_str: bytes) -> Tree:
     return root
 
 
-def miner(traces: List[PolyTrackerTrace]):
-    my_trees = []
+def miner(traces: List[PolyTrackerTrace]) -> Iterable[Tuple]:
     for trace in traces:
 
-        # # The following code caches the method tree for debugging purposes only:
-        # import os
-        # import pickle
-        # CACHE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "method_tree.cache")
-        # if os.path.exists(CACHE_FILE):
-        #     with open(CACHE_FILE, 'rb') as f:
-        #         method_tree = pickle.load(f)
-        # else:
-        #     method_tree = reconstruct_method_tree(trace)
-        #     with open(CACHE_FILE, 'wb') as f:
-        #         pickle.dump(method_tree, f)
+        # The following code caches the method tree for debugging purposes only:
+        import os
+        import pickle
+        CACHE_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "method_tree.cache")
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, 'rb') as f:
+                method_tree = pickle.load(f)
+        else:
+            method_tree = reconstruct_method_tree(trace)
+            with open(CACHE_FILE, 'wb') as f:
+                pickle.dump(method_tree, f)
 
-        method_tree = reconstruct_method_tree(trace)
+        # method_tree = reconstruct_method_tree(trace)
 
         comparisons = trace['comparisons']
         attach_comparisons(method_tree, last_comparisons(comparisons))
         my_str = trace.inputstr
 
-        # print("INPUT:", my_str, file=sys.stderr)
         tree = to_tree(method_tree[method_tree.first_node], my_str)
-        tree_ = wrap_terminals(tree)
-        # print("RECONSTRUCTED INPUT:", tree_to_string(tree), file=sys.stderr)
-        my_tree = {'tree': tree_}#, 'original': call_trace['original'], 'arg': call_trace['arg']}
-        #assert util.tree_to_str(tree) == my_str
-        my_trees.append(my_tree)
+        yield wrap_terminals(tree)
 
-    return my_trees
+
+def convert_to_grammar(my_trees):
+    grammar = {}
+    ret = []
+    for my_tree in my_trees:
+        tree = my_tree['tree']
+        start = tree[0]
+        ret.append(start)
+        g = to_grammar(tree, grammar)
+        grammar = merge_grammar(grammar, g)
+    return ret, grammar
 
 
 def extract(traces: List[PolyTrackerTrace]):
-    return miner(traces)
+    trees = [{'tree': list(tree)} for tree in miner(traces)]
+    #gmethod_trees = generalize_method_trees(trees)
+    #print(json.dumps(gmethod_trees, indent=4))
+    ret, g = convert_to_grammar(trees)
+    assert len(set(ret)) == 1
+    start_symbol = ret[0]
+    g = grammartools.grammar_gc(g, start_symbol)  # garbage collect
+    g = check_empty_rules(g)  # add optional rules
+    g = grammartools.grammar_gc(g, start_symbol)  # garbage collect
+    g = collapse_rules(g)  # learn regex
+    g = grammartools.grammar_gc(g, start_symbol)  # garbage collect
+    g = convert_spaces_in_keys(g)  # fuzzable grammar
+    g = grammartools.grammar_gc(g, start_symbol)  # garbage collect
+
+    print(g)
 
     #return miner(traces)
