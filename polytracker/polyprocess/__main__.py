@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import sys
 
@@ -76,7 +77,7 @@ def main():
             sys.stderr.write(str(e))
             sys.stderr.write("\n\n")
             exit(1)
-        grammars.extract(traces)
+        print(str(grammars.extract(traces)))
 
 
 if __name__ == "__main__":
