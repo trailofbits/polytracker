@@ -1,9 +1,8 @@
 import argparse
-import json
 import logging
 import sys
 
-from .. import grammars
+from .. import grammars, tracing
 from .polyprocess import PolyProcess
 
 logger = logging.getLogger("polyprocess")
@@ -61,7 +60,7 @@ def main():
         try:
             traces = []
             for json_file, input_file in args.extract_grammar:
-                trace = grammars.PolyTrackerTrace.parse(json_file, input_file=input_file)
+                trace = tracing.PolyTrackerTrace.parse(json_file, input_file=input_file)
                 if not trace.is_cfg_connected():
                     roots = trace.cfg_roots()
                     if len(roots) == 0:
