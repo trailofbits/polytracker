@@ -14,9 +14,13 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
+using json = nlohmann::json;
+
 using polytracker::BasicBlockEntry;
 using polytracker::FunctionCall;
+using polytracker::FunctionReturn;
 using polytracker::TraceEvent;
+
 
 using namespace __dfsan;
 
@@ -98,7 +102,7 @@ int taintManager::logFunctionEntry(char* fname) {
   }
   (thread_stack_map)[this_id].push_back(new_str);
   if (recordTrace()) {
-    trace.getStack(this_id).emplace<FunctionCall>();
+    trace.getStack(this_id).emplace<FunctionCall>(fname);
   }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
@@ -116,6 +120,7 @@ void taintManager::logFunctionExit() {
         event = event->previous) {
       if (auto func = dynamic_cast<FunctionCall*>(event)) {
         foundFunction = true;
+        trace.functionReturns.emplace_back(func->fname);
         stack.pop();
         break;
       }
@@ -251,6 +256,39 @@ void taintManager::addJsonRuntimeTrace() {
   }
   fclose(polyPathFile);
   output_json["trace"]["comparisons"] = cmps;
+  std::vector<json> events;
+  for (const auto& kvp : trace.eventStacks) {
+    const auto& stack = kvp.second;
+    for (const auto event : stack.eventHistory) {
+      if (const auto call = dynamic_cast<const FunctionCall *>(event)) {
+        json j = json::object({
+          {"type", "FunctionCall"},
+          {"name", call->fname},
+          {"uid", call->eventIndex}
+        });
+        events.push_back(j);
+      } else if(const auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
+        json j = json::object({
+          {"type", "BasicBlockEntry"},
+          {"function", bb->fname},
+          {"function_index", bb->index.functionIndex()},
+          {"bb_index", bb->index.index()},
+          {"global_index", bb->index.uid()},
+          {"name", bb->str()},
+          {"uid", bb->eventIndex}
+        });
+        events.push_back(j);
+      } else if(const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
+        json j = json::object({
+          {"type", "FunctionReturn"},
+          {"name", ret->fname},
+          {"uid", ret->eventIndex}
+        });
+        events.push_back(j);
+      }
+    }
+  }
+  output_json["trace"]["full_trace"] = events;
 }
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }

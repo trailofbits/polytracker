@@ -1,8 +1,18 @@
+#include <mutex>
 #include <sstream>
 
 #include "polytracker/tracing.h"
 
 namespace polytracker {
+
+size_t numTraceEvents = 0;
+std::mutex traceEventLock;
+
+TraceEvent::TraceEvent() : previous(nullptr) {
+  traceEventLock.lock();
+  eventIndex = ++numTraceEvents;
+  traceEventLock.unlock();
+};
 
 /**
  * Calculates and memoizes the "count" of this basic block.

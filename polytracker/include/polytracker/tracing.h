@@ -20,13 +20,20 @@
 
 namespace polytracker {
 
+extern size_t numTraceEvents;
+
 struct TraceEvent {
   TraceEvent *previous;
-  TraceEvent() : previous(nullptr){};
+  size_t eventIndex;
+  TraceEvent();
   virtual ~TraceEvent() = default;
 };
 
-struct FunctionCall : public TraceEvent {};
+struct FunctionCall : public TraceEvent {
+  const char *fname;
+
+  FunctionCall(const char* fname) : fname(fname) {}
+};
 
 struct BasicBlockTrace {
   const char *fname;
@@ -98,14 +105,24 @@ public:
   std::string str() const { return BasicBlockTrace(*this).str(); }
 };
 
+struct FunctionReturn : public TraceEvent {
+  const char *fname;
+
+  FunctionReturn(const char *fname) : fname(fname) {}
+};
+
 class TraceEventStack {
   TraceEvent *head;
 
 public:
+  std::vector<const TraceEvent*> eventHistory;
+
   TraceEventStack() : head(nullptr) {}
   ~TraceEventStack() {
-    while (pop())
-      ;
+    for (auto event : eventHistory) {
+      delete event;
+    }
+    head = nullptr;
   }
   /* disallow copying to avoid the memory management headache
    * and avoid the runtime overhead of using shared pointers */
@@ -118,6 +135,7 @@ public:
   void push(TraceEvent *event) {
     event->previous = head;
     head = event;
+    eventHistory.push_back(event);
   }
   template <typename T,
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
@@ -133,7 +151,6 @@ public:
     if (head) {
       auto oldHead = head;
       head = head->previous;
-      delete oldHead;
       return true;
     } else {
       return false;
@@ -183,12 +200,13 @@ public:
 };
 
 class Trace {
-  std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
   /* lastUsages maps canonical byte offsets to the last basic block trace
    * in which they were used */
   std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
 public:
   CFG cfg;
+  std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
+  std::vector<FunctionReturn> functionReturns;
 
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
