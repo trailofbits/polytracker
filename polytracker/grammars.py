@@ -1,4 +1,5 @@
-from typing import Any, cast, Dict, ItemsView, Iterable, Iterator, List, Optional, Tuple, Union
+from io import StringIO
+from typing import Any, cast, Dict, ItemsView, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from tqdm import tqdm
 
@@ -63,9 +64,22 @@ class TreeNode:
         self.tree: MethodTree = tree
         self.bb: BasicBlockEntry = bb
 
+    @property
+    def children(self) -> 'TreeNode.ChildView':
+        return TreeNode.ChildView(self)
+
+    def __hash__(self):
+        return self.bb.uid + 1
+
+    def __eq__(self, other):
+        return isinstance(other, TreeNode) and other.bb.uid == self.bb.uid
+
     class ChildView:
         def __init__(self, node: 'TreeNode'):
             self.node: TreeNode = node
+
+        def __bool__(self):
+            return len(self) > 0
 
         def __len__(self):
             return len(self.node.bb.children)
@@ -229,12 +243,24 @@ def miner(traces: Iterable[PolyTrackerTrace]) -> Iterable[Tuple]:
         yield wrap_terminals(tree)
 
 
-def convert_to_grammar(my_trees):
+def to_grammar(node: TreeNode, grammar):
+    if not node.children:
+        return grammar
+    tokens = []
+    if node not in grammar:
+        grammar[node] = []
+    for c in node.children:
+        tokens.append(c[0])
+        to_grammar(c, grammar)
+    grammar[node].append(tuple(tokens))
+    return grammar
+
+
+def convert_to_grammar(my_trees: Iterable[MethodTree]):
     grammar = {}
     ret = []
-    for my_tree in my_trees:
-        tree = my_tree['tree']
-        start = tree[0]
+    for tree in my_trees:
+        start = tree[tree.first_node]
         ret.append(start)
         g = to_grammar(tree, grammar)
         grammar = merge_grammar(grammar, g)
@@ -246,6 +272,12 @@ class Terminal:
         if isinstance(terminal, str):
             terminal = terminal.encode('utf-8')
         self.terminal: bytes = terminal
+
+    def __eq__(self, other):
+        return isinstance(other, Terminal) and other.terminal == self.terminal
+
+    def __hash__(self):
+        return hash(self.terminal)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(terminal={self.terminal!r})"
@@ -276,8 +308,14 @@ class Rule:
         self.grammar: Grammar = grammar
         self.alternatives: Tuple[Union[Terminal, str], ...] = tuple(alternatives)
 
+    def __hash__(self):
+        return hash(self.alternatives)
+
+    def __eq__(self, other):
+        return self.alternatives == other.alternatives
+
     @staticmethod
-    def load(grammar: 'Grammar', *alternatives: str) -> 'Rule':
+    def load(grammar: 'Grammar', *alternatives: Union[Terminal, str]) -> 'Rule':
         alts = []
         for a in alternatives:
             if isinstance(a, str) and a.startswith('<') and a.endswith('>'):
@@ -312,6 +350,14 @@ class Production:
     @staticmethod
     def load(grammar: 'Grammar', name: str, *rules: Iterable[str]) -> 'Production':
         return Production(grammar, name, *(Rule.load(grammar, *alternatives) for alternatives in rules))
+
+    def add(self, rule: Rule) -> bool:
+        # check if the rule already exists
+        if rule in self.rules:
+            return False
+        self.rules = self.rules + (rule,)
+        # TODO: investigate checking for common subsequences and generating new sub-productions for those
+        return True
 
     def __iter__(self) -> Iterable[Rule]:
         return iter(self.rules)
@@ -349,11 +395,46 @@ class Grammar:
         return '\n'.join(map(str, self.productions.values()))
 
 
+def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
+    if trace.entrypoint is None:
+        raise ValueError(f"Trace {trace} does not have an entrypoint!")
+
+    grammar = Grammar()
+
+    for event in tqdm(trace, unit=" productions", leave=False, desc="extracting a base grammar"):
+        if isinstance(event, BasicBlockEntry):
+            # Add a production rule for this BB
+
+            sub_productions: List[str] = []
+
+            for token in event.consumed_tokens:
+                # Make a production rule for this terminal, or add one if it already exists:
+                terminal = Terminal(token)
+                terminal_name = f"<{terminal!s}>"
+                if terminal_name not in grammar:
+                    Production(grammar, terminal_name, Rule.load(grammar, terminal))
+                sub_productions.append(terminal_name)
+
+            for child in event.children:
+                sub_productions.append(f"<{child!s}>")
+
+            production_name = f"<{event!s}>"
+            if production_name in grammar:
+                production = grammar[production_name]
+                production.add(Rule(grammar, *sub_productions))
+            else:
+                Production(grammar, production_name, Rule.load(grammar, *sub_productions))
+
+    return grammar
+
+
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
-    trees = [{'tree': list(tree)} for tree in miner(traces)]
+    #trees = [{'tree': list(tree)} for tree in miner(traces)]
     #gmethod_trees = generalize_method_trees(trees)
     #print(json.dumps(gmethod_trees, indent=4))
-    ret, g = convert_to_grammar(trees)
+    for trace in traces:
+        print(str(trace_to_grammar(trace)))
+    ret, g = convert_to_grammar((MethodTree(trace) for trace in traces))
     assert len(set(ret)) == 1
     start_symbol = ret[0]
     g = grammartools.grammar_gc(g, start_symbol)  # garbage collect

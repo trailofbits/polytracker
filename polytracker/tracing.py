@@ -148,10 +148,28 @@ class BasicBlockEntry(TraceEvent):
         self.function_index: int = function_index
         self.bb_index: int = bb_index
         self.global_index: int = global_index
-        self.consumed: List[int] = consumed
+        self.consumed: List[int] = sorted(consumed)
         self._entry_count: Optional[int] = None
         self._children: List[BasicBlockEntry] = []
         self._children_set: bool = False
+
+    @property
+    def consumed_tokens(self) -> Iterable[bytes]:
+        start_offset: Optional[int] = None
+        last_offset: Optional[int] = None
+        for offset in self.consumed:
+            if start_offset is None:
+                start_offset = last_offset = offset
+            elif start_offset + 1 != offset:
+                # this is not a contiguous byte sequence
+                # so yield the previous token
+                yield self.trace.inputstr[start_offset:last_offset+1]
+                start_offset = last_offset = offset
+            else:
+                # this is a contiguous byte sequence, so update its end
+                last_offset = offset
+        if start_offset is not None:
+            yield self.trace.inputstr[start_offset:last_offset+1]
 
     @property
     def children(self) -> List['BasicBlockEntry']:
@@ -263,7 +281,7 @@ class PolyTrackerTrace:
             event.uid: event for event in events
         }
         self.entrypoint: Optional[BasicBlockEntry] = None
-        for event in self.events:
+        for event in tqdm(self.events, unit=" events", leave=False, desc="initializing trace events"):
             if event.trace is not None:
                 raise ValueError(f"Event {event} is already associated with trace {event.trace}")
             event.trace = self
@@ -271,7 +289,7 @@ class PolyTrackerTrace:
                 self.entrypoint = event
         self._functions_by_idx: Optional[Dict[int, Function]] = None
         self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
-        self.inputstr = inputstr
+        self.inputstr: bytes = inputstr
         self._cfg: Optional[DiGraph[BasicBlockEntry]] = None
 
     def __len__(self):
