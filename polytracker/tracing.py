@@ -34,6 +34,20 @@ class BasicBlock:
         self.predecessors: Set[BasicBlock] = set()
         function.basic_blocks.append(self)
 
+    def is_loop_entry(self, trace: 'PolyTrackerTrace') -> bool:
+        predecessors = set(p for p in self.predecessors if self.function == p.function)
+        if len(predecessors) < 2:
+            return False
+        dominators = set(trace.cfg.dominator_forest.predecessors(self))
+        # we are a loop entry if we have one predecessor that dominates us and another that doesn't
+        if not any(p in predecessors for p in dominators):
+            return False
+        return any(p not in dominators for p in predecessors)
+
+    def is_conditional(self, trace: 'PolyTrackerTrace') -> bool:
+        # we are a conditional if we have at least two children in the same function and we are not a loop entry
+        return sum(1 for c in self.children if c.function == self.function) >= 2 and not self.is_loop_entry(trace)
+
     def __hash__(self):
         return hash((self.function, self.index_in_function))
 
