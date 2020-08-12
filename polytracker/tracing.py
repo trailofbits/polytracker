@@ -150,12 +150,22 @@ class BasicBlockEntry(TraceEvent):
         self.global_index: int = global_index
         self.consumed: List[int] = consumed
         self._entry_count: Optional[int] = None
-        self.children: List[BasicBlockEntry] = []
+        self._children: List[BasicBlockEntry] = []
+        self._children_set: bool = False
 
-    def initialized(self):
+    @property
+    def children(self) -> List['BasicBlockEntry']:
+        if not self._children_set:
+            for event in self.trace.events:
+                if isinstance(event, BasicBlockEntry):
+                    event._set_children()
+        return self._children
+
+    def _set_children(self):
+        self._children_set = True
         prev = self.previous
         if isinstance(prev, BasicBlockEntry):
-            prev.children.append(self)
+            prev._children.append(self)
         elif isinstance(prev, FunctionReturn):
             try:
                 caller = prev.function_call.caller
@@ -167,12 +177,12 @@ class BasicBlockEntry(TraceEvent):
                 while prev is not None and not isinstance(prev, BasicBlockEntry):
                     prev = prev.previous
                 if isinstance(prev, BasicBlockEntry):
-                    prev.children.append(self)
+                    prev._children.append(self)
                 return
             if caller != self:
-                caller.children.append(self)
+                caller._children.append(self)
         elif isinstance(prev, FunctionCall):
-            prev.caller.children.append(self)
+            prev.caller._children.append(self)
 
     @property
     def entry_count(self) -> int:
@@ -259,8 +269,6 @@ class PolyTrackerTrace:
             event.trace = self
             if self.entrypoint is None and isinstance(event, BasicBlockEntry):
                 self.entrypoint = event
-        for event in tqdm(self.events, unit=' events', leave=False, desc='initializing'):
-            event.initialized()
         self._functions_by_idx: Optional[Dict[int, Function]] = None
         self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
         self.inputstr = inputstr
