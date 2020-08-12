@@ -10,7 +10,7 @@ std::mutex traceEventLock;
 
 TraceEvent::TraceEvent() : previous(nullptr) {
   traceEventLock.lock();
-  eventIndex = ++numTraceEvents;
+  eventIndex = numTraceEvents++;
   traceEventLock.unlock();
 };
 

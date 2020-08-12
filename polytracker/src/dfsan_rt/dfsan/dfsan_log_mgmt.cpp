@@ -62,7 +62,7 @@ void taintManager::logCompare(dfsan_label some_label) {
     // we are recording a full trace, and we know the current basic block
     if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
       // this is a canonical label
-      trace.setLastUsage(some_label, *bb);
+      trace.setLastUsage(some_label, bb);
     }
   }
   taint_prop_lock.unlock();
@@ -81,7 +81,7 @@ void taintManager::logOperation(dfsan_label some_label) {
     // we are recording a full trace, and we know the current basic block
     if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
       // this is a canonical label
-      trace.setLastUsage(some_label, *bb);
+      trace.setLastUsage(some_label, bb);
     }
   }
   taint_prop_lock.unlock();
@@ -120,8 +120,8 @@ void taintManager::logFunctionExit() {
         event = event->previous) {
       if (auto func = dynamic_cast<FunctionCall*>(event)) {
         foundFunction = true;
-        trace.functionReturns.emplace_back(func->fname);
         stack.pop();
+        stack.emplace<FunctionReturn>(func->fname, func->getCaller());
         break;
       }
       stack.pop();
@@ -142,19 +142,7 @@ void taintManager::logFunctionExit() {
  */
 void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
   taint_prop_lock.lock();
-  auto currentBB = trace.currentBB();
   auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex);
-  if (currentBB) {
-    trace.cfg.addChild(*currentBB, *event);
-  } else {
-    if (auto fCall = dynamic_cast<FunctionCall*>(trace.secondToLastEvent())) {
-      // currentBB is the first basic block in a function call
-      if (auto callingBB = dynamic_cast<BasicBlockEntry*>(fCall->previous)) {
-        // we know the basic block that called fCall
-        trace.cfg.addChild(*callingBB, *event);
-      }
-    }
-  }
   taint_prop_lock.unlock();
 }
 
@@ -208,24 +196,7 @@ json escapeChar(int c) {
 
 void taintManager::addJsonRuntimeTrace() {
   if (!recordTrace()) { return; }
-  output_json["trace"]["method_map_fmt"] =
-      "method_call_id, method_name, children";
-  size_t id = 0;
-  for (auto& bb : trace.cfg.bbs()) {
-    json entry(std::make_tuple(id, bb.str(), trace.cfg.childIds(id)));
-    output_json["trace"]["method_map"][std::to_string(id)] = entry;
-    ++id;
-  }
-  output_json["trace"]["comparisons_fmt"] = "idx, char, method_call_id";
-  std::vector<std::tuple<size_t, std::string, size_t>> cmps;
-  /* FIXME: this is somewhat of a hack. The Mimid code's JSON input format
-   * requires the character from each canonical byte of the input file, not
-   * just its offset. Therefore, we open the file passed as POLYPATH and read
-   * the bytes from it here.
-   *
-   * TODO: Find a better way to do this without re-opening the file!
-   *
-   * FIXME: This assumes that there is a single key in this->canonical_mapping
+  /* FIXME: This assumes that there is a single key in this->canonical_mapping
    * that corresponds to POLYPATH. If/when we support multiple taint sources,
    * this code will have to be updated!
    */
@@ -237,58 +208,49 @@ void taintManager::addJsonRuntimeTrace() {
     std::cout << "Warning: More than one taint source found! The resulting "
         << "runtime trace will likely be incorrect!" << std::endl;
   }
-  const std::string polyPath = canonical_mapping.begin()->first;
-  auto polyPathFile = fopen(polyPath.c_str(), "rb");
-  if (polyPathFile == nullptr) {
-    std::cout << "Unable to open file \"" << polyPath << "\" for generating "
-        << "the runtime trace!" << std::endl;
-    exit(1);
-  }
-  for (const auto& taint : trace.taints()) {
-    const auto& label = taint.first;
-    const auto& lastBB = taint.second;
-    if (fseek(polyPathFile, label - 1, SEEK_SET) == 0) {
-      auto c = fgetc(polyPathFile);
-      if (c != EOF) {
-        cmps.emplace_back(label, escapeChar(c), trace.cfg.id(lastBB));
-      }
-    }
-  }
-  fclose(polyPathFile);
-  output_json["trace"]["comparisons"] = cmps;
   std::vector<json> events;
   for (const auto& kvp : trace.eventStacks) {
     const auto& stack = kvp.second;
     for (const auto event : stack.eventHistory) {
+      json j;
       if (const auto call = dynamic_cast<const FunctionCall *>(event)) {
-        json j = json::object({
+        j = json::object({
           {"type", "FunctionCall"},
           {"name", call->fname},
-          {"uid", call->eventIndex}
         });
-        events.push_back(j);
       } else if(const auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
-        json j = json::object({
+        j = json::object({
           {"type", "BasicBlockEntry"},
           {"function", bb->fname},
           {"function_index", bb->index.functionIndex()},
           {"bb_index", bb->index.index()},
           {"global_index", bb->index.uid()},
           {"name", bb->str()},
-          {"uid", bb->eventIndex}
+          {"consumed", trace.taints(bb)}
         });
-        events.push_back(j);
       } else if(const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
-        json j = json::object({
+        j = json::object({
           {"type", "FunctionReturn"},
           {"name", ret->fname},
-          {"uid", ret->eventIndex}
         });
-        events.push_back(j);
+        if (ret->returningTo) {
+          j["returning_to_uid"] = ret->returningTo->eventIndex;
+        } else {
+          j["returning_to_uid"] = nullptr;
+        }
+      } else {
+        continue;
       }
+      j["uid"] = event->eventIndex;
+      if (event->previous) {
+        j["previous_uid"] = event->previous->eventIndex;
+      } else {
+        j["previous_uid"] = nullptr;
+      }
+      events.push_back(j);
     }
   }
-  output_json["trace"]["full_trace"] = events;
+  output_json["trace"] = events;
 }
 
 void taintManager::setOutputFilename(std::string out) { outfile = out; }

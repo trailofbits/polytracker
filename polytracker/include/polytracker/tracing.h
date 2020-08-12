@@ -29,12 +29,6 @@ struct TraceEvent {
   virtual ~TraceEvent() = default;
 };
 
-struct FunctionCall : public TraceEvent {
-  const char *fname;
-
-  FunctionCall(const char* fname) : fname(fname) {}
-};
-
 struct BasicBlockTrace {
   const char *fname;
   BBIndex index;
@@ -105,10 +99,26 @@ public:
   std::string str() const { return BasicBlockTrace(*this).str(); }
 };
 
-struct FunctionReturn : public TraceEvent {
+struct FunctionCall : public TraceEvent {
   const char *fname;
 
-  FunctionReturn(const char *fname) : fname(fname) {}
+  FunctionCall(const char* fname) : fname(fname) {}
+
+  const BasicBlockEntry *getCaller() const {
+    for (auto event = previous; event; event = event->previous) {
+      if (auto bb = dynamic_cast<const BasicBlockEntry*>(event)) {
+        return bb;
+      }
+    }
+    return nullptr;
+  }
+};
+
+struct FunctionReturn : public TraceEvent {
+  const char *fname;
+  const BasicBlockEntry *returningTo;
+
+  FunctionReturn(const char *fname, const BasicBlockEntry *returningTo) : fname(fname), returningTo(returningTo) {}
 };
 
 class TraceEventStack {
@@ -158,55 +168,13 @@ public:
   }
 };
 
-class CFG {
-  mutable std::unordered_map<BasicBlockTrace, size_t, BasicBlockTraceHasher<const BasicBlockTrace &>>
-    bbIds;
-  mutable std::vector<BasicBlockTrace> bbsById;
-  mutable std::unordered_map<size_t, std::unordered_set<size_t>> cfg;
-
-public:
-  size_t id(const BasicBlockTrace &bb) const {
-    auto bbId = bbIds.find(bb);
-    if (bbId != bbIds.end()) {
-      return bbId->second;
-    } else {
-      size_t newId = bbsById.size();
-      bbsById.push_back(bb);
-      bbIds[bb] = newId;
-      return newId;
-    }
-  }
-  const std::set<std::reference_wrapper<const BasicBlockTrace>, BasicBlockTraceComparator>
-      children(const BasicBlockTrace &bb) const {
-    std::set<std::reference_wrapper<const BasicBlockTrace>, BasicBlockTraceComparator> ret;
-    for (auto& childId : cfg[id(bb)]) {
-      ret.insert(std::cref(bbsById[childId]));
-    }
-    return ret;
-  }
-  std::set<size_t> childIds(size_t bbId) const {
-    const auto& children = cfg[bbId];
-    return std::set<size_t>(children.begin(), children.end());
-  }
-  std::set<size_t> childIds(const BasicBlockTrace &bb) const {
-    return childIds(id(bb));
-  }
-  void addChild(const BasicBlockTrace &parent, const BasicBlockTrace &child) {
-    cfg[id(parent)].emplace(id(child));
-  }
-  const std::vector<BasicBlockTrace> bbs() const {
-    return bbsById;
-  }
-};
-
 class Trace {
   /* lastUsages maps canonical byte offsets to the last basic block trace
    * in which they were used */
-  std::unordered_map<dfsan_label, BasicBlockTrace> lastUsages;
+  std::unordered_map<dfsan_label, const BasicBlockEntry *> lastUsages;
+  std::unordered_map<const BasicBlockEntry *, std::set<dfsan_label>> lastUsagesByBB;
 public:
-  CFG cfg;
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
-  std::vector<FunctionReturn> functionReturns;
 
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
@@ -239,22 +207,45 @@ public:
   /**
    * Returns the current basic block for the calling thread
    */
-  BasicBlockEntry *currentBB() const {
-    return dynamic_cast<BasicBlockEntry *>(lastEvent());
+  const BasicBlockEntry *currentBB() const {
+    auto event = lastEvent();
+    for (auto event = lastEvent(); event; event = event->previous) {
+      if(auto bbe = dynamic_cast<BasicBlockEntry *>(event)) {
+        return bbe;
+      } else if (dynamic_cast<FunctionCall *>(event)) {
+        return nullptr;
+      }
+    }
+    return nullptr;
   }
-  void setLastUsage(dfsan_label canonicalByte, BasicBlockTrace bb) {
+  void setLastUsage(dfsan_label canonicalByte, const BasicBlockEntry *bb) {
+    const auto oldValue = lastUsages.find(canonicalByte);
+    if (oldValue != lastUsages.cend()) {
+      // We are updating the last usage,
+      // so remove the old value from the reverse map
+      lastUsagesByBB[oldValue->second].erase(canonicalByte);
+    }
     lastUsages[canonicalByte] = bb;
+    lastUsagesByBB[bb].insert(canonicalByte);
   }
-  const BasicBlockTrace *getLastUsage(dfsan_label label) const {
+  const BasicBlockEntry *getLastUsage(dfsan_label label) const {
     auto luIter = lastUsages.find(label);
     if (luIter != lastUsages.end()) {
-      return &luIter->second;
+      return luIter->second;
     } else {
       return nullptr;
     }
   }
   decltype(lastUsages) taints() const {
     return lastUsages;
+  }
+  const std::set<dfsan_label> taints(const BasicBlockEntry *bb) const {
+    const auto ret = lastUsagesByBB.find(bb);
+    if (ret == lastUsagesByBB.cend()) {
+      return {};
+    } else {
+      return ret->second;
+    }
   }
 };
 

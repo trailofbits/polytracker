@@ -1,42 +1,89 @@
-from typing import Any, Dict, ItemsView, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, cast, Dict, ItemsView, Iterable, Iterator, List, Optional, Tuple, Union
 
-from .cfg import DiGraph, non_disjoint_union_all
+from tqdm import tqdm
 
 from .mimid.treeminer import attach_comparisons, indexes_to_children, last_comparisons, no_overlap, wrap_terminals
 from .mimid.grammarminer import check_empty_rules, collapse_rules, convert_spaces_in_keys, merge_grammar, to_grammar
 from .mimid import grammartools
-from .tracing import PolyTrackerTrace, BasicBlockInvocation
+from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace
+
+
+class StartNode:
+    def __init__(self, tree: 'MethodTree', child_uid: int):
+        self.tree: MethodTree = tree
+        self.child_uid: int = child_uid
+
+    class ChildView:
+        def __init__(self, start: 'StartNode'):
+            self.start: StartNode = start
+
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, index: int) -> 'TreeNode':
+            if index != 0:
+                raise IndexError(index)
+            return self.start.tree[self.start.child_uid]
+
+        def __iter__(self) -> Iterable['TreeNode']:
+            yield self[0]
+
+    def __len__(self):
+        return 1
+
+    def __eq__(self, other):
+        return isinstance(other, StartNode) and other.child_uid == self.child_uid
+
+    def __hash__(self):
+        return self.child_uid
+
+    def __getitem__(self, key: str) -> Union[None, int, List, 'StartNode.ChildView']:
+        if key == 'name':
+            return None
+        elif key == 'id':
+            return 0
+        elif key == 'indexes':
+            return []
+        elif key == 'children':
+            return StartNode.ChildView(self)
+        else:
+            raise KeyError(key)
+
+    def get(self, key: str, default: Union[int, str, List, 'TreeNode.ChildView'] = None) -> Optional[Union[
+        int, str, List, 'TreeNode.ChildView'
+    ]]:
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
 
 class TreeNode:
-    def __init__(self, tree: 'MethodTree', uid: int, name: str):
+    def __init__(self, tree: 'MethodTree', bb: BasicBlockEntry):
         self.tree: MethodTree = tree
-        self.id: int = uid
-        self.name: str = name
-        self.indexes: List = []
-        self.children: List[int] = []
+        self.bb: BasicBlockEntry = bb
 
     class ChildView:
         def __init__(self, node: 'TreeNode'):
             self.node: TreeNode = node
 
         def __len__(self):
-            return len(self.node.children)
+            return len(self.node.bb.children)
 
-        def __getitem__(self, index: int):
-            return self.node.tree.nodes_by_id[self.node.children[index]]
+        def __getitem__(self, index: int) -> 'TreeNode':
+            return self.node.tree[self.node.bb.children[index].uid + 1]
 
         def __iter__(self) -> Iterable['TreeNode']:
-            for child in self.node.children:
-                yield self.node.tree.nodes_by_id[child]
+            for child in self.node.bb.children:
+                yield self.node.tree[child.uid + 1]
 
     def __getitem__(self, key: str) -> Union[int, str, List, 'TreeNode.ChildView']:
         if key == 'name':
-            return self.name
+            return str(self.bb)
         elif key == 'id':
-            return self.id
+            return self.bb.uid + 1
         elif key == 'indexes':
-            return self.indexes
+            return self.bb.consumed
         elif key == 'children':
             return TreeNode.ChildView(self)
         else:
@@ -52,46 +99,36 @@ class TreeNode:
 
 
 class MethodTree:
-    def __init__(self):
+    def __init__(self, trace: PolyTrackerTrace):
         self.first_node: int = 0
-        self.nodes_by_id: Dict[int, TreeNode] = {}
+        self.num_nodes = 1 + sum(1 for e in trace.events if isinstance(e, BasicBlockEntry))
+        self.trace: PolyTrackerTrace = trace
+        if self.trace.entrypoint is None:
+            raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
-    def __getitem__(self, uid: int) -> TreeNode:
-        return self.nodes_by_id[uid]
+    def __getitem__(self, uid: int) -> Union[StartNode, TreeNode]:
+        if uid == 0:
+            return StartNode(self, self.trace.entrypoint.uid + 1)
+        else:
+            bbentry = self.trace[uid - 1]
+            if isinstance(bbentry, BasicBlockEntry):
+                return TreeNode(self, bbentry)
+            else:
+                raise ValueError(f"Trace event {uid - 1} was expected to be a BasicBlockEntry, "
+                                 f"but was instead {bbentry!r}")
 
     def __contains__(self, uid: int):
-        return uid in self.nodes_by_id
+        return uid == 0 or (uid - 1) in self.trace
 
     def __len__(self):
-        return len(self.nodes_by_id)
+        return self.num_nodes
 
     def __iter__(self):
-        return iter(self.nodes_by_id)
+        return range(self.num_nodes)
 
-    def items(self) -> ItemsView[int, TreeNode]:
-        return self.nodes_by_id.items()
-
-
-def reconstruct_method_tree(*traces: PolyTrackerTrace) -> MethodTree:
-    if not traces:
-        raise ValueError("At least one trace is required to reconstruct the method tree!")
-    unified_graph: DiGraph[BasicBlockInvocation] = non_disjoint_union_all(*(trace.cfg for trace in traces))
-    tree = unified_graph.dominator_forest
-    if len(tree.roots) != 1:
-        raise ValueError("The unified dominator forest has multiple roots!"
-                         "This probably means one of the input traces was disconnected.")
-    tree_map: MethodTree = MethodTree()
-    first_node: Optional[BasicBlockInvocation] = None
-    for n in tree.nodes:
-        if first_node is None or first_node.id > n.id:
-            first_node = n
-        assert n.id not in tree_map
-        tree_map.nodes_by_id[n.id] = TreeNode(tree_map, n.id, n.name)
-    for n1, n2 in tree.edges:
-        tree_map.nodes_by_id[n1.id].children.append(n2.id)
-    tree_map.first_node = first_node.id
-
-    return tree_map
+    def items(self) -> Iterable[Tuple[int, TreeNode]]:
+        for i in range(self.num_nodes):
+            yield i, self[i]
 
 
 class Tree:
@@ -136,7 +173,7 @@ def to_tree(node: TreeNode, my_str: bytes) -> Tree:
     while call_stack:
         t = call_stack[-1]
         try:
-            next_child = MethodTree.Node = next(t.remaining_children)
+            next_child: TreeNode = next(t.remaining_children)
             call_stack.append(Tree(next_child, parent=t))
             continue
         except StopIteration:
@@ -182,10 +219,10 @@ def miner(traces: Iterable[PolyTrackerTrace]) -> Iterable[Tuple]:
         #     with open(CACHE_FILE, 'wb') as f:
         #         pickle.dump(method_tree, f)
 
-        method_tree = reconstruct_method_tree(trace)
+        method_tree = MethodTree(trace)
 
-        comparisons = trace['comparisons']
-        attach_comparisons(method_tree, last_comparisons(comparisons))
+        # comparisons = trace['comparisons']
+        # attach_comparisons(method_tree, last_comparisons(comparisons))
         my_str = trace.inputstr
 
         tree = to_tree(method_tree[method_tree.first_node], my_str)
@@ -312,7 +349,7 @@ class Grammar:
         return '\n'.join(map(str, self.productions.values()))
 
 
-def extract(traces: List[PolyTrackerTrace]) -> Grammar:
+def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     trees = [{'tree': list(tree)} for tree in miner(traces)]
     #gmethod_trees = generalize_method_trees(trees)
     #print(json.dumps(gmethod_trees, indent=4))

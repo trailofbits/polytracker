@@ -62,13 +62,13 @@ def main():
             for json_file, input_file in args.extract_grammar:
                 trace = tracing.PolyTrackerTrace.parse(json_file, input_file=input_file)
                 if not trace.is_cfg_connected():
-                    roots = trace.cfg_roots()
+                    roots = list(trace.cfg_roots())
                     if len(roots) == 0:
                         sys.stderr.write(f"Error: Basic block trace of {json_file} has no roots!\n\n")
                     else:
                         sys.stderr.write(f"Error: Basic block trace of {json_file} has multiple roots:\n")
                         for r in roots:
-                            sys.stderr.write(f"\t{ trace.method_map[r].name }\n")
+                            sys.stderr.write(f"\t{ str(r) }\n")
                         sys.stderr.write("\n")
                     exit(1)
                 traces.append(trace)
