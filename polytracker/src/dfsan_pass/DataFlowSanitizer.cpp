@@ -1014,13 +1014,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     Value *FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
     auto store_inst =
         IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, FuncName), FrameIndex);
-    // Add instrumentation for the basic block entrypoint afterward
-    {
-      Value *BBIndex =
-          ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
-      IRBuilder<> IRB(store_inst->getNextNode());
-      IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex});
-    }
 
 #ifdef DEBUG_INFO
     llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
@@ -1058,12 +1051,19 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Instruction *Inst = &curr_bb->front();
 
       // Add a callback for BB entry
-      if(curr_bb != &(i->getEntryBlock())) {
+      {
         // we do not need to instrument the entry block of a function
         // because we do that above when we add the function instrumentation
         Value *BBIndex =
             ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
-        Instruction *InsertBefore = Inst;
+        Instruction *InsertBefore;
+        if (curr_bb == BB) {
+          // this is the entrypoint basic block in a function, so make sure the
+          // BB instrumentation happens after the function call instrumentation
+          InsertBefore = store_inst->getNextNode();
+        } else {
+          InsertBefore = Inst;
+        }
         while (isa<PHINode>(InsertBefore) ||
                isa<LandingPadInst>(InsertBefore)) {
           // This is a PHI or landing pad instruction,
