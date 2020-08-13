@@ -1080,16 +1080,16 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       }
       while (true) {
         Instruction *Next = Inst->getNextNode();
-        CallInst *potential_call = dyn_cast<CallInst>(Inst);
-        if (potential_call != nullptr) {
-          Function *F = potential_call->getCalledFunction();
-          if (F != nullptr) {
+        bool IsTerminator = isa<TerminatorInst>(Inst);
+        if (CallInst *call = dyn_cast<CallInst>(Inst)) {
+          if (Function *F = call->getCalledFunction()) {
             if (F->getName() == "setjmp" || F->getName() == "sigsetjump" ||
                 F->getName() == "_setjmp") {
               // Insert before the next inst.
               IRBuilder<> IRB(Next);
               IRB.CreateCall(DFSanResetFrameFn, FrameIndex);
-            } else {
+            } else if (!IsTerminator) {
+              // This call is not the final instruction in this BB
               // Record that we returned back into the basic block from the
               // function call
               Value *BBIndex2 = ConstantInt::get(IntegerType::getInt32Ty(*Ctx),
@@ -1100,13 +1100,14 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
                       polytracker::getType(curr_bb, DFSF.DT) |
                       polytracker::BasicBlockType::FUNCTION_RETURN),
                   false);
-              IRBuilder<> IRB(Next->getNextNode());
+              // from the instrumentation's perspective, make the
+              // remainder of this BB after the call a new BB
+              IRBuilder<> IRB(Next);
               IRB.CreateCall(DFSanEntryBBFn,
                              {FuncName, FuncIndex, BBIndex2, BBType});
             }
           }
         }
-        bool IsTerminator = isa<TerminatorInst>(Inst);
         if (IsTerminator)
           break;
         Inst = Next;
