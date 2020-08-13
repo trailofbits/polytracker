@@ -1095,7 +1095,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
                   ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++,
                       false);
               Value *BBType =
-                  ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT)), false);
+                  ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT) | polytracker::BasicBlockType::FUNCTION_RETURN), false);
               IRBuilder<> IRB(Next->getNextNode());
               IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex2, BBType});
             }
