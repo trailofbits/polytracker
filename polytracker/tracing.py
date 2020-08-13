@@ -141,6 +141,9 @@ class FunctionCall(TraceEvent):
             raise TypeError(f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}")
         return prev
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
+
 
 class BasicBlockEntry(TraceEvent):
     event_type = 'BasicBlockEntry'
@@ -166,6 +169,30 @@ class BasicBlockEntry(TraceEvent):
         self._entry_count: Optional[int] = None
         self._children: List[BasicBlockEntry] = []
         self._children_set: bool = False
+        self._predecessors: List[BasicBlockEntry] = []
+
+    def remove(self) -> bool:
+        if len(self.predecessors) > 1:
+            return False
+        elif len(self.children) > 1:
+            return False
+        elif len(self.predecessors) == 1 and len(self.children) == 1 and isinstance(self.previous, BasicBlockEntry):
+            self.predecessors[0]._children.remove(self)
+            self.predecessors[0]._children.append(self.children[0])
+            self.children[0]._predecessors.remove(self)
+            self.children[0]._predecessors.append(self.predecessors[0])
+            self.children[0].consumed = list(set(self.children[0].consumed + self.consumed))
+            self.children[0].previous_uid = self.previous_uid
+        elif len(self.children) == 1:
+            self.children[0]._predecessors.remove(self)
+            self.children[0].previous_uid = None
+            self.children[0].consumed = list(set(self.children[0].consumed + self.consumed))
+        elif len(self.predecessors) == 1:
+            self.predecessors[0]._children.remove(self)
+            self.predecessors[0].consumed = list(set(self.predecessors[0].consumed + self.consumed))
+        elif self.consumed:
+            return False
+        return True
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
@@ -193,15 +220,22 @@ class BasicBlockEntry(TraceEvent):
                     event._set_children()
         return self._children
 
+    @property
+    def predecessors(self) -> List['BasicBlockEntry']:
+        if not self._children_set:
+            _ = self.children
+        return self._predecessors
+
     def _set_children(self):
         self._children_set = True
         prev = self.previous
         if isinstance(prev, BasicBlockEntry):
             prev._children.append(self)
+            self._predecessors.append(prev)
         elif isinstance(prev, FunctionReturn):
             try:
                 caller = prev.function_call.caller
-            except ValueError:
+            except (ValueError, TypeError):
                 # This just means there were not matching function calls,
                 # which is likely due to an instrumentation error
                 # (this can sometimes happen on the first function in the trace)
@@ -210,11 +244,15 @@ class BasicBlockEntry(TraceEvent):
                     prev = prev.previous
                 if isinstance(prev, BasicBlockEntry):
                     prev._children.append(self)
+                    self._predecessors.append(prev)
                 return
             if caller != self:
                 caller._children.append(self)
+                self._predecessors.append(caller)
         elif isinstance(prev, FunctionCall):
-            prev.caller._children.append(self)
+            if prev.previous is not None and isinstance(prev.previous, BasicBlockEntry):
+                prev.caller._children.append(self)
+                self._predecessors.append(prev.caller)
 
     @property
     def entry_count(self) -> int:
@@ -246,6 +284,10 @@ class FunctionReturn(TraceEvent):
         self.returning_to_uid: Optional[int] = returning_to_uid
         self._returning_to: Optional[BasicBlockEntry] = None
         self._function_call: Optional[Union[FunctionCall, ValueError]] = None
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.function_name!r}, "\
+               f"{self.returning_to_uid!r})"
 
     @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
@@ -312,6 +354,26 @@ class PolyTrackerTrace:
     def __iter__(self) -> Iterable[TraceEvent]:
         return iter(self.events)
 
+    def simplify(self) -> int:
+        reductions = 0
+        # first, remove trivial basic blocks (that have at most once predecessor and one successor)
+        to_remove = set()
+        for event in self.events:
+            if isinstance(event, BasicBlockEntry):
+                if len(event.basic_block.predecessors) <= 1 and len(event.basic_block.children) <= 1:
+                    if not event.remove():
+                        continue
+                    to_remove.add(event)
+                    reductions += 1
+
+        self.events = [event for event in self.events if event not in to_remove]
+
+        if reductions > 0:
+            # invalidate our caches
+            self._cfg = None
+
+        return reductions
+
     @property
     def functions(self) -> Iterable[Function]:
         if self._functions_by_idx is None:
@@ -346,6 +408,7 @@ class PolyTrackerTrace:
         return self._basic_blocks_by_idx.values()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
+        _ = self.basic_blocks
         return self._basic_blocks_by_idx[entry.global_index]
 
     def __getitem__(self, uid: int) -> TraceEvent:

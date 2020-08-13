@@ -399,6 +399,8 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
+    #trace.simplify()
+
     grammar = Grammar()
 
     for event in tqdm(trace, unit=" productions", leave=False, desc="extracting a base grammar"):
