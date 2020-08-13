@@ -106,7 +106,7 @@ class PolyBuilder:
                 compile_command.append(lib)
         ret_code = subprocess.call(compile_command)
         if ret_code != 0:
-            print(f"Error! Failed to execute compile command: {compile_command}")
+            print(f"Error! Failed to execute compile command: {' '.join(compile_command)}")
             return False
         return True
 
