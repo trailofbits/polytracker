@@ -94,6 +94,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 // For out of source registration
 #include "dfsan/dfsan_types.h"
+#include "polytracker/basic_block_utils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -1059,7 +1060,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
             ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
         Instruction *InsertBefore;
         Value *BBType =
-            ConstantInt::get(IntegerType::getInt8Ty(*Ctx), 0, false);
+            ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT)), false);
         if (curr_bb == BB) {
           // this is the entrypoint basic block in a function, so make sure the
           // BB instrumentation happens after the function call instrumentation
@@ -1093,8 +1094,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
               Value *BBIndex2 =
                   ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++,
                       false);
+              Value *BBType =
+                  ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT)), false);
               IRBuilder<> IRB(Next->getNextNode());
-              IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex2});
+              IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex2, BBType});
             }
           }
         }

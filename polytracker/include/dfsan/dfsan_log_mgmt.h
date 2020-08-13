@@ -5,7 +5,6 @@
 #include "json.hpp"
 #include "polytracker/polytracker.h"
 #include "polytracker/tracing.h"
-#include "polytracker/basic_block_types.h"
 #include <iostream>
 #include <list>
 #include <map>

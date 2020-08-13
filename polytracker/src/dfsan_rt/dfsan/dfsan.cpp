@@ -22,7 +22,7 @@
 
 #include "dfsan/dfsan_log_mgmt.h"
 #include "polytracker/polytracker.h"
-#include "polytracker/basic_block_types.h"
+#include "polytracker/tracing.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
