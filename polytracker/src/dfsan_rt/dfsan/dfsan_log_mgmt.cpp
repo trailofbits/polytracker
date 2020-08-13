@@ -21,6 +21,7 @@ using polytracker::BasicBlockType;
 using polytracker::FunctionCall;
 using polytracker::FunctionReturn;
 using polytracker::TraceEvent;
+using polytracker::hasType;
 
 
 using namespace __dfsan;
@@ -229,6 +230,26 @@ void taintManager::addJsonRuntimeTrace() {
           {"name", bb->str()},
           {"consumed", trace.taints(bb)}
         });
+        std::vector<std::string> types;
+        if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {
+          types.push_back("conditional");
+        }
+        if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
+          types.push_back("function_entry");
+        }
+        if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
+          types.push_back("function_return");
+        }
+        if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
+          types.push_back("loop_entry");
+        }
+        if (hasType(bb->type, BasicBlockType::LOOP_EXIT)) {
+          types.push_back("loop_exit");
+        }
+        if (hasType(bb->type, BasicBlockType::UNKNOWN)) {
+          types.push_back("unknown");
+        }
+        j["types"] = types;
       } else if(const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
         j = json::object({
           {"type", "FunctionReturn"},
