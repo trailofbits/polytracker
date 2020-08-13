@@ -610,10 +610,9 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
-  Type *DFSanEntryBBArgs[4] = {Type::getInt8PtrTy(*Ctx),
-                               IntegerType::getInt32Ty(*Ctx),
-                               IntegerType::getInt32Ty(*Ctx),
-                               IntegerType::getInt8Ty(*Ctx)};
+  Type *DFSanEntryBBArgs[4] = {
+      Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx),
+      IntegerType::getInt32Ty(*Ctx), IntegerType::getInt8Ty(*Ctx)};
   DFSanEntryBBFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
   DFSanExitBBFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
@@ -1059,8 +1058,10 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Value *BBIndex =
             ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
         Instruction *InsertBefore;
-        Value *BBType =
-            ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT)), false);
+        Value *BBType = ConstantInt::get(
+            IntegerType::getInt8Ty(*Ctx),
+            static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT)),
+            false);
         if (curr_bb == BB) {
           // this is the entrypoint basic block in a function, so make sure the
           // BB instrumentation happens after the function call instrumentation
@@ -1091,13 +1092,17 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
             } else {
               // Record that we returned back into the basic block from the
               // function call
-              Value *BBIndex2 =
-                  ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++,
-                      false);
-              Value *BBType =
-                  ConstantInt::get(IntegerType::getInt8Ty(*Ctx), static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT) | polytracker::BasicBlockType::FUNCTION_RETURN), false);
+              Value *BBIndex2 = ConstantInt::get(IntegerType::getInt32Ty(*Ctx),
+                                                 bbIndex++, false);
+              Value *BBType = ConstantInt::get(
+                  IntegerType::getInt8Ty(*Ctx),
+                  static_cast<uint8_t>(
+                      polytracker::getType(curr_bb, DFSF.DT) |
+                      polytracker::BasicBlockType::FUNCTION_RETURN),
+                  false);
               IRBuilder<> IRB(Next->getNextNode());
-              IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex2, BBType});
+              IRB.CreateCall(DFSanEntryBBFn,
+                             {FuncName, FuncIndex, BBIndex2, BBType});
             }
           }
         }

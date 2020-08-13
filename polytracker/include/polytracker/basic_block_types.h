@@ -3,15 +3,14 @@
 
 namespace polytracker {
 
-#define ENABLE_BITMASK_OPERATOR(EnumClass, oper) \
-constexpr EnumClass operator oper(EnumClass lhs, EnumClass rhs) { \
-  using underlying = typename std::underlying_type<EnumClass>::type; \
-  return static_cast<EnumClass> ( \
-    static_cast<underlying>(lhs) oper static_cast<underlying>(rhs) \
-  ); \
-}
-#define ENABLE_BITMASK_OPERATORS(EnumClass) \
-ENABLE_BITMASK_OPERATOR(EnumClass, |)
+#define ENABLE_BITMASK_OPERATOR(EnumClass, oper)                               \
+  constexpr EnumClass operator oper(EnumClass lhs, EnumClass rhs) {            \
+    using underlying = typename std::underlying_type<EnumClass>::type;         \
+    return static_cast<EnumClass>(static_cast<underlying>(lhs)                 \
+                                      oper static_cast<underlying>(rhs));      \
+  }
+#define ENABLE_BITMASK_OPERATORS(EnumClass)                                    \
+  ENABLE_BITMASK_OPERATOR(EnumClass, |)
 
 enum struct BasicBlockType : uint8_t {
   UNKNOWN = 0,
@@ -24,6 +23,6 @@ enum struct BasicBlockType : uint8_t {
 };
 ENABLE_BITMASK_OPERATORS(BasicBlockType)
 
-};
+}; // namespace polytracker
 
 #endif /* POLYTRACKER_INCLUDE_POLYTRACKER_BASIC_BLOCK_TYPES_H_ */

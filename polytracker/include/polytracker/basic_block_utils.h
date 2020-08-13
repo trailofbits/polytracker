@@ -12,18 +12,18 @@ namespace polytracker {
 using llvm::BasicBlock;
 using llvm::DominatorTree;
 
-BasicBlockType getType(const BasicBlock* bb, const DominatorTree& dt) {
+BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
   size_t dominatedPredecessors = 0;
   size_t totalPredecessors = 0;
   size_t dominatingSuccessors = 0;
   size_t totalSuccessors = 0;
-  for (const BasicBlock* pred : llvm::predecessors(bb)) {
+  for (const BasicBlock *pred : llvm::predecessors(bb)) {
     ++totalPredecessors;
     if (dt.dominates(bb, pred)) {
       ++dominatedPredecessors;
     }
   }
-  for (const BasicBlock* succ : llvm::successors(bb)) {
+  for (const BasicBlock *succ : llvm::successors(bb)) {
     ++totalSuccessors;
     if (dt.dominates(succ, bb)) {
       ++dominatingSuccessors;
@@ -41,11 +41,11 @@ BasicBlockType getType(const BasicBlock* bb, const DominatorTree& dt) {
       ret = ret | BasicBlockType::CONDITIONAL;
     }
   } else if (totalSuccessors > dominatingSuccessors) {
-      ret = ret | BasicBlockType::LOOP_EXIT;
+    ret = ret | BasicBlockType::LOOP_EXIT;
   }
   return ret;
 }
 
-};
+}; // namespace polytracker
 
 #endif /* POLYTRACKER_INCLUDE_POLYTRACKER_BASIC_BLOCK_UTILS_H_ */
