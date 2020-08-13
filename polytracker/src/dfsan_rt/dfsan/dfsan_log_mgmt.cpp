@@ -17,6 +17,7 @@
 using json = nlohmann::json;
 
 using polytracker::BasicBlockEntry;
+using polytracker::BasicBlockType;
 using polytracker::FunctionCall;
 using polytracker::FunctionReturn;
 using polytracker::TraceEvent;
@@ -140,9 +141,9 @@ void taintManager::logFunctionExit() {
  * It will only be called if taintManager::recordTrace() is true,
  * which will only be set if the POLYTRACE environment variable is set.
  */
-void taintManager::logBBEntry(char *fname, BBIndex bbIndex) {
+void taintManager::logBBEntry(char *fname, BBIndex bbIndex, BasicBlockType bbType) {
   taint_prop_lock.lock();
-  auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex);
+  auto event = trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
   taint_prop_lock.unlock();
 }
 

@@ -609,9 +609,10 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
-  Type *DFSanEntryBBArgs[3] = {Type::getInt8PtrTy(*Ctx),
+  Type *DFSanEntryBBArgs[4] = {Type::getInt8PtrTy(*Ctx),
                                IntegerType::getInt32Ty(*Ctx),
-                               IntegerType::getInt32Ty(*Ctx)};
+                               IntegerType::getInt32Ty(*Ctx),
+                               IntegerType::getInt8Ty(*Ctx)};
   DFSanEntryBBFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
   DFSanExitBBFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
@@ -1057,6 +1058,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Value *BBIndex =
             ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
         Instruction *InsertBefore;
+        Value *BBType =
+            ConstantInt::get(IntegerType::getInt8Ty(*Ctx), 0, false);
         if (curr_bb == BB) {
           // this is the entrypoint basic block in a function, so make sure the
           // BB instrumentation happens after the function call instrumentation
@@ -1071,7 +1074,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           InsertBefore = InsertBefore->getNextNode();
         }
         IRBuilder<> IRB(InsertBefore);
-        IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex});
+        IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex, BBType});
       }
       while (true) {
         Instruction *Next = Inst->getNextNode();
@@ -1084,6 +1087,14 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
               // Insert before the next inst.
               IRBuilder<> IRB(Next);
               IRB.CreateCall(DFSanResetFrameFn, FrameIndex);
+            } else {
+              // Record that we returned back into the basic block from the
+              // function call
+              Value *BBIndex2 =
+                  ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++,
+                      false);
+              IRBuilder<> IRB(Next->getNextNode());
+              IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex2});
             }
           }
         }

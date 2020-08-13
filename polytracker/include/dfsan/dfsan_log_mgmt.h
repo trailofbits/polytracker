@@ -5,6 +5,7 @@
 #include "json.hpp"
 #include "polytracker/polytracker.h"
 #include "polytracker/tracing.h"
+#include "polytracker/basic_block_types.h"
 #include <iostream>
 #include <list>
 #include <map>
@@ -91,7 +92,7 @@ public:
   void logOperation(dfsan_label some_label);
   int logFunctionEntry(char *fname);
   void logFunctionExit();
-  void logBBEntry(char *fname, BBIndex bbIndex);
+  void logBBEntry(char *fname, BBIndex bbIndex, polytracker::BasicBlockType bbType);
   void logBBExit();
   void resetFrame(int *index);
   void output();

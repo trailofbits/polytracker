@@ -22,6 +22,7 @@
 
 #include "dfsan/dfsan_log_mgmt.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/basic_block_types.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -134,7 +135,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
-    uint32_t functionIndex, uint32_t bbIndex) {
+    uint32_t functionIndex, uint32_t bbIndex, polytracker::BasicBlockType bbType) {
   init_lock.lock();
   if (is_init == false) {
     dfsan_late_late_init();
@@ -143,7 +144,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
   init_lock.unlock();
 
   if (taint_manager->recordTrace()) {
-    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex));
+    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex), bbType);
   }
 }
 

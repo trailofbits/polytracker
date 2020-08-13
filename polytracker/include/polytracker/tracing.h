@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "dfsan/dfsan_types.h"
+#include "polytracker/basic_block_types.h"
 
 namespace polytracker {
 
@@ -84,9 +85,10 @@ class BasicBlockEntry : public TraceEvent {
 public:
   const char *fname;
   BBIndex index;
+  BasicBlockType type;
 
-  BasicBlockEntry(const char *fname, BBIndex index)
-      : entryCounter(0), fname(fname), index(index) {}
+  BasicBlockEntry(const char *fname, BBIndex index, BasicBlockType type)
+      : entryCounter(0), fname(fname), index(index), type(type) {}
 
   size_t entryCount() const;
 
