@@ -28,11 +28,14 @@ ENABLE_BITMASK_OPERATORS(BasicBlockType)
 
 #if __cplusplus < 201402L
 #define ENABLE_IF_CPP14(X)
+#define ENABLE_IF_NOT_CPP14(X) X
 #else
 #define ENABLE_IF_CPP14(X) X
+#define ENABLE_IF_NOT_CPP14(X)
 #endif
 
 ENABLE_IF_CPP14(constexpr)
+ENABLE_IF_NOT_CPP14(inline)
 bool hasType(BasicBlockType toCheck, BasicBlockType type) {
   if (type == BasicBlockType::UNKNOWN) {
     return toCheck == type;
