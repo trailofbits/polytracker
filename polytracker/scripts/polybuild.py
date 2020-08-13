@@ -128,7 +128,7 @@ class PolyBuilder:
         opt_command += [input_file, "-o", bitcode_file]
         ret_code = subprocess.call(opt_command)
         if ret_code != 0:
-            print("Error! opt command failed!")
+            print(f"Error! opt command failed: {' '.join(opt_command)}")
             return False
         if not os.path.exists(bitcode_file):
             print("Error! Bitcode file does not exist!")
