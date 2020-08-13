@@ -134,8 +134,9 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   return taint_manager->logFunctionEntry(fname);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
-    uint32_t functionIndex, uint32_t bbIndex, polytracker::BasicBlockType bbType) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
+    char *fname, uint32_t functionIndex, uint32_t bbIndex,
+    std::underlying_type<polytracker::BasicBlockType>::type bbType) {
   init_lock.lock();
   if (is_init == false) {
     dfsan_late_late_init();
@@ -144,7 +145,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(char *fname,
   init_lock.unlock();
 
   if (taint_manager->recordTrace()) {
-    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex), bbType);
+    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex),
+                              static_cast<polytracker::BasicBlockType>(bbType));
   }
 }
 
@@ -167,7 +169,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_exit() {
     taint_manager->logBBExit();
   }
 }
-
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
@@ -397,14 +398,14 @@ void dfsan_parse_env() {
   if (poly_trace == NULL) {
     polytracker_trace = false;
   } else {
-	auto trace_str = std::string(poly_trace);
-	std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-	    [](unsigned char c){ return std::tolower(c); });
-	if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
-		polytracker_trace = false;
-	} else {
-		polytracker_trace = true;
-	}
+    auto trace_str = std::string(poly_trace);
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace = false;
+    } else {
+      polytracker_trace = true;
+    }
   }
 
   taint_manager->setOutputFilename(std::string(polytracker_output_filename));
