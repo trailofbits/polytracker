@@ -94,7 +94,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 // For out of source registration
 #include "dfsan/dfsan_types.h"
-#include "polytracker/bb_splitting_pass.h"
+//#include "polytracker/bb_splitting_pass.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -1883,15 +1883,14 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 }
 
 void DataFlowSanitizer::getAnalysisUsage(AnalysisUsage &info) const {
-  info.addRequired<polytracker::BBSplittingPass>();
-  info.addPreserved<polytracker::BBSplittingPass>();
+  // info.addRequired<polytracker::BBSplittingPass>();
+  // info.addPreserved<polytracker::BBSplittingPass>();
 }
 
 static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass");
 
 static void registerAflDFSanPass(const PassManagerBuilder &,
                                  legacy::PassManagerBase &PM) {
-
   PM.add(new DataFlowSanitizer());
 }
 

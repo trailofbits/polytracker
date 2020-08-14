@@ -23,6 +23,7 @@
 from collections import defaultdict
 import argparse
 import os
+import tempfile
 import sys
 import subprocess
 from typing import List, Optional
@@ -110,30 +111,51 @@ class PolyBuilder:
             return False
         return True
 
-    def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
-        opt_command = ["opt", "-O0", "-load",
-                       os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
-        ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
-        if ignore_list_files is None:
-            print("Error! Failed to add ignore lists")
-            return False
-        track_list_files: Optional[List[str]] = self.poly_add_inst_lists("track_lists")
-        if track_list_files is None:
-            print("Error! Failed to add track_lists")
-            return False
-        for file in ignore_list_files:
-            opt_command.append("-polytrack-dfsan-abilist=" + file)
-        for file in track_list_files:
-            opt_command.append("-polytrack-dfsan-abilist=" + file)
+    def split_bbs(self, input_file: str, bitcode_file: str) -> bool:
+        opt_command = ["opt", "-O0",
+                       "-load", os.path.join(self.meta.compiler_dir, "pass", "libBBSplittingPass.so"),
+                       "-bbsplit"]
         opt_command += [input_file, "-o", bitcode_file]
         ret_code = subprocess.call(opt_command)
         if ret_code != 0:
-            print("Error! opt command failed!")
-            return False
-        if not os.path.exists(bitcode_file):
-            print("Error! Bitcode file does not exist!")
+            print(f"Error running the basic block splitting pass: {' '.join(opt_command)}")
             return False
         return True
+
+    def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
+        # First, run the BB splitting pass
+        first_pass_file = tempfile.NamedTemporaryFile(prefix="bbsplit", suffix=".bc", delete=False).name
+        try:
+            if not self.split_bbs(input_file=input_file, bitcode_file=first_pass_file):
+                return False
+
+            opt_command = ["opt", "-O0",
+                           "-load", os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
+            ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
+            if ignore_list_files is None:
+                print("Error! Failed to add ignore lists")
+                return False
+            track_list_files: Optional[List[str]] = self.poly_add_inst_lists("track_lists")
+            if track_list_files is None:
+                print("Error! Failed to add track_lists")
+                return False
+            for file in ignore_list_files:
+                opt_command.append("-polytrack-dfsan-abilist=" + file)
+            for file in track_list_files:
+                opt_command.append("-polytrack-dfsan-abilist=" + file)
+            opt_command += [first_pass_file, "-o", bitcode_file]
+            ret_code = subprocess.call(opt_command)
+            if ret_code != 0:
+                print(f"Error! opt command failed: {' '.join(opt_command)}")
+                return False
+            if not os.path.exists(bitcode_file):
+                print("Error! Bitcode file does not exist!")
+                return False
+            return True
+        finally:
+            # delete the temporary first pass file if necessary
+            if os.path.exists(first_pass_file):
+                os.unlink(first_pass_file)
 
     def poly_instrument(self, input_file, output_file, bitcode_file, libs) -> bool:
         res = self.poly_opt(input_file, bitcode_file)

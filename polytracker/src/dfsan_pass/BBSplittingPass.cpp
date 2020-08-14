@@ -6,6 +6,7 @@
  */
 
 #include <iostream>
+#include <string>
 
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -41,23 +42,32 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
           continue;
         }
       }
-      // We need to split this BB into a new one after the call
-      modified = true;
-      std::cout << "Splitting basic block";
-      auto bb = next->getParent();
-      if (bb->hasName()) {
-        std::cout << " " << bb->getName().data();
-      }
+      std::string fname;
       if (auto function = call->getCalledFunction()) {
         if (function->hasName()) {
-          std::cout << " after call to " << function->getName().data();
+          fname = function->getName().data();
         }
       } else if (auto v = call->getCalledValue()->stripPointerCasts()) {
         if (v->hasName()) {
-          std::cout << " after call to " << v->getName().data();
+          fname = v->getName().data();
         }
       }
-      std::cout << std::endl;
+      // We need to split this BB into a new one after the call
+      modified = true;
+      bool includeFunctionName =
+          (fname != "llvm.dbg.declare" && fname != "__assert_fail");
+      // Don't bother logging these common functions, but still split for them
+      auto bb = next->getParent();
+      if (fname.length() == 0 || bb->hasName() || includeFunctionName) {
+        std::cout << "Splitting basic block";
+        if (bb->hasName()) {
+          std::cout << " " << bb->getName().data();
+        }
+        if (includeFunctionName) {
+          std::cout << " after call to " << fname;
+        }
+        std::cout << std::endl;
+      }
       bb->splitBasicBlock(next);
     }
     return modified;
