@@ -309,7 +309,7 @@ void taintManager::addJsonRuntimeTrace() {
       }
       events.push_back(j);
     }
-    std::cout << std::endl;
+    std::cerr << std::endl << std::flush;
   }
   output_json["trace"] = events;
 }
