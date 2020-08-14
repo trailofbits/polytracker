@@ -9,18 +9,21 @@
 #define POLYTRACKER_INCLUDE_POLYTRACKER_BB_SPLITTING_PASS_H_
 
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 
 namespace polytracker {
 
-struct BBSplittingPass : public llvm::BasicBlockPass {
+struct BBSplittingPass : public llvm::FunctionPass {
   static char ID;
 
-  BBSplittingPass() : BasicBlockPass(ID) {}
+  BBSplittingPass() : FunctionPass(ID) {}
 
-  bool runOnBasicBlock(llvm::BasicBlock &F) override;
+  bool analyzeBasicBlock(llvm::BasicBlock &bb) const;
+
+  bool runOnFunction(llvm::Function &function) override;
 };
 
-};
+}; // namespace polytracker
 
 #endif /* POLYTRACKER_INCLUDE_POLYTRACKER_BB_SPLITTING_PASS_H_ */
