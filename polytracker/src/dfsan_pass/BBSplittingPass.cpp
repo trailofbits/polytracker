@@ -43,9 +43,9 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       // We need to split this BB into a new one after the call
       modified = true;
       bb = bb->splitBasicBlock(next);
-      std::cout << "Splitting basic block ";
+      std::cout << "Splitting basic block";
       if (bb->hasName()) {
-        std::cout << bb->getName().data();
+        std::cout << " " << bb->getName().data();
       }
       std::cout << " after call to "
                 << call->getCalledFunction()->getName().data() << std::endl;
