@@ -161,8 +161,6 @@ void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
   taint_prop_lock.unlock();
 }
 
-void taintManager::logBBExit() {}
-
 void taintManager::resetFrame(int* index) {
   taint_prop_lock.lock();
   if (index == nullptr) {

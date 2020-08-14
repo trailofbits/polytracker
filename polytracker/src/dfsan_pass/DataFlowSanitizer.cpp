@@ -357,12 +357,10 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
   FunctionType *DFSanEntryBBFnTy;
-  FunctionType *DFSanExitBBFnTy;
   FunctionType *DFSanResetFrameFnTy;
   Constant *DFSanEntryFn;
   Constant *DFSanEntryBBFn;
   Constant *DFSanExitFn;
-  Constant *DFSanExitBBFn;
   Constant *DFSanResetFrameFn;
 
   Constant *DFSanUnionFn;
@@ -615,7 +613,6 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       IntegerType::getInt32Ty(*Ctx), IntegerType::getInt8Ty(*Ctx)};
   DFSanEntryBBFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
-  DFSanExitBBFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
   DFSanResetFrameFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
@@ -821,7 +818,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanExitFn = Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
   DFSanEntryBBFn =
       Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBFnTy);
-  DFSanExitBBFn = Mod->getOrInsertFunction("__dfsan_bb_exit", DFSanExitBBFnTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
 
@@ -833,7 +829,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-        &i != DFSanEntryBBFn && &i != DFSanExitBBFn && &i != DFSanResetFrameFn)
+        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn)
       FnsToInstrument.push_back(&i);
   }
 
@@ -1112,7 +1108,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           break;
         Inst = Next;
       }
-      IRBuilder<>(Inst).CreateCall(DFSanExitBBFn);
     }
 
     // We will not necessarily be able to compute the shadow for every phi node

@@ -164,12 +164,6 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
   taint_manager->logFunctionExit();
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_exit() {
-  if (taint_manager->recordTrace()) {
-    taint_manager->logBBExit();
-  }
-}
-
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
 // this function (the instrumentation pass inlines the equality test).
 // The union table prevents there from being dupilcate labels

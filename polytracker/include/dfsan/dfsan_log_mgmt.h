@@ -93,7 +93,6 @@ public:
   void logFunctionExit();
   void logBBEntry(char *fname, BBIndex bbIndex,
                   polytracker::BasicBlockType bbType);
-  void logBBExit();
   void resetFrame(int *index);
   void output();
   dfsan_label getLastLabel();
