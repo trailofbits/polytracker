@@ -25,15 +25,16 @@ namespace polytracker {
 
 bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
   bool modified = false;
-  BasicBlock *bb = &basicBlock;
 
-  for (Instruction *inst = &bb->front(); inst && !isa<TerminatorInst>(inst);
-       inst = inst->getNextNode()) {
+  for (Instruction *inst = &basicBlock.front();
+       inst && !isa<TerminatorInst>(inst); inst = inst->getNextNode()) {
     if (auto call = dyn_cast<CallInst>(inst)) {
       // Is the call immediately followed by an unconditional branch?
       // if so, that's the only case that is okay:
       Instruction *next = inst->getNextNode();
-      if (auto branch = dyn_cast<BranchInst>(next)) {
+      if (next == nullptr) {
+        continue;
+      } else if (auto branch = dyn_cast<BranchInst>(next)) {
         if (branch->isUnconditional()) {
           // The next instruction after the call is an unconditional branch,
           // so it's okay to leave it.
@@ -42,13 +43,22 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       }
       // We need to split this BB into a new one after the call
       modified = true;
-      bb = bb->splitBasicBlock(next);
       std::cout << "Splitting basic block";
+      auto bb = next->getParent();
       if (bb->hasName()) {
         std::cout << " " << bb->getName().data();
       }
-      std::cout << " after call to "
-                << call->getCalledFunction()->getName().data() << std::endl;
+      if (auto function = call->getCalledFunction()) {
+        if (function->hasName()) {
+          std::cout << " after call to " << function->getName().data();
+        }
+      } else if (auto v = call->getCalledValue()->stripPointerCasts()) {
+        if (v->hasName()) {
+          std::cout << " after call to " << v->getName().data();
+        }
+      }
+      std::cout << std::endl;
+      bb->splitBasicBlock(next);
     }
     return modified;
   }
@@ -69,7 +79,5 @@ char BBSplittingPass::ID = 0;
 }; // namespace polytracker
 
 static llvm::RegisterPass<polytracker::BBSplittingPass>
-    X("bbsplit",
-      "Ensures that all basic blocks contain at most one call or one "
-      "conditional branch.",
+    X("bbsplit", "Basic Block Control Flow Splitter",
       false /* Only looks at CFG */, false /* Analysis Pass */);
