@@ -86,7 +86,8 @@ struct BasicBlockEntry : public TraceEvent {
   const size_t entryCount;
   BasicBlockType type;
 
-  BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount, BasicBlockType type)
+  BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount,
+                  BasicBlockType type)
       : fname(fname), index(index), entryCount(entryCount), type(type) {}
   BasicBlockEntry(const char *fname, BBIndex index, BasicBlockType type)
       : BasicBlockEntry(fname, index, 1, type) {}
@@ -160,9 +161,7 @@ class TraceEventStack {
 public:
   std::vector<const TraceEvent *> eventHistory;
 
-  TraceEventStack() {
-    stack.emplace();
-  }
+  TraceEventStack() { stack.emplace(); }
   ~TraceEventStack() {
     for (auto event : eventHistory) {
       delete event;
@@ -179,9 +178,7 @@ public:
     eventHistory.push_back(event);
     stack.top().push(event);
   }
-  inline void push() {
-    stack.emplace();
-  }
+  inline void push() { stack.emplace(); }
   template <typename T,
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
                 * = nullptr,

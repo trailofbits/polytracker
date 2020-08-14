@@ -123,9 +123,7 @@ void taintManager::logFunctionExit() {
     if (!stack.pop()) {
       // if this happens, then stack should have been a null pointer,
       // which would have likely caused a segfault before this!
-      std::cout
-          << "Event stack was unexpectedly empty!"
-          << std::endl;
+      std::cout << "Event stack was unexpectedly empty!" << std::endl;
     } else {
       if (auto func = dynamic_cast<FunctionCall*>(stack.peek().peek())) {
         // Create the function return event in the stack frame that called
@@ -155,7 +153,8 @@ void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
   if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
     // this is not the first occurrence of this basic block in the current
     // stack frame
-    currentStack->emplace<BasicBlockEntry>(fname, bbIndex, prevBB->entryCount + 1, bbType);
+    currentStack->emplace<BasicBlockEntry>(fname, bbIndex,
+                                           prevBB->entryCount + 1, bbType);
   } else {
     currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
   }
