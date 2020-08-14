@@ -116,17 +116,14 @@ struct FunctionCall : public TraceEvent {
   }
 };
 
-class FunctionReturn : public TraceEvent {
-  mutable FunctionCall *mCall;
+struct FunctionReturn : public TraceEvent {
+  FunctionCall *call;
 
-public:
-  const char *fname;
-  const BasicBlockEntry *returningTo;
+  FunctionReturn(FunctionCall *call) : call(call) {}
 
-  FunctionReturn(const char *fname, const BasicBlockEntry *returningTo)
-      : mCall(nullptr), fname(fname), returningTo(returningTo) {}
-
-  FunctionCall *call() const;
+  constexpr const BasicBlockEntry *returningTo() const {
+    return call ? call->getCaller() : nullptr;
+  }
 };
 
 class TraceEventStack {

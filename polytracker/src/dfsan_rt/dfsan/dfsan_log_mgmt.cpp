@@ -122,7 +122,7 @@ void taintManager::logFunctionExit() {
       if (auto func = dynamic_cast<FunctionCall*>(event)) {
         foundFunction = true;
         stack.pop();
-        stack.emplace<FunctionReturn>(func->fname, func->getCaller());
+        stack.emplace<FunctionReturn>(func);
         break;
       }
       stack.pop();
@@ -274,15 +274,15 @@ void taintManager::addJsonRuntimeTrace() {
       } else if (const auto ret = dynamic_cast<const FunctionReturn*>(event)) {
         j = json::object({
             {"type", "FunctionReturn"},
-            {"name", ret->fname},
+            {"name", ret->call ? ret->call->fname : nullptr},
         });
-        if (ret->returningTo) {
-          j["returning_to_uid"] = ret->returningTo->eventIndex;
+        if (ret->returningTo()) {
+          j["returning_to_uid"] = ret->returningTo()->eventIndex;
         } else {
           j["returning_to_uid"] = nullptr;
         }
-        if (const auto functionCall = ret->call()) {
-          j["call_event_uid"] = ret->call()->eventIndex;
+        if (const auto functionCall = ret->call) {
+          j["call_event_uid"] = ret->call->eventIndex;
         } else {
           j["call_event_uid"] = nullptr;
         }

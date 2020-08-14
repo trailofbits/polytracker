@@ -15,25 +15,6 @@ TraceEvent::TraceEvent() : previous(nullptr) {
   traceEventLock.unlock();
 };
 
-FunctionCall* FunctionReturn::call() const {
-  if (mCall == nullptr) {
-    size_t functionCount = 0;
-    for (TraceEvent* event = previous; event; event = event->previous) {
-      if (auto fc = dynamic_cast<FunctionCall*>(event)) {
-        if (functionCount == 0) {
-          // we found the function call that started this stack frame
-          mCall = fc;
-          break;
-        }
-      } else if (dynamic_cast<FunctionReturn*>(event)) {
-        ++functionCount;
-      }
-    }
-  }
-  return mCall;
-}
-
-
 /**
  * Calculates and memoizes the "count" of this basic block.
  * That is the number of times this block has been entered in this stack frame.
@@ -50,7 +31,7 @@ size_t BasicBlockEntry::entryCount() const {
         break;
       }
       if (auto ret = dynamic_cast<FunctionReturn*>(event)) {
-        if (auto functionCall = ret->call()) {
+        if (auto functionCall = ret->call) {
           event = functionCall;
         }
       } else if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
