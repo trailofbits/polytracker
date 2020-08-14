@@ -82,13 +82,10 @@ public:
 
 namespace std {
 
-  template <>
-  struct hash<BBIndex> {
-    constexpr std::size_t operator()(const BBIndex& i) const {
-      return i.uid();
-    }
-  };
+template <> struct hash<BBIndex> {
+  constexpr std::size_t operator()(const BBIndex &i) const { return i.uid(); }
+};
 
-}
+} // namespace std
 
 #endif
