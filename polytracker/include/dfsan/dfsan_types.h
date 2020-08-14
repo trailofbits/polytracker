@@ -2,6 +2,7 @@
 #define DFSAN_TYPES_H
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
+#include <functional>
 #include <stdint.h>
 
 using __sanitizer::u16;
@@ -78,5 +79,16 @@ public:
     return value < other.value;
   }
 };
+
+namespace std {
+
+  template <>
+  struct hash<BBIndex> {
+    constexpr std::size_t operator()(const BBIndex& i) const {
+      return i.uid();
+    }
+  };
+
+}
 
 #endif

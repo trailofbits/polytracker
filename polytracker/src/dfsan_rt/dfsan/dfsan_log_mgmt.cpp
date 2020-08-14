@@ -104,7 +104,10 @@ int taintManager::logFunctionEntry(char* fname) {
   }
   (thread_stack_map)[this_id].push_back(new_str);
   if (recordTrace()) {
-    trace.getStack(this_id).emplace<FunctionCall>(fname);
+    auto& stack = trace.getStack(this_id);
+    stack.emplace<FunctionCall>(fname);
+    // Create a new stack frame:
+    stack.push();
   }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
@@ -116,21 +119,24 @@ void taintManager::logFunctionExit() {
   (thread_stack_map)[this_id].pop_back();
   if (recordTrace()) {
     auto& stack = trace.getStack(this_id);
-    bool foundFunction = false;
-    for (TraceEvent* event = stack.peek(); event != nullptr;
-         event = event->previous) {
-      if (auto func = dynamic_cast<FunctionCall*>(event)) {
-        foundFunction = true;
-        stack.pop();
-        stack.emplace<FunctionReturn>(func);
-        break;
-      }
-      stack.pop();
-    }
-    if (!foundFunction) {
+    auto caller = stack.peek().peek();
+    if (!stack.pop()) {
+      // if this happens, then stack should have been a null pointer,
+      // which would have likely caused a segfault before this!
       std::cout
-          << "Error finding matching function call in the event trace stack!"
+          << "Event stack was unexpectedly empty!"
           << std::endl;
+    } else {
+      if (auto func = dynamic_cast<FunctionCall*>(stack.peek().peek())) {
+        // Create the function return event in the stack frame that called
+        // the function, and manually set the previous event to be the BB that
+        // contained the return statement
+        stack.emplace<FunctionReturn>(func)->previous = caller;
+      } else {
+        std::cout
+            << "Error finding matching function call in the event trace stack!"
+            << std::endl;
+      }
     }
   }
   taint_prop_lock.unlock();
@@ -144,8 +150,15 @@ void taintManager::logFunctionExit() {
 void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
                               BasicBlockType bbType) {
   taint_prop_lock.lock();
-  auto event =
-      trace.currentStack()->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
+  auto currentStack = trace.currentStack();
+  size_t entryCount;
+  if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
+    // this is not the first occurrence of this basic block in the current
+    // stack frame
+    currentStack->emplace<BasicBlockEntry>(fname, bbIndex, prevBB->entryCount + 1, bbType);
+  } else {
+    currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
+  }
   taint_prop_lock.unlock();
 }
 
@@ -249,7 +262,7 @@ void taintManager::addJsonRuntimeTrace() {
                           {"function_index", bb->index.functionIndex()},
                           {"bb_index", bb->index.index()},
                           {"global_index", bb->index.uid()},
-                          {"entry_count", bb->entryCount()},
+                          {"entry_count", bb->entryCount},
                           {"consumed", trace.taints(bb)}});
         std::vector<std::string> types;
         if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {

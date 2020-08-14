@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <set>
+#include <stack>
 #include <string.h>
 #include <string>
 #include <thread>
@@ -79,23 +80,21 @@ struct BasicBlockTraceComparator {
   }
 };
 
-class BasicBlockEntry : public TraceEvent {
-  mutable size_t entryCounter;
-
-public:
+struct BasicBlockEntry : public TraceEvent {
   const char *fname;
   BBIndex index;
+  const size_t entryCount;
   BasicBlockType type;
 
+  BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount, BasicBlockType type)
+      : fname(fname), index(index), entryCount(entryCount), type(type) {}
   BasicBlockEntry(const char *fname, BBIndex index, BasicBlockType type)
-      : entryCounter(0), fname(fname), index(index), type(type) {}
-
-  size_t entryCount() const;
+      : BasicBlockEntry(fname, index, 1, type) {}
 
   operator BasicBlockTrace() const { return bb(); }
 
   BasicBlockTrace bb() const {
-    return BasicBlockTrace{fname, index, entryCount()};
+    return BasicBlockTrace{fname, index, entryCount};
   }
 
   std::string str() const { return BasicBlockTrace(*this).str(); }
@@ -126,31 +125,62 @@ struct FunctionReturn : public TraceEvent {
   }
 };
 
-class TraceEventStack {
+class TraceEventStackFrame {
   TraceEvent *head;
+  // This keeps track of the last occurrence of each BB in this stack frame
+  std::unordered_map<BBIndex, BasicBlockEntry *> lastOccurrences;
 
 public:
   std::vector<const TraceEvent *> eventHistory;
 
-  TraceEventStack() : head(nullptr) {}
+  TraceEventStackFrame() : head(nullptr) {}
+  operator bool() const { return head != nullptr; }
+  bool empty() const { return head != nullptr; }
+  void push(TraceEvent *event) {
+    event->previous = head;
+    head = event;
+    if (auto bb = dynamic_cast<BasicBlockEntry *>(event)) {
+      lastOccurrences[bb->index] = bb;
+    }
+  }
+  constexpr TraceEvent *peek() const { return head; }
+  BasicBlockEntry *lastOccurrence(BBIndex bb) const {
+    auto bbe = lastOccurrences.find(bb);
+    if (bbe == lastOccurrences.cend()) {
+      return nullptr;
+    } else {
+      return bbe->second;
+    }
+  }
+};
+
+class TraceEventStack {
+  std::stack<TraceEventStackFrame> stack;
+
+public:
+  std::vector<const TraceEvent *> eventHistory;
+
+  TraceEventStack() {
+    stack.emplace();
+  }
   ~TraceEventStack() {
     for (auto event : eventHistory) {
       delete event;
     }
-    head = nullptr;
   }
   /* disallow copying to avoid the memory management headache
    * and avoid the runtime overhead of using shared pointers */
   TraceEventStack(const TraceEventStack &) = delete;
-  operator bool() const { return head != nullptr; }
-  bool empty() const { return head != nullptr; }
+  operator bool() const { return peek(); }
   /**
    * This object will assume ownership of the memory pointed to by event.
    */
-  void push(TraceEvent *event) {
-    event->previous = head;
-    head = event;
+  inline void push(TraceEvent *event) {
     eventHistory.push_back(event);
+    stack.top().push(event);
+  }
+  inline void push() {
+    stack.emplace();
   }
   template <typename T,
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
@@ -161,11 +191,10 @@ public:
     push(t);
     return t;
   }
-  TraceEvent *peek() const { return head; }
+  constexpr const TraceEventStackFrame &peek() const { return stack.top(); }
   bool pop() {
-    if (head) {
-      auto oldHead = head;
-      head = head->previous;
+    if (stack.size() > 1) {
+      stack.pop();
       return true;
     } else {
       return false;
@@ -199,7 +228,7 @@ public:
   }
   TraceEvent *lastEvent() const {
     if (auto stack = currentStack()) {
-      return stack->peek();
+      return stack->peek().peek();
     } else {
       return nullptr;
     }
