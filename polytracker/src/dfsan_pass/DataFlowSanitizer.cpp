@@ -94,6 +94,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 // For out of source registration
 #include "dfsan/dfsan_types.h"
+#include "polytracker/bb_splitting_pass.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -396,6 +397,7 @@ public:
 
   bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
+  virtual void getAnalysisUsage(AnalysisUsage &Info) const override;
 };
 
 struct DFSanFunction {
@@ -1878,6 +1880,11 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
   DFSF.PHIFixups.push_back(std::make_pair(&PN, ShadowPN));
   DFSF.setShadow(&PN, ShadowPN);
+}
+
+void DataFlowSanitizer::getAnalysisUsage(AnalysisUsage &info) const {
+  info.addRequired<polytracker::BBSplittingPass>();
+  info.addPreserved<polytracker::BBSplittingPass>();
 }
 
 static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass");

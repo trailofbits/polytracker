@@ -44,5 +44,8 @@ endif(APPLE)
 
 add_library(DataFlowSanitizerPass MODULE DataFlowSanitizer.cpp)
 target_link_libraries(DataFlowSanitizerPass LLVMPassConfig)
+add_library(BBSplittingPass MODULE BBSplittingPass.cpp)
+target_link_libraries(BBSplittingPass LLVMPassConfig)
 
 install (TARGETS DataFlowSanitizerPass DESTINATION ${POLYTRACK_PASS_DIR})
+install (TARGETS BBSplittingPass DESTINATION ${POLYTRACK_PASS_DIR})
