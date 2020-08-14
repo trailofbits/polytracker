@@ -1,3 +1,4 @@
+#include <iostream>
 #include <mutex>
 #include <sstream>
 
@@ -14,6 +15,25 @@ TraceEvent::TraceEvent() : previous(nullptr) {
   traceEventLock.unlock();
 };
 
+FunctionCall* FunctionReturn::call() const {
+  if (mCall == nullptr) {
+    size_t functionCount = 0;
+    for (TraceEvent* event = previous; event; event = event->previous) {
+      if (auto fc = dynamic_cast<FunctionCall*>(event)) {
+        if (functionCount == 0) {
+          // we found the function call that started this stack frame
+          mCall = fc;
+          break;
+        }
+      } else if (dynamic_cast<FunctionReturn*>(event)) {
+        ++functionCount;
+      }
+    }
+  }
+  return mCall;
+}
+
+
 /**
  * Calculates and memoizes the "count" of this basic block.
  * That is the number of times this block has been entered in this stack frame.
@@ -22,12 +42,23 @@ TraceEvent::TraceEvent() : previous(nullptr) {
 size_t BasicBlockEntry::entryCount() const {
   if (entryCounter == 0) {
     entryCounter = 1;
-    for (TraceEvent* event = previous;
-        event != nullptr && !dynamic_cast<FunctionCall*>(event);
-        event = event->previous) {
-      if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
+    for (TraceEvent* event = previous; event; event = event->previous) {
+      if (event == this) {
+        std::cerr << "There is a cycle in the event stream!" << std::endl;
+        std::cerr << "Basic block #" << this->index.index() << " in function "
+            << this->fname << " appears at least twice." << std::endl;
+        break;
+      }
+      if (auto ret = dynamic_cast<FunctionReturn*>(event)) {
+        if (auto functionCall = ret->call()) {
+          event = functionCall;
+        }
+      } else if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
         if (bb->index == index) {
-          ++entryCounter;
+          // we found another instance of the same basic block that
+          // was executed in the same stack frame
+          entryCounter += bb->entryCount();
+          break;
         }
       }
     }

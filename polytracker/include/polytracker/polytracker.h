@@ -1,7 +1,8 @@
 #ifndef __POLYTRACKER_H__
 #define __POLYTRACKER_H__
 
-// NOTE: Whenever the version is updated, make sure to add support to the JSON parsing code in polytracker.py!
+// NOTE: Whenever the version is updated, make sure to add support to the JSON
+// parsing code in polytracker.py!
 
 #define POLYTRACKER_VERSION_MAJOR 2
 #define POLYTRACKER_VERSION_MINOR 2

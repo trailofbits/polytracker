@@ -9,8 +9,8 @@
 
 #include <functional>
 #include <set>
-#include <string>
 #include <string.h>
+#include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -60,21 +60,21 @@ struct BasicBlockTrace {
   std::string str() const;
 };
 
-template<typename BB>
-struct BasicBlockTraceHasher {
+template <typename BB> struct BasicBlockTraceHasher {
   std::size_t operator()(BB bb) const {
     using std::hash;
     using std::size_t;
     using std::string;
 
     return (hash<uint64_t>()(bb.index) << 1) ^
-           (hash<decltype(BasicBlockTrace::entryCount)>()(bb.entryCount)
-            << 1);
+           (hash<decltype(BasicBlockTrace::entryCount)>()(bb.entryCount) << 1);
   }
 };
 
 struct BasicBlockTraceComparator {
-  std::size_t operator()(std::reference_wrapper<const BasicBlockTrace> lhs, std::reference_wrapper<const BasicBlockTrace> rhs) const {
+  std::size_t
+  operator()(std::reference_wrapper<const BasicBlockTrace> lhs,
+             std::reference_wrapper<const BasicBlockTrace> rhs) const {
     return lhs.get() < rhs.get();
   }
 };
@@ -104,11 +104,11 @@ public:
 struct FunctionCall : public TraceEvent {
   const char *fname;
 
-  FunctionCall(const char* fname) : fname(fname) {}
+  FunctionCall(const char *fname) : fname(fname) {}
 
   const BasicBlockEntry *getCaller() const {
     for (auto event = previous; event; event = event->previous) {
-      if (auto bb = dynamic_cast<const BasicBlockEntry*>(event)) {
+      if (auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
         return bb;
       }
     }
@@ -116,18 +116,24 @@ struct FunctionCall : public TraceEvent {
   }
 };
 
-struct FunctionReturn : public TraceEvent {
+class FunctionReturn : public TraceEvent {
+  mutable FunctionCall *mCall;
+
+public:
   const char *fname;
   const BasicBlockEntry *returningTo;
 
-  FunctionReturn(const char *fname, const BasicBlockEntry *returningTo) : fname(fname), returningTo(returningTo) {}
+  FunctionReturn(const char *fname, const BasicBlockEntry *returningTo)
+      : mCall(nullptr), fname(fname), returningTo(returningTo) {}
+
+  FunctionCall *call() const;
 };
 
 class TraceEventStack {
   TraceEvent *head;
 
 public:
-  std::vector<const TraceEvent*> eventHistory;
+  std::vector<const TraceEvent *> eventHistory;
 
   TraceEventStack() : head(nullptr) {}
   ~TraceEventStack() {
@@ -174,7 +180,9 @@ class Trace {
   /* lastUsages maps canonical byte offsets to the last basic block trace
    * in which they were used */
   std::unordered_map<dfsan_label, const BasicBlockEntry *> lastUsages;
-  std::unordered_map<const BasicBlockEntry *, std::set<dfsan_label>> lastUsagesByBB;
+  std::unordered_map<const BasicBlockEntry *, std::set<dfsan_label>>
+      lastUsagesByBB;
+
 public:
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
 
@@ -212,7 +220,7 @@ public:
   const BasicBlockEntry *currentBB() const {
     auto event = lastEvent();
     for (auto event = lastEvent(); event; event = event->previous) {
-      if(auto bbe = dynamic_cast<BasicBlockEntry *>(event)) {
+      if (auto bbe = dynamic_cast<BasicBlockEntry *>(event)) {
         return bbe;
       } else if (dynamic_cast<FunctionCall *>(event)) {
         return nullptr;
@@ -238,9 +246,7 @@ public:
       return nullptr;
     }
   }
-  decltype(lastUsages) taints() const {
-    return lastUsages;
-  }
+  decltype(lastUsages) taints() const { return lastUsages; }
   const std::set<dfsan_label> taints(const BasicBlockEntry *bb) const {
     const auto ret = lastUsagesByBB.find(bb);
     if (ret == lastUsagesByBB.cend()) {
