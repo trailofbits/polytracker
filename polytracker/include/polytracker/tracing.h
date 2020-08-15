@@ -8,7 +8,7 @@
 #define POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 
 #include <functional>
-#include <set>
+#include <list>
 #include <stack>
 #include <string.h>
 #include <string>
@@ -203,8 +203,9 @@ class Trace {
   /* lastUsages maps canonical byte offsets to the last basic block trace
    * in which they were used */
   std::unordered_map<dfsan_label, const BasicBlockEntry *> lastUsages;
-  std::unordered_map<const BasicBlockEntry *, std::set<dfsan_label>>
+  std::unordered_map<const BasicBlockEntry *, std::list<dfsan_label>>
       lastUsagesByBB;
+  static const std::list<dfsan_label> EMPTY_LIST;
 
 public:
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
@@ -256,10 +257,10 @@ public:
     if (oldValue != lastUsages.cend()) {
       // We are updating the last usage,
       // so remove the old value from the reverse map
-      lastUsagesByBB[oldValue->second].erase(canonicalByte);
+      lastUsagesByBB[oldValue->second].remove_if([canonicalByte](dfsan_label b) { return b == canonicalByte; });
     }
     lastUsages[canonicalByte] = bb;
-    lastUsagesByBB[bb].insert(canonicalByte);
+    lastUsagesByBB[bb].push_back(canonicalByte);
   }
   const BasicBlockEntry *getLastUsage(dfsan_label label) const {
     auto luIter = lastUsages.find(label);
@@ -270,10 +271,10 @@ public:
     }
   }
   decltype(lastUsages) taints() const { return lastUsages; }
-  const std::set<dfsan_label> taints(const BasicBlockEntry *bb) const {
+  const std::list<dfsan_label>& taints(const BasicBlockEntry *bb) const {
     const auto ret = lastUsagesByBB.find(bb);
     if (ret == lastUsagesByBB.cend()) {
-      return {};
+      return EMPTY_LIST;
     } else {
       return ret->second;
     }

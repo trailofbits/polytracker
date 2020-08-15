@@ -9,6 +9,8 @@ namespace polytracker {
 size_t numTraceEvents = 0;
 std::mutex traceEventLock;
 
+const std::list<dfsan_label> Trace::EMPTY_LIST = {};
+
 TraceEvent::TraceEvent() : previous(nullptr) {
   traceEventLock.lock();
   eventIndex = numTraceEvents++;
