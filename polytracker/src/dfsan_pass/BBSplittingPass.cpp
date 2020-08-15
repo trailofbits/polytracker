@@ -55,7 +55,8 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       // We need to split this BB into a new one after the call
       modified = true;
       bool includeFunctionName =
-          (fname != "llvm.dbg.declare" && fname != "__assert_fail");
+          (fname != "llvm.dbg.declare" && fname != "llvm.dbg.value" &&
+           fname != "llvm.lifetime.end.p0i8" && fname != "__assert_fail");
       // Don't bother logging these common functions, but still split for them
       auto bb = next->getParent();
       if (fname.length() == 0 || bb->hasName() || includeFunctionName) {

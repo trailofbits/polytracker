@@ -257,7 +257,8 @@ public:
     if (oldValue != lastUsages.cend()) {
       // We are updating the last usage,
       // so remove the old value from the reverse map
-      lastUsagesByBB[oldValue->second].remove_if([canonicalByte](dfsan_label b) { return b == canonicalByte; });
+      lastUsagesByBB[oldValue->second].remove_if(
+          [canonicalByte](dfsan_label b) { return b == canonicalByte; });
     }
     lastUsages[canonicalByte] = bb;
     lastUsagesByBB[bb].push_back(canonicalByte);
@@ -271,7 +272,7 @@ public:
     }
   }
   decltype(lastUsages) taints() const { return lastUsages; }
-  const std::list<dfsan_label>& taints(const BasicBlockEntry *bb) const {
+  const std::list<dfsan_label> &taints(const BasicBlockEntry *bb) const {
     const auto ret = lastUsagesByBB.find(bb);
     if (ret == lastUsagesByBB.cend()) {
       return EMPTY_LIST;
