@@ -16,13 +16,14 @@ namespace polytracker {
   ENABLE_BITMASK_OPERATOR(EnumClass, ^)
 
 enum struct BasicBlockType : uint8_t {
-  UNKNOWN = 0, // we don't know what kind of BB this is
-  STANDARD = 1, // this is a standard, unremarkable BB
+  UNKNOWN = 0,     // we don't know what kind of BB this is
+  STANDARD = 1,    // this is a standard, unremarkable BB
   CONDITIONAL = 2, // this BB contains a conditional branch
-  LOOP_ENTRY = 4, // this BB is an entrypoint into a loop
-  LOOP_EXIT = 8, // this BB exits a loop (which should also imply that it is CONDITIONAL)
-  FUNCTION_ENTRY = 16, // this BB is the first in a function
-  FUNCTION_EXIT = 32, // this BB contains a function return
+  LOOP_ENTRY = 4,  // this BB is an entrypoint into a loop
+  LOOP_EXIT = 8,   // this BB exits a loop (which should also imply that it is
+                   // CONDITIONAL)
+  FUNCTION_ENTRY = 16,  // this BB is the first in a function
+  FUNCTION_EXIT = 32,   // this BB contains a function return
   FUNCTION_RETURN = 64, // this BB is executed immediately after a CallInst
 };
 ENABLE_BITMASK_OPERATORS(BasicBlockType)
