@@ -95,7 +95,7 @@
 // For out of source registration
 #include "dfsan/dfsan_types.h"
 #include "polytracker/basic_block_utils.h"
-//#include "polytracker/bb_splitting_pass.h"
+#include "polytracker/bb_splitting_pass.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -400,7 +400,6 @@ public:
 
   bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
-  virtual void getAnalysisUsage(AnalysisUsage &Info) const override;
 };
 
 struct DFSanFunction {
@@ -981,6 +980,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   }
 
   uint32_t functionIndex = 0;
+  polytracker::BBSplittingPass bbSplitter;
   for (Function *i : FnsToInstrument) {
     if (!i || i->isDeclaration())
       continue;
@@ -989,6 +989,12 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
     removeUnreachableBlocks(*i);
+
+    // Split the function's basic blocks such that each BB has at most one
+    // function call and one conditional branch. This means that all of the
+    // calls in the instrumented code will be followed by an unconditional
+    // branch.
+    bbSplitter.runOnFunction(*i);
 
     std::string curr_fname = i->getName();
     if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
@@ -1939,11 +1945,6 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
   DFSF.PHIFixups.push_back(std::make_pair(&PN, ShadowPN));
   DFSF.setShadow(&PN, ShadowPN);
-}
-
-void DataFlowSanitizer::getAnalysisUsage(AnalysisUsage &info) const {
-  // info.addRequired<polytracker::BBSplittingPass>();
-  // info.addPreserved<polytracker::BBSplittingPass>();
 }
 
 static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass");
