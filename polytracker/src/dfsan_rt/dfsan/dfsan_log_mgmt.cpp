@@ -268,6 +268,9 @@ void taintManager::addJsonRuntimeTrace() {
         if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
           types.push_back("function_entry");
         }
+        if (hasType(bb->type, BasicBlockType::FUNCTION_EXIT)) {
+          types.push_back("function_exit");
+        }
         if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
           types.push_back("function_return");
         }
