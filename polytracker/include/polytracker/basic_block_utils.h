@@ -37,8 +37,9 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
   if (&(bb->getParent()->getEntryBlock()) == bb) {
     ret = ret | BasicBlockType::FUNCTION_ENTRY;
   }
-  if (dominatedPredecessors > 0 && (totalPredecessors > dominatedPredecessors ||
-                                    (ret & BasicBlockType::FUNCTION_ENTRY))) {
+  if (dominatedPredecessors > 0 &&
+      (totalPredecessors > dominatedPredecessors ||
+       hasType(ret, BasicBlockType::FUNCTION_ENTRY))) {
     ret = ret | BasicBlockType::LOOP_ENTRY;
   }
   for (const auto *inst = &bb->front(); inst; inst = inst->getNextNode()) {
@@ -47,8 +48,9 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
     }
   }
-  if (dominatingSuccessors > 0 && (totalSuccessors > dominatingSuccessors ||
-                                   (ret & BasicBlockType::FUNCTION_EXIT))) {
+  if (dominatingSuccessors > 0 &&
+      (totalSuccessors > dominatingSuccessors ||
+       hasType(ret, BasicBlockType::FUNCTION_EXIT))) {
     ret = ret | BasicBlockType::LOOP_EXIT;
   }
   return ret;
