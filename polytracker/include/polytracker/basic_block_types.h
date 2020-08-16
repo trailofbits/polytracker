@@ -25,6 +25,7 @@ enum struct BasicBlockType : uint8_t {
   FUNCTION_ENTRY = 16,  // this BB is the first in a function
   FUNCTION_EXIT = 32,   // this BB contains a function return
   FUNCTION_RETURN = 64, // this BB is executed immediately after a CallInst
+  FUNCTION_CALL = 128, // this BB contains a CallInst
 };
 ENABLE_BITMASK_OPERATORS(BasicBlockType)
 

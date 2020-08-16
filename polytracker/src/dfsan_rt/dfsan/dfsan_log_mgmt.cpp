@@ -274,6 +274,9 @@ void taintManager::addJsonRuntimeTrace() {
         if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
           types.push_back("function_return");
         }
+        if (hasType(bb->type, BasicBlockType::FUNCTION_CALL)) {
+          types.push_back("function_call");
+        }
         if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
           types.push_back("loop_entry");
         }

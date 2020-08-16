@@ -10,6 +10,7 @@
 namespace polytracker {
 
 using llvm::BasicBlock;
+using llvm::CallInst;
 using llvm::DominatorTree;
 using llvm::ReturnInst;
 
@@ -46,6 +47,8 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
     // TODO: Also handle longjmp here
     if (llvm::isa<ReturnInst>(inst)) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
+    } else if (llvm::isa<CallInst>(inst)) {
+      ret = ret | BasicBlockType::FUNCTION_CALL;
     }
   }
   if (dominatingSuccessors > 0 &&
