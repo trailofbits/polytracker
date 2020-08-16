@@ -31,24 +31,25 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
     }
   }
   BasicBlockType ret = BasicBlockType::STANDARD;
+  if (totalSuccessors > 1) {
+    ret = ret | BasicBlockType::CONDITIONAL;
+  }
   if (&(bb->getParent()->getEntryBlock()) == bb) {
     ret = ret | BasicBlockType::FUNCTION_ENTRY;
   }
-  if (dominatedPredecessors > 0 && totalPredecessors > dominatedPredecessors) {
+  if (dominatedPredecessors > 0 && (totalPredecessors > dominatedPredecessors ||
+                                    (ret & BasicBlockType::FUNCTION_ENTRY))) {
     ret = ret | BasicBlockType::LOOP_ENTRY;
-  }
-  if (dominatingSuccessors == 0) {
-    if (totalSuccessors > 1) {
-      ret = ret | BasicBlockType::CONDITIONAL;
-    }
-  } else if (totalSuccessors > dominatingSuccessors) {
-    ret = ret | BasicBlockType::LOOP_EXIT;
   }
   for (const auto *inst = &bb->front(); inst; inst = inst->getNextNode()) {
     // TODO: Also handle longjmp here
     if (llvm::isa<ReturnInst>(inst)) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
     }
+  }
+  if (dominatingSuccessors > 0 && (totalSuccessors > dominatingSuccessors ||
+                                   (ret & BasicBlockType::FUNCTION_EXIT))) {
+    ret = ret | BasicBlockType::LOOP_EXIT;
   }
   return ret;
 }
