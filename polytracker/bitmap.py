@@ -13,6 +13,7 @@ class BitmapMeta(ABCMeta):
         if name != "Bitmap":
             types = {}
             setattr(cls, "type_map", types)
+            to_remove = set()
             for member_name, value in clsdict.items():
                 if isinstance(value, BitmapValue):
                     inst = cls(value=value.value)
@@ -20,8 +21,12 @@ class BitmapMeta(ABCMeta):
                         name = member_name
                     else:
                         name = value.name
-                    clsdict[member_name] = inst
+                    to_remove.add(member_name)
+                    setattr(cls, member_name, inst)
+                    cls.__annotations__[member_name] = cls
                     types[name] = inst
+            for rem in to_remove:
+                del clsdict[rem]
         super().__init__(name, bases, clsdict)
 
 

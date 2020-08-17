@@ -19,23 +19,23 @@ class BasicBlockType(Bitmap):
 
     """
 
-    UNKNOWN: "BasicBlockType" = BitmapValue(0)
+    UNKNOWN = BitmapValue(0)
     """We don't know what kind of BB this is"""
-    STANDARD: "BasicBlockType" = BitmapValue(1)
+    STANDARD = BitmapValue(1)
     """A standard, unremarkable BB"""
-    CONDITIONAL: "BasicBlockType" = BitmapValue(2)
+    CONDITIONAL = BitmapValue(2)
     """Any BB that contains a conditional branch"""
-    LOOP_ENTRY: "BasicBlockType" = BitmapValue(6)
+    LOOP_ENTRY = BitmapValue(6)
     """A BB that is an entrypoint into a loop"""
-    LOOP_EXIT: "BasicBlockType" = BitmapValue(10)
+    LOOP_EXIT = BitmapValue(10)
     """A BB that is an exit to a loop"""
-    FUNCTION_ENTRY: "BasicBlockType" = BitmapValue(16)
+    FUNCTION_ENTRY = BitmapValue(16)
     """A BB that is the first inside of its function"""
-    FUNCTION_EXIT: "BasicBlockType" = BitmapValue(32)
+    FUNCTION_EXIT = BitmapValue(32)
     """A BB that exits a function (i.e., it contains a return instruction)"""
-    FUNCTION_RETURN: "BasicBlockType" = BitmapValue(64)
+    FUNCTION_RETURN = BitmapValue(64)
     """A BB that is executed immediately after a CallInst returns"""
-    FUNCTION_CALL: "BasicBlockType" = BitmapValue(128)
+    FUNCTION_CALL = BitmapValue(128)
     """A BB that contains a CallInst"""
 
 
