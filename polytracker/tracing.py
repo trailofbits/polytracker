@@ -1,6 +1,8 @@
 import json
 from abc import ABCMeta
-from typing import Any, BinaryIO, Callable, Dict, IO, Iterable, List, Optional, Set, Type, Union
+from typing import (
+    Any, BinaryIO, Callable, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
+)
 
 from tqdm import tqdm
 
@@ -8,7 +10,11 @@ from .bitmap import Bitmap, BitmapValue
 from polytracker.cfg import DiGraph
 
 
-EVENTS_BY_TYPE: Dict[str, Callable[[Any], "TraceEvent"]] = {}
+class TraceEventConstructor(Protocol):
+    def __call__(self, **kwargs) -> "TraceEvent": ...
+
+
+EVENTS_BY_TYPE: Dict[str, TraceEventConstructor] = {}
 
 
 class BasicBlockType(Bitmap):
@@ -99,8 +105,8 @@ class FunctionInvocation:
 
 
 class TraceEventMeta(ABCMeta):
-    def __init__(cls: Type["TraceEvent"], name, bases, clsdict):
-        if len(cls.mro()) > 2 and not cls.__abstractmethods__:
+    def __init__(cls, name, bases, clsdict):
+        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and isinstance(cls, TraceEvent):
             if cls.event_type in EVENTS_BY_TYPE:
                 raise ValueError(
                     f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
@@ -119,7 +125,10 @@ class TraceEvent(metaclass=TraceEventMeta):
         self._trace: Optional[PolyTrackerTrace] = None
 
     @property
-    def trace(self) -> Optional["PolyTrackerTrace"]:
+    def trace(self) -> "PolyTrackerTrace":
+        if self._trace is None:
+            raise RuntimeError(f"The trace for event {self!r} has not been set!"
+                               "Did you call `.trace` before the entire trace was loaded?")
         return self._trace
 
     @trace.setter
@@ -193,7 +202,7 @@ class BasicBlockEntry(TraceEvent):
         global_index: int,
         entry_count: int = 1,
         consumed: Iterable[int] = (),
-        types: List[str] = (),
+        types: Iterable[str] = (),
     ):
         super().__init__(uid, previous_uid)
         self.entry_count: int = entry_count
@@ -202,8 +211,8 @@ class BasicBlockEntry(TraceEvent):
         self.bb_index: int = bb_index
         self.global_index: int = global_index
         self.consumed: List[int] = sorted(consumed)
-        self.types: List[str] = types
-        self.bb_type: BasicBlockType = BasicBlockType.UNKNOWN
+        self.types: List[str] = list(types)
+        self.bb_type: BasicBlockType = cast(BasicBlockType, BasicBlockType.UNKNOWN)
         for ty in types:
             bb_type = BasicBlockType.get(ty.upper())
             if bb_type is None:
@@ -246,13 +255,13 @@ class BasicBlockEntry(TraceEvent):
             elif start_offset + 1 != offset:
                 # this is not a contiguous byte sequence
                 # so yield the previous token
-                yield self.trace.inputstr[start_offset : last_offset + 1]
+                yield self.trace.inputstr[start_offset:last_offset + 1]  # type: ignore
                 start_offset = last_offset = offset
             else:
                 # this is a contiguous byte sequence, so update its end
                 last_offset = offset
         if start_offset is not None:
-            yield self.trace.inputstr[start_offset : last_offset + 1]
+            yield self.trace.inputstr[start_offset:last_offset + 1]  # type: ignore
 
     @property
     def children(self) -> List["BasicBlockEntry"]:
@@ -349,13 +358,14 @@ class FunctionReturn(TraceEvent):
                 fc = self.trace[self.call_event_uid]
                 if isinstance(fc, FunctionCall):
                     self._function_call = fc
+                    return fc
                 else:
                     self._function_call = ValueError(
                         f"Function return {self!r} was associated with "
                         f"function call uid {self.call_event_uid}, but this was "
                         f"not a function call: {fc!r}"
                     )
-                return self._function_call
+                    raise self._function_call
             prev: Optional[TraceEvent] = self.previous
             subcalls = 0
             while prev is not None:
@@ -372,14 +382,14 @@ class FunctionReturn(TraceEvent):
                             break
                     else:
                         subcalls += 1
-                prev = prev.previous
+                prev = prev.previous  # type: ignore
             if isinstance(prev, FunctionCall):
                 self._function_call = prev
             else:
                 self._function_call = ValueError(f"Could not find the function call associated with return {self}")
         if isinstance(self._function_call, ValueError):
             raise self._function_call
-        return self._function_call
+        return self._function_call  # type: ignore
 
 
 class PolyTrackerTrace:
@@ -428,7 +438,7 @@ class PolyTrackerTrace:
     def functions(self) -> Iterable[Function]:
         if self._functions_by_idx is None:
             _ = self.basic_blocks  # this populates the function mapping
-        return self._functions_by_idx.values()
+        return self._functions_by_idx.values()  # type: ignore
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
@@ -456,7 +466,7 @@ class PolyTrackerTrace:
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
         _ = self.basic_blocks
-        return self._basic_blocks_by_idx[entry.global_index]
+        return self._basic_blocks_by_idx[entry.global_index]  # type: ignore
 
     def __getitem__(self, uid: int) -> TraceEvent:
         return self.events_by_uid[uid]
@@ -514,6 +524,6 @@ class PolyTrackerTrace:
             else:
                 inputstr: bytes = input_file.read()
         else:
-            inputstr: bytes = bytes(trace["inputstr"])
+            inputstr = bytes(trace["inputstr"])
 
         return PolyTrackerTrace(events=events, inputstr=inputstr)
