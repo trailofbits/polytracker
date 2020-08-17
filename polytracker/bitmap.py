@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import Dict, FrozenSet, Iterable, Optional, TypeVar
+from typing import cast, Dict, FrozenSet, Optional, Type, TypeVar, ValuesView
 
 
 class BitmapValue:
@@ -25,7 +25,7 @@ class BitmapMeta(ABCMeta):
         super().__init__(name, bases, clsdict)
 
 
-B = TypeVar("B")
+B = TypeVar("B", bound='Bitmap')
 
 
 class Bitmap(metaclass=BitmapMeta):
@@ -37,12 +37,12 @@ class Bitmap(metaclass=BitmapMeta):
         self.value = value
 
     @classmethod
-    def get(cls: B, name: str) -> Optional[B]:
-        return cls.type_map.get(name, None)
+    def get(cls: Type[B], name: str) -> Optional[B]:
+        return cast(B, cls.type_map.get(name, None))
 
     @classmethod
-    def types(cls: B) -> Iterable[B]:
-        return cls.type_map.values()
+    def types(cls: Type[B]) -> ValuesView[B]:
+        return cast(ValuesView[B], cls.type_map.values())
 
     def names(self) -> FrozenSet[str]:
         t = []
