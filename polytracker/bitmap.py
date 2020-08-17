@@ -10,7 +10,7 @@ class BitmapValue:
 
 class BitmapMeta(ABCMeta):
     def __init__(cls, name, bases, clsdict):
-        if name != 'Bitmap':
+        if name != "Bitmap":
             types = {}
             setattr(cls, "type_map", types)
             for member_name, value in clsdict.items():
@@ -25,11 +25,11 @@ class BitmapMeta(ABCMeta):
         super().__init__(name, bases, clsdict)
 
 
-B = TypeVar('B')
+B = TypeVar("B")
 
 
 class Bitmap(metaclass=BitmapMeta):
-    type_map: Dict[str, 'Bitmap'] = {}
+    type_map: Dict[str, "Bitmap"] = {}
 
     def __init__(self, value: int):
         if self.__class__ == Bitmap.__class__:
@@ -78,7 +78,7 @@ class Bitmap(metaclass=BitmapMeta):
     def __eq__(self, other):
         return isinstance(other, Bitmap) and other.value == self.value
 
-    def __contains__(self, bitmap: 'Bitmap') -> bool:
+    def __contains__(self, bitmap: "Bitmap") -> bool:
         return bool(bitmap.value & self.value)
 
     def __bool__(self):

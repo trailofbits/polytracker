@@ -24,11 +24,11 @@ def main():
     commands.add_argument(
         "--extract-grammar",
         nargs=2,
-        action='append',
-        metavar=('polytracker_json', 'input_file'),
+        action="append",
+        metavar=("polytracker_json", "input_file"),
         type=argparse.FileType("rb"),
         help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
-             "was sent to the instrumented parser to generate polytracker_json",
+        "was sent to the instrumented parser to generate polytracker_json",
     )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")

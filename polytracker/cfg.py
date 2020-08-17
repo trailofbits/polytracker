@@ -22,7 +22,7 @@ import graphviz
 import networkx as nx
 
 N = TypeVar("N")
-D = TypeVar("D", bound='DiGraph')
+D = TypeVar("D", bound="DiGraph")
 
 
 class DiGraph(nx.DiGraph, Generic[N]):

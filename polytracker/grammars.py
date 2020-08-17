@@ -10,23 +10,23 @@ from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerT
 
 
 class StartNode:
-    def __init__(self, tree: 'MethodTree', child_uid: int):
+    def __init__(self, tree: "MethodTree", child_uid: int):
         self.tree: MethodTree = tree
         self.child_uid: int = child_uid
 
     class ChildView:
-        def __init__(self, start: 'StartNode'):
+        def __init__(self, start: "StartNode"):
             self.start: StartNode = start
 
         def __len__(self):
             return 1
 
-        def __getitem__(self, index: int) -> 'TreeNode':
+        def __getitem__(self, index: int) -> "TreeNode":
             if index != 0:
                 raise IndexError(index)
             return self.start.tree[self.start.child_uid]
 
-        def __iter__(self) -> Iterable['TreeNode']:
+        def __iter__(self) -> Iterable["TreeNode"]:
             yield self[0]
 
     def __len__(self):
@@ -38,21 +38,21 @@ class StartNode:
     def __hash__(self):
         return self.child_uid
 
-    def __getitem__(self, key: str) -> Union[None, int, List, 'StartNode.ChildView']:
-        if key == 'name':
+    def __getitem__(self, key: str) -> Union[None, int, List, "StartNode.ChildView"]:
+        if key == "name":
             return None
-        elif key == 'id':
+        elif key == "id":
             return 0
-        elif key == 'indexes':
+        elif key == "indexes":
             return []
-        elif key == 'children':
+        elif key == "children":
             return StartNode.ChildView(self)
         else:
             raise KeyError(key)
 
-    def get(self, key: str, default: Union[int, str, List, 'TreeNode.ChildView'] = None) -> Optional[Union[
-        int, str, List, 'TreeNode.ChildView'
-    ]]:
+    def get(
+        self, key: str, default: Union[int, str, List, "TreeNode.ChildView"] = None
+    ) -> Optional[Union[int, str, List, "TreeNode.ChildView"]]:
         try:
             return self[key]
         except KeyError:
@@ -60,12 +60,12 @@ class StartNode:
 
 
 class TreeNode:
-    def __init__(self, tree: 'MethodTree', bb: BasicBlockEntry):
+    def __init__(self, tree: "MethodTree", bb: BasicBlockEntry):
         self.tree: MethodTree = tree
         self.bb: BasicBlockEntry = bb
 
     @property
-    def children(self) -> 'TreeNode.ChildView':
+    def children(self) -> "TreeNode.ChildView":
         return TreeNode.ChildView(self)
 
     def __hash__(self):
@@ -75,7 +75,7 @@ class TreeNode:
         return isinstance(other, TreeNode) and other.bb.uid == self.bb.uid
 
     class ChildView:
-        def __init__(self, node: 'TreeNode'):
+        def __init__(self, node: "TreeNode"):
             self.node: TreeNode = node
 
         def __bool__(self):
@@ -84,28 +84,28 @@ class TreeNode:
         def __len__(self):
             return len(self.node.bb.children)
 
-        def __getitem__(self, index: int) -> 'TreeNode':
+        def __getitem__(self, index: int) -> "TreeNode":
             return self.node.tree[self.node.bb.children[index].uid + 1]
 
-        def __iter__(self) -> Iterable['TreeNode']:
+        def __iter__(self) -> Iterable["TreeNode"]:
             for child in self.node.bb.children:
                 yield self.node.tree[child.uid + 1]
 
-    def __getitem__(self, key: str) -> Union[int, str, List, 'TreeNode.ChildView']:
-        if key == 'name':
+    def __getitem__(self, key: str) -> Union[int, str, List, "TreeNode.ChildView"]:
+        if key == "name":
             return str(self.bb)
-        elif key == 'id':
+        elif key == "id":
             return self.bb.uid + 1
-        elif key == 'indexes':
+        elif key == "indexes":
             return self.bb.consumed
-        elif key == 'children':
+        elif key == "children":
             return TreeNode.ChildView(self)
         else:
             raise KeyError(key)
 
-    def get(self, key: str, default: Union[int, str, List, 'TreeNode.ChildView'] = None) -> Optional[Union[
-        int, str, List, 'TreeNode.ChildView'
-    ]]:
+    def get(
+        self, key: str, default: Union[int, str, List, "TreeNode.ChildView"] = None
+    ) -> Optional[Union[int, str, List, "TreeNode.ChildView"]]:
         try:
             return self[key]
         except KeyError:
@@ -128,8 +128,9 @@ class MethodTree:
             if isinstance(bbentry, BasicBlockEntry):
                 return TreeNode(self, bbentry)
             else:
-                raise ValueError(f"Trace event {uid - 1} was expected to be a BasicBlockEntry, "
-                                 f"but was instead {bbentry!r}")
+                raise ValueError(
+                    f"Trace event {uid - 1} was expected to be a BasicBlockEntry, " f"but was instead {bbentry!r}"
+                )
 
     def __contains__(self, uid: int):
         return uid == 0 or (uid - 1) in self.trace
@@ -146,16 +147,16 @@ class MethodTree:
 
 
 class Tree:
-    def __init__(self, node: TreeNode, parent: Optional['Tree'] = None):
-        self.method_name: str = ("<%s>" % node['name']) if node['name'] is not None else '<START>'
-        self.indexes = node['indexes']
+    def __init__(self, node: TreeNode, parent: Optional["Tree"] = None):
+        self.method_name: str = ("<%s>" % node["name"]) if node["name"] is not None else "<START>"
+        self.indexes = node["indexes"]
         self.node_children: List[Union[Tree, Tuple[int, list, int, int]]] = []
-        self.remaining_children: Iterator[TreeNode] = iter(node.get('children', []))
+        self.remaining_children: Iterator[TreeNode] = iter(node.get("children", []))
         self.parent: Optional[Tree] = parent
         self.start_idx: Optional[int] = None
         self.end_idx: Optional[int] = None
 
-    def __iter__(self) -> Iterator[Union[str, List[Union['Tree', Tuple[int, list, int, int]]], int]]:
+    def __iter__(self) -> Iterator[Union[str, List[Union["Tree", Tuple[int, list, int, int]]], int]]:
         return iter((self.method_name, self.node_children, self.start_idx, self.end_idx))
 
     def __getitem__(self, idx: Union[int, slice]):
@@ -205,7 +206,7 @@ def to_tree(node: TreeNode, my_str: bytes) -> Tree:
         # instruction.
         for c in children:
             if c[2] != si:
-                sbs = my_str[si: c[2]]
+                sbs = my_str[si : c[2]]
                 my_children.append((sbs, [], si, c[2] - 1))
             my_children.append(c)
             si = c[3] + 1
@@ -270,7 +271,7 @@ def convert_to_grammar(my_trees: Iterable[MethodTree]):
 class Terminal:
     def __init__(self, terminal: Union[bytes, str]):
         if isinstance(terminal, str):
-            terminal = terminal.encode('utf-8')
+            terminal = terminal.encode("utf-8")
         self.terminal: bytes = terminal
 
     def __eq__(self, other):
@@ -285,26 +286,26 @@ class Terminal:
     def __str__(self):
         ret = '"'
         for i in self.terminal:
-            if i == ord('\n'):
+            if i == ord("\n"):
                 b = "\\n"
-            elif i == ord('\t'):
+            elif i == ord("\t"):
                 b = "\\t"
-            elif i == ord('\r'):
+            elif i == ord("\r"):
                 b = "\\r"
             elif i == ord('"'):
                 b = '\\"'
-            elif i == ord('\\'):
-                b = '\\\\'
+            elif i == ord("\\"):
+                b = "\\\\"
             elif ord(" ") <= i <= ord("~"):
                 b = chr(i)
             else:
                 b = f"\\x{i:02x}"
             ret = f"{ret}{b}"
-        return f"{ret}\""
+        return f'{ret}"'
 
 
 class Rule:
-    def __init__(self, grammar: 'Grammar', *alternatives: Union[Terminal, str]):
+    def __init__(self, grammar: "Grammar", *alternatives: Union[Terminal, str]):
         self.grammar: Grammar = grammar
         self.alternatives: Tuple[Union[Terminal, str], ...] = tuple(alternatives)
 
@@ -315,16 +316,16 @@ class Rule:
         return self.alternatives == other.alternatives
 
     @staticmethod
-    def load(grammar: 'Grammar', *alternatives: Union[Terminal, str]) -> 'Rule':
+    def load(grammar: "Grammar", *alternatives: Union[Terminal, str]) -> "Rule":
         alts = []
         for a in alternatives:
-            if isinstance(a, str) and a.startswith('<') and a.endswith('>'):
+            if isinstance(a, str) and a.startswith("<") and a.endswith(">"):
                 alts.append(a)
             else:
                 alts.append(Terminal(a))
         return Rule(grammar, *alts)
 
-    def __iter__(self) -> Iterable[Union[Terminal, 'Production']]:
+    def __iter__(self) -> Iterable[Union[Terminal, "Production"]]:
         for alternative in self.alternatives:
             if isinstance(alternative, Terminal):
                 yield alternative
@@ -339,7 +340,7 @@ class Rule:
 
 
 class Production:
-    def __init__(self, grammar: 'Grammar', name: str, *rules: Rule):
+    def __init__(self, grammar: "Grammar", name: str, *rules: Rule):
         if name in grammar:
             raise ValueError(f"A production named {name!r} already exists in grammar {grammar!s}!")
         self.grammar: Grammar = grammar
@@ -348,7 +349,7 @@ class Production:
         grammar.productions[name] = self
 
     @staticmethod
-    def load(grammar: 'Grammar', name: str, *rules: Iterable[str]) -> 'Production':
+    def load(grammar: "Grammar", name: str, *rules: Iterable[str]) -> "Production":
         return Production(grammar, name, *(Rule.load(grammar, *alternatives) for alternatives in rules))
 
     def add(self, rule: Rule) -> bool:
@@ -366,7 +367,7 @@ class Production:
         return len(self.rules)
 
     def __str__(self):
-        rules = ' | '.join(map(str, self.rules))
+        rules = " | ".join(map(str, self.rules))
         return f"{self.name} ::= {rules}"
 
 
@@ -392,14 +393,14 @@ class Grammar:
         return production_name in self.productions
 
     def __str__(self):
-        return '\n'.join(map(str, self.productions.values()))
+        return "\n".join(map(str, self.productions.values()))
 
 
 def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
-    #trace.simplify()
+    # trace.simplify()
 
     grammar = Grammar()
 
@@ -431,9 +432,9 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 
 
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
-    #trees = [{'tree': list(tree)} for tree in miner(traces)]
-    #gmethod_trees = generalize_method_trees(trees)
-    #print(json.dumps(gmethod_trees, indent=4))
+    # trees = [{'tree': list(tree)} for tree in miner(traces)]
+    # gmethod_trees = generalize_method_trees(trees)
+    # print(json.dumps(gmethod_trees, indent=4))
     for trace in traces:
         print(str(trace_to_grammar(trace)))
     ret, g = convert_to_grammar((MethodTree(trace) for trace in traces))
