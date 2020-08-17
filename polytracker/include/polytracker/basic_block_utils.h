@@ -56,6 +56,10 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
        hasType(ret, BasicBlockType::FUNCTION_EXIT))) {
     ret = ret | BasicBlockType::LOOP_EXIT;
   }
+  if (ret != BasicBlockType::STANDARD) {
+    // If the BB is anything but standard, it shouldn't have the standard flag
+    ret = ret ^ BasicBlockType::STANDARD;
+  }
   return ret;
 }
 

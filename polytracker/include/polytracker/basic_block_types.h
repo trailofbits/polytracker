@@ -19,13 +19,12 @@ enum struct BasicBlockType : uint8_t {
   UNKNOWN = 0,     // we don't know what kind of BB this is
   STANDARD = 1,    // this is a standard, unremarkable BB
   CONDITIONAL = 2, // this BB contains a conditional branch
-  LOOP_ENTRY = 4,  // this BB is an entrypoint into a loop
-  LOOP_EXIT = 8,   // this BB exits a loop (which should also imply that it is
-                   // CONDITIONAL)
+  LOOP_ENTRY = 6,  // this BB is an entrypoint into a loop (implies CONDITIONAL)
+  LOOP_EXIT = 10,  // this BB exits a loop (implies CONDITIONAL)
   FUNCTION_ENTRY = 16,  // this BB is the first in a function
   FUNCTION_EXIT = 32,   // this BB contains a function return
   FUNCTION_RETURN = 64, // this BB is executed immediately after a CallInst
-  FUNCTION_CALL = 128, // this BB contains a CallInst
+  FUNCTION_CALL = 128,  // this BB contains a CallInst
 };
 ENABLE_BITMASK_OPERATORS(BasicBlockType)
 

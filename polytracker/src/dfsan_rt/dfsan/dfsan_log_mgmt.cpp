@@ -258,35 +258,44 @@ void taintManager::addJsonRuntimeTrace() {
                           {"function", bb->fname},
                           {"function_index", bb->index.functionIndex()},
                           {"bb_index", bb->index.index()},
-                          {"global_index", bb->index.uid()},
-                          {"entry_count", bb->entryCount},
-                          {"consumed", trace.taints(bb)}});
+                          {"global_index", bb->index.uid()}});
+        auto entryCount = bb->entryCount;
+        if (entryCount != 1) {
+          j["entry_count"] = entryCount;
+        }
+        const auto& taints = trace.taints(bb);
+        if (!taints.empty()) {
+          j["consumed"] = taints;
+        }
         std::vector<std::string> types;
-        if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {
-          types.push_back("conditional");
+        if (hasType(bb->type, BasicBlockType::STANDARD)) {
+          types.push_back("standard");
+        } else {
+          if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {
+            types.push_back("conditional");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
+            types.push_back("function_entry");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_EXIT)) {
+            types.push_back("function_exit");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
+            types.push_back("function_return");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_CALL)) {
+            types.push_back("function_call");
+          }
+          if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
+            types.push_back("loop_entry");
+          }
+          if (hasType(bb->type, BasicBlockType::LOOP_EXIT)) {
+            types.push_back("loop_exit");
+          }
         }
-        if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
-          types.push_back("function_entry");
+        if (!types.empty()) {
+          j["types"] = types;
         }
-        if (hasType(bb->type, BasicBlockType::FUNCTION_EXIT)) {
-          types.push_back("function_exit");
-        }
-        if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
-          types.push_back("function_return");
-        }
-        if (hasType(bb->type, BasicBlockType::FUNCTION_CALL)) {
-          types.push_back("function_call");
-        }
-        if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
-          types.push_back("loop_entry");
-        }
-        if (hasType(bb->type, BasicBlockType::LOOP_EXIT)) {
-          types.push_back("loop_exit");
-        }
-        if (hasType(bb->type, BasicBlockType::UNKNOWN)) {
-          types.push_back("unknown");
-        }
-        j["types"] = types;
       } else if (const auto ret = dynamic_cast<const FunctionReturn*>(event)) {
         j = json::object({
             {"type", "FunctionReturn"},
@@ -294,13 +303,9 @@ void taintManager::addJsonRuntimeTrace() {
         });
         if (ret->returningTo()) {
           j["returning_to_uid"] = ret->returningTo()->eventIndex;
-        } else {
-          j["returning_to_uid"] = nullptr;
         }
         if (const auto functionCall = ret->call) {
           j["call_event_uid"] = ret->call->eventIndex;
-        } else {
-          j["call_event_uid"] = nullptr;
         }
       } else {
         continue;
@@ -308,8 +313,6 @@ void taintManager::addJsonRuntimeTrace() {
       j["uid"] = event->eventIndex;
       if (event->previous) {
         j["previous_uid"] = event->previous->eventIndex;
-      } else {
-        j["previous_uid"] = nullptr;
       }
       events.push_back(j);
     }
