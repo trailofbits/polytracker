@@ -74,7 +74,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
             # it has exactly one predecessor
             return True
 
-    def contract(self: D, union: Optional[Callable[[N, N], N]] = lambda n, _: n) -> D:
+    def contract(self: D, union: Callable[[N, N], N] = lambda n, _: n) -> D:
         """
         Simplifies this graph by merging nodes with exactly one predecessor to its predecessor.
 
@@ -87,7 +87,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
         """
         nodes: Set[N] = set(self.nodes)
-        ret: D[N] = self.__class__()
+        ret: D = self.__class__()
         ret.add_edges_from(self.edges)
         while nodes:
             node = next(iter(nodes))
