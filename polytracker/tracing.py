@@ -4,10 +4,38 @@ from typing import Any, BinaryIO, Callable, Dict, IO, Iterable, List, Optional, 
 
 from tqdm import tqdm
 
+from .bitmap import Bitmap, BitmapValue
 from polytracker.cfg import DiGraph
 
 
 EVENTS_BY_TYPE: Dict[str, Callable[[Any], 'TraceEvent']] = {}
+
+
+class BasicBlockType(Bitmap):
+    """
+    Basic block types
+
+    This should be kept in parity with the enum in /polytracker/include/polytracker/basic_block_types.h
+
+    """
+    UNKNOWN: 'BasicBlockType' = BitmapValue(0)
+    """We don't know what kind of BB this is"""
+    STANDARD: 'BasicBlockType' = BitmapValue(1)
+    """A standard, unremarkable BB"""
+    CONDITIONAL: 'BasicBlockType' = BitmapValue(2)
+    """Any BB that contains a conditional branch"""
+    LOOP_ENTRY: 'BasicBlockType' = BitmapValue(6)
+    """A BB that is an entrypoint into a loop"""
+    LOOP_EXIT: 'BasicBlockType' = BitmapValue(10)
+    """A BB that is an exit to a loop"""
+    FUNCTION_ENTRY: 'BasicBlockType' = BitmapValue(16)
+    """A BB that is the first inside of its function"""
+    FUNCTION_EXIT: 'BasicBlockType' = BitmapValue(32)
+    """A BB that exits a function (i.e., it contains a return instruction)"""
+    FUNCTION_RETURN: 'BasicBlockType' = BitmapValue(64)
+    """A BB that is executed immediately after a CallInst returns"""
+    FUNCTION_CALL: 'BasicBlockType' = BitmapValue(128)
+    """A BB that contains a CallInst"""
 
 
 class Function:
@@ -152,21 +180,28 @@ class BasicBlockEntry(TraceEvent):
             self,
             uid: int,
             previous_uid: Optional[int],
-            name: str,
             function: str,
             function_index: int,
             bb_index: int,
             global_index: int,
-            consumed: List[int]
+            entry_count: int = 1,
+            consumed: Iterable[int] = (),
+            types: List[str] = ()
     ):
         super().__init__(uid, previous_uid)
-        self.name: str = name
+        self.entry_count: int = entry_count
         self.function: str = function
         self.function_index: int = function_index
         self.bb_index: int = bb_index
         self.global_index: int = global_index
         self.consumed: List[int] = sorted(consumed)
-        self._entry_count: Optional[int] = None
+        self.types: List[str] = types
+        self.bb_type: BasicBlockType = BasicBlockType.UNKNOWN
+        for ty in types:
+            bb_type = BasicBlockType.get(ty.upper())
+            if bb_type is None:
+                raise ValueError(f"Unknown basic block type: {ty!r} in basic block entry {uid}")
+            self.bb_type |= bb_type
         self._children: List[BasicBlockEntry] = []
         self._children_set: bool = False
         self._predecessors: List[BasicBlockEntry] = []
@@ -255,19 +290,6 @@ class BasicBlockEntry(TraceEvent):
                 self._predecessors.append(prev.caller)
 
     @property
-    def entry_count(self) -> int:
-        if self._entry_count is None:
-            event = self.previous
-            self._entry_count = 0
-            while event is not None:
-                if isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
-                    self._entry_count += 1
-                elif isinstance(event, FunctionCall):
-                    break
-                event = event.previous
-        return self._entry_count
-
-    @property
     def basic_block(self) -> BasicBlock:
         return self.trace.get_basic_block(self)
 
@@ -278,10 +300,18 @@ class BasicBlockEntry(TraceEvent):
 class FunctionReturn(TraceEvent):
     event_type = 'FunctionReturn'
 
-    def __init__(self, uid: int, previous_uid: Optional[int], name: str, returning_to_uid: Optional[int]):
+    def __init__(
+            self,
+            uid: int,
+            name: str,
+            previous_uid: Optional[int] = None,
+            call_event_uid: Optional[int] = None,
+            returning_to_uid: Optional[int] = None
+    ):
         super().__init__(uid, previous_uid)
         self.function_name: str = name
         self.returning_to_uid: Optional[int] = returning_to_uid
+        self.call_event_uid: Optional[int] = call_event_uid
         self._returning_to: Optional[BasicBlockEntry] = None
         self._function_call: Optional[Union[FunctionCall, ValueError]] = None
 
@@ -304,6 +334,15 @@ class FunctionReturn(TraceEvent):
     @property
     def function_call(self) -> FunctionCall:
         if self._function_call is None:
+            if self.call_event_uid is not None:
+                fc = self.trace[self.call_event_uid]
+                if isinstance(fc, FunctionCall):
+                    self._function_call = fc
+                else:
+                    self._function_call = ValueError(f"Function return {self!r} was associated with "
+                                                     f"function call uid {self.call_event_uid}, but this was "
+                                                     f"not a function call: {fc!r}")
+                return self._function_call
             prev: Optional[TraceEvent] = self.previous
             subcalls = 0
             while prev is not None:
