@@ -1,7 +1,7 @@
 import json
 from abc import ABCMeta
 from typing import (
-    Any, BinaryIO, Callable, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
+    Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
 )
 
 from tqdm import tqdm
@@ -106,7 +106,7 @@ class FunctionInvocation:
 
 class TraceEventMeta(ABCMeta):
     def __init__(cls, name, bases, clsdict):
-        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and isinstance(cls, TraceEvent):
+        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and hasattr(cls, 'event_type'):
             if cls.event_type in EVENTS_BY_TYPE:
                 raise ValueError(
                     f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
@@ -123,6 +123,10 @@ class TraceEvent(metaclass=TraceEventMeta):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
         self._trace: Optional[PolyTrackerTrace] = None
+
+    @property
+    def has_trace(self) -> bool:
+        return self._trace is not None
 
     @property
     def trace(self) -> "PolyTrackerTrace":
@@ -177,6 +181,16 @@ class FunctionCall(TraceEvent):
     def __init__(self, uid: int, previous_uid: Optional[int], name: str):
         super().__init__(uid, previous_uid)
         self.name = name
+        self.function_return: Optional[FunctionReturn] = None
+        self.entrypoint: Optional[BasicBlockEntry] = None
+
+    @TraceEvent.trace.setter  # type: ignore
+    def trace(self, pttrace: "PolyTrackerTrace"):
+        TraceEvent.trace.fset(self, pttrace)  # type: ignore
+        try:
+            self.caller.called_function = self
+        except TypeError as e:
+            tqdm.write(f"Warning: {e}\n")
 
     @property
     def caller(self) -> "BasicBlockEntry":
@@ -205,12 +219,15 @@ class BasicBlockEntry(TraceEvent):
         types: Iterable[str] = (),
     ):
         super().__init__(uid, previous_uid)
+        if entry_count < 1:
+            raise ValueError("entry_count must be a natural number")
         self.entry_count: int = entry_count
         self.function: str = function
         self.function_index: int = function_index
         self.bb_index: int = bb_index
         self.global_index: int = global_index
         self.consumed: List[int] = sorted(consumed)
+        self.called_function: Optional[FunctionCall] = None
         self.types: List[str] = list(types)
         self.bb_type: BasicBlockType = cast(BasicBlockType, BasicBlockType.UNKNOWN)
         for ty in types:
@@ -218,9 +235,15 @@ class BasicBlockEntry(TraceEvent):
             if bb_type is None:
                 raise ValueError(f"Unknown basic block type: {ty!r} in basic block entry {uid}")
             self.bb_type |= bb_type
-        self._children: List[BasicBlockEntry] = []
-        self._children_set: bool = False
-        self._predecessors: List[BasicBlockEntry] = []
+        self.children: List[BasicBlockEntry] = []
+
+    @TraceEvent.trace.setter  # type: ignore
+    def trace(self, pttrace: "PolyTrackerTrace"):
+        TraceEvent.trace.fset(self, pttrace)  # type: ignore
+        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(self.previous, FunctionCall):
+            self.previous.entrypoint = self
+        if isinstance(self.previous, BasicBlockEntry):
+            self.previous.children.append(self)
 
     def remove(self) -> bool:
         if len(self.predecessors) > 1:
@@ -262,48 +285,6 @@ class BasicBlockEntry(TraceEvent):
                 last_offset = offset
         if start_offset is not None:
             yield self.trace.inputstr[start_offset:last_offset + 1]  # type: ignore
-
-    @property
-    def children(self) -> List["BasicBlockEntry"]:
-        if not self._children_set:
-            for event in self.trace.events:
-                if isinstance(event, BasicBlockEntry):
-                    event._set_children()
-        return self._children
-
-    @property
-    def predecessors(self) -> List["BasicBlockEntry"]:
-        if not self._children_set:
-            _ = self.children
-        return self._predecessors
-
-    def _set_children(self):
-        self._children_set = True
-        prev = self.previous
-        if isinstance(prev, BasicBlockEntry):
-            prev._children.append(self)
-            self._predecessors.append(prev)
-        elif isinstance(prev, FunctionReturn):
-            try:
-                caller = prev.function_call.caller
-            except (ValueError, TypeError):
-                # This just means there were not matching function calls,
-                # which is likely due to an instrumentation error
-                # (this can sometimes happen on the first function in the trace)
-                # deal with it by connecting the previous basic block to us, if one exists
-                while prev is not None and not isinstance(prev, BasicBlockEntry):
-                    prev = prev.previous
-                if isinstance(prev, BasicBlockEntry):
-                    prev._children.append(self)
-                    self._predecessors.append(prev)
-                return
-            if caller != self:
-                caller._children.append(self)
-                self._predecessors.append(caller)
-        elif isinstance(prev, FunctionCall):
-            if prev.previous is not None and isinstance(prev.previous, BasicBlockEntry):
-                prev.caller._children.append(self)
-                self._predecessors.append(prev.caller)
 
     @property
     def basic_block(self) -> BasicBlock:
@@ -351,6 +332,11 @@ class FunctionReturn(TraceEvent):
             self._returning_to = ret
         return self._returning_to
 
+    @TraceEvent.trace.setter  # type: ignore
+    def trace(self, pttrace: "PolyTrackerTrace"):
+        TraceEvent.trace.fset(self, pttrace)  # type: ignore
+        self.function_call.function_return = self
+
     @property
     def function_call(self) -> FunctionCall:
         if self._function_call is None:
@@ -395,10 +381,12 @@ class FunctionReturn(TraceEvent):
 class PolyTrackerTrace:
     def __init__(self, events: List[TraceEvent], inputstr: bytes):
         self.events: List[TraceEvent] = sorted(events)
-        self.events_by_uid: Dict[int, TraceEvent] = {event.uid: event for event in events}
+        self.events_by_uid: Dict[int, TraceEvent] = {
+            event.uid: event for event in tqdm(events, leave=False, unit=" events", desc="building UID map")
+        }
         self.entrypoint: Optional[BasicBlockEntry] = None
         for event in tqdm(self.events, unit=" events", leave=False, desc="initializing trace events"):
-            if event.trace is not None:
+            if event.has_trace:
                 raise ValueError(f"Event {event} is already associated with trace {event.trace}")
             event.trace = self
             if self.entrypoint is None and isinstance(event, BasicBlockEntry):
@@ -514,7 +502,7 @@ class PolyTrackerTrace:
             raise ValueError(f"File {trace_file.name} was not recorded with POLYTRACE=1!")
         trace = data["trace"]
 
-        events = [TraceEvent.parse(event) for event in trace]
+        events = [TraceEvent.parse(event) for event in tqdm(trace, leave=False, unit=" events", desc="loading trace")]
 
         if "inputstr" not in data:
             if input_file is None:

@@ -6,7 +6,7 @@ from tqdm import tqdm
 from .mimid.treeminer import attach_comparisons, indexes_to_children, last_comparisons, no_overlap, wrap_terminals
 from .mimid.grammarminer import check_empty_rules, collapse_rules, convert_spaces_in_keys, merge_grammar, to_grammar
 from .mimid import grammartools
-from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace
+from .tracing import BasicBlockEntry, BasicBlockType, FunctionCall, FunctionReturn, PolyTrackerTrace
 
 
 class StartNode:
@@ -360,6 +360,9 @@ class Production:
         # TODO: investigate checking for common subsequences and generating new sub-productions for those
         return True
 
+    def __contains__(self, rule: Rule):
+        return rule in self.rules
+
     def __iter__(self) -> Iterable[Rule]:
         return iter(self.rules)
 
@@ -415,18 +418,52 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                 terminal = Terminal(token)
                 terminal_name = f"<{terminal!s}>"
                 if terminal_name not in grammar:
-                    Production(grammar, terminal_name, Rule.load(grammar, terminal))
+                    Production(grammar, terminal_name, Rule(grammar, terminal))
                 sub_productions.append(terminal_name)
 
-            for child in event.children:
-                sub_productions.append(f"<{child!s}>")
+            if event.called_function is not None:
+                sub_productions.append(f"<{event.called_function.name}>")
+                ret = event.called_function.function_return
+                if ret is not None:
+                    returning_to = event.called_function.function_return.returning_to
+                    if returning_to is not None:
+                        sub_productions.append(f"<{returning_to!s}>")
+                    else:
+                        # TODO: Print warning
+                        pass
+                else:
+                    # TODO: Print warning
+                    pass
+
+            if event.children:
+                rules = [
+                    Rule(grammar, *(sub_productions + [f"<{child!s}>"]))
+                    for child in event.children
+                ]
+            else:
+                rules = [Rule(grammar, *sub_productions)]
 
             production_name = f"<{event!s}>"
             if production_name in grammar:
                 production = grammar[production_name]
-                production.add(Rule(grammar, *sub_productions))
+                for rule in rules:
+                    if rule not in production:
+                        production.add(rule)
             else:
-                Production(grammar, production_name, Rule.load(grammar, *sub_productions))
+                Production(grammar, production_name, *rules)
+
+        elif isinstance(event, FunctionCall):
+            if event.entrypoint is None:
+                print(f"Warning: unknown basic block entrypoint for function {event.name}")
+            else:
+                production_name = f"<{event.name}>"
+                rule = Rule(grammar, str(event.entrypoint))
+                if production_name in grammar:
+                    production = grammar[production_name]
+                    if rule not in production:
+                        production.add(rule)
+                else:
+                    Production(grammar, production_name, rule)
 
     return grammar
 
