@@ -237,9 +237,7 @@ void taintManager::addJsonRuntimeTrace() {
               << std::flush;
     ++threadStack;
     size_t eventNumber = 0;
-    //for (const auto event : stack.eventHistory) {
-    for(auto iter = stack.eventHistory.cbegin(); iter != stack.eventHistory.cend(); ++iter) {
-      auto event = *iter;
+    for (auto event = stack.lastEvent(); event; event = event->previous) {
       json j;
       const auto currentTime = std::chrono::system_clock::now();
       auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -251,7 +249,7 @@ void taintManager::addJsonRuntimeTrace() {
         lastLogTime = currentTime;
         std::cerr << "\r" << std::string(80, ' ') << "\r";
         std::cerr << "Event " << eventNumber << " / "
-                  << stack.eventHistory.size() << std::flush;
+                  << stack.numEvents() << std::flush;
       }
       if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
         // does this function call consume bytes?
@@ -261,7 +259,7 @@ void taintManager::addJsonRuntimeTrace() {
         //       we can experiment with emitting all functions
         if (!(call->consumesBytes(trace)) && call->ret) {
           std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
-          while (*iter != call->ret && ++iter != stack.eventHistory.cend());
+          event = call->ret;
         } else {
           j = json::object({
               {"type", "FunctionCall"},

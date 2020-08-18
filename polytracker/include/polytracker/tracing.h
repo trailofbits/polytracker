@@ -177,14 +177,17 @@ public:
 
 class TraceEventStack {
   std::stack<TraceEventStackFrame> stack;
+  TraceEvent* mLastEvent;
+  size_t mNumEvents;
 
 public:
-  std::vector<TraceEvent *> eventHistory;
-
-  TraceEventStack() { stack.emplace(); }
+  TraceEventStack() : mLastEvent(nullptr), mNumEvents(0) { stack.emplace(); }
   ~TraceEventStack() {
-    for (auto event : eventHistory) {
-      delete event;
+    auto event = mLastEvent;
+    while (event) {
+      auto toDelete = event;
+      event = event->previous;
+      delete toDelete;
     }
   }
   /* disallow copying to avoid the memory management headache
@@ -195,10 +198,11 @@ public:
    * This object will assume ownership of the memory pointed to by event.
    */
   inline void push(TraceEvent *event) {
-    if (!eventHistory.empty()) {
-      event->previous = eventHistory.back();
+    if (mLastEvent) {
+      event->previous = mLastEvent;
     }
-    eventHistory.push_back(event);
+    mLastEvent = event;
+    ++mNumEvents;
     stack.top().push(event);
   }
   inline void push() { stack.emplace(); }
@@ -219,6 +223,12 @@ public:
     } else {
       return false;
     }
+  }
+  constexpr const TraceEvent * const lastEvent() const {
+    return mLastEvent;
+  }
+  constexpr size_t numEvents() const {
+    return mNumEvents;
   }
 };
 
