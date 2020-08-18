@@ -24,18 +24,34 @@ std::string BasicBlockTrace::str() const {
 }
 
 bool FunctionCall::consumesBytes(const Trace &trace) const {
-  //std::cerr << "\rconsumesBytes " << fname << std::flush;
   if (mConsumesBytes != CachedBool::UNKNOWN) {
     return mConsumesBytes == CachedBool::TRUE;
   }
   for (TraceEvent* event = ret; event; event = event->previous) {
-    if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
-      if (!trace.taints(bb).empty()) {
-        std::cerr << "\r" << bb->str() << " has taints!" << std::endl << std::flush;
+    if (event->eventIndex <= this->eventIndex) {
+      mConsumesBytes = CachedBool::FALSE;
+      return false;
+    } else if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
+      if (bb->function == nullptr || bb->function->eventIndex <= this->eventIndex) {
+        if (!trace.taints(bb).empty()) {
+          mConsumesBytes = CachedBool::TRUE;
+          return true;
+        } else if (bb->function && bb->function->eventIndex < this->eventIndex) {
+          // we somehow missed our associated function call event
+          std::cerr << std::endl << "Warning: could not find path between the call to " << this->fname << " and its return." << std::endl << "This could be an indication of instrumentation error." << std::endl;
+          mConsumesBytes = CachedBool::FALSE;
+          return false;
+        }
+      } else if (bb->function->consumesBytes(trace)) {
         mConsumesBytes = CachedBool::TRUE;
         return true;
-      } else if (const auto ret = dynamic_cast<FunctionReturn*>(event)) {
-        if (const auto call = ret->call) {
+      } else {
+        // jump back to the call of this BB
+        event = bb->function;
+      }
+    } else if (const auto ret = dynamic_cast<FunctionReturn*>(event)) {
+      if (const auto call = ret->call) {
+        if (call->eventIndex > this->eventIndex) {
           if (call->consumesBytes(trace)) {
             mConsumesBytes = CachedBool::TRUE;
             return true;
@@ -43,14 +59,17 @@ bool FunctionCall::consumesBytes(const Trace &trace) const {
             event = call;
           }
         }
-      } else if (event == this) {
-        std::cerr << "\rGGGG Function " << this->fname << " DID NOT CONSUME\n" << std::flush;
-        mConsumesBytes = CachedBool::FALSE;
-        return false;
+      }
+    } else if (const auto call = dynamic_cast<FunctionCall*>(event)) {
+      // this will only happen if there is an instrumentation error, because
+      // in an ideal world we should always see the associated FunctionReturn
+      // first
+      if (call->consumesBytes(trace)) {
+        mConsumesBytes = CachedBool::TRUE;
+        return true;
       }
     }
   }
-  //std::cerr << " BAD" << std::endl << std::flush;
   // we were unable to resolve the return associated with this function
   // (most likely due to instrumentation deficiencies), so just assume
   // that this function does consume bytes

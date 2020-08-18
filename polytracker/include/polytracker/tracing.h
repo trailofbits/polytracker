@@ -80,15 +80,18 @@ struct BasicBlockTraceComparator {
   }
 };
 
+struct FunctionCall;
+
 struct BasicBlockEntry : public TraceEvent {
   const char *fname;
   BBIndex index;
   const size_t entryCount;
   BasicBlockType type;
+  FunctionCall *function;
 
   BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount,
                   BasicBlockType type)
-      : fname(fname), index(index), entryCount(entryCount), type(type) {}
+      : fname(fname), index(index), entryCount(entryCount), type(type), function(nullptr) {}
   BasicBlockEntry(const char *fname, BBIndex index, BasicBlockType type)
       : BasicBlockEntry(fname, index, 1, type) {}
 
@@ -145,6 +148,7 @@ struct FunctionReturn : public TraceEvent {
 class TraceEventStack;
 
 class TraceEventStackFrame {
+  FunctionCall *call;
   TraceEvent *head;
   // This keeps track of the last occurrence of each BB in this stack frame
   std::unordered_map<BBIndex, BasicBlockEntry *> lastOccurrences;
@@ -155,15 +159,18 @@ class TraceEventStackFrame {
     head = event;
     if (auto bb = dynamic_cast<BasicBlockEntry *>(event)) {
       lastOccurrences[bb->index] = bb;
+      bb->function = call;
     }
   }
 
 public:
   std::vector<const TraceEvent *> eventHistory;
 
-  TraceEventStackFrame() : head(nullptr) {}
+  TraceEventStackFrame(FunctionCall *call) : call(call), head(nullptr) {}
+  TraceEventStackFrame() : TraceEventStackFrame(nullptr) {}
   operator bool() const { return head != nullptr; }
   bool empty() const { return head != nullptr; }
+  constexpr FunctionCall *functionCall() const { return call; }
   constexpr TraceEvent *peek() const { return head; }
   BasicBlockEntry *lastOccurrence(BBIndex bb) const {
     auto bbe = lastOccurrences.find(bb);
@@ -205,7 +212,7 @@ public:
     ++mNumEvents;
     stack.top().push(event);
   }
-  inline void push() { stack.emplace(); }
+  inline void push(FunctionCall *call) { stack.emplace(call); }
   template <typename T,
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
                 * = nullptr,

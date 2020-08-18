@@ -209,10 +209,11 @@ class BasicBlockEntry(TraceEvent):
     def __init__(
         self,
         uid: int,
-        function: str,
         function_index: int,
         bb_index: int,
         global_index: int,
+        function_call_uid: Optional[int] = None,
+        function_name: Optional[str] = None,
         previous_uid: Optional[int] = None,
         entry_count: int = 1,
         consumed: Iterable[int] = (),
@@ -222,12 +223,15 @@ class BasicBlockEntry(TraceEvent):
         if entry_count < 1:
             raise ValueError("entry_count must be a natural number")
         self.entry_count: int = entry_count
-        self.function: str = function
+        self._function_name: Optional[str] = function_name
+        self.function_call_uid: Optional[int] = function_call_uid
+        """The UID of the function containing this basic block"""
         self.function_index: int = function_index
         self.bb_index: int = bb_index
         self.global_index: int = global_index
         self.consumed: List[int] = sorted(consumed)
         self.called_function: Optional[FunctionCall] = None
+        """The function this basic block calls"""
         self.types: List[str] = list(types)
         self.bb_type: BasicBlockType = cast(BasicBlockType, BasicBlockType.UNKNOWN)
         for ty in types:
@@ -236,6 +240,22 @@ class BasicBlockEntry(TraceEvent):
                 raise ValueError(f"Unknown basic block type: {ty!r} in basic block entry {uid}")
             self.bb_type |= bb_type
         self.children: List[BasicBlockEntry] = []
+
+    @property
+    def containing_function(self) -> Optional[FunctionCall]:
+        if self.function_call_uid is not None:
+            return self.trace[self.function_call_uid]
+        else:
+            return None
+
+    @property
+    def function_name(self) -> str:
+        if self._function_name is None:
+            func = self.containing_function
+            if func is None:
+                raise ValueError(f"The function name of {self!r} is not known!")
+            self._function_name = func.name
+        return self._function_name
 
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
@@ -439,7 +459,7 @@ class PolyTrackerTrace:
                     if event.function_index in self._functions_by_idx:
                         function = self._functions_by_idx[event.function_index]
                     else:
-                        function = Function(name=event.function, function_index=event.function_index)
+                        function = Function(name=event.function_name, function_index=event.function_index)
                         self._functions_by_idx[event.function_index] = function
                     if event.global_index in self._basic_blocks_by_idx:
                         new_bb = self._basic_blocks_by_idx[event.global_index]
