@@ -5,7 +5,6 @@
  *      Author: Evan Sultanik, Trail of Bits
  */
 
-#include <iostream>
 #include <string>
 
 #include "llvm/IR/InstrTypes.h"
@@ -27,12 +26,11 @@ namespace polytracker {
 bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
   bool modified = false;
 
-  for (Instruction *inst = &basicBlock.front();
-       inst && !isa<TerminatorInst>(inst); inst = inst->getNextNode()) {
-    if (auto call = dyn_cast<CallInst>(inst)) {
+  for (Instruction &inst : basicBlock) {
+    if (auto call = dyn_cast<CallInst>(&inst)) {
       // Is the call immediately followed by an unconditional branch?
       // if so, that's the only case that is okay:
-      Instruction *next = inst->getNextNode();
+      Instruction *next = inst.getNextNode();
       if (next == nullptr) {
         continue;
       } else if (auto branch = dyn_cast<BranchInst>(next)) {
@@ -54,32 +52,31 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       }
       // We need to split this BB into a new one after the call
       modified = true;
+      auto bb = next->getParent();
+      // Don't bother logging these common functions, but still split for them
       bool includeFunctionName =
           (fname != "llvm.dbg.declare" && fname != "llvm.dbg.value" &&
            fname != "llvm.lifetime.end.p0i8" && fname != "__assert_fail");
-      // Don't bother logging these common functions, but still split for them
-      auto bb = next->getParent();
       if (fname.length() == 0 || bb->hasName() || includeFunctionName) {
-        std::cout << "Splitting basic block";
+        llvm::errs() << "Splitting basic block";
         if (bb->hasName()) {
-          std::cout << " " << bb->getName().data();
+          llvm::errs() << " " << bb->getName().data();
         }
         if (includeFunctionName) {
-          std::cout << " after call to " << fname;
+          llvm::errs() << " after call to " << fname;
         }
-        std::cout << std::endl;
+        llvm::errs() << "\n";
       }
       bb->splitBasicBlock(next);
     }
-    return modified;
   }
 
-  return false;
+  return modified;
 }
 
 bool BBSplittingPass::runOnFunction(Function &function) {
   bool ret = false;
-  for (auto &bb : function.getBasicBlockList()) {
+  for (auto &bb : function) {
     ret = analyzeBasicBlock(bb) || ret;
   }
   return ret;

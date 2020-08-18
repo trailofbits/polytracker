@@ -982,8 +982,9 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   uint32_t functionIndex = 0;
   polytracker::BBSplittingPass bbSplitter;
   for (Function *i : FnsToInstrument) {
-    if (!i || i->isDeclaration())
+    if (!i || i->isDeclaration()) {
       continue;
+    }
 
     Value *FuncIndex =
         ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
