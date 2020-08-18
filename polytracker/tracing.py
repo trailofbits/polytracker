@@ -119,7 +119,7 @@ class TraceEventMeta(ABCMeta):
 class TraceEvent(metaclass=TraceEventMeta):
     event_type: str = "TraceEvent"
 
-    def __init__(self, uid: int, previous_uid: Optional[int]):
+    def __init__(self, uid: int, previous_uid: Optional[int] = None):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
         self._trace: Optional[PolyTrackerTrace] = None
@@ -178,7 +178,7 @@ class TraceEvent(metaclass=TraceEventMeta):
 class FunctionCall(TraceEvent):
     event_type = "FunctionCall"
 
-    def __init__(self, uid: int, previous_uid: Optional[int], name: str):
+    def __init__(self, uid: int, name: str, previous_uid: Optional[int] = None):
         super().__init__(uid, previous_uid)
         self.name = name
         self.function_return: Optional[FunctionReturn] = None
@@ -209,11 +209,11 @@ class BasicBlockEntry(TraceEvent):
     def __init__(
         self,
         uid: int,
-        previous_uid: Optional[int],
         function: str,
         function_index: int,
         bb_index: int,
         global_index: int,
+        previous_uid: Optional[int] = None,
         entry_count: int = 1,
         consumed: Iterable[int] = (),
         types: Iterable[str] = (),

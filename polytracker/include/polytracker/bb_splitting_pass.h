@@ -8,6 +8,8 @@
 #ifndef POLYTRACKER_INCLUDE_POLYTRACKER_BB_SPLITTING_PASS_H_
 #define POLYTRACKER_INCLUDE_POLYTRACKER_BB_SPLITTING_PASS_H_
 
+#include <vector>
+
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
@@ -19,7 +21,9 @@ struct BBSplittingPass : public llvm::FunctionPass {
 
   BBSplittingPass() : FunctionPass(ID) {}
 
-  bool analyzeBasicBlock(llvm::BasicBlock &bb) const;
+  std::vector<llvm::BasicBlock *> analyzeBasicBlock(llvm::BasicBlock &bb) const;
+
+  std::vector<llvm::BasicBlock *> analyzeFunction(llvm::Function &function) const;
 
   bool runOnFunction(llvm::Function &function) override;
 };

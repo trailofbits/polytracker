@@ -23,8 +23,8 @@ using llvm::TerminatorInst;
 
 namespace polytracker {
 
-bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
-  bool modified = false;
+std::vector<BasicBlock *> BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
+  std::vector<BasicBlock *> newBBs;
 
   for (Instruction &inst : basicBlock) {
     if (auto call = dyn_cast<CallInst>(&inst)) {
@@ -51,7 +51,6 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
         }
       }
       // We need to split this BB into a new one after the call
-      modified = true;
       auto bb = next->getParent();
       // Don't bother logging these common functions, but still split for them
       bool includeFunctionName =
@@ -67,17 +66,30 @@ bool BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
         }
         llvm::errs() << "\n";
       }
-      bb->splitBasicBlock(next);
+      newBBs.push_back(bb->splitBasicBlock(next));
     }
   }
 
-  return modified;
+  return newBBs;
+}
+
+std::vector<BasicBlock *> BBSplittingPass::analyzeFunction(llvm::Function &function) const {
+  std::vector<BasicBlock *> ret;
+  for (auto &bb : function) {
+    auto newBBs = analyzeBasicBlock(bb);
+    ret.insert(
+          ret.end(),
+          std::make_move_iterator(newBBs.begin()),
+          std::make_move_iterator(newBBs.end())
+        );
+  }
+  return ret;
 }
 
 bool BBSplittingPass::runOnFunction(Function &function) {
   bool ret = false;
   for (auto &bb : function) {
-    ret = analyzeBasicBlock(bb) || ret;
+    ret = !analyzeBasicBlock(bb).empty() || ret;
   }
   return ret;
 }

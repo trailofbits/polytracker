@@ -58,10 +58,10 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
        hasType(ret, BasicBlockType::FUNCTION_EXIT))) {
     ret = ret | BasicBlockType::LOOP_EXIT;
   }
-  if (hasType(ret, BasicBlockType::CONDITIONAL) && hasType(ret, BasicBlockType::FUNCTION_EXIT)) {
-    llvm::errs() << "Error: basic block " << *bb << " in function " << *bb->getParent() << " is both a conditional and a function exit. This likely means that the basic block splitting pass failed.\n";
-    exit(1);
-  }
+//  if (hasType(ret, BasicBlockType::CONDITIONAL) && hasType(ret, BasicBlockType::FUNCTION_CALL)) {
+//    llvm::errs() << "Error: basic block " << *bb << " in function " << *bb->getParent() << " is both a conditional and a function call. This likely means that the basic block splitting pass failed.\n";
+//    exit(1);
+//  }
   if (ret != BasicBlockType::STANDARD) {
     // If the BB is anything but standard, it shouldn't have the standard flag
     ret = ret ^ BasicBlockType::STANDARD;
