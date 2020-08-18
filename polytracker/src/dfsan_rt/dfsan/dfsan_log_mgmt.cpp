@@ -408,7 +408,8 @@ void taintManager::outputRawTaintSets() {
   }
   std::string output_string = outfile + "_process_set.json";
   std::ofstream o(output_string);
-  o << std::setw(4) << output_json;
+  // If we are doing a full trace, only indent two spaces to save space!
+  o << std::setw(this->doTrace ? 2 : 4) << output_json;
   o.close();
 }
 

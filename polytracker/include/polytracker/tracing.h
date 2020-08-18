@@ -265,7 +265,7 @@ public:
   }
   const BasicBlockEntry *getLastUsage(dfsan_label label) const {
     auto luIter = lastUsages.find(label);
-    if (luIter != lastUsages.end()) {
+    if (luIter != lastUsages.cend()) {
       return luIter->second;
     } else {
       return nullptr;
