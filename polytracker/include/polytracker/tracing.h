@@ -101,10 +101,23 @@ struct BasicBlockEntry : public TraceEvent {
   std::string str() const { return BasicBlockTrace(*this).str(); }
 };
 
-struct FunctionCall : public TraceEvent {
-  const char *fname;
+struct FunctionReturn;
+class Trace;
 
-  FunctionCall(const char *fname) : fname(fname) {}
+enum class CachedBool : uint_fast8_t {
+  FALSE = 0,
+  TRUE = 1,
+  UNKNOWN = 128,
+};
+
+class FunctionCall : public TraceEvent {
+  mutable CachedBool mConsumesBytes;
+
+public:
+  const char *fname;
+  FunctionReturn* ret;
+
+  FunctionCall(const char *fname) : mConsumesBytes(CachedBool::UNKNOWN), fname(fname), ret(nullptr) {}
 
   const BasicBlockEntry *getCaller() const {
     for (auto event = previous; event; event = event->previous) {
@@ -114,29 +127,30 @@ struct FunctionCall : public TraceEvent {
     }
     return nullptr;
   }
+
+  bool consumesBytes(const Trace &trace) const;
 };
 
 struct FunctionReturn : public TraceEvent {
   FunctionCall *call;
+  BasicBlockEntry *returningTo;
 
-  FunctionReturn(FunctionCall *call) : call(call) {}
-
-  constexpr const BasicBlockEntry *returningTo() const {
-    return call ? call->getCaller() : nullptr;
+  FunctionReturn(FunctionCall *call) : call(call), returningTo(nullptr) {
+    if (call) {
+      call->ret = this;
+    }
   }
 };
+
+class TraceEventStack;
 
 class TraceEventStackFrame {
   TraceEvent *head;
   // This keeps track of the last occurrence of each BB in this stack frame
   std::unordered_map<BBIndex, BasicBlockEntry *> lastOccurrences;
 
-public:
-  std::vector<const TraceEvent *> eventHistory;
+  friend class TraceEventStack;
 
-  TraceEventStackFrame() : head(nullptr) {}
-  operator bool() const { return head != nullptr; }
-  bool empty() const { return head != nullptr; }
   void push(TraceEvent *event) {
     event->previous = head;
     head = event;
@@ -144,6 +158,13 @@ public:
       lastOccurrences[bb->index] = bb;
     }
   }
+
+public:
+  std::vector<const TraceEvent *> eventHistory;
+
+  TraceEventStackFrame() : head(nullptr) {}
+  operator bool() const { return head != nullptr; }
+  bool empty() const { return head != nullptr; }
   constexpr TraceEvent *peek() const { return head; }
   BasicBlockEntry *lastOccurrence(BBIndex bb) const {
     auto bbe = lastOccurrences.find(bb);
@@ -176,6 +197,24 @@ public:
    */
   inline void push(TraceEvent *event) {
     eventHistory.push_back(event);
+    if (stack.top().empty()) {
+      stack.pop();
+      if (!stack.empty()) {
+        // this is the first BB in a function call
+        if (auto prev = peek().peek()) {
+          // we have the previous event from the last stack frame,
+          // so add it as this event's previous
+          push();
+          stack.top().push(event);
+          // we need to set event->previous after pushing it to the stack
+          // because TraceEventStack.push(...) will set event->previous to
+          // nullptr in this case.
+          event->previous = prev;
+          return;
+        }
+      }
+      push();
+    }
     stack.top().push(event);
   }
   inline void push() { stack.emplace(); }

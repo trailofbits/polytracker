@@ -150,13 +150,17 @@ void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
   taint_prop_lock.lock();
   auto currentStack = trace.currentStack();
   size_t entryCount;
+  BasicBlockEntry *newBB;
   if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
     // this is not the first occurrence of this basic block in the current
     // stack frame
-    currentStack->emplace<BasicBlockEntry>(fname, bbIndex,
+    newBB = currentStack->emplace<BasicBlockEntry>(fname, bbIndex,
                                            prevBB->entryCount + 1, bbType);
   } else {
-    currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
+    newBB = currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
+  }
+  if (auto ret = dynamic_cast<FunctionReturn *>(newBB->previous)) {
+    ret->returningTo = newBB;
   }
   taint_prop_lock.unlock();
 }
@@ -234,7 +238,9 @@ void taintManager::addJsonRuntimeTrace() {
               << std::flush;
     ++threadStack;
     size_t eventNumber = 0;
-    for (const auto event : stack.eventHistory) {
+    //for (const auto event : stack.eventHistory) {
+    for(auto iter = stack.eventHistory.cbegin(); iter != stack.eventHistory.cend(); ++iter) {
+      auto event = *iter;
       json j;
       const auto currentTime = std::chrono::system_clock::now();
       auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -249,10 +255,20 @@ void taintManager::addJsonRuntimeTrace() {
                   << stack.eventHistory.size() << std::flush;
       }
       if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
-        j = json::object({
-            {"type", "FunctionCall"},
-            {"name", call->fname},
-        });
+        // does this function call consume bytes?
+        // if not, we do not need it to do grammar extraction, and saving
+        // to JSON is very slow. So speed things up by just eliding it!
+        // TODO: If/when we implement another means of output (e.g., sqlite),
+        //       we can experiment with emitting all functions
+        if (!(call->consumesBytes(trace)) && call->ret) {
+          std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
+          while (*iter != call->ret && ++iter != stack.eventHistory.cend());
+        } else {
+          j = json::object({
+              {"type", "FunctionCall"},
+              {"name", call->fname},
+          });
+        }
       } else if (const auto bb = dynamic_cast<const BasicBlockEntry*>(event)) {
         j = json::object({{"type", "BasicBlockEntry"},
                           {"function", bb->fname},
@@ -301,8 +317,8 @@ void taintManager::addJsonRuntimeTrace() {
             {"type", "FunctionReturn"},
             {"name", ret->call ? ret->call->fname : nullptr},
         });
-        if (ret->returningTo()) {
-          j["returning_to_uid"] = ret->returningTo()->eventIndex;
+        if (ret->returningTo) {
+          j["returning_to_uid"] = ret->returningTo->eventIndex;
         }
         if (const auto functionCall = ret->call) {
           j["call_event_uid"] = ret->call->eventIndex;

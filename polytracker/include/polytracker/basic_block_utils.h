@@ -4,6 +4,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/InstrTypes.h"
 
 #include "polytracker/basic_block_types.h"
 
@@ -13,6 +14,7 @@ using llvm::BasicBlock;
 using llvm::CallInst;
 using llvm::DominatorTree;
 using llvm::ReturnInst;
+using llvm::TerminatorInst;
 
 BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
   size_t dominatedPredecessors = 0;
@@ -49,6 +51,9 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
     } else if (llvm::isa<CallInst>(inst)) {
       ret = ret | BasicBlockType::FUNCTION_CALL;
+    }
+    if (llvm::isa<TerminatorInst>(inst)) {
+      break;
     }
   }
   if (dominatingSuccessors > 0 &&
