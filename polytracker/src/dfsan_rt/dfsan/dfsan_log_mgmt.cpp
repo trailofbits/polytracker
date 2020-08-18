@@ -278,7 +278,11 @@ void taintManager::addJsonRuntimeTrace() {
         }
         const auto& taints = trace.taints(bb);
         if (!taints.empty()) {
-          j["consumed"] = taints;
+          // dfsan_labels are 1-indexed
+          std::vector<dfsan_label> zeroIndexed;
+          zeroIndexed.reserve(taints.size());
+          std::transform(taints.begin(), taints.end(), std::back_inserter(zeroIndexed), [](dfsan_label d) {return d - 1;});
+          j["consumed"] = zeroIndexed;
         }
         std::vector<std::string> types;
         if (hasType(bb->type, BasicBlockType::STANDARD)) {
