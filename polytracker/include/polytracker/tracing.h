@@ -152,7 +152,6 @@ class TraceEventStackFrame {
   friend class TraceEventStack;
 
   void push(TraceEvent *event) {
-    event->previous = head;
     head = event;
     if (auto bb = dynamic_cast<BasicBlockEntry *>(event)) {
       lastOccurrences[bb->index] = bb;
@@ -180,7 +179,7 @@ class TraceEventStack {
   std::stack<TraceEventStackFrame> stack;
 
 public:
-  std::vector<const TraceEvent *> eventHistory;
+  std::vector<TraceEvent *> eventHistory;
 
   TraceEventStack() { stack.emplace(); }
   ~TraceEventStack() {
@@ -196,25 +195,10 @@ public:
    * This object will assume ownership of the memory pointed to by event.
    */
   inline void push(TraceEvent *event) {
-    eventHistory.push_back(event);
-    if (stack.top().empty()) {
-      stack.pop();
-      if (!stack.empty()) {
-        // this is the first BB in a function call
-        if (auto prev = peek().peek()) {
-          // we have the previous event from the last stack frame,
-          // so add it as this event's previous
-          push();
-          stack.top().push(event);
-          // we need to set event->previous after pushing it to the stack
-          // because TraceEventStack.push(...) will set event->previous to
-          // nullptr in this case.
-          event->previous = prev;
-          return;
-        }
-      }
-      push();
+    if (!eventHistory.empty()) {
+      event->previous = eventHistory.back();
     }
+    eventHistory.push_back(event);
     stack.top().push(event);
   }
   inline void push() { stack.emplace(); }

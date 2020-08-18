@@ -1093,23 +1093,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
               // Insert before the next inst.
               IRBuilder<> IRB(Next);
               IRB.CreateCall(DFSanResetFrameFn, FrameIndex);
-            } else if (!IsTerminator) {
-              // This call is not the final instruction in this BB
-              // Record that we returned back into the basic block from the
-              // function call
-              Value *BBIndex2 = ConstantInt::get(IntegerType::getInt32Ty(*Ctx),
-                                                 bbIndex++, false);
-              Value *BBType = ConstantInt::get(
-                  IntegerType::getInt8Ty(*Ctx),
-                  static_cast<uint8_t>(
-                      polytracker::getType(curr_bb, DFSF.DT) |
-                      polytracker::BasicBlockType::FUNCTION_RETURN),
-                  false);
-              // from the instrumentation's perspective, make the
-              // remainder of this BB after the call a new BB
-              IRBuilder<> IRB(Next);
-              IRB.CreateCall(DFSanEntryBBFn,
-                             {FuncName, FuncIndex, BBIndex2, BBType});
             }
           }
         }

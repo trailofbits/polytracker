@@ -127,9 +127,8 @@ void taintManager::logFunctionExit() {
     } else {
       if (auto func = dynamic_cast<FunctionCall*>(stack.peek().peek())) {
         // Create the function return event in the stack frame that called
-        // the function, and manually set the previous event to be the BB that
-        // contained the return statement
-        stack.emplace<FunctionReturn>(func)->previous = caller;
+        // the function
+        stack.emplace<FunctionReturn>(func);
       } else {
         std::cout
             << "Error finding matching function call in the event trace stack!"
