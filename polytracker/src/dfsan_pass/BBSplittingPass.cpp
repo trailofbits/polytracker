@@ -23,7 +23,8 @@ using llvm::TerminatorInst;
 
 namespace polytracker {
 
-std::vector<BasicBlock *> BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
+std::vector<BasicBlock *>
+BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
   std::vector<BasicBlock *> newBBs;
 
   for (Instruction &inst : basicBlock) {
@@ -73,15 +74,13 @@ std::vector<BasicBlock *> BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBl
   return newBBs;
 }
 
-std::vector<BasicBlock *> BBSplittingPass::analyzeFunction(llvm::Function &function) const {
+std::vector<BasicBlock *>
+BBSplittingPass::analyzeFunction(llvm::Function &function) const {
   std::vector<BasicBlock *> ret;
   for (auto &bb : function) {
     auto newBBs = analyzeBasicBlock(bb);
-    ret.insert(
-          ret.end(),
-          std::make_move_iterator(newBBs.begin()),
-          std::make_move_iterator(newBBs.end())
-        );
+    ret.insert(ret.end(), std::make_move_iterator(newBBs.begin()),
+               std::make_move_iterator(newBBs.end()));
   }
   return ret;
 }

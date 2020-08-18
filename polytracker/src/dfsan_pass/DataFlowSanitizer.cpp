@@ -1065,10 +1065,14 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Instruction *InsertBefore;
         // Was this one of the new BBs that was split after a function call?
         // If so, set that it is a FUNCTION_RETURN
-        bool wasSplit = std::find(splitBBs.cbegin(), splitBBs.cend(), curr_bb) != splitBBs.cend();
+        bool wasSplit = std::find(splitBBs.cbegin(), splitBBs.cend(),
+                                  curr_bb) != splitBBs.cend();
         Value *BBType = ConstantInt::get(
             IntegerType::getInt8Ty(*Ctx),
-            static_cast<uint8_t>(polytracker::getType(curr_bb, DFSF.DT) | (wasSplit ? polytracker::BasicBlockType::FUNCTION_RETURN : polytracker::BasicBlockType::UNKNOWN)),
+            static_cast<uint8_t>(
+                polytracker::getType(curr_bb, DFSF.DT) |
+                (wasSplit ? polytracker::BasicBlockType::FUNCTION_RETURN
+                          : polytracker::BasicBlockType::UNKNOWN)),
             false);
         if (curr_bb == BB) {
           // this is the entrypoint basic block in a function, so make sure the

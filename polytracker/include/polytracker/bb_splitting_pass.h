@@ -23,7 +23,8 @@ struct BBSplittingPass : public llvm::FunctionPass {
 
   std::vector<llvm::BasicBlock *> analyzeBasicBlock(llvm::BasicBlock &bb) const;
 
-  std::vector<llvm::BasicBlock *> analyzeFunction(llvm::Function &function) const;
+  std::vector<llvm::BasicBlock *>
+  analyzeFunction(llvm::Function &function) const;
 
   bool runOnFunction(llvm::Function &function) override;
 };

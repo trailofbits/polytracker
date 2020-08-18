@@ -30,7 +30,7 @@ class BitmapMeta(ABCMeta):
         super().__init__(name, bases, clsdict)
 
 
-B = TypeVar("B", bound='Bitmap')
+B = TypeVar("B", bound="Bitmap")
 
 
 class Bitmap(metaclass=BitmapMeta):

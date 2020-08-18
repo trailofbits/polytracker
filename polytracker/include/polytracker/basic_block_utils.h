@@ -45,7 +45,7 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
        hasType(ret, BasicBlockType::FUNCTION_ENTRY))) {
     ret = ret | BasicBlockType::LOOP_ENTRY;
   }
-  for (const auto& inst : *bb) {
+  for (const auto &inst : *bb) {
     // TODO: Also handle longjmp here
     if (llvm::isa<ReturnInst>(&inst)) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
@@ -58,10 +58,12 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
        hasType(ret, BasicBlockType::FUNCTION_EXIT))) {
     ret = ret | BasicBlockType::LOOP_EXIT;
   }
-//  if (hasType(ret, BasicBlockType::CONDITIONAL) && hasType(ret, BasicBlockType::FUNCTION_CALL)) {
-//    llvm::errs() << "Error: basic block " << *bb << " in function " << *bb->getParent() << " is both a conditional and a function call. This likely means that the basic block splitting pass failed.\n";
-//    exit(1);
-//  }
+  //  if (hasType(ret, BasicBlockType::CONDITIONAL) && hasType(ret,
+  //  BasicBlockType::FUNCTION_CALL)) {
+  //    llvm::errs() << "Error: basic block " << *bb << " in function " <<
+  //    *bb->getParent() << " is both a conditional and a function call. This
+  //    likely means that the basic block splitting pass failed.\n"; exit(1);
+  //  }
   if (ret != BasicBlockType::STANDARD) {
     // If the BB is anything but standard, it shouldn't have the standard flag
     ret = ret ^ BasicBlockType::STANDARD;

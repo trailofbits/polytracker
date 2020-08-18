@@ -92,7 +92,8 @@ struct BasicBlockEntry : public TraceEvent {
 
   BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount,
                   BasicBlockType type)
-      : fname(fname), index(index), entryCount(entryCount), type(type), function(nullptr) {}
+      : fname(fname), index(index), entryCount(entryCount), type(type),
+        function(nullptr) {}
   BasicBlockEntry(const char *fname, BBIndex index, BasicBlockType type)
       : BasicBlockEntry(fname, index, 1, type) {}
 
@@ -119,9 +120,10 @@ class FunctionCall : public TraceEvent {
 
 public:
   const char *fname;
-  FunctionReturn* ret;
+  FunctionReturn *ret;
 
-  FunctionCall(const char *fname) : mConsumesBytes(CachedBool::UNKNOWN), fname(fname), ret(nullptr) {}
+  FunctionCall(const char *fname)
+      : mConsumesBytes(CachedBool::UNKNOWN), fname(fname), ret(nullptr) {}
 
   const BasicBlockEntry *getCaller() const {
     for (auto event = previous; event; event = event->previous) {
@@ -188,7 +190,9 @@ class TraceEventStack {
   size_t mNumEvents;
 
 public:
-  TraceEventStack() : mFirstEvent(nullptr), mLastEvent(nullptr), mNumEvents(0) { stack.emplace(); }
+  TraceEventStack() : mFirstEvent(nullptr), mLastEvent(nullptr), mNumEvents(0) {
+    stack.emplace();
+  }
   ~TraceEventStack() {
     auto event = mLastEvent;
     while (event) {
@@ -234,15 +238,9 @@ public:
       return false;
     }
   }
-  constexpr const TraceEvent * const firstEvent() const {
-    return mFirstEvent;
-  }
-  constexpr const TraceEvent * const lastEvent() const {
-    return mLastEvent;
-  }
-  constexpr size_t numEvents() const {
-    return mNumEvents;
-  }
+  constexpr const TraceEvent *const firstEvent() const { return mFirstEvent; }
+  constexpr const TraceEvent *const lastEvent() const { return mLastEvent; }
+  constexpr size_t numEvents() const { return mNumEvents; }
 };
 
 class Trace {

@@ -436,10 +436,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     pass
 
             if event.children:
-                rules = [
-                    Rule(grammar, *(sub_productions + [f"<{child!s}>"]))
-                    for child in event.children
-                ]
+                rules = [Rule(grammar, *(sub_productions + [f"<{child!s}>"])) for child in event.children]
             else:
                 rules = [Rule(grammar, *sub_productions)]
 

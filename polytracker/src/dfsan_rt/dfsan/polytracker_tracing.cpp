@@ -23,7 +23,7 @@ std::string BasicBlockTrace::str() const {
   return s.str();
 }
 
-bool FunctionCall::consumesBytes(const Trace &trace) const {
+bool FunctionCall::consumesBytes(const Trace& trace) const {
   if (mConsumesBytes != CachedBool::UNKNOWN) {
     return mConsumesBytes == CachedBool::TRUE;
   }
@@ -32,13 +32,19 @@ bool FunctionCall::consumesBytes(const Trace &trace) const {
       mConsumesBytes = CachedBool::FALSE;
       return false;
     } else if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
-      if (bb->function == nullptr || bb->function->eventIndex <= this->eventIndex) {
+      if (bb->function == nullptr ||
+          bb->function->eventIndex <= this->eventIndex) {
         if (!trace.taints(bb).empty()) {
           mConsumesBytes = CachedBool::TRUE;
           return true;
-        } else if (bb->function && bb->function->eventIndex < this->eventIndex) {
+        } else if (bb->function &&
+                   bb->function->eventIndex < this->eventIndex) {
           // we somehow missed our associated function call event
-          std::cerr << std::endl << "Warning: could not find path between the call to " << this->fname << " and its return." << std::endl << "This could be an indication of instrumentation error." << std::endl;
+          std::cerr << std::endl
+                    << "Warning: could not find path between the call to "
+                    << this->fname << " and its return." << std::endl
+                    << "This could be an indication of instrumentation error."
+                    << std::endl;
           mConsumesBytes = CachedBool::FALSE;
           return false;
         }
@@ -76,6 +82,5 @@ bool FunctionCall::consumesBytes(const Trace &trace) const {
   mConsumesBytes = CachedBool::TRUE;
   return true;
 }
-
 
 } /* namespace polytracker */

@@ -134,7 +134,8 @@ void taintManager::logFunctionExit() {
         // FIXME: Figure out why simply printing a string here causes a segfault
         //        in jq
         // std::cerr
-        //     << "Error finding matching function call in the event trace stack!";
+        //     << "Error finding matching function call in the event trace
+        //     stack!";
         // if (auto bb = dynamic_cast<BasicBlockEntry*>(stack.peek().peek())) {
         //     std::cerr << " Found basic block " << bb->str() << " instead.";
         //   }
@@ -155,16 +156,16 @@ void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
   taint_prop_lock.lock();
   auto currentStack = trace.currentStack();
   size_t entryCount;
-  BasicBlockEntry *newBB;
+  BasicBlockEntry* newBB;
   if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
     // this is not the first occurrence of this basic block in the current
     // stack frame
-    newBB = currentStack->emplace<BasicBlockEntry>(fname, bbIndex,
-                                           prevBB->entryCount + 1, bbType);
+    newBB = currentStack->emplace<BasicBlockEntry>(
+        fname, bbIndex, prevBB->entryCount + 1, bbType);
   } else {
     newBB = currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
   }
-  if (auto ret = dynamic_cast<FunctionReturn *>(newBB->previous)) {
+  if (auto ret = dynamic_cast<FunctionReturn*>(newBB->previous)) {
     ret->returningTo = newBB;
   }
   taint_prop_lock.unlock();
@@ -254,15 +255,13 @@ void taintManager::addJsonRuntimeTrace() {
         // Log our progress every second or so
         lastLogTime = currentTime;
         std::cerr << "\r" << std::string(80, ' ') << "\r";
-        std::cerr << "Event " << eventNumber << " / "
-                  << stack.numEvents() << std::flush;
+        std::cerr << "Event " << eventNumber << " / " << stack.numEvents()
+                  << std::flush;
       }
       if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
-        j = json::object({
-            {"type", "FunctionCall"},
-            {"name", call->fname},
-            {"consumes_bytes", call->consumesBytes(trace)}
-        });
+        j = json::object({{"type", "FunctionCall"},
+                          {"name", call->fname},
+                          {"consumes_bytes", call->consumesBytes(trace)}});
         if (call->ret) {
           j["return_uid"] = call->ret->eventIndex;
         }
@@ -284,7 +283,9 @@ void taintManager::addJsonRuntimeTrace() {
           // dfsan_labels are 1-indexed
           std::vector<dfsan_label> zeroIndexed;
           zeroIndexed.reserve(taints.size());
-          std::transform(taints.begin(), taints.end(), std::back_inserter(zeroIndexed), [](dfsan_label d) {return d - 1;});
+          std::transform(taints.begin(), taints.end(),
+                         std::back_inserter(zeroIndexed),
+                         [](dfsan_label d) { return d - 1; });
           j["consumed"] = zeroIndexed;
         }
         std::vector<std::string> types;
@@ -347,7 +348,7 @@ void taintManager::addJsonRuntimeTrace() {
         j["previous_uid"] = event->previous->eventIndex;
       }
       events.push_back(j);
-      if (auto call = dynamic_cast<const FunctionCall *>(event)) {
+      if (auto call = dynamic_cast<const FunctionCall*>(event)) {
         // does this function call consume bytes?
         // if not, we do not need it to do grammar extraction, and saving
         // to JSON is very slow. So speed things up by just eliding its
@@ -355,7 +356,11 @@ void taintManager::addJsonRuntimeTrace() {
         // TODO: If/when we implement another means of output (e.g., sqlite),
         //       we can experiment with emitting all functions
         if (call->ret && !(call->consumesBytes(trace))) {
-          std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
+          std::cerr << "\rSkipping emitting the trace for function "
+                    << call->fname
+                    << " because it did not consume any tainted bytes."
+                    << std::endl
+                    << std::flush;
           event = call->ret->previous;
         }
       }

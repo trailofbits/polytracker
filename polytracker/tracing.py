@@ -1,8 +1,6 @@
 import json
 from abc import ABCMeta
-from typing import (
-    Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
-)
+from typing import Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
 
 from tqdm import tqdm
 
@@ -11,7 +9,8 @@ from polytracker.cfg import DiGraph
 
 
 class TraceEventConstructor(Protocol):
-    def __call__(self, **kwargs) -> "TraceEvent": ...
+    def __call__(self, **kwargs) -> "TraceEvent":
+        ...
 
 
 EVENTS_BY_TYPE: Dict[str, TraceEventConstructor] = {}
@@ -106,7 +105,7 @@ class FunctionInvocation:
 
 class TraceEventMeta(ABCMeta):
     def __init__(cls, name, bases, clsdict):
-        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and hasattr(cls, 'event_type'):
+        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and hasattr(cls, "event_type"):
             if cls.event_type in EVENTS_BY_TYPE:
                 raise ValueError(
                     f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
@@ -131,8 +130,9 @@ class TraceEvent(metaclass=TraceEventMeta):
     @property
     def trace(self) -> "PolyTrackerTrace":
         if self._trace is None:
-            raise RuntimeError(f"The trace for event {self!r} has not been set!"
-                               "Did you call `.trace` before the entire trace was loaded?")
+            raise RuntimeError(
+                f"The trace for event {self!r} has not been set!" "Did you call `.trace` before the entire trace was loaded?"
+            )
         return self._trace
 
     @trace.setter
@@ -301,13 +301,13 @@ class BasicBlockEntry(TraceEvent):
             elif start_offset + 1 != offset:
                 # this is not a contiguous byte sequence
                 # so yield the previous token
-                yield self.trace.inputstr[start_offset:last_offset + 1]  # type: ignore
+                yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
                 start_offset = last_offset = offset
             else:
                 # this is a contiguous byte sequence, so update its end
                 last_offset = offset
         if start_offset is not None:
-            yield self.trace.inputstr[start_offset:last_offset + 1]  # type: ignore
+            yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
 
     @property
     def basic_block(self) -> BasicBlock:
