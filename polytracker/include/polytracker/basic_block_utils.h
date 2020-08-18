@@ -45,25 +45,22 @@ BasicBlockType getType(const BasicBlock *bb, const DominatorTree &dt) {
        hasType(ret, BasicBlockType::FUNCTION_ENTRY))) {
     ret = ret | BasicBlockType::LOOP_ENTRY;
   }
-  for (const auto *inst = &bb->front(); inst; inst = inst->getNextNode()) {
+  for (const auto& inst : *bb) {
     // TODO: Also handle longjmp here
-    if (llvm::isa<ReturnInst>(inst)) {
-      if (hasType(ret, BasicBlockType::CONDITIONAL)) {
-        llvm::errs() << "Error: a basic block in function " << bb->getParent()->getName().data() << " is both a conditional and a function exit. This likely means that the basic block splitting pass failed.\n";
-        exit(1);
-      }
+    if (llvm::isa<ReturnInst>(&inst)) {
       ret = ret | BasicBlockType::FUNCTION_EXIT;
-    } else if (llvm::isa<CallInst>(inst)) {
+    } else if (llvm::isa<CallInst>(&inst)) {
       ret = ret | BasicBlockType::FUNCTION_CALL;
-    }
-    if (llvm::isa<TerminatorInst>(inst)) {
-      break;
     }
   }
   if (dominatingSuccessors > 0 &&
       (totalSuccessors > dominatingSuccessors ||
        hasType(ret, BasicBlockType::FUNCTION_EXIT))) {
     ret = ret | BasicBlockType::LOOP_EXIT;
+  }
+  if (hasType(ret, BasicBlockType::CONDITIONAL) && hasType(ret, BasicBlockType::FUNCTION_EXIT)) {
+    llvm::errs() << "Error: basic block " << *bb << " in function " << *bb->getParent() << " is both a conditional and a function exit. This likely means that the basic block splitting pass failed.\n";
+    exit(1);
   }
   if (ret != BasicBlockType::STANDARD) {
     // If the BB is anything but standard, it shouldn't have the standard flag
