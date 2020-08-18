@@ -237,7 +237,7 @@ void taintManager::addJsonRuntimeTrace() {
               << std::flush;
     ++threadStack;
     size_t eventNumber = 0;
-    for (auto event = stack.lastEvent(); event; event = event->previous) {
+    for (auto event = stack.firstEvent(); event; event = event->next) {
       json j;
       const auto currentTime = std::chrono::system_clock::now();
       auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -252,37 +252,22 @@ void taintManager::addJsonRuntimeTrace() {
                   << stack.numEvents() << std::flush;
       }
       if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
-#if 0
-        // does this function call consume bytes?
-        // if not, we do not need it to do grammar extraction, and saving
-        // to JSON is very slow. So speed things up by just eliding it!
-        // TODO: If/when we implement another means of output (e.g., sqlite),
-        //       we can experiment with emitting all functions
-        if (!(call->consumesBytes(trace))) {
-          std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
-          continue;
-        } else {
-#endif
-          j = json::object({
-              {"type", "FunctionCall"},
-              {"name", call->fname},
-              {"consumes_bytes", call->consumesBytes(trace)}
-          });
-          if (call->ret) {
-            j["return_uid"] = call->ret->eventIndex;
-          }
-#if 0
+        j = json::object({
+            {"type", "FunctionCall"},
+            {"name", call->fname},
+            {"consumes_bytes", call->consumesBytes(trace)}
+        });
+        if (call->ret) {
+          j["return_uid"] = call->ret->eventIndex;
         }
-#endif
       } else if (const auto bb = dynamic_cast<const BasicBlockEntry*>(event)) {
         j = json::object({{"type", "BasicBlockEntry"},
+                          {"function_name", bb->fname},
                           {"function_index", bb->index.functionIndex()},
                           {"bb_index", bb->index.index()},
                           {"global_index", bb->index.uid()}});
         if (bb->function) {
           j["function_call_uid"] = bb->function->eventIndex;
-        } else {
-          j["function_name"] = bb->fname;
         }
         auto entryCount = bb->entryCount;
         if (entryCount != 1) {
@@ -356,6 +341,18 @@ void taintManager::addJsonRuntimeTrace() {
         j["previous_uid"] = event->previous->eventIndex;
       }
       events.push_back(j);
+      if (auto call = dynamic_cast<const FunctionCall *>(event)) {
+        // does this function call consume bytes?
+        // if not, we do not need it to do grammar extraction, and saving
+        // to JSON is very slow. So speed things up by just eliding its
+        // constituent events!
+        // TODO: If/when we implement another means of output (e.g., sqlite),
+        //       we can experiment with emitting all functions
+        if (call->ret && !(call->consumesBytes(trace))) {
+          std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
+          event = call->ret->previous;
+        }
+      }
     }
     std::cerr << std::endl << std::flush;
   }

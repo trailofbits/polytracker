@@ -244,7 +244,10 @@ class BasicBlockEntry(TraceEvent):
     @property
     def containing_function(self) -> Optional[FunctionCall]:
         if self.function_call_uid is not None:
-            return self.trace[self.function_call_uid]
+            try:
+                return self.trace[self.function_call_uid]
+            except KeyError:
+                return None
         else:
             return None
 

@@ -11,7 +11,7 @@ std::mutex traceEventLock;
 
 const std::list<dfsan_label> Trace::EMPTY_LIST = {};
 
-TraceEvent::TraceEvent() : previous(nullptr) {
+TraceEvent::TraceEvent() : previous(nullptr), next(nullptr) {
   traceEventLock.lock();
   eventIndex = numTraceEvents++;
   traceEventLock.unlock();

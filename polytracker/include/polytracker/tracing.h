@@ -26,6 +26,7 @@ extern size_t numTraceEvents;
 
 struct TraceEvent {
   TraceEvent *previous;
+  TraceEvent *next;
   size_t eventIndex;
   TraceEvent();
   virtual ~TraceEvent() = default;
@@ -164,8 +165,6 @@ class TraceEventStackFrame {
   }
 
 public:
-  std::vector<const TraceEvent *> eventHistory;
-
   TraceEventStackFrame(FunctionCall *call) : call(call), head(nullptr) {}
   TraceEventStackFrame() : TraceEventStackFrame(nullptr) {}
   operator bool() const { return head != nullptr; }
@@ -184,11 +183,12 @@ public:
 
 class TraceEventStack {
   std::stack<TraceEventStackFrame> stack;
-  TraceEvent* mLastEvent;
+  TraceEvent *mFirstEvent;
+  TraceEvent *mLastEvent;
   size_t mNumEvents;
 
 public:
-  TraceEventStack() : mLastEvent(nullptr), mNumEvents(0) { stack.emplace(); }
+  TraceEventStack() : mFirstEvent(nullptr), mLastEvent(nullptr), mNumEvents(0) { stack.emplace(); }
   ~TraceEventStack() {
     auto event = mLastEvent;
     while (event) {
@@ -207,6 +207,9 @@ public:
   inline void push(TraceEvent *event) {
     if (mLastEvent) {
       event->previous = mLastEvent;
+      mLastEvent->next = event;
+    } else {
+      mFirstEvent = event;
     }
     mLastEvent = event;
     ++mNumEvents;
@@ -230,6 +233,9 @@ public:
     } else {
       return false;
     }
+  }
+  constexpr const TraceEvent * const firstEvent() const {
+    return mFirstEvent;
   }
   constexpr const TraceEvent * const lastEvent() const {
     return mLastEvent;
