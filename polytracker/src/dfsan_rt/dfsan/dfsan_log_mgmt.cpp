@@ -119,20 +119,26 @@ void taintManager::logFunctionExit() {
   (thread_stack_map)[this_id].pop_back();
   if (recordTrace()) {
     auto& stack = trace.getStack(this_id);
-    auto caller = stack.peek().peek();
     if (!stack.pop()) {
       // if this happens, then stack should have been a null pointer,
       // which would have likely caused a segfault before this!
-      std::cout << "Event stack was unexpectedly empty!" << std::endl;
+      // FIXME: Figure out why simply printing a string here causes a segfault
+      //        in jq
+      // std::cerr << "Event stack was unexpectedly empty!" << std::endl;
     } else {
       if (auto func = dynamic_cast<FunctionCall*>(stack.peek().peek())) {
         // Create the function return event in the stack frame that called
         // the function
         stack.emplace<FunctionReturn>(func);
       } else {
-        std::cout
-            << "Error finding matching function call in the event trace stack!"
-            << std::endl;
+        // FIXME: Figure out why simply printing a string here causes a segfault
+        //        in jq
+        // std::cerr
+        //     << "Error finding matching function call in the event trace stack!";
+        // if (auto bb = dynamic_cast<BasicBlockEntry*>(stack.peek().peek())) {
+        //     std::cerr << " Found basic block " << bb->str() << " instead.";
+        //   }
+        // std::cerr << std::endl;
       }
     }
   }
