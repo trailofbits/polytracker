@@ -60,7 +60,7 @@ class Rule:
         self.sequence = tuple([s for s in self.sequence if s != production_name])
         return len(self.sequence) != old_len
 
-    def replace_sub_production(self, to_replace: str, replace_with: str):
+    def replace_sub_production(self, to_replace: str, replace_with: str) -> bool:
         new_seq = []
         modified = False
         for s in self.sequence:
@@ -179,12 +179,17 @@ class Production:
             if rule:
                 new_rules.append(rule)
         self.rules = set(new_rules)
+        self.grammar.used_by[production_name].remove(self.name)
 
     def replace_sub_production(self, to_replace: str, replace_with: str):
+        modified = False
         for rule in list(self.rules):
             self.rules.remove(rule)
-            rule.replace_sub_production(to_replace, replace_with)
+            modified = rule.replace_sub_production(to_replace, replace_with) or modified
             self.rules.add(rule)
+        if modified:
+            self.grammar.used_by[to_replace].remove(self.name)
+            self.grammar.used_by[replace_with].add(self.name)
 
     @staticmethod
     def load(grammar: "Grammar", name: str, *rules: Iterable[str]) -> "Production":
@@ -212,7 +217,23 @@ class Production:
 
     def __str__(self):
         rules = " | ".join(map(str, self.rules))
-        return f"{self.name} ::= {rules}"
+        if self.grammar.start is self:
+            start = "--> "
+        else:
+            start = ""
+        return f"{start}{self.name} ::= {rules}"
+
+
+class GrammarError(RuntimeError):
+    pass
+
+
+class CorruptedGrammarError(GrammarError):
+    pass
+
+
+class MissingProductionError(CorruptedGrammarError):
+    pass
 
 
 class Grammar:
@@ -226,7 +247,11 @@ class Grammar:
         for prod in self.productions:
             graph.add_node(prod)
         for prod_name, used_by_names in self.used_by.items():
+            if prod_name not in self:
+                Production(self, prod_name)
             for used_by_name in used_by_names:
+                if used_by_name not in self:
+                    Production(self, used_by_name)
                 graph.add_edge(self[used_by_name], self[prod_name])
         return graph
 
@@ -241,12 +266,37 @@ class Grammar:
             name = production
         if name not in self:
             return False
+        # update all of the productions we use
+        for rule in production:
+            for v in rule.sequence:
+                if isinstance(v, str):
+                    try:
+                        self.used_by[v].remove(name)
+                    except KeyError:
+                        pass
         del self.productions[name]
-        for uses_name in self.used_by[name]:
-            if uses_name in self:
-                self[uses_name].remove_sub_production(name)
+        # update all of the productions that use us
+        for uses_name in list(self.used_by[name]):
+            self[uses_name].remove_sub_production(name)
         del self.used_by[name]
         return True
+
+    def verify(self):
+        for prod in self.productions.values():
+            for rule in prod:
+                for v in rule.sequence:
+                    if isinstance(v, str):
+                        if v not in self:
+                            raise MissingProductionError(f"Production {prod.name} references {v}, "
+                                                         "which is not in the grammar")
+                        elif prod.name not in self.used_by[v]:
+                            raise CorruptedGrammarError(f"Production {prod.name} references {v} but that is not "
+                                                        "recorded in the \"used by\" table: "
+                                                        f"{self.used_by[prod.name]!r}")
+            for user in self.used_by[prod.name]:
+                if user not in self:
+                    raise CorruptedGrammarError(f"Production {prod.name} is used by {user}, but {user} production is "
+                                                "not in the grammar")
 
     def simplify(self) -> bool:
         modified = False
@@ -255,26 +305,25 @@ class Grammar:
             while modified_last_pass:
                 modified_last_pass = False
                 for prod in list(self.productions.values()):
-                    if not prod.can_produce_terminal:
+                    if not prod.can_produce_terminal and prod is not self.start:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
                         assert removed
+                        self.verify()
                         status.update(1)
                         modified_last_pass = True
                     elif len(prod.rules) == 1 and len(prod.first_rule().sequence) == 1 and isinstance(prod.first_rule().sequence[0], str):
                         # this production has a single rule that just calls another production,
                         # so replace it with that production
                         equivalent_prod_name: str = prod.first_rule().sequence[0]
-                        for uses_name in self.used_by[prod.name]:
-                            if uses_name in self:
-                                self[uses_name].replace_sub_production(prod.name, equivalent_prod_name)
+                        for user in list(prod.used_by):
+                            user.replace_sub_production(prod.name, equivalent_prod_name)
+                        self.used_by[equivalent_prod_name].remove(prod.name)
                         del self.productions[prod.name]
                         del self.used_by[prod.name]
-                        status.update(1)
-                        modified_last_pass = True
-                    elif prod != self.start and not self.used_by[prod.name]:
-                        # this production isn't used by anything, so remove it
-                        self.remove(prod)
+                        if prod is self.start:
+                            self.start = self[equivalent_prod_name]
+                        self.verify()
                         status.update(1)
                         modified_last_pass = True
                 modified = modified or modified_last_pass
@@ -308,15 +357,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
         if isinstance(event, BasicBlockEntry):
             # Add a production rule for this BB
 
-            sub_productions: List[str] = []
-
-            for token in event.consumed_tokens:
-                # Make a production rule for this terminal, or add one if it already exists:
-                terminal = Terminal(token)
-                terminal_name = f"<{terminal!s}>"
-                if terminal_name not in grammar:
-                    Production(grammar, terminal_name, Rule(grammar, terminal))
-                sub_productions.append(terminal_name)
+            sub_productions: List[Union[Terminal, str]] = [Terminal(token) for token in event.consumed_tokens]
 
             if event.called_function is not None:
                 sub_productions.append(f"<{event.called_function.name}>")
@@ -328,11 +369,13 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     else:
                         # TODO: Print warning
                         pass
+                        # breakpoint()
                 else:
                     # TODO: Print warning
                     pass
+                    # breakpoint()
 
-            if event.children:
+            if event.called_function is None and event.children:
                 rules = [Rule(grammar, *(sub_productions + [f"<{child!s}>"])) for child in event.children]
             else:
                 rules = [Rule(grammar, *sub_productions)]
@@ -347,11 +390,12 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                 Production(grammar, production_name, *rules)
 
         elif isinstance(event, FunctionCall):
+            production_name = f"<{event.name}>"
             if event.entrypoint is None:
-                print(f"Warning: unknown basic block entrypoint for function {event.name}")
+                if production_name not in grammar:
+                    Production(grammar, production_name)
             else:
-                production_name = f"<{event.name}>"
-                rule = Rule(grammar, str(event.entrypoint))
+                rule = Rule(grammar, f"<{event.entrypoint!s}>")
                 if production_name in grammar:
                     production = grammar[production_name]
                     if rule not in production:
@@ -361,6 +405,8 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 
         if trace.entrypoint == event:
             grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event!s}>"))
+
+    grammar.verify()
 
     return grammar
 

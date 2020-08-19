@@ -178,15 +178,26 @@ class TraceEvent(metaclass=TraceEventMeta):
 class FunctionCall(TraceEvent):
     event_type = "FunctionCall"
 
-    def __init__(self, uid: int, name: str, previous_uid: Optional[int] = None):
+    def __init__(
+            self,
+            uid: int,
+            name: str,
+            previous_uid: Optional[int] = None,
+            return_uid: Optional[int] = None,
+            consumes_bytes: bool = True
+    ):
         super().__init__(uid, previous_uid)
         self.name = name
         self.function_return: Optional[FunctionReturn] = None
         self.entrypoint: Optional[BasicBlockEntry] = None
+        self.consumes_bytes: bool = consumes_bytes
+        self.return_uid: Optional[int] = return_uid
 
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
         TraceEvent.trace.fset(self, pttrace)  # type: ignore
+        if self.return_uid is not None and self.function_return is None:
+            self.function_return = self.trace[self.return_uid]
         try:
             self.caller.called_function = self
         except TypeError as e:
@@ -358,7 +369,11 @@ class FunctionReturn(TraceEvent):
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
         TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        self.function_call.function_return = self
+        if self.function_call.function_return is None:
+            self.function_call.function_return = self
+        elif self.function_call.function_return is not self:
+            raise ValueError(f"Function call {self.function_call} was expected to return to {self}, "
+                             f"but instead returns to {self.function_call.function_return}")
 
     @property
     def function_call(self) -> FunctionCall:
