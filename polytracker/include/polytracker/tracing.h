@@ -219,7 +219,7 @@ public:
     ++mNumEvents;
     stack.top().push(event);
   }
-  inline void push(FunctionCall *call) { stack.emplace(call); }
+  inline void newFrame(FunctionCall *call) { stack.emplace(call); }
   template <typename T,
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
                 * = nullptr,

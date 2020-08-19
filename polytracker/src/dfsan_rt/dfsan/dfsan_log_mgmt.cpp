@@ -107,7 +107,7 @@ int taintManager::logFunctionEntry(char* fname) {
     auto& stack = trace.getStack(this_id);
     auto call = stack.emplace<FunctionCall>(fname);
     // Create a new stack frame:
-    stack.push(call);
+    stack.newFrame(call);
   }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
