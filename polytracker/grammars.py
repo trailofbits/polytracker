@@ -60,12 +60,16 @@ class Rule:
         self.sequence = tuple([s for s in self.sequence if s != production_name])
         return len(self.sequence) != old_len
 
-    def replace_sub_production(self, to_replace: str, replace_with: str) -> bool:
+    def replace_sub_production(self, to_replace: str, replace_with: Union[str, 'Rule']) -> bool:
+        if isinstance(replace_with, str):
+            replacement = [replace_with]
+        else:
+            replacement = list(replace_with.sequence)
         new_seq = []
         modified = False
         for s in self.sequence:
             if s == to_replace:
-                new_seq.append(replace_with)
+                new_seq.extend(replacement)
                 modified = True
             else:
                 new_seq.append(s)
@@ -181,7 +185,12 @@ class Production:
         self.rules = set(new_rules)
         self.grammar.used_by[production_name].remove(self.name)
 
-    def replace_sub_production(self, to_replace: str, replace_with: str):
+    def replace_sub_production(self, to_replace: str, replace_with: Union[str, Rule]):
+        if isinstance(replace_with, str):
+            new_prods: List[str] = [replace_with]
+            replace_with = Rule(self.grammar, replace_with)
+        else:
+            new_prods = [v for v in replace_with.sequence if isinstance(v, str)]
         modified = False
         for rule in list(self.rules):
             self.rules.remove(rule)
@@ -189,7 +198,8 @@ class Production:
             self.rules.add(rule)
         if modified:
             self.grammar.used_by[to_replace].remove(self.name)
-            self.grammar.used_by[replace_with].add(self.name)
+            for new_prod in new_prods:
+                self.grammar.used_by[new_prod].add(self.name)
 
     @staticmethod
     def load(grammar: "Grammar", name: str, *rules: Iterable[str]) -> "Production":
@@ -312,17 +322,11 @@ class Grammar:
                         self.verify()
                         status.update(1)
                         modified_last_pass = True
-                    elif len(prod.rules) == 1 and len(prod.first_rule().sequence) == 1 and isinstance(prod.first_rule().sequence[0], str):
-                        # this production has a single rule that just calls another production,
-                        # so replace it with that production
-                        equivalent_prod_name: str = prod.first_rule().sequence[0]
+                    elif len(prod.rules) == 1 and prod is not self.start:
+                        # this production has a single rule, so replace all uses with that rule
                         for user in list(prod.used_by):
-                            user.replace_sub_production(prod.name, equivalent_prod_name)
-                        self.used_by[equivalent_prod_name].remove(prod.name)
-                        del self.productions[prod.name]
-                        del self.used_by[prod.name]
-                        if prod is self.start:
-                            self.start = self[equivalent_prod_name]
+                            user.replace_sub_production(prod.name, prod.first_rule())
+                        self.remove(prod)
                         self.verify()
                         status.update(1)
                         modified_last_pass = True
