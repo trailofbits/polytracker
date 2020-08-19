@@ -311,6 +311,8 @@ class Grammar:
                     raise CorruptedGrammarError(
                         f"Production {prod.name} is used by {user}, but {user} production is " "not in the grammar"
                     )
+            if not self.used_by[prod.name] and self.start is not prod:
+                print(f"Warning: Production {prod.name} is never used")
 
     def simplify(self) -> bool:
         modified = False
@@ -323,7 +325,7 @@ class Grammar:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
                         assert removed
-                        self.verify()
+                        # self.verify()
                         status.update(1)
                         modified_last_pass = True
                     elif len(prod.rules) == 1 and prod is not self.start:
@@ -331,7 +333,7 @@ class Grammar:
                         for user in list(prod.used_by):
                             user.replace_sub_production(prod.name, prod.first_rule())
                         self.remove(prod)
-                        self.verify()
+                        # self.verify()
                         status.update(1)
                         modified_last_pass = True
                 modified = modified or modified_last_pass
@@ -412,7 +414,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     Production(grammar, production_name, rule)
 
         if trace.entrypoint == event:
-            grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event!s}>"))
+            grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event.function_name}>"))
 
     grammar.verify()
 

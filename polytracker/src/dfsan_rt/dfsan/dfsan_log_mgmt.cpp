@@ -347,6 +347,9 @@ void taintManager::addJsonRuntimeTrace() {
       if (event->previous) {
         j["previous_uid"] = event->previous->eventIndex;
       }
+      if (event->next) {
+        j["next_uid"] = event->next->eventIndex;
+      }
       events.push_back(j);
       if (auto call = dynamic_cast<const FunctionCall*>(event)) {
         // does this function call consume bytes?

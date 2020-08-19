@@ -118,9 +118,10 @@ class TraceEventMeta(ABCMeta):
 class TraceEvent(metaclass=TraceEventMeta):
     event_type: str = "TraceEvent"
 
-    def __init__(self, uid: int, previous_uid: Optional[int] = None):
+    def __init__(self, uid: int, previous_uid: Optional[int] = None, next_uid: Optional[int] = None):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
+        self.next_uid: Optional[int] = next_uid
         self._trace: Optional[PolyTrackerTrace] = None
 
     @property
@@ -154,6 +155,13 @@ class TraceEvent(metaclass=TraceEventMeta):
         else:
             return self.trace[self.previous_uid]
 
+    @property
+    def next(self) -> Optional["TraceEvent"]:
+        if self.next_uid is None:
+            return None
+        else:
+            return self.trace[self.next_uid]
+
     @staticmethod
     def parse(json_obj: Dict[str, Any]) -> "TraceEvent":
         if "type" not in json_obj:
@@ -183,10 +191,11 @@ class FunctionCall(TraceEvent):
         uid: int,
         name: str,
         previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
         return_uid: Optional[int] = None,
         consumes_bytes: bool = True,
     ):
-        super().__init__(uid, previous_uid)
+        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         self.name = name
         self.function_return: Optional[FunctionReturn] = None
         self.entrypoint: Optional[BasicBlockEntry] = None
@@ -201,11 +210,16 @@ class FunctionCall(TraceEvent):
         try:
             self.caller.called_function = self
         except TypeError as e:
-            tqdm.write(f"Warning: {e}\n")
+            pass
 
     @property
     def caller(self) -> "BasicBlockEntry":
         prev = self.previous
+        if isinstance(prev, FunctionReturn) and prev.function_call is not None:
+            try:
+                return prev.function_call.caller
+            except TypeError:
+                pass
         if not isinstance(prev, BasicBlockEntry):
             raise TypeError(f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}")
         return prev
@@ -226,11 +240,12 @@ class BasicBlockEntry(TraceEvent):
         function_call_uid: Optional[int] = None,
         function_name: Optional[str] = None,
         previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
         entry_count: int = 1,
         consumed: Iterable[int] = (),
         types: Iterable[str] = (),
     ):
-        super().__init__(uid, previous_uid)
+        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         if entry_count < 1:
             raise ValueError("entry_count must be a natural number")
         self.entry_count: int = entry_count
@@ -336,10 +351,11 @@ class FunctionReturn(TraceEvent):
         uid: int,
         name: str,
         previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
         call_event_uid: Optional[int] = None,
         returning_to_uid: Optional[int] = None,
     ):
-        super().__init__(uid, previous_uid)
+        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         self.function_name: str = name
         self.returning_to_uid: Optional[int] = returning_to_uid
         self.call_event_uid: Optional[int] = call_event_uid
