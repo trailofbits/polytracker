@@ -1,8 +1,11 @@
+import itertools
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, cast, Dict, Iterable, List, Optional, Set, Tuple, Union
 
+import networkx as nx
 from tqdm import tqdm
 
+from .cfg import DiGraph
 from .tracing import BasicBlockEntry, FunctionCall, PolyTrackerTrace
 
 
@@ -46,6 +49,11 @@ class Rule:
     def __init__(self, grammar: "Grammar", *sequence: Union[Terminal, str]):
         self.grammar: Grammar = grammar
         self.sequence: Tuple[Union[Terminal, str], ...] = tuple(sequence)
+        self.has_terminals: bool = any(isinstance(t, Terminal) for t in self.sequence)
+
+    @property
+    def can_produce_terminal(self) -> bool:
+        return self.has_terminals or any(p.can_produce_terminal for p in self if isinstance(p, Production))
 
     def remove_sub_production(self, production_name: str) -> bool:
         old_len = len(self.sequence)
@@ -54,12 +62,16 @@ class Rule:
 
     def replace_sub_production(self, to_replace: str, replace_with: str):
         new_seq = []
+        modified = False
         for s in self.sequence:
             if s == to_replace:
                 new_seq.append(replace_with)
+                modified = True
             else:
                 new_seq.append(s)
-        self.sequence = tuple(new_seq)
+        if modified:
+            self.sequence = tuple(new_seq)
+        return modified
 
     def __hash__(self):
         return hash(self.sequence)
@@ -112,12 +124,53 @@ class Production:
             for term in rule.sequence:
                 if isinstance(term, str):
                     grammar.used_by[term].add(name)
+        self._can_produce_terminal: Optional[bool] = None
 
     def first_rule(self) -> Optional[Rule]:
         if self.rules:
             return next(iter(self.rules))
         else:
             return None
+
+    @property
+    def can_produce_terminal(self) -> bool:
+        if self._can_produce_terminal is None:
+            with tqdm(leave=False, unit=" productions") as status:
+                status.set_description("building grammar dependency graph")
+                graph: DiGraph = self.grammar.dependency_graph()
+                status.total = len(graph)
+                status.set_description("calculating dominator forest")
+                forest = graph.dominator_forest
+                status.set_description("finding empty productions")
+                for production in nx.dfs_postorder_nodes(forest):
+                    status.update(1)
+                    # use a postorder traversal so dependencies are calculated first
+                    cast(Production, production)._propagate_terminals()
+        return self._can_produce_terminal
+
+    @property
+    def used_by(self) -> Iterable['Production']:
+        return (self.grammar[name] for name in self.grammar.used_by[self.name])
+
+    def _propagate_terminals(self):
+        """Calculates if this production can produce a terminal.
+        If a rule calls another terminal whose _can_produce_terminal member is None, assume that it is False
+
+        """
+        if any(r.has_terminals for r in self.rules):
+            self._can_produce_terminal = True
+        for v in itertools.chain(*self.rules):
+            if isinstance(v, Production):
+                if v._can_produce_terminal is not None and v._can_produce_terminal:
+                    # The rule calls another production that can produce a terminal
+                    self._can_produce_terminal = True
+                    break
+            else:
+                # v is a Terminal
+                self._can_produce_terminal = True
+                break
+        else:
+            self._can_produce_terminal = False
 
     def remove_sub_production(self, production_name: str):
         new_rules = []
@@ -168,6 +221,15 @@ class Grammar:
         self.used_by: Dict[str, Set[str]] = defaultdict(set)
         self.start: Optional[Production] = None
 
+    def dependency_graph(self) -> DiGraph[Production]:
+        graph: DiGraph[Production] = DiGraph()
+        for prod in self.productions:
+            graph.add_node(prod)
+        for prod_name, used_by_names in self.used_by.items():
+            for used_by_name in used_by_names:
+                graph.add_edge(self[used_by_name], self[prod_name])
+        return graph
+
     def load(self, raw_grammar: Dict[str, Any]):
         for name, definition in raw_grammar.items():
             Production.load(self, name, *definition)
@@ -189,30 +251,34 @@ class Grammar:
     def simplify(self) -> bool:
         modified = False
         modified_last_pass = True
-        while modified_last_pass:
-            modified_last_pass = False
-            for prod in list(self.productions.values()):
-                if not prod.rules:
-                    # remove any produtions that only produce empty strings
-                    removed = self.remove(prod)
-                    assert removed
-                    modified_last_pass = True
-                elif len(prod.rules) == 1 and len(prod.first_rule().sequence) == 1 and isinstance(prod.first_rule().sequence[0], str):
-                    # this production has a single rule that just calls another production,
-                    # so replace it with that production
-                    equivalent_prod_name: str = prod.first_rule().sequence[0]
-                    for uses_name in self.used_by[prod.name]:
-                        if uses_name in self:
-                            self[uses_name].replace_sub_production(prod.name, equivalent_prod_name)
-                    del self.productions[prod.name]
-                    del self.used_by[prod.name]
-                    modified_last_pass = True
-                elif prod != self.start and not self.used_by[prod.name]:
-                    # this production isn't used by anything, so remove it
-                    self.remove(prod)
-                    modified_last_pass = True
-            modified = modified or modified_last_pass
-        return modified
+        with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
+            while modified_last_pass:
+                modified_last_pass = False
+                for prod in list(self.productions.values()):
+                    if not prod.can_produce_terminal:
+                        # remove any produtions that only produce empty strings
+                        removed = self.remove(prod)
+                        assert removed
+                        status.update(1)
+                        modified_last_pass = True
+                    elif len(prod.rules) == 1 and len(prod.first_rule().sequence) == 1 and isinstance(prod.first_rule().sequence[0], str):
+                        # this production has a single rule that just calls another production,
+                        # so replace it with that production
+                        equivalent_prod_name: str = prod.first_rule().sequence[0]
+                        for uses_name in self.used_by[prod.name]:
+                            if uses_name in self:
+                                self[uses_name].replace_sub_production(prod.name, equivalent_prod_name)
+                        del self.productions[prod.name]
+                        del self.used_by[prod.name]
+                        status.update(1)
+                        modified_last_pass = True
+                    elif prod != self.start and not self.used_by[prod.name]:
+                        # this production isn't used by anything, so remove it
+                        self.remove(prod)
+                        status.update(1)
+                        modified_last_pass = True
+                modified = modified or modified_last_pass
+            return modified
 
     def __len__(self):
         return len(self.productions)
@@ -300,11 +366,10 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 
 
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
-    # trees = [{'tree': list(tree)} for tree in miner(traces)]
-    # gmethod_trees = generalize_method_trees(trees)
-    # print(json.dumps(gmethod_trees, indent=4))
-    for trace in traces:
+    trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
+    for trace in trace_iter:
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
+        trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         return grammar
