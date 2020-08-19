@@ -6,7 +6,7 @@ import networkx as nx
 from tqdm import tqdm
 
 from .cfg import DiGraph
-from .tracing import BasicBlockEntry, FunctionCall, PolyTrackerTrace
+from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
 class Terminal:
@@ -355,6 +355,17 @@ class Grammar:
         return "\n".join(map(str, self.productions.values()))
 
 
+def production_name(event: TraceEvent) -> str:
+    if isinstance(event, BasicBlockEntry):
+        return f"<{event!s}>"
+    elif isinstance(event, FunctionCall):
+        return f"<{event.name}>"
+    elif isinstance(event, FunctionReturn):
+        return f"<{event.function_name}>"
+    else:
+        raise ValueError(f"Unhandled event: {event!r}")
+
+
 def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -364,13 +375,15 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     grammar = Grammar()
 
     for event in tqdm(trace, unit=" productions", leave=False, desc="extracting a base grammar"):
+        prod_name = production_name(event)
+
         if isinstance(event, BasicBlockEntry):
             # Add a production rule for this BB
 
             sub_productions: List[Union[Terminal, str]] = [Terminal(token) for token in event.consumed_tokens]
 
             if event.called_function is not None:
-                sub_productions.append(f"<{event.called_function.name}>")
+                sub_productions.append(production_name(event.called_function))
                 ret = event.called_function.function_return
                 if ret is not None:
                     returning_to = event.called_function.function_return.returning_to
@@ -390,28 +403,41 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
             else:
                 rules = [Rule(grammar, *sub_productions)]
 
-            production_name = f"<{event!s}>"
-            if production_name in grammar:
-                production = grammar[production_name]
+            if prod_name in grammar:
+                production = grammar[prod_name]
                 for rule in rules:
                     if rule not in production:
                         production.add(rule)
             else:
-                Production(grammar, production_name, *rules)
+                Production(grammar, prod_name, *rules)
 
         elif isinstance(event, FunctionCall):
-            production_name = f"<{event.name}>"
             if event.entrypoint is None:
-                if production_name not in grammar:
-                    Production(grammar, production_name)
+                if prod_name not in grammar:
+                    Production(grammar, prod_name)
             else:
-                rule = Rule(grammar, f"<{event.entrypoint!s}>")
-                if production_name in grammar:
-                    production = grammar[production_name]
+                rule = Rule(grammar, production_name(event.entrypoint))
+                if prod_name in grammar:
+                    production = grammar[prod_name]
                     if rule not in production:
                         production.add(rule)
                 else:
-                    Production(grammar, production_name, rule)
+                    Production(grammar, prod_name, rule)
+
+        elif isinstance(event, FunctionReturn):
+            next_event = event.returning_to
+            if next_event is not None and not isinstance(next_event, BasicBlockEntry):
+                # sometimes instrumentation errors can cause functions to return directly into another call
+                call_name = production_name(event.function_call)
+                next_event_name = production_name(next_event)
+                if call_name in grammar:
+                    production = grammar[call_name]
+                    for rule in production.rules:
+                        if next_event_name not in rule.sequence:
+                            rule.sequence = rule.sequence + (next_event_name,)
+                    grammar.used_by[next_event_name].add(call_name)
+                else:
+                    Production(grammar, call_name, Rule(grammar, next_event_name))
 
         if trace.entrypoint == event:
             grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event.function_name}>"))

@@ -369,17 +369,11 @@ class FunctionReturn(TraceEvent):
         )
 
     @property
-    def returning_to(self) -> Optional[BasicBlockEntry]:
+    def returning_to(self) -> Optional[TraceEvent]:
         if self._returning_to is None:
             if self.returning_to_uid is None:
                 return None
-            ret = self.trace[self.returning_to_uid]
-            if not isinstance(ret, BasicBlockEntry):
-                raise ValueError(
-                    f"Expected function return {self} to return to a basic block entry event, "
-                    f"but instead it returned to {ret}!"
-                )
-            self._returning_to = ret
+            self._returning_to = self.trace[self.returning_to_uid]
         return self._returning_to
 
     @TraceEvent.trace.setter  # type: ignore
