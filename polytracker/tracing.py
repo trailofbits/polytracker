@@ -179,12 +179,12 @@ class FunctionCall(TraceEvent):
     event_type = "FunctionCall"
 
     def __init__(
-            self,
-            uid: int,
-            name: str,
-            previous_uid: Optional[int] = None,
-            return_uid: Optional[int] = None,
-            consumes_bytes: bool = True
+        self,
+        uid: int,
+        name: str,
+        previous_uid: Optional[int] = None,
+        return_uid: Optional[int] = None,
+        consumes_bytes: bool = True,
     ):
         super().__init__(uid, previous_uid)
         self.name = name
@@ -372,8 +372,10 @@ class FunctionReturn(TraceEvent):
         if self.function_call.function_return is None:
             self.function_call.function_return = self
         elif self.function_call.function_return is not self:
-            raise ValueError(f"Function call {self.function_call} was expected to return to {self}, "
-                             f"but instead returns to {self.function_call.function_return}")
+            raise ValueError(
+                f"Function call {self.function_call} was expected to return to {self}, "
+                f"but instead returns to {self.function_call.function_return}"
+            )
 
     @property
     def function_call(self) -> FunctionCall:

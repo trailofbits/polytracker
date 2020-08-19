@@ -60,7 +60,7 @@ class Rule:
         self.sequence = tuple([s for s in self.sequence if s != production_name])
         return len(self.sequence) != old_len
 
-    def replace_sub_production(self, to_replace: str, replace_with: Union[str, 'Rule']) -> bool:
+    def replace_sub_production(self, to_replace: str, replace_with: Union[str, "Rule"]) -> bool:
         if isinstance(replace_with, str):
             replacement = [replace_with]
         else:
@@ -153,7 +153,7 @@ class Production:
         return self._can_produce_terminal
 
     @property
-    def used_by(self) -> Iterable['Production']:
+    def used_by(self) -> Iterable["Production"]:
         return (self.grammar[name] for name in self.grammar.used_by[self.name])
 
     def _propagate_terminals(self):
@@ -297,16 +297,20 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(f"Production {prod.name} references {v}, "
-                                                         "which is not in the grammar")
+                            raise MissingProductionError(
+                                f"Production {prod.name} references {v}, " "which is not in the grammar"
+                            )
                         elif prod.name not in self.used_by[v]:
-                            raise CorruptedGrammarError(f"Production {prod.name} references {v} but that is not "
-                                                        "recorded in the \"used by\" table: "
-                                                        f"{self.used_by[prod.name]!r}")
+                            raise CorruptedGrammarError(
+                                f"Production {prod.name} references {v} but that is not "
+                                'recorded in the "used by" table: '
+                                f"{self.used_by[prod.name]!r}"
+                            )
             for user in self.used_by[prod.name]:
                 if user not in self:
-                    raise CorruptedGrammarError(f"Production {prod.name} is used by {user}, but {user} production is "
-                                                "not in the grammar")
+                    raise CorruptedGrammarError(
+                        f"Production {prod.name} is used by {user}, but {user} production is " "not in the grammar"
+                    )
 
     def simplify(self) -> bool:
         modified = False
