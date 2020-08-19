@@ -156,7 +156,7 @@ class TraceEvent(metaclass=TraceEventMeta):
             return self.trace[self.previous_uid]
 
     @property
-    def next(self) -> Optional["TraceEvent"]:
+    def next_event(self) -> Optional["TraceEvent"]:
         if self.next_uid is None:
             return None
         else:
@@ -223,6 +223,13 @@ class FunctionCall(TraceEvent):
         if not isinstance(prev, BasicBlockEntry):
             raise TypeError(f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}")
         return prev
+
+    @property
+    def returning_to(self) -> Optional[TraceEvent]:
+        if self.function_return is not None:
+            return self.function_return.returning_to
+        else:
+            return self.next_event
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
@@ -372,7 +379,7 @@ class FunctionReturn(TraceEvent):
     def returning_to(self) -> Optional[TraceEvent]:
         if self._returning_to is None:
             if self.returning_to_uid is None:
-                return None
+                return self.next_event
             self._returning_to = self.trace[self.returning_to_uid]
         return self._returning_to
 

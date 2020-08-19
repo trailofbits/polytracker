@@ -272,10 +272,13 @@ class Grammar:
     def remove(self, production: Union[str, Production]) -> bool:
         if isinstance(production, Production):
             name: str = production.name
+            if name not in self:
+                return False
         else:
             name = production
-        if name not in self:
-            return False
+            if name not in self:
+                return False
+            production = self[name]
         # update all of the productions we use
         for rule in production:
             for v in rule.sequence:
@@ -325,7 +328,7 @@ class Grammar:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
                         assert removed
-                        # self.verify()
+                        self.verify()
                         status.update(1)
                         modified_last_pass = True
                     elif len(prod.rules) == 1 and prod is not self.start:
@@ -333,7 +336,7 @@ class Grammar:
                         for user in list(prod.used_by):
                             user.replace_sub_production(prod.name, prod.first_rule())
                         self.remove(prod)
-                        # self.verify()
+                        self.verify()
                         status.update(1)
                         modified_last_pass = True
                 modified = modified or modified_last_pass
@@ -386,7 +389,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                 sub_productions.append(production_name(event.called_function))
                 ret = event.called_function.function_return
                 if ret is not None:
-                    returning_to = event.called_function.function_return.returning_to
+                    returning_to = event.called_function.returning_to
                     if returning_to is not None:
                         sub_productions.append(f"<{returning_to!s}>")
                     else:
@@ -435,7 +438,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     for rule in production.rules:
                         if next_event_name not in rule.sequence:
                             rule.sequence = rule.sequence + (next_event_name,)
-                    grammar.used_by[next_event_name].add(call_name)
+                    grammar.used_by[call_name].add(next_event_name)
                 else:
                     Production(grammar, call_name, Rule(grammar, next_event_name))
 
