@@ -94,7 +94,10 @@ class Rule:
         return bool(self.sequence)
 
     def __str__(self):
-        return " ".join(map(str, self.sequence))
+        if not self.sequence:
+            return "ε"
+        else:
+            return " ".join(map(str, self.sequence))
 
 
 class Production:
@@ -103,12 +106,18 @@ class Production:
             raise ValueError(f"A production named {name!r} already exists in grammar {grammar!s}!")
         self.grammar: Grammar = grammar
         self.name: str = name
-        self.rules: Tuple[Rule, ...] = tuple(rules)
+        self.rules: Set[Rule, ...] = set(rules)
         grammar.productions[name] = self
         for rule in rules:
             for term in rule.sequence:
                 if isinstance(term, str):
                     grammar.used_by[term].add(name)
+
+    def first_rule(self) -> Optional[Rule]:
+        if self.rules:
+            return next(iter(self.rules))
+        else:
+            return None
 
     def remove_sub_production(self, production_name: str):
         new_rules = []
@@ -116,11 +125,13 @@ class Production:
             rule.remove_sub_production(production_name)
             if rule:
                 new_rules.append(rule)
-        self.rules = tuple(new_rules)
+        self.rules = set(new_rules)
 
     def replace_sub_production(self, to_replace: str, replace_with: str):
-        for rule in self.rules:
+        for rule in list(self.rules):
+            self.rules.remove(rule)
             rule.replace_sub_production(to_replace, replace_with)
+            self.rules.add(rule)
 
     @staticmethod
     def load(grammar: "Grammar", name: str, *rules: Iterable[str]) -> "Production":
@@ -130,7 +141,7 @@ class Production:
         # check if the rule already exists
         if rule in self.rules:
             return False
-        self.rules = self.rules + (rule,)
+        self.rules.add(rule)
         for term in rule.sequence:
             if isinstance(term, str):
                 self.grammar.used_by[term].add(self.name)
@@ -186,15 +197,19 @@ class Grammar:
                     removed = self.remove(prod)
                     assert removed
                     modified_last_pass = True
-                elif len(prod.rules) == 1 and len(prod.rules[0].sequence) == 1 and isinstance(prod.rules[0].sequence[0], str):
+                elif len(prod.rules) == 1 and len(prod.first_rule().sequence) == 1 and isinstance(prod.first_rule().sequence[0], str):
                     # this production has a single rule that just calls another production,
                     # so replace it with that production
-                    equivalent_prod_name: str = prod.rules[0].sequence[0]
+                    equivalent_prod_name: str = prod.first_rule().sequence[0]
                     for uses_name in self.used_by[prod.name]:
                         if uses_name in self:
                             self[uses_name].replace_sub_production(prod.name, equivalent_prod_name)
                     del self.productions[prod.name]
                     del self.used_by[prod.name]
+                    modified_last_pass = True
+                elif prod != self.start and not self.used_by[prod.name]:
+                    # this production isn't used by anything, so remove it
+                    self.remove(prod)
                     modified_last_pass = True
             modified = modified or modified_last_pass
         return modified
@@ -277,6 +292,9 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                         production.add(rule)
                 else:
                     Production(grammar, production_name, rule)
+
+        if trace.entrypoint == event:
+            grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event!s}>"))
 
     return grammar
 
