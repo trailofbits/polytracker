@@ -15,6 +15,13 @@ class Terminal:
             terminal = terminal.encode("utf-8")
         self.terminal: bytes = terminal
 
+    def __add__(self, other: Union[bytes, str, "Terminal"]) -> "Terminal":
+        if isinstance(other, Terminal):
+            other = other.terminal
+        elif isinstance(other, str):
+            other = other.encode("utf-8")
+        return Terminal(self.terminal + other)
+
     def __eq__(self, other):
         return isinstance(other, Terminal) and other.terminal == self.terminal
 
@@ -48,8 +55,21 @@ class Terminal:
 class Rule:
     def __init__(self, grammar: "Grammar", *sequence: Union[Terminal, str]):
         self.grammar: Grammar = grammar
-        self.sequence: Tuple[Union[Terminal, str], ...] = tuple(sequence)
+        self.sequence: Tuple[Union[Terminal, str], ...] = Rule.combine_terminals(sequence)
         self.has_terminals: bool = any(isinstance(t, Terminal) for t in self.sequence)
+
+    @staticmethod
+    def combine_terminals(sequence: Iterable[Union[Terminal, str]]) -> Tuple[Union[Terminal, str], ...]:
+        seq = []
+        for t in sequence:
+            if isinstance(t, Terminal):
+                if seq and isinstance(seq[-1], Terminal):
+                    seq[-1] = seq[-1] + t
+                else:
+                    seq.append(t)
+            else:
+                seq.append(t)
+        return tuple(seq)
 
     @property
     def can_produce_terminal(self) -> bool:
@@ -57,7 +77,7 @@ class Rule:
 
     def remove_sub_production(self, prod_name: str) -> bool:
         old_len = len(self.sequence)
-        self.sequence = tuple([s for s in self.sequence if s != prod_name])
+        self.sequence = Rule.combine_terminals([s for s in self.sequence if s != prod_name])
         return len(self.sequence) != old_len
 
     def replace_sub_production(self, to_replace: str, replace_with: Union[str, "Rule"]) -> bool:
@@ -76,7 +96,7 @@ class Rule:
             else:
                 new_seq.append(s)
         if modified:
-            self.sequence = tuple(new_seq)
+            self.sequence = Rule.combine_terminals(new_seq)
         return modified
 
     def __hash__(self):
@@ -309,9 +329,7 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(
-                                f"Production {prod.name} references {v}, which is not in the grammar"
-                            )
+                            raise MissingProductionError(f"Production {prod.name} references {v}, which is not in the grammar")
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -327,7 +345,7 @@ class Grammar:
             #     print(f"Warning: Production {prod.name} is never used")
         for prod in self.used_by.keys():
             if prod not in self:
-                raise CorruptedGrammarError(f"Production {prod} is in the \"used by\" table, but not in the grammar")
+                raise CorruptedGrammarError(f'Production {prod} is in the "used by" table, but not in the grammar')
         if self.start is not None and test_disconnection:
             # make sure there is a path from start to every other production
             graph = self.dependency_graph()
@@ -337,8 +355,10 @@ class Grammar:
                 # it's okay if the unvisited productions aren't able to produce terminals
                 not_visited = [node.name for node in not_visited if node.can_produce_terminal]
                 if not_visited:
-                    raise DisconnectedGrammarError("These productions are not accessible from the start production "
-                                                   f"{self.start.name}: {', '.join(not_visited)}")
+                    raise DisconnectedGrammarError(
+                        "These productions are not accessible from the start production "
+                        f"{self.start.name}: {', '.join(not_visited)}"
+                    )
 
     def simplify(self) -> bool:
         modified = False
