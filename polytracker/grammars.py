@@ -55,13 +55,15 @@ class Rule:
     def can_produce_terminal(self) -> bool:
         return self.has_terminals or any(p.can_produce_terminal for p in self if isinstance(p, Production))
 
-    def remove_sub_production(self, production_name: str) -> bool:
+    def remove_sub_production(self, prod_name: str) -> bool:
         old_len = len(self.sequence)
-        self.sequence = tuple([s for s in self.sequence if s != production_name])
+        self.sequence = tuple([s for s in self.sequence if s != prod_name])
         return len(self.sequence) != old_len
 
     def replace_sub_production(self, to_replace: str, replace_with: Union[str, "Rule"]) -> bool:
         if isinstance(replace_with, str):
+            if to_replace == replace_with:
+                return False
             replacement = [replace_with]
         else:
             replacement = list(replace_with.sequence)
@@ -176,17 +178,19 @@ class Production:
         else:
             self._can_produce_terminal = False
 
-    def remove_sub_production(self, production_name: str):
+    def remove_sub_production(self, name: str):
         new_rules = []
         for rule in self.rules:
-            rule.remove_sub_production(production_name)
+            rule.remove_sub_production(name)
             if rule:
                 new_rules.append(rule)
         self.rules = set(new_rules)
-        self.grammar.used_by[production_name].remove(self.name)
+        self.grammar.used_by[name].remove(self.name)
 
     def replace_sub_production(self, to_replace: str, replace_with: Union[str, Rule]):
         if isinstance(replace_with, str):
+            if to_replace == replace_with:
+                return
             new_prods: List[str] = [replace_with]
             replace_with = Rule(self.grammar, replace_with)
         else:
@@ -235,6 +239,10 @@ class Production:
 
 
 class GrammarError(RuntimeError):
+    pass
+
+
+class DisconnectedGrammarError(GrammarError):
     pass
 
 
@@ -287,21 +295,22 @@ class Grammar:
                         self.used_by[v].remove(name)
                     except KeyError:
                         pass
-        del self.productions[name]
         # update all of the productions that use us
         for uses_name in list(self.used_by[name]):
-            self[uses_name].remove_sub_production(name)
+            if uses_name != name:
+                self[uses_name].remove_sub_production(name)
         del self.used_by[name]
+        del self.productions[name]
         return True
 
-    def verify(self):
+    def verify(self, test_disconnection: bool = True):
         for prod in self.productions.values():
             for rule in prod:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
                             raise MissingProductionError(
-                                f"Production {prod.name} references {v}, " "which is not in the grammar"
+                                f"Production {prod.name} references {v}, which is not in the grammar"
                             )
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
@@ -312,10 +321,24 @@ class Grammar:
             for user in self.used_by[prod.name]:
                 if user not in self:
                     raise CorruptedGrammarError(
-                        f"Production {prod.name} is used by {user}, but {user} production is " "not in the grammar"
+                        f"Production {prod.name} is used by {user}, but {user} production is not in the grammar"
                     )
-            if not self.used_by[prod.name] and self.start is not prod:
-                print(f"Warning: Production {prod.name} is never used")
+            # if not self.used_by[prod.name] and self.start is not prod:
+            #     print(f"Warning: Production {prod.name} is never used")
+        for prod in self.used_by.keys():
+            if prod not in self:
+                raise CorruptedGrammarError(f"Production {prod} is in the \"used by\" table, but not in the grammar")
+        if self.start is not None and test_disconnection:
+            # make sure there is a path from start to every other production
+            graph = self.dependency_graph()
+            visited = set(node for node in nx.dfs_preorder_nodes(graph, source=self.start))
+            if len(visited) < len(self.productions):
+                not_visited = set(node for node in self.productions.values() if node not in visited)
+                # it's okay if the unvisited productions aren't able to produce terminals
+                not_visited = [node.name for node in not_visited if node.can_produce_terminal]
+                if not_visited:
+                    raise DisconnectedGrammarError("These productions are not accessible from the start production "
+                                                   f"{self.start.name}: {', '.join(not_visited)}")
 
     def simplify(self) -> bool:
         modified = False
@@ -328,7 +351,8 @@ class Grammar:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
                         assert removed
-                        self.verify()
+                        # print(f"removed {prod} because it was empty")
+                        # self.verify(test_disconnection=False)
                         status.update(1)
                         modified_last_pass = True
                     elif len(prod.rules) == 1 and prod is not self.start:
@@ -336,7 +360,8 @@ class Grammar:
                         for user in list(prod.used_by):
                             user.replace_sub_production(prod.name, prod.first_rule())
                         self.remove(prod)
-                        self.verify()
+                        # print(f"replaced {prod} with {prod.first_rule()}")
+                        # self.verify(test_disconnection=False)
                         status.update(1)
                         modified_last_pass = True
                 modified = modified or modified_last_pass
@@ -348,11 +373,11 @@ class Grammar:
     def __iter__(self) -> Iterable[Production]:
         yield from self.productions.values()
 
-    def __getitem__(self, production_name: str):
-        return self.productions[production_name]
+    def __getitem__(self, prod_name: str):
+        return self.productions[prod_name]
 
-    def __contains__(self, production_name: str):
-        return production_name in self.productions
+    def __contains__(self, prod_name: str):
+        return prod_name in self.productions
 
     def __str__(self):
         return "\n".join(map(str, self.productions.values()))
@@ -378,6 +403,12 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     grammar = Grammar()
 
     for event in tqdm(trace, unit=" productions", leave=False, desc="extracting a base grammar"):
+        # ignore events before the entrypoint, if it exists
+        if trace.entrypoint and trace.entrypoint.uid > event.uid:
+            # if it's a function call to the entrypoint, that's okay
+            if not isinstance(event, FunctionCall) or event.name != trace.entrypoint.function_name:
+                continue
+
         prod_name = production_name(event)
 
         if isinstance(event, BasicBlockEntry):
@@ -435,10 +466,13 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                 next_event_name = production_name(next_event)
                 if call_name in grammar:
                     production = grammar[call_name]
-                    for rule in production.rules:
-                        if next_event_name not in rule.sequence:
-                            rule.sequence = rule.sequence + (next_event_name,)
-                    grammar.used_by[call_name].add(next_event_name)
+                    if not production.rules:
+                        production.add(Rule(grammar, next_event_name))
+                    else:
+                        for rule in production.rules:
+                            if next_event_name not in rule.sequence:
+                                rule.sequence = rule.sequence + (next_event_name,)
+                    grammar.used_by[next_event_name].add(call_name)
                 else:
                     Production(grammar, call_name, Rule(grammar, next_event_name))
 
