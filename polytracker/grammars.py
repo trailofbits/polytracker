@@ -1,6 +1,6 @@
 import itertools
 from collections import defaultdict
-from typing import Any, cast, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, cast, Collection, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 from tqdm import tqdm
@@ -60,7 +60,7 @@ class Rule:
 
     @staticmethod
     def combine_terminals(sequence: Iterable[Union[Terminal, str]]) -> Tuple[Union[Terminal, str], ...]:
-        seq = []
+        seq: List[Union[Terminal, str]] = []
         for t in sequence:
             if isinstance(t, Terminal):
                 if seq and isinstance(seq[-1], Terminal):
@@ -84,7 +84,7 @@ class Rule:
         if isinstance(replace_with, str):
             if to_replace == replace_with:
                 return False
-            replacement = [replace_with]
+            replacement: List[Union[str, Terminal]] = [replace_with]
         else:
             replacement = list(replace_with.sequence)
         new_seq = []
@@ -107,7 +107,7 @@ class Rule:
 
     @staticmethod
     def load(grammar: "Grammar", *sequence: Union[Terminal, str]) -> "Rule":
-        alts = []
+        alts: List[Union[Terminal, str]] = []
         for a in sequence:
             if isinstance(a, str):
                 if a.startswith("<") and a.endswith(">"):
@@ -118,7 +118,7 @@ class Rule:
                 alts.append(a)
         return Rule(grammar, *alts)
 
-    def __iter__(self) -> Iterable[Union[Terminal, "Production"]]:
+    def __iter__(self) -> Iterator[Union[Terminal, "Production"]]:
         for alternative in self.sequence:
             if isinstance(alternative, Terminal):
                 yield alternative
@@ -144,7 +144,7 @@ class Production:
             raise ValueError(f"A production named {name!r} already exists in grammar {grammar!s}!")
         self.grammar: Grammar = grammar
         self.name: str = name
-        self.rules: Set[Rule, ...] = set(rules)
+        self.rules: Set[Rule] = set(rules)
         grammar.productions[name] = self
         for rule in rules:
             for term in rule.sequence:
@@ -172,7 +172,7 @@ class Production:
                     status.update(1)
                     # use a postorder traversal so dependencies are calculated first
                     cast(Production, production)._propagate_terminals()
-        return self._can_produce_terminal
+        return self._can_produce_terminal  # type: ignore
 
     @property
     def used_by(self) -> Iterable["Production"]:
@@ -243,7 +243,7 @@ class Production:
     def __contains__(self, rule: Rule):
         return rule in self.rules
 
-    def __iter__(self) -> Iterable[Rule]:
+    def __iter__(self) -> Iterator[Rule]:
         return iter(self.rules)
 
     def __len__(self):
@@ -309,7 +309,7 @@ class Grammar:
             production = self[name]
         # update all of the productions we use
         for rule in production:
-            for v in rule.sequence:
+            for v in rule.sequence:  # type: ignore   # mypy is dumb and thinks that this can sometimes be a str?
                 if isinstance(v, str):
                     try:
                         self.used_by[v].remove(name)
@@ -343,17 +343,17 @@ class Grammar:
                     )
             # if not self.used_by[prod.name] and self.start is not prod:
             #     print(f"Warning: Production {prod.name} is never used")
-        for prod in self.used_by.keys():
-            if prod not in self:
-                raise CorruptedGrammarError(f'Production {prod} is in the "used by" table, but not in the grammar')
+        for prod_name in self.used_by.keys():
+            if prod_name not in self:
+                raise CorruptedGrammarError(f'Production {prod_name} is in the "used by" table, but not in the grammar')
         if self.start is not None and test_disconnection:
             # make sure there is a path from start to every other production
             graph = self.dependency_graph()
             visited = set(node for node in nx.dfs_preorder_nodes(graph, source=self.start))
             if len(visited) < len(self.productions):
-                not_visited = set(node for node in self.productions.values() if node not in visited)
+                not_visited_prods = set(node for node in self.productions.values() if node not in visited)
                 # it's okay if the unvisited productions aren't able to produce terminals
-                not_visited = [node.name for node in not_visited if node.can_produce_terminal]
+                not_visited = [node.name for node in not_visited_prods if node.can_produce_terminal]
                 if not_visited:
                     raise DisconnectedGrammarError(
                         "These productions are not accessible from the start production "
@@ -378,7 +378,7 @@ class Grammar:
                     elif len(prod.rules) == 1 and prod is not self.start:
                         # this production has a single rule, so replace all uses with that rule
                         for user in list(prod.used_by):
-                            user.replace_sub_production(prod.name, prod.first_rule())
+                            user.replace_sub_production(prod.name, prod.first_rule())  # type: ignore
                         self.remove(prod)
                         # print(f"replaced {prod} with {prod.first_rule()}")
                         # self.verify(test_disconnection=False)
@@ -512,3 +512,4 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         return grammar
+    return Grammar()

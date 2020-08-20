@@ -296,33 +296,10 @@ class BasicBlockEntry(TraceEvent):
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
         TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(self.previous, FunctionCall):
+        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(self.previous, FunctionCall):  # type: ignore
             self.previous.entrypoint = self
         if isinstance(self.previous, BasicBlockEntry):
             self.previous.children.append(self)
-
-    def remove(self) -> bool:
-        if len(self.predecessors) > 1:
-            return False
-        elif len(self.children) > 1:
-            return False
-        elif len(self.predecessors) == 1 and len(self.children) == 1 and isinstance(self.previous, BasicBlockEntry):
-            self.predecessors[0]._children.remove(self)
-            self.predecessors[0]._children.append(self.children[0])
-            self.children[0]._predecessors.remove(self)
-            self.children[0]._predecessors.append(self.predecessors[0])
-            self.children[0].consumed = list(set(self.children[0].consumed + self.consumed))
-            self.children[0].previous_uid = self.previous_uid
-        elif len(self.children) == 1:
-            self.children[0]._predecessors.remove(self)
-            self.children[0].previous_uid = None
-            self.children[0].consumed = list(set(self.children[0].consumed + self.consumed))
-        elif len(self.predecessors) == 1:
-            self.predecessors[0]._children.remove(self)
-            self.predecessors[0].consumed = list(set(self.predecessors[0].consumed + self.consumed))
-        elif self.consumed:
-            return False
-        return True
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
@@ -458,26 +435,6 @@ class PolyTrackerTrace:
 
     def __iter__(self) -> Iterable[TraceEvent]:
         return iter(self.events)
-
-    def simplify(self) -> int:
-        reductions = 0
-        # first, remove trivial basic blocks (that have at most once predecessor and one successor)
-        to_remove = set()
-        for event in self.events:
-            if isinstance(event, BasicBlockEntry):
-                if len(event.basic_block.predecessors) <= 1 and len(event.basic_block.children) <= 1:
-                    if not event.remove():
-                        continue
-                    to_remove.add(event)
-                    reductions += 1
-
-        self.events = [event for event in self.events if event not in to_remove]
-
-        if reductions > 0:
-            # invalidate our caches
-            self._cfg = None
-
-        return reductions
 
     @property
     def functions(self) -> Iterable[Function]:
