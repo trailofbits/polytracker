@@ -249,6 +249,12 @@ class Production:
     def __len__(self):
         return len(self.rules)
 
+    def __eq__(self, other):
+        return isinstance(other, Production) and self.rules == other.rules
+
+    def __hash__(self):
+        return hash(frozenset(self.rules))
+
     def __str__(self):
         rules = " | ".join(map(str, self.rules))
         if self.grammar.start is self:
@@ -385,6 +391,19 @@ class Grammar:
                         status.update(1)
                         modified_last_pass = True
                 modified = modified or modified_last_pass
+            # traverse the productions from the least dominant up
+            dominators = self.dependency_graph().dominator_forest
+            ordered_productions: List[Production] = list(nx.dfs_postorder_nodes(dominators, source=self.start))
+            # see if any of the productions are equivalent. if so, combine them
+            for p1, p2 in itertools.combinations(ordered_productions, 2):
+                if p1 == p2:
+                    # p2 dominates p1 in the grammar, so replace p1 with p2
+                    for user in list(p1.used_by):
+                        user.replace_sub_production(p1.name, p2.name)  # type: ignore
+                    self.remove(p1)
+                    status.update(1)
+                    modified = True
+
             return modified
 
     def __len__(self):
