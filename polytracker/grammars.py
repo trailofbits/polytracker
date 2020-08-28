@@ -328,8 +328,9 @@ class MatchPossibility:
     @property
     def consumed(self) -> List[Tuple["MatchPossibility", Terminal]]:
         if self._consumed is None:
+            # running self.expand() automatically sets self._consumed
             _ = self.expand()
-        return self._consumed
+        return self._consumed  # type: ignore
 
     def __lt__(self, other: "MatchPossibility"):
         return (self.depth < other.depth) or (self.depth == other.depth and len(self.remainder) < len(other.remainder))
@@ -358,7 +359,7 @@ class MatchPossibility:
         parent, next_production = self.sequence[matches]
         assert isinstance(next_production, str)
         production = self.grammar[next_production]
-        rules = production.rules
+        rules: Iterable[Rule] = production.rules
         if not rules:
             rules = [Rule(self.grammar)]
         for rule in rules:
@@ -399,7 +400,8 @@ class Grammar:
             if sub_possibilities is not None:
                 if len(sub_possibilities) == 0:
                     # we found a match!
-                    return possibility
+                    # TODO: Convert this to a ParseTree
+                    return possibility  # type:ignore
                 for p in sub_possibilities:
                     heapq.heappush(possibilities, p)
         # TODO: Describe this parse error
