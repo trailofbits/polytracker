@@ -286,7 +286,7 @@ class ParseTree:
         self.value: Union[Production, Terminal] = production_or_terminal
         self.children: List[ParseTree] = []
 
-    def __iter__(self) -> Iterator['ParseTree']:
+    def __iter__(self) -> Iterator["ParseTree"]:
         return iter(self.children)
 
     def __len__(self):
@@ -301,39 +301,40 @@ class ParseTree:
 
 class MatchPossibility:
     def __init__(
-            self,
-            grammar: 'Grammar',
-            remainder: bytes,
-            production: Production,
-            rule: Rule,
-            after_sequence: Iterable[Tuple['MatchPossibility', Union[str, Terminal]]] = (),
-            previous: Optional['MatchPossibility'] = None,
-            parent: Optional['MatchPossibility'] = None
+        self,
+        grammar: "Grammar",
+        remainder: bytes,
+        production: Production,
+        rule: Rule,
+        after_sequence: Iterable[Tuple["MatchPossibility", Union[str, Terminal]]] = (),
+        previous: Optional["MatchPossibility"] = None,
+        parent: Optional["MatchPossibility"] = None,
     ):
-        self.grammar: 'Grammar' = grammar
+        self.grammar: "Grammar" = grammar
         self.remainder: bytes = remainder
         self.rule: Rule = rule
-        self.sequence: List[Tuple['MatchPossibility', Union[str, Terminal]]] = [(self, s) for s in rule.sequence] \
-            + list(after_sequence)
+        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [(self, s) for s in rule.sequence] + list(
+            after_sequence
+        )
         self.previous: Optional[MatchPossibility] = previous
         self.parent: Optional[MatchPossibility] = parent
         self.production: Production = production
-        self._consumed: Optional[List[Tuple['MatchPossibility', Terminal]]] = None
+        self._consumed: Optional[List[Tuple["MatchPossibility", Terminal]]] = None
         if previous is None:
             self.depth: int = 0
         else:
             self.depth = previous.depth + 1
 
     @property
-    def consumed(self) -> List[Tuple['MatchPossibility', Terminal]]:
+    def consumed(self) -> List[Tuple["MatchPossibility", Terminal]]:
         if self._consumed is None:
             _ = self.expand()
         return self._consumed
 
-    def __lt__(self, other: 'MatchPossibility'):
+    def __lt__(self, other: "MatchPossibility"):
         return (self.depth < other.depth) or (self.depth == other.depth and len(self.remainder) < len(other.remainder))
 
-    def expand(self) -> Optional[List['MatchPossibility']]:
+    def expand(self) -> Optional[List["MatchPossibility"]]:
         possibilities = []
         remainder = self.remainder
         matches = 0
@@ -346,7 +347,7 @@ class MatchPossibility:
             if isinstance(seq, Terminal):
                 if not remainder.startswith(seq.terminal):
                     return None
-                remainder = remainder[len(seq.terminal):]
+                remainder = remainder[len(seq.terminal) :]
                 if assign_consumed:
                     self._consumed.append((source, seq))
                 matches += 1
@@ -361,15 +362,17 @@ class MatchPossibility:
         if not rules:
             rules = [Rule(self.grammar)]
         for rule in rules:
-            possibilities.append(MatchPossibility(
-                grammar=self.grammar,
-                remainder=remainder,
-                production=production,
-                rule=rule,
-                after_sequence=self.sequence[matches+1:],
-                parent=parent,
-                previous=self
-            ))
+            possibilities.append(
+                MatchPossibility(
+                    grammar=self.grammar,
+                    remainder=remainder,
+                    production=production,
+                    rule=rule,
+                    after_sequence=self.sequence[matches + 1 :],
+                    parent=parent,
+                    previous=self,
+                )
+            )
         return possibilities
 
 
@@ -381,14 +384,13 @@ class Grammar:
 
     def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
         if isinstance(sentence, str):
-            sentence = sentence.encode('utf-8')
+            sentence = sentence.encode("utf-8")
         if start is None:
             if self.start is None:
                 raise ValueError("Either the grammar must have a start production or one must be provided to `match`")
             start = self.start
         possibilities = [
-            MatchPossibility(grammar=self, remainder=sentence, production=start, rule=rule)
-            for rule in start.rules
+            MatchPossibility(grammar=self, remainder=sentence, production=start, rule=rule) for rule in start.rules
         ]
         while possibilities:
             possibility = heapq.heappop(possibilities)
