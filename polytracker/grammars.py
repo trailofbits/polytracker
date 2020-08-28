@@ -1,6 +1,7 @@
+import heapq
 import itertools
 from collections import defaultdict
-from typing import Any, cast, Collection, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import networkx as nx
 from tqdm import tqdm
@@ -280,11 +281,127 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
+class ParseTree:
+    def __init__(self, production_or_terminal: Union[Production, Terminal]):
+        self.value: Union[Production, Terminal] = production_or_terminal
+        self.children: List[ParseTree] = []
+
+    def __iter__(self) -> Iterator['ParseTree']:
+        return iter(self.children)
+
+    def __len__(self):
+        return len(self.children)
+
+    def __str__(self):
+        if not self.children:
+            return str(self.value)
+        else:
+            return f"[{self.value!s} [{' '.join(map(str, self.children))}]]"
+
+
+class MatchPossibility:
+    def __init__(
+            self,
+            grammar: 'Grammar',
+            remainder: bytes,
+            production: Production,
+            rule: Rule,
+            after_sequence: Iterable[Tuple['MatchPossibility', Union[str, Terminal]]] = (),
+            previous: Optional['MatchPossibility'] = None,
+            parent: Optional['MatchPossibility'] = None
+    ):
+        self.grammar: 'Grammar' = grammar
+        self.remainder: bytes = remainder
+        self.rule: Rule = rule
+        self.sequence: List[Tuple['MatchPossibility', Union[str, Terminal]]] = [(self, s) for s in rule.sequence] \
+            + list(after_sequence)
+        self.previous: Optional[MatchPossibility] = previous
+        self.parent: Optional[MatchPossibility] = parent
+        self.production: Production = production
+        self._consumed: Optional[List[Tuple['MatchPossibility', Terminal]]] = None
+        if previous is None:
+            self.depth: int = 0
+        else:
+            self.depth = previous.depth + 1
+
+    @property
+    def consumed(self) -> List[Tuple['MatchPossibility', Terminal]]:
+        if self._consumed is None:
+            _ = self.expand()
+        return self._consumed
+
+    def __lt__(self, other: 'MatchPossibility'):
+        return (self.depth < other.depth) or (self.depth == other.depth and len(self.remainder) < len(other.remainder))
+
+    def expand(self) -> Optional[List['MatchPossibility']]:
+        possibilities = []
+        remainder = self.remainder
+        matches = 0
+        if self._consumed is None:
+            self._consumed = []
+            assign_consumed = True
+        else:
+            assign_consumed = False
+        for source, seq in self.sequence:
+            if isinstance(seq, Terminal):
+                if not remainder.startswith(seq.terminal):
+                    return None
+                remainder = remainder[len(seq.terminal):]
+                if assign_consumed:
+                    self._consumed.append((source, seq))
+                matches += 1
+            else:
+                break
+        if matches == len(self.sequence):
+            return []
+        parent, next_production = self.sequence[matches]
+        assert isinstance(next_production, str)
+        production = self.grammar[next_production]
+        rules = production.rules
+        if not rules:
+            rules = [Rule(self.grammar)]
+        for rule in rules:
+            possibilities.append(MatchPossibility(
+                grammar=self.grammar,
+                remainder=remainder,
+                production=production,
+                rule=rule,
+                after_sequence=self.sequence[matches+1:],
+                parent=parent,
+                previous=self
+            ))
+        return possibilities
+
+
 class Grammar:
     def __init__(self):
         self.productions: Dict[str, Production] = {}
         self.used_by: Dict[str, Set[str]] = defaultdict(set)
         self.start: Optional[Production] = None
+
+    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
+        if isinstance(sentence, str):
+            sentence = sentence.encode('utf-8')
+        if start is None:
+            if self.start is None:
+                raise ValueError("Either the grammar must have a start production or one must be provided to `match`")
+            start = self.start
+        possibilities = [
+            MatchPossibility(grammar=self, remainder=sentence, production=start, rule=rule)
+            for rule in start.rules
+        ]
+        while possibilities:
+            possibility = heapq.heappop(possibilities)
+            print(possibility.production)
+            sub_possibilities = possibility.expand()
+            if sub_possibilities is not None:
+                if len(sub_possibilities) == 0:
+                    # we found a match!
+                    return possibility
+                for p in sub_possibilities:
+                    heapq.heappush(possibilities, p)
+        # TODO: Describe this parse error
+        raise ValueError()
 
     def dependency_graph(self) -> DiGraph[Production]:
         graph: DiGraph[Production] = DiGraph()
@@ -409,10 +526,10 @@ class Grammar:
     def __len__(self):
         return len(self.productions)
 
-    def __iter__(self) -> Iterable[Production]:
+    def __iter__(self) -> Iterator[Production]:
         yield from self.productions.values()
 
-    def __getitem__(self, prod_name: str):
+    def __getitem__(self, prod_name: str) -> Production:
         return self.productions[prod_name]
 
     def __contains__(self, prod_name: str):
@@ -528,6 +645,7 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     for trace in trace_iter:
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
+        # grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         return grammar
