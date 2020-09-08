@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-if [[ "$(docker images -q trailofbits/polytrackerbuilder 2> /dev/null)" == "" ]]; then
-    docker build -t trailofbits/polytrackerbuilder .
-fi
+set -e
 
 SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+
+if [[ "$(docker images -q trailofbits/polytrackerbuilder 2> /dev/null)" == "" ]]; then
+    docker build -t trailofbits/polytrackerbuilder -f "${SCRIPTPATH}/Dockerfile" "${SCRIPTPATH}"
+fi
 
 mkdir -p "${SCRIPTPATH}/../build"
 

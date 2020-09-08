@@ -33,6 +33,8 @@ RUN go get github.com/SRI-CSL/gllvm/cmd/...
 
 ENV PATH="$PATH:/root/go/bin"
 
+RUN python3.7 -m pip install pytest
+
 COPY . /polytracker
 
 WORKDIR /polytracker

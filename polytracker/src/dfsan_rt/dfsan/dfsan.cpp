@@ -22,6 +22,7 @@
 
 #include "dfsan/dfsan_log_mgmt.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/tracing.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -73,6 +74,9 @@ static decay_val taint_node_ttl = DEFAULT_TTL;
 
 // This is the output file name
 static const char *polytracker_output_filename;
+
+// Whether or not to perform a full program trace
+static bool polytracker_trace = false;
 
 // Manages taint info/propagation
 taintManager *taint_manager = nullptr;
@@ -128,6 +132,22 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   init_lock.unlock();
 
   return taint_manager->logFunctionEntry(fname);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
+    char *fname, uint32_t functionIndex, uint32_t bbIndex,
+    std::underlying_type<polytracker::BasicBlockType>::type bbType) {
+  init_lock.lock();
+  if (is_init == false) {
+    dfsan_late_late_init();
+    is_init = true;
+  }
+  init_lock.unlock();
+
+  if (taint_manager->recordTrace()) {
+    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex),
+                              static_cast<polytracker::BasicBlockType>(bbType));
+  }
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
@@ -368,7 +388,22 @@ void dfsan_parse_env() {
     polytracker_output_filename = "polytracker";
   }
 
+  const char *poly_trace = dfsan_getenv("POLYTRACE");
+  if (poly_trace == NULL) {
+    polytracker_trace = false;
+  } else {
+    auto trace_str = std::string(poly_trace);
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace = false;
+    } else {
+      polytracker_trace = true;
+    }
+  }
+
   taint_manager->setOutputFilename(std::string(polytracker_output_filename));
+  taint_manager->setTrace(polytracker_trace);
 
   const char *env_ttl = dfsan_getenv("POLYTTL");
   decay_val taint_node_ttl = DEFAULT_TTL;

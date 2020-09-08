@@ -60,13 +60,13 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=[
-        'graphviz',
-        'matplotlib',
-        'networkx',
-        'pygraphviz',
-        'pydot',
-        'tqdm',
-        'typing_extensions'
+        'graphviz==0.14.1',
+        'matplotlib==3.3.0',
+        'networkx==2.4',
+        'pygraphviz==1.5',
+        'pydot==1.4.1',
+        'tqdm==4.48.0',
+        'typing_extensions==3.7.4.2'
     ],
     extras_require={
         "dev": ["black", "mypy", "pytest"]

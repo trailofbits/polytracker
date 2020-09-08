@@ -23,6 +23,7 @@
 from collections import defaultdict
 import argparse
 import os
+import tempfile
 import sys
 import subprocess
 from typing import List, Optional
@@ -106,13 +107,13 @@ class PolyBuilder:
                 compile_command.append(lib)
         ret_code = subprocess.call(compile_command)
         if ret_code != 0:
-            print(f"Error! Failed to execute compile command: {compile_command}")
+            print(f"Error! Failed to execute compile command: {' '.join(compile_command)}")
             return False
         return True
 
     def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
-        opt_command = ["opt", "-O0", "-load",
-                       os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
+        opt_command = ["opt", "-O0",
+                       "-load", os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
         ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
         if ignore_list_files is None:
             print("Error! Failed to add ignore lists")
@@ -128,7 +129,7 @@ class PolyBuilder:
         opt_command += [input_file, "-o", bitcode_file]
         ret_code = subprocess.call(opt_command)
         if ret_code != 0:
-            print("Error! opt command failed!")
+            print(f"Error! opt command failed: {' '.join(opt_command)}")
             return False
         if not os.path.exists(bitcode_file):
             print("Error! Bitcode file does not exist!")

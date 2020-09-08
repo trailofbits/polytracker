@@ -13,4 +13,4 @@ if [[ "$(docker images -q trailofbits/polytracker-demo-jq 2> /dev/null)" == "" ]
     docker build -t trailofbits/polytracker-demo-jq -f Dockerfile-jq.demo .
 fi
 
-docker run --read-only -ti --rm -e POLYPATH="$1" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-jq:latest jq . "$1"
+docker run --read-only -ti --rm -e POLYTRACE="1" -e POLYPATH="$1" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-jq:latest jq . "$1"

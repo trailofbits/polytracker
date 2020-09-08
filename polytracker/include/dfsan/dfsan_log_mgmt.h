@@ -4,11 +4,13 @@
 #include "dfsan/dfsan.h"
 #include "json.hpp"
 #include "polytracker/polytracker.h"
+#include "polytracker/tracing.h"
 #include <iostream>
 #include <list>
 #include <map>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <stdint.h>
 #include <string>
 #include <thread>
@@ -89,6 +91,8 @@ public:
   void logOperation(dfsan_label some_label);
   int logFunctionEntry(char *fname);
   void logFunctionExit();
+  void logBBEntry(char *fname, BBIndex bbIndex,
+                  polytracker::BasicBlockType bbType);
   void resetFrame(int *index);
   void output();
   dfsan_label getLastLabel();
@@ -97,6 +101,8 @@ public:
   dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2);
   dfsan_label createReturnLabel(int file_byte_offset, std::string name);
   void setOutputFilename(std::string outfile);
+  void setTrace(bool doTrace);
+  bool recordTrace() const { return doTrace; }
 
 private:
   void checkMaxLabel(dfsan_label label);
@@ -105,6 +111,7 @@ private:
   void addJsonVersion();
   void addTaintSources();
   void addJsonRuntimeCFG();
+  void addJsonRuntimeTrace();
   void addCanonicalMapping();
   void addTaintedBlocks();
   dfsan_label createCanonicalLabel(int file_byte_offset,
@@ -125,6 +132,8 @@ private:
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;
   string_node_map function_to_cmp_bytes;
+  bool doTrace;
+  polytracker::Trace trace;
   std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
   std::string outfile;
   json output_json;

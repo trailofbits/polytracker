@@ -1,10 +1,12 @@
 #include "dfsan/dfsan_log_mgmt.h"
 
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <stack>
+#include <tuple>
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -12,6 +14,15 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
+
+using json = nlohmann::json;
+
+using polytracker::BasicBlockEntry;
+using polytracker::BasicBlockType;
+using polytracker::FunctionCall;
+using polytracker::FunctionReturn;
+using polytracker::hasType;
+using polytracker::TraceEvent;
 
 using namespace __dfsan;
 
@@ -49,6 +60,13 @@ void taintManager::logCompare(dfsan_label some_label) {
   std::vector<std::string> func_stack = thread_stack_map[this_id];
   (function_to_cmp_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
   (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(curr_node);
+  if (auto bb = trace.currentBB()) {
+    // we are recording a full trace, and we know the current basic block
+    if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
+      // this is a canonical label
+      trace.setLastUsage(some_label, bb);
+    }
+  }
   taint_prop_lock.unlock();
 }
 
@@ -61,6 +79,13 @@ void taintManager::logOperation(dfsan_label some_label) {
   std::thread::id this_id = std::this_thread::get_id();
   std::vector<std::string> func_stack = thread_stack_map[this_id];
   (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(new_node);
+  if (auto bb = trace.currentBB()) {
+    // we are recording a full trace, and we know the current basic block
+    if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
+      // this is a canonical label
+      trace.setLastUsage(some_label, bb);
+    }
+  }
   taint_prop_lock.unlock();
 }
 
@@ -78,6 +103,12 @@ int taintManager::logFunctionEntry(char* fname) {
     (runtime_cfg)[new_str].insert(caller);
   }
   (thread_stack_map)[this_id].push_back(new_str);
+  if (recordTrace()) {
+    auto& stack = trace.getStack(this_id);
+    auto call = stack.emplace<FunctionCall>(fname);
+    // Create a new stack frame:
+    stack.newFrame(call);
+  }
   taint_prop_lock.unlock();
   return thread_stack_map[this_id].size() - 1;
 }
@@ -86,6 +117,57 @@ void taintManager::logFunctionExit() {
   taint_prop_lock.lock();
   std::thread::id this_id = std::this_thread::get_id();
   (thread_stack_map)[this_id].pop_back();
+  if (recordTrace()) {
+    auto& stack = trace.getStack(this_id);
+    if (!stack.pop()) {
+      // if this happens, then stack should have been a null pointer,
+      // which would have likely caused a segfault before this!
+      // FIXME: Figure out why simply printing a string here causes a segfault
+      //        in jq
+      // std::cerr << "Event stack was unexpectedly empty!" << std::endl;
+    } else {
+      if (auto func = dynamic_cast<FunctionCall*>(stack.peek().peek())) {
+        // Create the function return event in the stack frame that called
+        // the function
+        stack.emplace<FunctionReturn>(func);
+      } else {
+        // FIXME: Figure out why simply printing a string here causes a segfault
+        //        in jq
+        // std::cerr
+        //     << "Error finding matching function call in the event trace
+        //     stack!";
+        // if (auto bb = dynamic_cast<BasicBlockEntry*>(stack.peek().peek())) {
+        //     std::cerr << " Found basic block " << bb->str() << " instead.";
+        //   }
+        // std::cerr << std::endl;
+      }
+    }
+  }
+  taint_prop_lock.unlock();
+}
+
+/**
+ * This function will be called on the entry of every basic block.
+ * It will only be called if taintManager::recordTrace() is true,
+ * which will only be set if the POLYTRACE environment variable is set.
+ */
+void taintManager::logBBEntry(char* fname, BBIndex bbIndex,
+                              BasicBlockType bbType) {
+  taint_prop_lock.lock();
+  auto currentStack = trace.currentStack();
+  size_t entryCount;
+  BasicBlockEntry* newBB;
+  if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
+    // this is not the first occurrence of this basic block in the current
+    // stack frame
+    newBB = currentStack->emplace<BasicBlockEntry>(
+        fname, bbIndex, prevBB->entryCount + 1, bbType);
+  } else {
+    newBB = currentStack->emplace<BasicBlockEntry>(fname, bbIndex, bbType);
+  }
+  if (auto ret = dynamic_cast<FunctionReturn*>(newBB->previous)) {
+    ret->returningTo = newBB;
+  }
   taint_prop_lock.unlock();
 }
 
@@ -123,7 +205,178 @@ void taintManager::addJsonRuntimeCFG() {
   }
 }
 
+json escapeChar(int c) {
+  std::stringstream s;
+  s << '"';
+  if (c >= 32 && c <= 126 && c != '"' && c != '\\') {
+    s << (char)c;
+  } else if (c != EOF) {
+    s << "\\u" << std::hex << std::setw(4) << std::setfill('0') << c;
+  }
+  s << '"';
+  return json::parse(s.str());
+}
+
+void taintManager::addJsonRuntimeTrace() {
+  if (!recordTrace()) {
+    return;
+  }
+  /* FIXME: This assumes that there is a single key in this->canonical_mapping
+   * that corresponds to POLYPATH. If/when we support multiple taint sources,
+   * this code will have to be updated!
+   */
+  if (canonical_mapping.size() < 1) {
+    std::cerr << "Unexpected number of taint sources: "
+              << canonical_mapping.size() << std::endl;
+    exit(1);
+  } else if (canonical_mapping.size() > 1) {
+    std::cerr << "Warning: More than one taint source found! The resulting "
+              << "runtime trace will likely be incorrect!" << std::endl;
+  }
+  std::cerr << "Saving runtime trace to JSON..." << std::endl << std::flush;
+  std::vector<json> events;
+  size_t threadStack = 0;
+  const auto startTime = std::chrono::system_clock::now();
+  auto lastLogTime = startTime;
+  for (const auto& kvp : trace.eventStacks) {
+    const auto& stack = kvp.second;
+    std::cerr << "Processing events from thread " << threadStack << std::endl
+              << std::flush;
+    ++threadStack;
+    size_t eventNumber = 0;
+    for (auto event = stack.firstEvent(); event; event = event->next) {
+      json j;
+      const auto currentTime = std::chrono::system_clock::now();
+      auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              currentTime - lastLogTime)
+                              .count();
+      ++eventNumber;
+      if (milliseconds >= 1000) {
+        // Log our progress every second or so
+        lastLogTime = currentTime;
+        std::cerr << "\r" << std::string(80, ' ') << "\r";
+        std::cerr << "Event " << eventNumber << " / " << stack.numEvents()
+                  << std::flush;
+      }
+      if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
+        j = json::object({{"type", "FunctionCall"},
+                          {"name", call->fname},
+                          {"consumes_bytes", call->consumesBytes(trace)}});
+        if (call->ret) {
+          j["return_uid"] = call->ret->eventIndex;
+        }
+      } else if (const auto bb = dynamic_cast<const BasicBlockEntry*>(event)) {
+        j = json::object({{"type", "BasicBlockEntry"},
+                          {"function_name", bb->fname},
+                          {"function_index", bb->index.functionIndex()},
+                          {"bb_index", bb->index.index()},
+                          {"global_index", bb->index.uid()}});
+        if (bb->function) {
+          j["function_call_uid"] = bb->function->eventIndex;
+        }
+        auto entryCount = bb->entryCount;
+        if (entryCount != 1) {
+          j["entry_count"] = entryCount;
+        }
+        const auto& taints = trace.taints(bb);
+        if (!taints.empty()) {
+          // dfsan_labels are 1-indexed
+          std::vector<dfsan_label> zeroIndexed;
+          zeroIndexed.reserve(taints.size());
+          std::transform(taints.begin(), taints.end(),
+                         std::back_inserter(zeroIndexed),
+                         [](dfsan_label d) { return d - 1; });
+          j["consumed"] = zeroIndexed;
+        }
+        std::vector<std::string> types;
+        if (hasType(bb->type, BasicBlockType::STANDARD)) {
+          types.push_back("standard");
+        } else {
+          if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {
+            types.push_back("conditional");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
+            types.push_back("function_entry");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_EXIT)) {
+            types.push_back("function_exit");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
+            types.push_back("function_return");
+          }
+          if (hasType(bb->type, BasicBlockType::FUNCTION_CALL)) {
+            types.push_back("function_call");
+          }
+          if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
+            types.push_back("loop_entry");
+          }
+          if (hasType(bb->type, BasicBlockType::LOOP_EXIT)) {
+            types.push_back("loop_exit");
+          }
+        }
+        if (!types.empty()) {
+          j["types"] = types;
+        }
+      } else if (const auto ret = dynamic_cast<const FunctionReturn*>(event)) {
+#if 0
+        // does this function call consume bytes?
+        // if not, we do not need it to do grammar extraction, and saving
+        // to JSON is very slow. So speed things up by just eliding it!
+        // TODO: If/when we implement another means of output (e.g., sqlite),
+        //       we can experiment with emitting all functions
+        if (ret->call && !(call->consumesBytes(trace))) {
+          std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
+          event = ret->call;
+          continue;
+        }
+#endif
+        j = json::object({
+            {"type", "FunctionReturn"},
+            {"name", ret->call ? ret->call->fname : nullptr},
+        });
+        if (ret->returningTo) {
+          j["returning_to_uid"] = ret->returningTo->eventIndex;
+        }
+        if (const auto functionCall = ret->call) {
+          j["call_event_uid"] = ret->call->eventIndex;
+        }
+      } else {
+        continue;
+      }
+      j["uid"] = event->eventIndex;
+      if (event->previous) {
+        j["previous_uid"] = event->previous->eventIndex;
+      }
+      if (event->next) {
+        j["next_uid"] = event->next->eventIndex;
+      }
+      events.push_back(j);
+      if (auto call = dynamic_cast<const FunctionCall*>(event)) {
+        // does this function call consume bytes?
+        // if not, we do not need it to do grammar extraction, and saving
+        // to JSON is very slow. So speed things up by just eliding its
+        // constituent events!
+        // TODO: If/when we implement another means of output (e.g., sqlite),
+        //       we can experiment with emitting all functions
+        if (call->ret && !(call->consumesBytes(trace))) {
+          std::cerr << "\rSkipping emitting the trace for function "
+                    << call->fname
+                    << " because it did not consume any tainted bytes."
+                    << std::endl
+                    << std::flush;
+          event = call->ret->previous;
+        }
+      }
+    }
+    std::cerr << std::endl << std::flush;
+  }
+  output_json["trace"] = events;
+  std::cerr << "Done emitting the trace events." << std::endl << std::flush;
+}
+
 void taintManager::setOutputFilename(std::string out) { outfile = out; }
+
+void taintManager::setTrace(bool doTrace) { this->doTrace = doTrace; }
 
 void taintManager::outputRawTaintForest() {
   std::string forest_fname = outfile + "_forest.bin";
@@ -178,10 +431,12 @@ void taintManager::addTaintedBlocks() {
 void taintManager::outputRawTaintSets() {
   string_node_map::iterator it;
   // NOTE: Whenever the output JSON format changes, make sure to:
-  //       (1) Up the version number in /polytracker/include/polytracker/polytracker.h; and
-  //       (2) Add support for parsing the changes in /polytracker/polytracker.py
+  //       (1) Up the version number in
+  //       /polytracker/include/polytracker/polytracker.h; and (2) Add support
+  //       for parsing the changes in /polytracker/polytracker.py
   addJsonVersion();
   addJsonRuntimeCFG();
+  addJsonRuntimeTrace();
   addTaintSources();
   addCanonicalMapping();
   addTaintedBlocks();
@@ -206,7 +461,8 @@ void taintManager::outputRawTaintSets() {
   }
   std::string output_string = outfile + "_process_set.json";
   std::ofstream o(output_string);
-  o << std::setw(4) << output_json;
+  // If we are doing a full trace, only indent two spaces to save space!
+  o << std::setw(this->doTrace ? 2 : 4) << output_json;
   o.close();
 }
 
@@ -222,6 +478,7 @@ taintManager::taintManager(decay_val init_decay, char* shad_mem,
                            char* forest_ptr)
     : taintMappingManager(shad_mem, forest_ptr), taint_node_ttl(init_decay) {
   next_label = 1;
+  doTrace = false;
 }
 
 taintManager::~taintManager() {}

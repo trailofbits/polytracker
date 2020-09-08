@@ -155,6 +155,10 @@ On program exit, those artifacts will be created in the current directory.
 These are intended to be consumed by PolyProcess to produce a final `polytracker.json` file,
 but can be consumed by other tools. The artifacts are documented [here.](docs/ARTIFACTS.md)
 
+The optional `POLYTRACE` enviornment variable can be set to `POLYTRACE=1` to produce a basic-block
+level trace of the program. This trace data will be included in the output JSON file under the
+"`trace`" key.
+
 To create the final JSON, run `polyprocess` 
 ```
 polyprocess --json path/to/polytracker_process_set.json --forest path/to/polytracker_forest.bin

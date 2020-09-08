@@ -94,6 +94,8 @@
 #include "llvm/Support/SpecialCaseList.h"
 // For out of source registration
 #include "dfsan/dfsan_types.h"
+#include "polytracker/basic_block_utils.h"
+#include "polytracker/bb_splitting_pass.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -355,8 +357,10 @@ class DataFlowSanitizer : public ModulePass {
 
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
+  FunctionType *DFSanEntryBBFnTy;
   FunctionType *DFSanResetFrameFnTy;
   Constant *DFSanEntryFn;
+  Constant *DFSanEntryBBFn;
   Constant *DFSanExitFn;
   Constant *DFSanResetFrameFn;
 
@@ -605,6 +609,11 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
+  Type *DFSanEntryBBArgs[4] = {
+      Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx),
+      IntegerType::getInt32Ty(*Ctx), IntegerType::getInt8Ty(*Ctx)};
+  DFSanEntryBBFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
   Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
   DFSanResetFrameFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
@@ -808,6 +817,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_log_taint_cmp", DFSanLogCmpFnTy);
   DFSanEntryFn = Mod->getOrInsertFunction("__dfsan_func_entry", DFSanEntryFnTy);
   DFSanExitFn = Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
+  DFSanEntryBBFn =
+      Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBFnTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
 
@@ -819,7 +830,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-        &i != DFSanResetFrameFn)
+        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn)
       FnsToInstrument.push_back(&i);
   }
 
@@ -968,11 +979,23 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
+  uint32_t functionIndex = 0;
+  polytracker::BBSplittingPass bbSplitter;
   for (Function *i : FnsToInstrument) {
-    if (!i || i->isDeclaration())
+    if (!i || i->isDeclaration()) {
       continue;
+    }
+
+    Value *FuncIndex =
+        ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
     removeUnreachableBlocks(*i);
+
+    // Split the function's basic blocks such that each BB has at most one
+    // function call and one conditional branch. This means that all of the
+    // calls in the instrumented code will be followed by an unconditional
+    // branch.
+    auto splitBBs = bbSplitter.analyzeFunction(*i);
 
     std::string curr_fname = i->getName();
     if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
@@ -987,6 +1010,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
 #endif
       }
     }
+    uint32_t bbIndex = 0;
+
     // Instrument function entry here
     BasicBlock *BB = &(i->getEntryBlock());
     Instruction *InsertPoint = &(*(BB->getFirstInsertionPt()));
@@ -1030,12 +1055,46 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     // When a longjmp is called.
     for (BasicBlock *curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
+
+      // Add a callback for BB entry
+      {
+        // we do not need to instrument the entry block of a function
+        // because we do that above when we add the function instrumentation
+        Value *BBIndex =
+            ConstantInt::get(IntegerType::getInt32Ty(*Ctx), bbIndex++, false);
+        Instruction *InsertBefore;
+        // Was this one of the new BBs that was split after a function call?
+        // If so, set that it is a FUNCTION_RETURN
+        bool wasSplit = std::find(splitBBs.cbegin(), splitBBs.cend(),
+                                  curr_bb) != splitBBs.cend();
+        Value *BBType = ConstantInt::get(
+            IntegerType::getInt8Ty(*Ctx),
+            static_cast<uint8_t>(
+                polytracker::getType(curr_bb, DFSF.DT) |
+                (wasSplit ? polytracker::BasicBlockType::FUNCTION_RETURN
+                          : polytracker::BasicBlockType::UNKNOWN)),
+            false);
+        if (curr_bb == BB) {
+          // this is the entrypoint basic block in a function, so make sure the
+          // BB instrumentation happens after the function call instrumentation
+          InsertBefore = store_inst->getNextNode();
+        } else {
+          InsertBefore = Inst;
+        }
+        while (isa<PHINode>(InsertBefore) ||
+               isa<LandingPadInst>(InsertBefore)) {
+          // This is a PHI or landing pad instruction,
+          // so we need to add the callback afterward
+          InsertBefore = InsertBefore->getNextNode();
+        }
+        IRBuilder<> IRB(InsertBefore);
+        IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex, BBType});
+      }
       while (true) {
         Instruction *Next = Inst->getNextNode();
-        CallInst *potential_call = dyn_cast<CallInst>(Inst);
-        if (potential_call != nullptr) {
-          Function *F = potential_call->getCalledFunction();
-          if (F != nullptr) {
+        bool IsTerminator = isa<TerminatorInst>(Inst);
+        if (CallInst *call = dyn_cast<CallInst>(Inst)) {
+          if (Function *F = call->getCalledFunction()) {
             if (F->getName() == "setjmp" || F->getName() == "sigsetjump" ||
                 F->getName() == "_setjmp") {
               // Insert before the next inst.
@@ -1044,7 +1103,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
             }
           }
         }
-        bool IsTerminator = isa<TerminatorInst>(Inst);
         if (IsTerminator)
           break;
         Inst = Next;
@@ -1884,7 +1942,6 @@ static RegisterPass<DataFlowSanitizer> X("dfsan_pass", "DataflowSan Pass");
 
 static void registerAflDFSanPass(const PassManagerBuilder &,
                                  legacy::PassManagerBase &PM) {
-
   PM.add(new DataFlowSanitizer());
 }
 
