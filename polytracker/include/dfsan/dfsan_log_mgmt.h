@@ -125,9 +125,9 @@ private:
   decay_val taint_node_ttl;
   std::mutex taint_prop_lock;
   dfsan_label next_label;
-  std::unordered_map<std::string, std::list<std::pair<dfsan_label, int>>>
+  std::unordered_map<std::string, std::vector<std::pair<dfsan_label, int>>>
       canonical_mapping;
-  std::unordered_map<std::string, std::list<std::pair<int, int>>>
+  std::unordered_map<std::string, std::vector<std::pair<int, int>>>
       taint_bytes_processed;
   thread_id_map thread_stack_map;
   string_node_map function_to_bytes;

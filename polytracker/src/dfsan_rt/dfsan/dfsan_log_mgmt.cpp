@@ -233,6 +233,7 @@ void taintManager::addJsonRuntimeTrace() {
     std::cerr << "Warning: More than one taint source found! The resulting "
               << "runtime trace will likely be incorrect!" << std::endl;
   }
+  const auto mapping = canonical_mapping.begin()->second;
   std::cerr << "Saving runtime trace to JSON..." << std::endl << std::flush;
   std::vector<json> events;
   size_t threadStack = 0;
@@ -280,13 +281,20 @@ void taintManager::addJsonRuntimeTrace() {
         }
         const auto& taints = trace.taints(bb);
         if (!taints.empty()) {
-          // dfsan_labels are 1-indexed
-          std::vector<dfsan_label> zeroIndexed;
-          zeroIndexed.reserve(taints.size());
+          std::vector<int> byteOffsets;
+          byteOffsets.reserve(taints.size());
           std::transform(taints.begin(), taints.end(),
-                         std::back_inserter(zeroIndexed),
-                         [](dfsan_label d) { return d - 1; });
-          j["consumed"] = zeroIndexed;
+                         std::back_inserter(byteOffsets),
+                         [&mapping](dfsan_label d) {
+            // TODO: Convert the mapping to a map instead of a list of pairs
+            for (const auto pair : mapping) {
+              if (pair.first == d) {
+                return pair.second;
+              }
+            }
+            return -1;
+          });
+          j["consumed"] = byteOffsets;
         }
         std::vector<std::string> types;
         if (hasType(bb->type, BasicBlockType::STANDARD)) {
