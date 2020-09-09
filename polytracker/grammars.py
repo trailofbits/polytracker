@@ -53,15 +53,19 @@ class Terminal:
         return f'{ret}"'
 
 
+NonTerminal = str
+Symbol = Union[NonTerminal, Terminal]
+
+
 class Rule:
-    def __init__(self, grammar: "Grammar", *sequence: Union[Terminal, str]):
+    def __init__(self, grammar: "Grammar", *sequence: Symbol):
         self.grammar: Grammar = grammar
-        self.sequence: Tuple[Union[Terminal, str], ...] = Rule.combine_terminals(sequence)
+        self.sequence: Tuple[Symbol, ...] = Rule.combine_terminals(sequence)
         self.has_terminals: bool = any(isinstance(t, Terminal) for t in self.sequence)
 
     @staticmethod
-    def combine_terminals(sequence: Iterable[Union[Terminal, str]]) -> Tuple[Union[Terminal, str], ...]:
-        seq: List[Union[Terminal, str]] = []
+    def combine_terminals(sequence: Iterable[Symbol]) -> Tuple[Symbol, ...]:
+        seq: List[Symbol] = []
         for t in sequence:
             if isinstance(t, Terminal):
                 if seq and isinstance(seq[-1], Terminal):
@@ -81,11 +85,11 @@ class Rule:
         self.sequence = Rule.combine_terminals([s for s in self.sequence if s != prod_name])
         return len(self.sequence) != old_len
 
-    def replace_sub_production(self, to_replace: str, replace_with: Union[str, "Rule"]) -> bool:
-        if isinstance(replace_with, str):
+    def replace_sub_production(self, to_replace: NonTerminal, replace_with: Union[NonTerminal, "Rule"]) -> bool:
+        if isinstance(replace_with, NonTerminal):
             if to_replace == replace_with:
                 return False
-            replacement: List[Union[str, Terminal]] = [replace_with]
+            replacement: List[Symbol] = [replace_with]
         else:
             replacement = list(replace_with.sequence)
         new_seq = []
@@ -107,10 +111,10 @@ class Rule:
         return self.sequence == other.sequence
 
     @staticmethod
-    def load(grammar: "Grammar", *sequence: Union[Terminal, str]) -> "Rule":
-        alts: List[Union[Terminal, str]] = []
+    def load(grammar: "Grammar", *sequence: Symbol) -> "Rule":
+        alts: List[Symbol] = []
         for a in sequence:
-            if isinstance(a, str):
+            if isinstance(a, NonTerminal):
                 if a.startswith("<") and a.endswith(">"):
                     alts.append(a)
                 else:
@@ -208,14 +212,14 @@ class Production:
         self.rules = set(new_rules)
         self.grammar.used_by[name].remove(self.name)
 
-    def replace_sub_production(self, to_replace: str, replace_with: Union[str, Rule]):
-        if isinstance(replace_with, str):
+    def replace_sub_production(self, to_replace: NonTerminal, replace_with: Union[NonTerminal, Rule]):
+        if isinstance(replace_with, NonTerminal):
             if to_replace == replace_with:
                 return
-            new_prods: List[str] = [replace_with]
+            new_prods: List[NonTerminal] = [replace_with]
             replace_with = Rule(self.grammar, replace_with)
         else:
-            new_prods = [v for v in replace_with.sequence if isinstance(v, str)]
+            new_prods = [v for v in replace_with.sequence if isinstance(v, NonTerminal)]
         modified = False
         for rule in list(self.rules):
             self.rules.remove(rule)
@@ -236,7 +240,7 @@ class Production:
             return False
         self.rules.add(rule)
         for term in rule.sequence:
-            if isinstance(term, str):
+            if isinstance(term, NonTerminal):
                 self.grammar.used_by[term].add(self.name)
         # TODO: investigate checking for common subsequences and generating new sub-productions for those
         return True
@@ -306,14 +310,14 @@ class MatchPossibility:
         remainder: bytes,
         production: Production,
         rule: Rule,
-        after_sequence: Iterable[Tuple["MatchPossibility", Union[str, Terminal]]] = (),
+        after_sequence: Iterable[Tuple["MatchPossibility", Symbol]] = (),
         previous: Optional["MatchPossibility"] = None,
         parent: Optional["MatchPossibility"] = None,
     ):
         self.grammar: "Grammar" = grammar
         self.remainder: bytes = remainder
         self.rule: Rule = rule
-        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [(self, s) for s in rule.sequence] + list(
+        self.sequence: List[Tuple["MatchPossibility", Symbol]] = [(self, s) for s in rule.sequence] + list(
             after_sequence
         )
         self.previous: Optional[MatchPossibility] = previous
@@ -348,7 +352,7 @@ class MatchPossibility:
             if isinstance(seq, Terminal):
                 if not remainder.startswith(seq.terminal):
                     return None
-                remainder = remainder[len(seq.terminal) :]
+                remainder = remainder[len(seq.terminal):]
                 if assign_consumed:
                     self._consumed.append((source, seq))
                 matches += 1
@@ -357,7 +361,7 @@ class MatchPossibility:
         if matches == len(self.sequence):
             return []
         parent, next_production = self.sequence[matches]
-        assert isinstance(next_production, str)
+        assert isinstance(next_production, NonTerminal)
         production = self.grammar[next_production]
         rules: Iterable[Rule] = production.rules
         if not rules:
@@ -369,18 +373,21 @@ class MatchPossibility:
                     remainder=remainder,
                     production=production,
                     rule=rule,
-                    after_sequence=self.sequence[matches + 1 :],
+                    after_sequence=self.sequence[matches + 1:],
                     parent=parent,
                     previous=self,
                 )
             )
         return possibilities
 
+    def __str__(self):
+        return f"<{self.rule!s}, {self.sequence!s}, {self.remainder!r}>"
+
 
 class Grammar:
     def __init__(self):
-        self.productions: Dict[str, Production] = {}
-        self.used_by: Dict[str, Set[str]] = defaultdict(set)
+        self.productions: Dict[NonTerminal, Production] = {}
+        self.used_by: Dict[NonTerminal, Set[NonTerminal]] = defaultdict(set)
         self.start: Optional[Production] = None
 
     def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
@@ -395,7 +402,7 @@ class Grammar:
         ]
         while possibilities:
             possibility = heapq.heappop(possibilities)
-            print(possibility.production)
+            print(str(possibility))
             sub_possibilities = possibility.expand()
             if sub_possibilities is not None:
                 if len(sub_possibilities) == 0:
@@ -424,7 +431,7 @@ class Grammar:
         for name, definition in raw_grammar.items():
             Production.load(self, name, *definition)
 
-    def remove(self, production: Union[str, Production]) -> bool:
+    def remove(self, production: Union[NonTerminal, Production]) -> bool:
         if isinstance(production, Production):
             name: str = production.name
             if name not in self:
@@ -437,7 +444,7 @@ class Grammar:
         # update all of the productions we use
         for rule in production:
             for v in rule.sequence:  # type: ignore   # mypy is dumb and thinks that this can sometimes be a str?
-                if isinstance(v, str):
+                if isinstance(v, NonTerminal):
                     try:
                         self.used_by[v].remove(name)
                     except KeyError:
@@ -456,7 +463,8 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(f"Production {prod.name} references {v}, which is not in the grammar")
+                            raise MissingProductionError(f"Production {prod.name} references {v}, "
+                                                         "which is not in the grammar")
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -649,8 +657,8 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     for trace in trace_iter:
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
-        # grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
+        grammar.match(trace.inputstr)
         return grammar
     return Grammar()
