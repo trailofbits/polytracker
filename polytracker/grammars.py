@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import networkx as nx
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from .cfg import DiGraph
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
@@ -303,85 +303,137 @@ class ParseTree:
             return f"[{self.value!s} [{' '.join(map(str, self.children))}]]"
 
 
-class MatchPossibility:
+class EarleyState:
+    __slots__ = ['production', 'parsed', 'expected', 'index']
+
     def __init__(
-        self,
-        grammar: "Grammar",
-        remainder: bytes,
-        production: Production,
-        rule: Rule,
-        after_sequence: Iterable[Tuple["MatchPossibility", Symbol]] = (),
-        previous: Optional["MatchPossibility"] = None,
-        parent: Optional["MatchPossibility"] = None,
-    ):
-        self.grammar: "Grammar" = grammar
-        self.remainder: bytes = remainder
-        self.rule: Rule = rule
-        self.sequence: List[Tuple["MatchPossibility", Symbol]] = [(self, s) for s in rule.sequence] + list(
-            after_sequence
-        )
-        self.previous: Optional[MatchPossibility] = previous
-        self.parent: Optional[MatchPossibility] = parent
+            self,
+            production: Production,
+            parsed: Tuple[NonTerminal, ...],
+            expected: Tuple[Symbol, ...],
+            index: int):
         self.production: Production = production
-        self._consumed: Optional[List[Tuple["MatchPossibility", Terminal]]] = None
-        if previous is None:
-            self.depth: int = 0
-        else:
-            self.depth = previous.depth + 1
+        self.parsed: Tuple[NonTerminal, ...] = parsed
+        self.expected: Tuple[Symbol, ...] = expected
+        self.index: int = index
 
     @property
-    def consumed(self) -> List[Tuple["MatchPossibility", Terminal]]:
-        if self._consumed is None:
-            # running self.expand() automatically sets self._consumed
-            _ = self.expand()
-        return self._consumed  # type: ignore
+    def finished(self) -> bool:
+        return len(self.expected) == 0
 
-    def __lt__(self, other: "MatchPossibility"):
-        return (self.depth < other.depth) or (self.depth == other.depth and len(self.remainder) < len(other.remainder))
+    @property
+    def next_element(self) -> Symbol:
+        return self.expected[0]
 
-    def expand(self) -> Optional[List["MatchPossibility"]]:
-        possibilities = []
-        remainder = self.remainder
-        matches = 0
-        if self._consumed is None:
-            self._consumed = []
-            assign_consumed = True
+    def __hash__(self):
+        return hash((self.parsed, self.expected, self.index))
+
+    def __eq__(self, other):
+        if isinstance(other, EarleyState):
+            return self.index == other.index and self.parsed == other.parsed and self.expected == other.expected
         else:
-            assign_consumed = False
-        for source, seq in self.sequence:
-            if isinstance(seq, Terminal):
-                if not remainder.startswith(seq.terminal):
-                    return None
-                remainder = remainder[len(seq.terminal):]
-                if assign_consumed:
-                    self._consumed.append((source, seq))
-                matches += 1
-            else:
-                break
-        if matches == len(self.sequence):
-            return []
-        parent, next_production = self.sequence[matches]
-        assert isinstance(next_production, NonTerminal)
-        production = self.grammar[next_production]
-        rules: Iterable[Rule] = production.rules
-        if not rules:
-            rules = [Rule(self.grammar)]
-        for rule in rules:
-            possibilities.append(
-                MatchPossibility(
-                    grammar=self.grammar,
-                    remainder=remainder,
-                    production=production,
-                    rule=rule,
-                    after_sequence=self.sequence[matches + 1:],
-                    parent=parent,
-                    previous=self,
-                )
-            )
-        return possibilities
+            return False
 
     def __str__(self):
-        return f"<{self.rule!s}, {self.sequence!s}, {self.remainder!r}>"
+        parsed = "".join(map(str, self.parsed))
+        expected = "".join(map(repr, self.expected))
+        return f"({self.production.name} → {parsed}•{expected}, {self.index})"
+
+
+class EarleyQueue:
+    def __init__(self):
+        self.queue: List[EarleyState] = []
+        self.elements: Set[EarleyState] = set()
+
+    def add(self, state: EarleyState) -> bool:
+        if state in self.elements:
+            # We already have this state
+            return False
+        self.queue.append(state)
+        self.elements.add(state)
+        return True
+
+    def __contains__(self, item):
+        return item in self.elements
+
+    def __iter__(self) -> Iterator[EarleyState]:
+        # allow the EarleyQueue to be modified during iteration
+        i = 0
+        while len(self.queue) > i:
+            yield self.queue[i]
+            i += 1
+
+
+class EarleyParser:
+    def __init__(self, grammar: 'Grammar', sentence: Union[str, bytes], start: Optional[Production] = None):
+        self.grammar: Grammar = grammar
+        if isinstance(sentence, str):
+            self.sentence: bytes = sentence.encode('utf-8')
+        else:
+            self.sentence = sentence
+        if start is None:
+            if self.grammar.start is None:
+                raise ValueError("Either the grammar must have a start production or one must be provided")
+            self.start: Production = self.grammar.start
+        else:
+            self.start = start
+        self.states: List[EarleyQueue] = [EarleyQueue() for _ in range(len(sentence) + 1)]
+
+    def parse(self):
+        for rule in self.start.rules:
+            self.states[0].add(EarleyState(production=self.start, parsed=(), expected=rule.sequence, index=0))
+        for k in trange(len(self.sentence) + 1, leave=False, desc="Parsing", unit=" bytes"):
+            found_match = False
+            for state in self.states[k]:
+                if not state.finished:
+                    next_element = state.next_element
+                    if isinstance(next_element, NonTerminal):
+                        print(state)
+                        self._predict(state, k)
+                    else:
+                        if self._scan(state, k):
+                            found_match = True
+                else:
+                    self._complete(state, k)
+            if not found_match:
+                raise ValueError(f"Unexpected byte {self.sentence[k:k+1]!r} at offset {k}")
+
+    def _predict(self, state: EarleyState, k: int):
+        prod: Production = self.grammar[state.next_element]
+        if not prod.rules:
+            self.states[k].add(EarleyState(production=prod, parsed=(prod.name,), expected=(), index=k))
+        else:
+            for rule in prod.rules:
+                self.states[k].add(EarleyState(production=prod, parsed=(), expected=rule.sequence, index=k))
+
+    def _scan(self, state: EarleyState, k: int) -> bool:
+        expected_element = state.next_element
+        expected_byte = expected_element.terminal[0:1]
+        remainder = expected_element.terminal[1:]
+        if not self.sentence[k:].startswith(expected_byte):
+            return False
+        if remainder:
+            expected = (Terminal(remainder),) + state.expected[1:]
+        else:
+            expected = state.expected[1:]
+        self.states[k+1].add(EarleyState(
+            production=state.production,
+            parsed=state.parsed + (state.next_element,),
+            expected=expected,
+            index=state.index
+        ))
+        return True
+
+    def _complete(self, state: EarleyState, k: int):
+        for to_add in self.states[state.index]:
+            if not to_add.finished and isinstance(to_add.next_element, NonTerminal) and \
+                    to_add.next_element == state.production.name:
+                self.states[k].add(EarleyState(
+                    production=to_add.production,
+                    parsed=to_add.parsed + state.parsed,
+                    expected=to_add.expected[len(state.parsed):],
+                    index=to_add.index
+                ))
 
 
 class Grammar:
@@ -391,26 +443,8 @@ class Grammar:
         self.start: Optional[Production] = None
 
     def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
-        if isinstance(sentence, str):
-            sentence = sentence.encode("utf-8")
-        if start is None:
-            if self.start is None:
-                raise ValueError("Either the grammar must have a start production or one must be provided to `match`")
-            start = self.start
-        possibilities = [
-            MatchPossibility(grammar=self, remainder=sentence, production=start, rule=rule) for rule in start.rules
-        ]
-        while possibilities:
-            possibility = heapq.heappop(possibilities)
-            print(str(possibility))
-            sub_possibilities = possibility.expand()
-            if sub_possibilities is not None:
-                if len(sub_possibilities) == 0:
-                    # we found a match!
-                    # TODO: Convert this to a ParseTree
-                    return possibility  # type:ignore
-                for p in sub_possibilities:
-                    heapq.heappush(possibilities, p)
+        parser = EarleyParser(grammar=self, sentence=sentence, start=start)
+        parser.parse()
         # TODO: Describe this parse error
         raise ValueError()
 
@@ -659,6 +693,6 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         grammar = trace_to_grammar(trace)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
-        grammar.match(trace.inputstr)
+        #grammar.match(trace.inputstr)
         return grammar
     return Grammar()
