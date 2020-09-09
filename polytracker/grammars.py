@@ -690,6 +690,8 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
+        for x in trace.consumed_bytes():
+            print(x)
         grammar = trace_to_grammar(trace)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()

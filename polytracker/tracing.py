@@ -1,6 +1,6 @@
 import json
 from abc import ABCMeta
-from typing import Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
+from typing import Any, BinaryIO, cast, Dict, IO, Iterable, Iterator, List, Optional, Protocol, Set, Tuple, Union
 
 from tqdm import tqdm
 
@@ -262,7 +262,7 @@ class BasicBlockEntry(TraceEvent):
         self.function_index: int = function_index
         self.bb_index: int = bb_index
         self.global_index: int = global_index
-        self.consumed: List[int] = sorted(consumed)
+        self.consumed: List[int] = list(consumed)
         self.called_function: Optional[FunctionCall] = None
         """The function this basic block calls"""
         self.types: List[str] = list(types)
@@ -302,10 +302,10 @@ class BasicBlockEntry(TraceEvent):
             self.previous.children.append(self)
 
     @property
-    def consumed_tokens(self) -> Iterable[bytes]:
+    def consumed_tokens(self) -> Iterator[bytes]:
         start_offset: Optional[int] = None
         last_offset: Optional[int] = None
-        for offset in self.consumed:
+        for offset in sorted(self.consumed):
             if start_offset is None:
                 start_offset = last_offset = offset
             elif start_offset + 1 != offset:
@@ -429,6 +429,12 @@ class PolyTrackerTrace:
         self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
         self.inputstr: bytes = inputstr
         self._cfg: Optional[DiGraph[BasicBlockEntry]] = None
+
+    def consumed_bytes(self) -> Iterator[Tuple[int, bytes]]:
+        """Yields the sequence of (byte offset, byte sequence) pairs as they were read in the trace"""
+        for bb in self.events:
+            if isinstance(bb, BasicBlockEntry):
+                yield from ((offset, self.inputstr[offset:offset+1]) for offset in bb.consumed)
 
     def __len__(self):
         return len(self.events)
