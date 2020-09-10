@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from typing import List
 
 from .. import grammars, tracing
 from .polyprocess import PolyProcess
@@ -30,6 +31,15 @@ def main():
         help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
         "was sent to the instrumented parser to generate polytracker_json",
     )
+    commands.add_argument(
+        "--extract-datalog",
+        nargs=2,
+        action="append",
+        metavar=("polytracker_json", "input_file"),
+        type=argparse.FileType("rb"),
+        help="extract a datalog parser from the provided pairs of JSON trace files as well as the associated input file"
+             "that was sent to the instrumented parser to generate polytracker_json"
+    )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
 
@@ -57,8 +67,8 @@ def main():
         if draw_forest:
             poly_process.draw_forest()
     elif args.extract_grammar:
+        traces = []
         try:
-            traces = []
             for json_file, input_file in args.extract_grammar:
                 trace = tracing.PolyTrackerTrace.parse(json_file, input_file=input_file)
                 if not trace.is_cfg_connected():
@@ -78,6 +88,36 @@ def main():
             exit(1)
         print(str(grammars.extract(traces)))
 
+    # TODO Copypasta'd from above for now.
+    elif args.extract_datalog:
+        traces = []
+        input_files: List[str] = []
+        try:
+            for json_file, input_file in args.extract_datalog:
+                input_files.append(input_file)
+                trace = tracing.PolyTrackerTrace.parse(json_file, input_file=input_file)
+                if not trace.is_cfg_connected():
+                    roots = list(trace.cfg_roots())
+                    if len(roots) == 0:
+                        sys.stderr.write(f"Error: Basic block trace of {json_file} has no roots!\n\n")
+                    else:
+                        sys.stderr.write(f"Error: Basic block trace of {json_file} has multiple roots:\n")
+                        for r in roots:
+                            sys.stderr.write(f"\t{str(r)}\n")
+                        sys.stderr.write("\n")
+                    exit(1)
+                traces.append(trace)
+        except ValueError as e:
+            sys.stderr.write(str(e))
+            sys.stderr.write("\n\n")
+            exit(1)
+        if args.outfile:
+            with open(args.outfile, "w") as out_file:
+                datalog_code = grammars.extract_datalog_grammar(traces, input_files)
+                out_file.write(datalog_code)
+        else:
+            sys.stderr.write(f"Error: No output file selected, use --outfile")
+            exit(1)
 
 if __name__ == "__main__":
     main()

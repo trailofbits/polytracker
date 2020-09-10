@@ -1,9 +1,11 @@
 import heapq
 import itertools
 from collections import defaultdict
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from subprocess import check_call
+from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, BinaryIO
 
 import networkx as nx
+from networkx.drawing.nx_pydot import write_dot
 from tqdm import tqdm
 
 from .cfg import DiGraph
@@ -301,19 +303,20 @@ class ParseTree:
 
 class MatchPossibility:
     def __init__(
-        self,
-        grammar: "Grammar",
-        remainder: bytes,
-        production: Production,
-        rule: Rule,
-        after_sequence: Iterable[Tuple["MatchPossibility", Union[str, Terminal]]] = (),
-        previous: Optional["MatchPossibility"] = None,
-        parent: Optional["MatchPossibility"] = None,
+            self,
+            grammar: "Grammar",
+            remainder: bytes,
+            production: Production,
+            rule: Rule,
+            after_sequence: Iterable[Tuple["MatchPossibility", Union[str, Terminal]]] = (),
+            previous: Optional["MatchPossibility"] = None,
+            parent: Optional["MatchPossibility"] = None,
     ):
         self.grammar: "Grammar" = grammar
         self.remainder: bytes = remainder
         self.rule: Rule = rule
-        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [(self, s) for s in rule.sequence] + list(
+        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [(self, s) for s in
+                                                                                rule.sequence] + list(
             after_sequence
         )
         self.previous: Optional[MatchPossibility] = previous
@@ -348,7 +351,7 @@ class MatchPossibility:
             if isinstance(seq, Terminal):
                 if not remainder.startswith(seq.terminal):
                     return None
-                remainder = remainder[len(seq.terminal) :]
+                remainder = remainder[len(seq.terminal):]
                 if assign_consumed:
                     self._consumed.append((source, seq))
                 matches += 1
@@ -369,7 +372,7 @@ class MatchPossibility:
                     remainder=remainder,
                     production=production,
                     rule=rule,
-                    after_sequence=self.sequence[matches + 1 :],
+                    after_sequence=self.sequence[matches + 1:],
                     parent=parent,
                     previous=self,
                 )
@@ -456,7 +459,8 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(f"Production {prod.name} references {v}, which is not in the grammar")
+                            raise MissingProductionError(
+                                f"Production {prod.name} references {v}, which is not in the grammar")
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -654,3 +658,194 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         grammar.simplify()
         return grammar
     return Grammar()
+
+
+def decl_datalog_fact(name) -> str:
+    return f".decl {name}(x: number, y: number)\n"
+
+
+def gen_datalog_fact(name, start, end) -> str:
+    return f"{name}({start}, {end}).\n"
+
+
+# TODO we might be able to also get this from a trace
+# TODO might need to swap from str to input file.
+# But I think indexing the entire input file is actually fine for now
+def extract_datalog_facts(input_file: BinaryIO) -> str:
+    # Keep track unique bytes in the file and their occurences
+    unique_bytes: Dict[str, bool] = {}
+    # Datalog code to return :)
+    # Turn this into class with @property str
+    datalog_code = ""
+    # TODO should this be read byte by byte?
+    # TODO Shouldn't have to reopen the file IMO, have Evan critique this
+    # TODO We should just make the new facts when we hit a new terminal!
+    # TODO BUT we don't know the terminals source location, so we do it here :)
+    # TODO Create a dictionary mapping terminals to names? :)
+    with open(input_file.name, "rb") as file:
+        data = file.read()
+        for i, byte in enumerate(data):
+            # Declare the new type of byte
+            if byte not in unique_bytes:
+                """
+                if chr(byte) == '"':
+                    datalog_code += decl_datalog_fact("GEN_QUOTE")
+                elif chr(byte) == ' ':
+                    datalog_code += decl_datalog_fact("GEN_SPACE")
+                elif chr(byte) == '':
+                    continue
+                elif chr(byte) == '\n':
+                    datalog_code += decl_datalog_fact("GEN_NEWLINE")
+                elif chr(byte) == '(':
+                    datalog_code += decl_datalog_fact("GEN_LPAR")
+                elif chr(byte) == ')':
+                    datalog_code += decl_datalog_fact("GEN_RPAR")
+                elif chr(byte) == '{':
+                    datalog_code += decl_datalog_fact("GEN_LCURL")
+                elif chr(byte) == '}':
+                    datalog_code += decl_datalog_fact("GEN_RCURL")
+                elif chr(byte) == ':':
+                    datalog_code += decl_datalog_fact("GEN_COL")
+                else:
+                    datalog_code += decl_datalog_fact(f"GEN_{ord(byte)}")
+                """
+                if chr(byte) == '':
+                    continue
+                else:
+                    datalog_code += decl_datalog_fact(f"GEN_{byte}")
+                unique_bytes[byte] = True
+            """
+            if chr(byte) == '"':
+                datalog_code += gen_datalog_fact("GEN_QUOTE", i, i + 1)
+            elif chr(byte) == " ":
+                datalog_code += gen_datalog_fact("GEN_SPACE", i, i + 1)
+            elif chr(byte) == '':
+                continue
+            elif chr(byte) == '\n':
+                datalog_code += gen_datalog_fact("GEN_NEWLINE", i, i + 1)
+
+            elif chr(byte) == '(':
+                datalog_code += gen_datalog_fact("GEN_LPAR", i, i + 1)
+
+            elif chr(byte) == ')':
+                datalog_code += gen_datalog_fact("GEN_RPAR", i, i + 1)
+
+            elif chr(byte) == '{':
+                datalog_code += gen_datalog_fact("GEN_LCURL", i, i + 1)
+
+            elif chr(byte) == '}':
+                datalog_code += gen_datalog_fact("GEN_RCURL", i, i + 1)
+
+            else:
+                datalog_code += gen_datalog_fact(f"GEN_{ord(byte)}", i, i + 1)
+            """
+            if chr(byte) == '':
+                continue
+            else:
+                datalog_code += gen_datalog_fact(f"GEN_{byte}", i, i + 1)
+    return datalog_code
+
+def decl_datalog_prod_rule(name):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    return f".decl GEN_{'_'.join(val_list)}(x: number, y: number)\n"
+
+def decl_output_prod_rule(name):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    return f".output GEN_{'_'.join(val_list)}\n"
+
+def gen_datalog_clause(name, start, end):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    name = "_".join(val_list)
+    return f"GEN_{name}({start}, {end})"
+
+def extract_datalog_grammar(traces: Iterable[PolyTrackerTrace], input_files) -> str:
+    datalog_facts = ""
+    datalog_grammar = ""
+    datalog_parser_grammar = ""
+    unique_rules: Dict[str, bool] = {}
+    trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
+    for i, trace in enumerate(trace_iter):
+        datalog_facts += extract_datalog_facts(input_files[i])
+        # TODO: Merge the grammars
+        grammar = trace_to_grammar(trace)
+        # grammar.match(trace.inputstr)
+        trace_iter.set_description("simplifying the grammar")
+        grammar.simplify()
+        # print("Start symbol!", grammar.start.name)
+        # grammar.productions
+        for prod_name in grammar.productions:
+            # print("prod name", prod_name)
+            if prod_name not in unique_rules:
+                unique_rules[prod_name] = True
+                datalog_grammar += decl_datalog_prod_rule(prod_name)
+                if "<START>" in prod_name:
+                    datalog_grammar += decl_output_prod_rule(prod_name)
+
+            # datalog_sentence = f"{prod_name}(i, j) :- "
+            # Start the variable iteration at "a", which is 97.
+            # As we add new rules in the sequence, we need to add new free variables to the datalog.
+            var_iterator_start = 97
+            var_iterator_curr = var_iterator_start
+            datalog_clause_terms = []
+            for rule in grammar.productions[prod_name].rules:
+                for term in rule.sequence:
+                    # if its a production rule, check if we have seen it before.
+                    if isinstance(term, str):
+                        # TODO maybe can do this whenever they are encountered in prod
+                        if term not in unique_rules:
+                            unique_rules[term] = True
+                            datalog_grammar += decl_datalog_prod_rule(term)
+
+                        datalog_clause_terms.append(gen_datalog_clause(term, chr(var_iterator_curr),
+                                                                       chr(var_iterator_curr + 1)))
+                        var_iterator_curr += 1
+
+                    # If its a terminal, we must make sure the name matches that of the fact.
+                    elif isinstance(term, Terminal):
+                        # print("term is a TERMINAL?", term)
+                        for val in term.terminal:
+                            """
+                            if chr(val) == '"':
+                                datalog_clause_terms.append(f"GEN_QUOTE({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == ' ':
+                                datalog_clause_terms.append(f"GEN_SPACE({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == '\n':
+                                datalog_clause_terms.append(f"GEN_NEWLINE({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == '(':
+                                datalog_clause_terms.append(f"GEN_LPAR({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == ')':
+                                datalog_clause_terms.append(f"GEN_RPAR({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == '{':
+                                datalog_clause_terms.append(f"GEN_LCURL({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            elif chr(val) == '}':
+                                datalog_clause_terms.append(f"GEN_RCURL({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            else:
+                                datalog_clause_terms.append(f"GEN_{chr(val)}({chr(var_iterator_curr)}, "
+                                                            f"{chr(var_iterator_curr + 1)})")
+                            """
+                            if chr(val) == '':
+                                continue
+                            datalog_clause_terms.append(f"GEN_{val}({chr(var_iterator_curr)}, "
+                                                        f"{chr(var_iterator_curr + 1)})")
+                            var_iterator_curr += 1
+                    else:
+                        print(f"WARNING term is not string/terminal: {term}")
+                # Add the end of the rule.
+            datalog_clause_terms[len(datalog_clause_terms) - 1] += "."
+            val_list = list(map(ord, prod_name))
+            val_list = list(map(str, val_list))
+            head_name = f"GEN_{'_'.join(val_list)}"
+            datalog_parser_grammar += f"{head_name}({chr(var_iterator_start)},{chr(var_iterator_curr)}) :- " \
+                                      f"{', '.join(datalog_clause_terms)}\n"
+
+    return datalog_facts + "\n" + datalog_grammar + "\n" + datalog_parser_grammar
