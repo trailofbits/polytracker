@@ -434,7 +434,7 @@ class PolyTrackerTrace:
         """Yields the sequence of (byte offset, byte sequence) pairs as they were read in the trace"""
         for bb in self.events:
             if isinstance(bb, BasicBlockEntry):
-                yield from ((offset, self.inputstr[offset:offset+1]) for offset in bb.consumed)
+                yield from ((offset, self.inputstr[offset : offset + 1]) for offset in bb.consumed)
 
     def __len__(self):
         return len(self.events)

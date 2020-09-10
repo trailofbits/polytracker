@@ -286,13 +286,13 @@ void taintManager::addJsonRuntimeTrace() {
           std::transform(taints.begin(), taints.end(),
                          std::back_inserter(byteOffsets),
                          [&mapping](dfsan_label d) {
-            for (const auto& pair : mapping) {
-              if (pair.first == d) {
-                return pair.second;
-              }
-            }
-            return -1;
-          });
+                           for (const auto& pair : mapping) {
+                             if (pair.first == d) {
+                               return pair.second;
+                             }
+                           }
+                           return -1;
+                         });
           j["consumed"] = byteOffsets;
         }
         std::vector<std::string> types;

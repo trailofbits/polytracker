@@ -33,7 +33,7 @@ def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
     end_offset = min(offset + length_div_2, len(text))
     before = 0
     offset_len = 1
-    ret = ''
+    ret = ""
     for i, b in enumerate(text[start_offset:end_offset]):
         byte_text = escape_byte(b)
         if i < offset - start_offset:
@@ -184,21 +184,20 @@ class Production:
         else:
             return None
 
-    def partial_match(self, sentence: bytes) -> Iterator['PartialMatch']:
+    def partial_match(self, sentence: bytes) -> Iterator["PartialMatch"]:
         """Enumerates all partial parse trees and remaining symbols that match the given sentence"""
         if not self.rules or not sentence:
             yield PartialMatch(tree=ParseTree(self), remaining_symbols=(), remaining_bytes=sentence)
             return
         for rule in self.rules:
+
             def make_tree() -> Tuple[ParseTree, ParseTree]:
                 root = ParseTree(self)
                 rtree = ParseTree(rule)
                 root.children.append(rtree)
                 return root, rtree
 
-            stack: List[Tuple[bytes, List[ParseTree], List[Symbol]]] = [
-                (sentence, [], list(rule.sequence))
-            ]
+            stack: List[Tuple[bytes, List[ParseTree], List[Symbol]]] = [(sentence, [], list(rule.sequence))]
             while stack:
                 remaining_bytes, trees, remaining_symbols = stack.pop()
                 if not remaining_symbols or not remaining_bytes:
@@ -208,9 +207,7 @@ class Production:
                             trees = [ParseTree(Terminal(""))]
                         rule_tree.children = trees
                     yield PartialMatch(
-                        tree=root_tree,
-                        remaining_symbols=tuple(remaining_symbols),
-                        remaining_bytes=remaining_bytes
+                        tree=root_tree, remaining_symbols=tuple(remaining_symbols), remaining_bytes=remaining_bytes
                     )
                 else:
                     next_symbol = remaining_symbols[0]
@@ -219,37 +216,38 @@ class Production:
                             root_tree, rule_tree = make_tree()
                             rule_tree.children = trees + [ParseTree(next_symbol)]
                             yield PartialMatch(
-                                tree=root_tree,
-                                remaining_symbols=tuple(remaining_symbols[1:]),
-                                remaining_bytes=b''
+                                tree=root_tree, remaining_symbols=tuple(remaining_symbols[1:]), remaining_bytes=b""
                             )
                         elif remaining_bytes.startswith(next_symbol.terminal):
-                            stack.append((
-                                remaining_bytes[len(next_symbol.terminal):],
-                                trees + [ParseTree(next_symbol)],
-                                remaining_symbols[1:]
-                            ))
+                            stack.append(
+                                (
+                                    remaining_bytes[len(next_symbol.terminal) :],
+                                    trees + [ParseTree(next_symbol)],
+                                    remaining_symbols[1:],
+                                )
+                            )
                         else:
                             # the terminal didn't match the input sentence
                             pass
                     else:
                         # this is a non-terminal
                         for match in self.grammar[next_symbol].partial_match(remaining_bytes):
-                            if not match.remaining_bytes or \
-                                    (not match.remaining_symbols and len(remaining_symbols) < 2):
+                            if not match.remaining_bytes or (not match.remaining_symbols and len(remaining_symbols) < 2):
                                 root_tree, rule_tree = make_tree()
                                 rule_tree.children = trees + [match.tree]
                                 yield PartialMatch(
                                     tree=root_tree,
                                     remaining_symbols=tuple(remaining_symbols[1:]),
-                                    remaining_bytes=match.remaining_bytes
+                                    remaining_bytes=match.remaining_bytes,
                                 )
                             else:
-                                stack.append((
-                                    match.remaining_bytes,
-                                    trees + [match.tree],
-                                    list(match.remaining_symbols) + remaining_symbols[1:]
-                                ))
+                                stack.append(
+                                    (
+                                        match.remaining_bytes,
+                                        trees + [match.tree],
+                                        list(match.remaining_symbols) + remaining_symbols[1:],
+                                    )
+                                )
 
     @property
     def can_produce_terminal(self) -> bool:
@@ -373,7 +371,7 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
-T = TypeVar('T', bound='ParseTree')
+T = TypeVar("T", bound="ParseTree")
 
 
 class ParseTree:
@@ -420,7 +418,7 @@ class ParseTree:
 
 
 class PartialMatch:
-    __slots__ = 'tree', 'remaining_symbols', 'remaining_bytes'
+    __slots__ = "tree", "remaining_symbols", "remaining_bytes"
 
     def __init__(self, tree: ParseTree, remaining_symbols: Tuple[Symbol, ...], remaining_bytes: bytes):
         self.tree: ParseTree = tree
@@ -429,14 +427,9 @@ class PartialMatch:
 
 
 class EarleyState:
-    __slots__ = ['production', 'parsed', 'expected', 'index']
+    __slots__ = ["production", "parsed", "expected", "index"]
 
-    def __init__(
-            self,
-            production: Production,
-            parsed: Tuple[Symbol, ...],
-            expected: Tuple[Symbol, ...],
-            index: int):
+    def __init__(self, production: Production, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
         self.production: Production = production
         self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
@@ -490,10 +483,10 @@ class EarleyQueue:
 
 
 class EarleyParser:
-    def __init__(self, grammar: 'Grammar', sentence: Union[str, bytes], start: Optional[Production] = None):
+    def __init__(self, grammar: "Grammar", sentence: Union[str, bytes], start: Optional[Production] = None):
         self.grammar: Grammar = grammar
         if isinstance(sentence, str):
-            self.sentence: bytes = sentence.encode('utf-8')
+            self.sentence: bytes = sentence.encode("utf-8")
         else:
             self.sentence = sentence
         if start is None:
@@ -521,9 +514,11 @@ class EarleyParser:
                 else:
                     self._complete(state, k)
         if last_k_with_match < len(self.sentence) - 1:
-            offset = last_k_with_match+1
-            raise ValueError(f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
-                             f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}")
+            offset = last_k_with_match + 1
+            raise ValueError(
+                f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
+                f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}"
+            )
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
@@ -544,24 +539,31 @@ class EarleyParser:
         terminal = expected_element.terminal  # type: ignore
         if not self.sentence[k:].startswith(terminal):
             return False
-        self.states[k+len(terminal)].add(EarleyState(
-            production=state.production,
-            parsed=state.parsed + (state.next_element,),
-            expected=state.expected[1:],
-            index=state.index
-        ))
+        self.states[k + len(terminal)].add(
+            EarleyState(
+                production=state.production,
+                parsed=state.parsed + (state.next_element,),
+                expected=state.expected[1:],
+                index=state.index,
+            )
+        )
         return True
 
     def _complete(self, state: EarleyState, k: int):
         for to_add in self.states[state.index]:
-            if not to_add.finished and isinstance(to_add.next_element, NonTerminal) and \
-                    to_add.next_element == state.production.name:
-                self.states[k].add(EarleyState(
-                    production=to_add.production,
-                    parsed=to_add.parsed + state.parsed,
-                    expected=to_add.expected[len(state.parsed):],
-                    index=to_add.index
-                ))
+            if (
+                not to_add.finished
+                and isinstance(to_add.next_element, NonTerminal)
+                and to_add.next_element == state.production.name
+            ):
+                self.states[k].add(
+                    EarleyState(
+                        production=to_add.production,
+                        parsed=to_add.parsed + state.parsed,
+                        expected=to_add.expected[len(state.parsed) :],
+                        index=to_add.index,
+                    )
+                )
 
 
 class Grammar:
@@ -632,8 +634,9 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(f"Production {prod.name} references {v}, "
-                                                         "which is not in the grammar")
+                            raise MissingProductionError(
+                                f"Production {prod.name} references {v}, " "which is not in the grammar"
+                            )
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -829,14 +832,16 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         for offset, _ in trace.consumed_bytes():
             unused_bytes.remove(offset)
         if unused_bytes:
-            print("Warning: The following byte offsets were never recorded as being read in the trace: "
-                  f"{[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}")
+            print(
+                "Warning: The following byte offsets were never recorded as being read in the trace: "
+                f"{[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
+            )
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
         print(grammar)
         # tree = next(iter(grammar.find_partial_trees(b"{\n")))
         # print(tree)
-        #grammar.match(trace.inputstr)
+        # grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         return grammar
