@@ -1,5 +1,6 @@
 Dockerfile
 build
+the_klondike
 *.json
 *.pdf
 .git
