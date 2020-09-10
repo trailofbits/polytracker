@@ -1,13 +1,48 @@
-import heapq
 import itertools
 from collections import defaultdict
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
+
+
+def escape_byte(byte_value: int) -> str:
+    if byte_value == ord("\n"):
+        b = "\\n"
+    elif byte_value == ord("\t"):
+        b = "\\t"
+    elif byte_value == ord("\r"):
+        b = "\\r"
+    elif byte_value == ord('"'):
+        b = '\\"'
+    elif byte_value == ord("\\"):
+        b = "\\\\"
+    elif ord(" ") <= byte_value <= ord("~"):
+        b = chr(byte_value)
+    else:
+        b = f"\\x{byte_value:02x}"
+    return b
+
+
+def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
+    length_div_2 = highlight_length // 2
+    start_offset = max(offset - length_div_2, 0)
+    end_offset = min(offset + length_div_2, len(text))
+    before = 0
+    offset_len = 1
+    ret = ''
+    for i, b in enumerate(text[start_offset:end_offset]):
+        byte_text = escape_byte(b)
+        if i < offset - start_offset:
+            before += len(byte_text)
+        elif i == offset - start_offset:
+            offset_len = len(byte_text)
+        ret = f"{ret}{byte_text}"
+    ret = f"\"{ret}\"\n {' ' * before}{'^' * offset_len}"
+    return ret
 
 
 class Terminal:
@@ -35,21 +70,7 @@ class Terminal:
     def __str__(self):
         ret = '"'
         for i in self.terminal:
-            if i == ord("\n"):
-                b = "\\n"
-            elif i == ord("\t"):
-                b = "\\t"
-            elif i == ord("\r"):
-                b = "\\r"
-            elif i == ord('"'):
-                b = '\\"'
-            elif i == ord("\\"):
-                b = "\\\\"
-            elif ord(" ") <= i <= ord("~"):
-                b = chr(i)
-            else:
-                b = f"\\x{i:02x}"
-            ret = f"{ret}{b}"
+            ret = f"{ret}{escape_byte(i)}"
         return f'{ret}"'
 
 
@@ -162,6 +183,73 @@ class Production:
             return next(iter(self.rules))
         else:
             return None
+
+    def partial_match(self, sentence: bytes) -> Iterator['PartialMatch']:
+        """Enumerates all partial parse trees and remaining symbols that match the given sentence"""
+        if not self.rules or not sentence:
+            yield PartialMatch(tree=ParseTree(self), remaining_symbols=(), remaining_bytes=sentence)
+            return
+        for rule in self.rules:
+            def make_tree() -> Tuple[ParseTree, ParseTree]:
+                root = ParseTree(self)
+                rtree = ParseTree(rule)
+                root.children.append(rtree)
+                return root, rtree
+
+            stack: List[Tuple[bytes, List[ParseTree], List[Symbol]]] = [
+                (sentence, [], list(rule.sequence))
+            ]
+            while stack:
+                remaining_bytes, trees, remaining_symbols = stack.pop()
+                if not remaining_symbols or not remaining_bytes:
+                    root_tree, rule_tree = make_tree()
+                    if not rule_tree.children:
+                        if not trees:
+                            trees = [ParseTree(Terminal(""))]
+                        rule_tree.children = trees
+                    yield PartialMatch(
+                        tree=root_tree,
+                        remaining_symbols=tuple(remaining_symbols),
+                        remaining_bytes=remaining_bytes
+                    )
+                else:
+                    next_symbol = remaining_symbols[0]
+                    if isinstance(next_symbol, Terminal):
+                        if remaining_bytes == next_symbol.terminal:
+                            root_tree, rule_tree = make_tree()
+                            rule_tree.children = trees + [ParseTree(next_symbol)]
+                            yield PartialMatch(
+                                tree=root_tree,
+                                remaining_symbols=tuple(remaining_symbols[1:]),
+                                remaining_bytes=b''
+                            )
+                        elif remaining_bytes.startswith(next_symbol.terminal):
+                            stack.append((
+                                remaining_bytes[len(next_symbol.terminal):],
+                                trees + [ParseTree(next_symbol)],
+                                remaining_symbols[1:]
+                            ))
+                        else:
+                            # the terminal didn't match the input sentence
+                            pass
+                    else:
+                        # this is a non-terminal
+                        for match in self.grammar[next_symbol].partial_match(remaining_bytes):
+                            if not match.remaining_bytes or \
+                                    (not match.remaining_symbols and len(remaining_symbols) < 2):
+                                root_tree, rule_tree = make_tree()
+                                rule_tree.children = trees + [match.tree]
+                                yield PartialMatch(
+                                    tree=root_tree,
+                                    remaining_symbols=tuple(remaining_symbols[1:]),
+                                    remaining_bytes=match.remaining_bytes
+                                )
+                            else:
+                                stack.append((
+                                    match.remaining_bytes,
+                                    trees + [match.tree],
+                                    list(match.remaining_symbols) + remaining_symbols[1:]
+                                ))
 
     @property
     def can_produce_terminal(self) -> bool:
@@ -285,10 +373,18 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
+T = TypeVar('T')
+
+
 class ParseTree:
-    def __init__(self, production_or_terminal: Union[Production, Terminal]):
-        self.value: Union[Production, Terminal] = production_or_terminal
+    def __init__(self, production_rule_or_terminal: Union[Production, Rule, Terminal]):
+        self.value: Union[Production, Rule, Terminal] = production_rule_or_terminal
         self.children: List[ParseTree] = []
+
+    def clone(self: T) -> T:
+        ret = self.__class__(self.value)
+        ret.children = [c.clone() for c in self.children]
+        return ret
 
     def __iter__(self) -> Iterator["ParseTree"]:
         return iter(self.children)
@@ -297,10 +393,39 @@ class ParseTree:
         return len(self.children)
 
     def __str__(self):
-        if not self.children:
-            return str(self.value)
-        else:
-            return f"[{self.value!s} [{' '.join(map(str, self.children))}]]"
+        ret = ""
+        stack = [self]
+        while stack:
+            n = stack.pop()
+            if isinstance(n, str):
+                ret = f"{ret}{n}"
+                continue
+            if isinstance(n.value, Production):
+                value_name = n.value.name
+            elif isinstance(n.value, Rule):
+                value_name = ""
+            else:
+                value_name = str(n.value)
+            if not n.children:
+                ret = f"{ret}{value_name}"
+            else:
+                if value_name:
+                    ret = f"{ret}{value_name} ["
+                    stack.append("]")
+                for i, c in reversed(list(enumerate(n.children))):
+                    if i > 0:
+                        stack.append(" ")
+                    stack.append(c)
+        return ret
+
+
+class PartialMatch:
+    __slots__ = 'tree', 'remaining_symbols', 'remaining_bytes'
+
+    def __init__(self, tree: ParseTree, remaining_symbols: Tuple[Symbol, ...], remaining_bytes: bytes):
+        self.tree: ParseTree = tree
+        self.remaining_symbols: Tuple[Symbol, ...] = remaining_symbols
+        self.remaining_bytes: bytes = remaining_bytes
 
 
 class EarleyState:
@@ -309,11 +434,11 @@ class EarleyState:
     def __init__(
             self,
             production: Production,
-            parsed: Tuple[NonTerminal, ...],
+            parsed: Tuple[Symbol, ...],
             expected: Tuple[Symbol, ...],
             index: int):
         self.production: Production = production
-        self.parsed: Tuple[NonTerminal, ...] = parsed
+        self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
         self.index: int = index
 
@@ -382,8 +507,8 @@ class EarleyParser:
     def parse(self):
         for rule in self.start.rules:
             self.states[0].add(EarleyState(production=self.start, parsed=(), expected=rule.sequence, index=0))
+        last_k_with_match = -1
         for k in trange(len(self.sentence) + 1, leave=False, desc="Parsing", unit=" bytes"):
-            found_match = False
             for state in self.states[k]:
                 if not state.finished:
                     next_element = state.next_element
@@ -392,34 +517,36 @@ class EarleyParser:
                         self._predict(state, k)
                     else:
                         if self._scan(state, k):
-                            found_match = True
+                            last_k_with_match = k
                 else:
                     self._complete(state, k)
-            if not found_match:
-                raise ValueError(f"Unexpected byte {self.sentence[k:k+1]!r} at offset {k}")
+        if last_k_with_match < len(self.sentence) - 1:
+            offset = last_k_with_match+1
+            raise ValueError(f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
+                             f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}")
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]
         if not prod.rules:
-            self.states[k].add(EarleyState(production=prod, parsed=(prod.name,), expected=(), index=k))
+            new_state = EarleyState(production=prod, parsed=(prod.name,), expected=(), index=k)
+            if not self.states[k].add(new_state):
+                # we already encountered this state, so re-run a completion for it:
+                self._complete(new_state, k)
         else:
             for rule in prod.rules:
-                self.states[k].add(EarleyState(production=prod, parsed=(), expected=rule.sequence, index=k))
+                new_state = EarleyState(production=prod, parsed=(), expected=rule.sequence, index=k)
+                if not self.states[k].add(new_state):
+                    # we already encountered this state, so re-run a completion for it:
+                    self._complete(new_state, k)
 
     def _scan(self, state: EarleyState, k: int) -> bool:
         expected_element = state.next_element
-        expected_byte = expected_element.terminal[0:1]
-        remainder = expected_element.terminal[1:]
-        if not self.sentence[k:].startswith(expected_byte):
+        if not self.sentence[k:].startswith(expected_element.terminal):
             return False
-        if remainder:
-            expected = (Terminal(remainder),) + state.expected[1:]
-        else:
-            expected = state.expected[1:]
-        self.states[k+1].add(EarleyState(
+        self.states[k+len(expected_element.terminal)].add(EarleyState(
             production=state.production,
             parsed=state.parsed + (state.next_element,),
-            expected=expected,
+            expected=state.expected[1:],
             index=state.index
         ))
         return True
@@ -447,6 +574,13 @@ class Grammar:
         parser.parse()
         # TODO: Describe this parse error
         raise ValueError()
+
+    def find_partial_trees(self, sentence: bytes, start: Optional[Union[Production]] = None) -> Iterator[ParseTree]:
+        """Enumerates all partial parse trees that could result in the given starting sentence fragment."""
+        if start is None:
+            start = self.start
+        for pm in start.partial_match(sentence):
+            yield pm.tree
 
     def dependency_graph(self) -> DiGraph[Production]:
         graph: DiGraph[Production] = DiGraph()
@@ -689,12 +823,20 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
+        # check if the trace has taint data for all input bytes:
+        unused_bytes = set(range(len(trace.inputstr)))
+        for offset, _ in trace.consumed_bytes():
+            unused_bytes.remove(offset)
+        if unused_bytes:
+            print("Warning: The following byte offsets were never recorded as being read in the trace: "
+                  f"{[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}")
         # TODO: Merge the grammars
-        for x in trace.consumed_bytes():
-            print(x)
         grammar = trace_to_grammar(trace)
+        print(grammar)
+        # tree = next(iter(grammar.find_partial_trees(b"{\n")))
+        # print(tree)
+        #grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
-        #grammar.match(trace.inputstr)
         return grammar
     return Grammar()
