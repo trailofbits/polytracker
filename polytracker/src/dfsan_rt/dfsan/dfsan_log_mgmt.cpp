@@ -233,6 +233,7 @@ void taintManager::addJsonRuntimeTrace() {
     std::cerr << "Warning: More than one taint source found! The resulting "
               << "runtime trace will likely be incorrect!" << std::endl;
   }
+  const auto mapping = canonical_mapping.begin()->second;
   std::cerr << "Saving runtime trace to JSON..." << std::endl << std::flush;
   std::vector<json> events;
   size_t threadStack = 0;
@@ -280,13 +281,19 @@ void taintManager::addJsonRuntimeTrace() {
         }
         const auto& taints = trace.taints(bb);
         if (!taints.empty()) {
-          // dfsan_labels are 1-indexed
-          std::vector<dfsan_label> zeroIndexed;
-          zeroIndexed.reserve(taints.size());
+          std::vector<int> byteOffsets;
+          byteOffsets.reserve(taints.size());
           std::transform(taints.begin(), taints.end(),
-                         std::back_inserter(zeroIndexed),
-                         [](dfsan_label d) { return d - 1; });
-          j["consumed"] = zeroIndexed;
+                         std::back_inserter(byteOffsets),
+                         [&mapping](dfsan_label d) {
+            for (const auto& pair : mapping) {
+              if (pair.first == d) {
+                return pair.second;
+              }
+            }
+            return -1;
+          });
+          j["consumed"] = byteOffsets;
         }
         std::vector<std::string> types;
         if (hasType(bb->type, BasicBlockType::STANDARD)) {
@@ -399,37 +406,34 @@ void taintManager::outputRawTaintForest() {
 
 void taintManager::addTaintSources() {
   auto name_target_map = getTargets();
-  for (auto it = name_target_map.begin(); it != name_target_map.end(); it++) {
-    targetInfo* targ_info = it->second;
-    output_json["taint_sources"][it->first]["start_byte"] =
+  for (const auto& it : name_target_map) {
+    targetInfo* targ_info = it.second;
+    output_json["taint_sources"][it.first]["start_byte"] =
         targ_info->byte_start;
-    output_json["taint_sources"][it->first]["end_byte"] = targ_info->byte_end;
+    output_json["taint_sources"][it.first]["end_byte"] = targ_info->byte_end;
     auto target_metadata = getMetadata(targ_info);
     if (!target_metadata.is_null()) {
-      output_json["taint_sources"][it->first]["metadata"] = target_metadata;
+      output_json["taint_sources"][it.first]["metadata"] = target_metadata;
     }
   }
 }
 
 void taintManager::addCanonicalMapping() {
-  for (auto it = canonical_mapping.begin(); it != canonical_mapping.end();
-       it++) {
-    auto map_list = it->second;
-    json canonical_map(map_list);
-    output_json["canonical_mapping"][it->first] = canonical_map;
+  for (const auto& it : canonical_mapping) {
+    auto mapping = it.second;
+    json canonical_map(mapping);
+    output_json["canonical_mapping"][it.first] = canonical_map;
   }
 }
 
 void taintManager::addTaintedBlocks() {
-  for (auto it = taint_bytes_processed.begin();
-       it != taint_bytes_processed.end(); it++) {
-    json tainted_chunks(it->second);
-    output_json["tainted_input_blocks"][it->first] = tainted_chunks;
+  for (const auto& it : taint_bytes_processed) {
+    json tainted_chunks(it.second);
+    output_json["tainted_input_blocks"][it.first] = tainted_chunks;
   }
 }
 
 void taintManager::outputRawTaintSets() {
-  string_node_map::iterator it;
   // NOTE: Whenever the output JSON format changes, make sure to:
   //       (1) Up the version number in
   //       /polytracker/include/polytracker/polytracker.h; and (2) Add support
@@ -440,23 +444,23 @@ void taintManager::outputRawTaintSets() {
   addTaintSources();
   addCanonicalMapping();
   addTaintedBlocks();
-  for (it = function_to_bytes.begin(); it != function_to_bytes.end(); it++) {
-    auto set = it->second;
+  for (const auto& it : function_to_bytes) {
+    auto set = it.second;
     std::set<dfsan_label> label_set;
-    for (auto it = set.begin(); it != set.end(); it++) {
-      label_set.insert(getTaintLabel(*it));
+    for (auto node : set) {
+      label_set.insert(getTaintLabel(node));
     }
     // Take label set and create a json based on source.
     json byte_set(label_set);
-    output_json["tainted_functions"][it->first]["input_bytes"] = byte_set;
-    if (function_to_cmp_bytes.find(it->first) != function_to_cmp_bytes.end()) {
-      auto cmp_set = it->second;
+    output_json["tainted_functions"][it.first]["input_bytes"] = byte_set;
+    if (function_to_cmp_bytes.find(it.first) != function_to_cmp_bytes.end()) {
+      auto cmp_set = it.second;
       std::set<dfsan_label> cmp_label_set;
       for (auto it = cmp_set.begin(); it != cmp_set.end(); it++) {
         cmp_label_set.insert(getTaintLabel(*it));
       }
       json cmp_byte_set(cmp_label_set);
-      output_json["tainted_functions"][it->first]["cmp_bytes"] = cmp_byte_set;
+      output_json["tainted_functions"][it.first]["cmp_bytes"] = cmp_byte_set;
     }
   }
   std::string output_string = outfile + "_process_set.json";
@@ -502,8 +506,7 @@ dfsan_label taintManager::createCanonicalLabel(int file_byte_offset,
   new_node->p1 = NULL;
   new_node->p2 = NULL;
   new_node->decay = taint_node_ttl;
-  canonical_mapping[name].push_back(
-      std::pair<dfsan_label, int>(new_label, file_byte_offset));
+  canonical_mapping[name][new_label] = file_byte_offset;
   return new_label;
 }
 
