@@ -373,7 +373,7 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
-T = TypeVar('T')
+T = TypeVar('T', bound='ParseTree')
 
 
 class ParseTree:
@@ -526,7 +526,7 @@ class EarleyParser:
                              f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}")
 
     def _predict(self, state: EarleyState, k: int):
-        prod: Production = self.grammar[state.next_element]
+        prod: Production = self.grammar[state.next_element]  # type: ignore
         if not prod.rules:
             new_state = EarleyState(production=prod, parsed=(prod.name,), expected=(), index=k)
             if not self.states[k].add(new_state):
@@ -541,9 +541,10 @@ class EarleyParser:
 
     def _scan(self, state: EarleyState, k: int) -> bool:
         expected_element = state.next_element
-        if not self.sentence[k:].startswith(expected_element.terminal):
+        terminal = expected_element.terminal  # type: ignore
+        if not self.sentence[k:].startswith(terminal):
             return False
-        self.states[k+len(expected_element.terminal)].add(EarleyState(
+        self.states[k+len(terminal)].add(EarleyState(
             production=state.production,
             parsed=state.parsed + (state.next_element,),
             expected=state.expected[1:],
@@ -575,11 +576,11 @@ class Grammar:
         # TODO: Describe this parse error
         raise ValueError()
 
-    def find_partial_trees(self, sentence: bytes, start: Optional[Union[Production]] = None) -> Iterator[ParseTree]:
+    def find_partial_trees(self, sentence: bytes, start: Optional[Production] = None) -> Iterator[ParseTree]:
         """Enumerates all partial parse trees that could result in the given starting sentence fragment."""
         if start is None:
             start = self.start
-        for pm in start.partial_match(sentence):
+        for pm in start.partial_match(sentence):  # type: ignore
             yield pm.tree
 
     def dependency_graph(self) -> DiGraph[Production]:
