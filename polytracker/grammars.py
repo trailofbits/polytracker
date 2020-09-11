@@ -221,7 +221,7 @@ class Production:
                         elif remaining_bytes.startswith(next_symbol.terminal):
                             stack.append(
                                 (
-                                    remaining_bytes[len(next_symbol.terminal) :],
+                                    remaining_bytes[len(next_symbol.terminal):],
                                     trees + [ParseTree(next_symbol)],
                                     remaining_symbols[1:],
                                 )
@@ -232,7 +232,8 @@ class Production:
                     else:
                         # this is a non-terminal
                         for match in self.grammar[next_symbol].partial_match(remaining_bytes):
-                            if not match.remaining_bytes or (not match.remaining_symbols and len(remaining_symbols) < 2):
+                            if not match.remaining_bytes or \
+                                    (not match.remaining_symbols and len(remaining_symbols) < 2):
                                 root_tree, rule_tree = make_tree()
                                 rule_tree.children = trees + [match.tree]
                                 yield PartialMatch(
@@ -560,7 +561,7 @@ class EarleyParser:
                     EarleyState(
                         production=to_add.production,
                         parsed=to_add.parsed + state.parsed,
-                        expected=to_add.expected[len(state.parsed) :],
+                        expected=to_add.expected[len(state.parsed):],
                         index=to_add.index,
                     )
                 )
@@ -838,12 +839,12 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
             )
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
+        trace_iter.set_description("simplifying the grammar")
+        grammar.simplify()
         print(grammar)
         # tree = next(iter(grammar.find_partial_trees(b"{\n")))
         # print(tree)
-        # grammar.match(trace.inputstr)
-        trace_iter.set_description("simplifying the grammar")
-        grammar.simplify()
+        grammar.match(trace.inputstr)
         return grammar
     return Grammar()
 
@@ -962,7 +963,8 @@ def extract_datalog_grammar(traces: Iterable[PolyTrackerTrace], input_files) -> 
             val_list_str: List[str] = list(map(str, val_list))
             head_name = f"GEN_{'_'.join(val_list_str)}"
             datalog_parser_grammar += (
-                f"{head_name}({chr(var_iterator_start)},{chr(var_iterator_curr)}) :- " f"{', '.join(datalog_clause_terms)}\n"
+                f"{head_name}({chr(var_iterator_start)},{chr(var_iterator_curr)}) :- "
+                f"{', '.join(datalog_clause_terms)}\n"
             )
 
     return datalog_facts + "\n" + datalog_grammar + "\n" + datalog_parser_grammar

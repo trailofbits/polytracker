@@ -34,7 +34,7 @@ bool FunctionCall::consumesBytes(const Trace& trace) const {
     } else if (auto bb = dynamic_cast<BasicBlockEntry*>(event)) {
       if (bb->function == nullptr ||
           bb->function->eventIndex <= this->eventIndex) {
-        if (!trace.taints(bb).empty()) {
+        if (!bb->consumedBytes.empty() || !trace.lastUsageTaints(bb).empty()) {
           mConsumesBytes = CachedBool::TRUE;
           return true;
         } else if (bb->function &&

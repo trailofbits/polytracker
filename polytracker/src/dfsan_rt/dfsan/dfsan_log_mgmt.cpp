@@ -296,19 +296,32 @@ void taintManager::addJsonRuntimeTrace() {
         if (entryCount != 1) {
           j["entry_count"] = entryCount;
         }
-        const auto& taints = trace.taints(bb);
+        const auto& taints = trace.lastUsageTaints(bb);
         if (!taints.empty()) {
           std::vector<int> byteOffsets;
           byteOffsets.reserve(taints.size());
           std::transform(taints.begin(), taints.end(),
                          std::back_inserter(byteOffsets),
                          [&mapping](dfsan_label d) {
-                           for (const auto& pair : mapping) {
-                             if (pair.first == d) {
-                               return pair.second;
-                             }
+                           try {
+                             return mapping.at(d);
+                           } catch (const std::out_of_range&) {
+                             return -1;
                            }
-                           return -1;
+                         });
+          j["last_consumed"] = byteOffsets;
+        }
+        if(!bb->consumedBytes.empty()) {
+          std::vector<int> byteOffsets;
+          byteOffsets.reserve(bb->consumedBytes.size());
+          std::transform(bb->consumedBytes.begin(), bb->consumedBytes.end(),
+                         std::back_inserter(byteOffsets),
+                         [&mapping](dfsan_label d) {
+                           try {
+                             return mapping.at(d);
+                           } catch (const std::out_of_range&) {
+                             return -1;
+                           }
                          });
           j["consumed"] = byteOffsets;
         }

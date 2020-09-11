@@ -89,6 +89,7 @@ struct BasicBlockEntry : public TraceEvent {
   const size_t entryCount;
   BasicBlockType type;
   FunctionCall *function;
+  std::unordered_set<dfsan_label> consumedBytes;
 
   BasicBlockEntry(const char *fname, BBIndex index, size_t entryCount,
                   BasicBlockType type)
@@ -285,7 +286,7 @@ public:
   /**
    * Returns the current basic block for the calling thread
    */
-  const BasicBlockEntry *currentBB() const {
+  BasicBlockEntry *currentBB() const {
     auto event = lastEvent();
     for (auto event = lastEvent(); event; event = event->previous) {
       if (auto bbe = dynamic_cast<BasicBlockEntry *>(event)) {
@@ -296,7 +297,7 @@ public:
     }
     return nullptr;
   }
-  void setLastUsage(dfsan_label canonicalByte, const BasicBlockEntry *bb) {
+  void setLastUsage(dfsan_label canonicalByte, BasicBlockEntry *bb) {
     const auto oldValue = lastUsages.find(canonicalByte);
     if (oldValue != lastUsages.cend()) {
       // We are updating the last usage,
@@ -306,6 +307,7 @@ public:
     }
     lastUsages[canonicalByte] = bb;
     lastUsagesByBB[bb].push_back(canonicalByte);
+    bb->consumedBytes.insert(canonicalByte);
   }
   const BasicBlockEntry *getLastUsage(dfsan_label label) const {
     auto luIter = lastUsages.find(label);
@@ -315,8 +317,8 @@ public:
       return nullptr;
     }
   }
-  decltype(lastUsages) taints() const { return lastUsages; }
-  const std::list<dfsan_label> &taints(const BasicBlockEntry *bb) const {
+  decltype(lastUsages) lastUsageTaints() const { return lastUsages; }
+  const std::list<dfsan_label> &lastUsageTaints(const BasicBlockEntry *bb) const {
     const auto ret = lastUsagesByBB.find(bb);
     if (ret == lastUsagesByBB.cend()) {
       return EMPTY_LIST;
