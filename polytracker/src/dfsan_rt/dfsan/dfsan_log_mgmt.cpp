@@ -70,6 +70,9 @@ void taintManager::logCompare(dfsan_label some_label) {
   taint_prop_lock.unlock();
 }
 
+/**
+ * NOTE: this function must always be called with a preexisting lock on `taint_prop_lock`
+ */
 void taintManager::logTaintedData(dfsan_label some_label) {
   taint_node_t* new_node = getTaintNode(some_label);
   std::thread::id this_id = std::this_thread::get_id();
