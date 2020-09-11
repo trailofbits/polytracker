@@ -202,6 +202,21 @@ class FunctionCall(TraceEvent):
         self.consumes_bytes: bool = consumes_bytes
         self.return_uid: Optional[int] = return_uid
 
+    def basic_blocks(self) -> Iterator['BasicBlockEntry']:
+        """Yields all of the basic block entries in this function call"""
+        event = self.entrypoint
+        while event is not None:
+            if isinstance(event, BasicBlockEntry):
+                if event.containing_function == self:
+                    yield event
+                event = event.next_event
+            elif isinstance(event, FunctionCall):
+                event = event.function_return
+            elif isinstance(event, FunctionReturn):
+                if event == self.function_return:
+                    break
+                event = event.next_event
+
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
         TraceEvent.trace.fset(self, pttrace)  # type: ignore

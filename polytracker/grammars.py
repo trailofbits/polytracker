@@ -1,6 +1,7 @@
 import itertools
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import Any, BinaryIO, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, BinaryIO, cast, Dict, Generic, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import networkx as nx
 from tqdm import tqdm, trange
@@ -372,11 +373,12 @@ class MissingProductionError(CorruptedGrammarError):
 
 
 T = TypeVar("T", bound="ParseTree")
+V = TypeVar("V")
 
 
-class ParseTree:
-    def __init__(self, production_rule_or_terminal: Union[Production, Rule, Terminal]):
-        self.value: Union[Production, Rule, Terminal] = production_rule_or_terminal
+class ParseTree(Generic[V]):
+    def __init__(self, value: V):
+        self.value: Union[Production, Rule, Terminal] = value
         self.children: List[ParseTree] = []
 
     def clone(self: T) -> T:
@@ -417,11 +419,13 @@ class ParseTree:
         return ret
 
 
+ParseTreeValue = Union[Production, Rule, Terminal]
+
 class PartialMatch:
     __slots__ = "tree", "remaining_symbols", "remaining_bytes"
 
-    def __init__(self, tree: ParseTree, remaining_symbols: Tuple[Symbol, ...], remaining_bytes: bytes):
-        self.tree: ParseTree = tree
+    def __init__(self, tree: ParseTree[ParseTreeValue], remaining_symbols: Tuple[Symbol, ...], remaining_bytes: bytes):
+        self.tree: ParseTree[ParseTreeValue] = tree
         self.remaining_symbols: Tuple[Symbol, ...] = remaining_symbols
         self.remaining_bytes: bytes = remaining_bytes
 
@@ -572,13 +576,13 @@ class Grammar:
         self.used_by: Dict[NonTerminal, Set[NonTerminal]] = defaultdict(set)
         self.start: Optional[Production] = None
 
-    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
+    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree[ParseTreeValue]:
         parser = EarleyParser(grammar=self, sentence=sentence, start=start)
         parser.parse()
         # TODO: Describe this parse error
         raise ValueError()
 
-    def find_partial_trees(self, sentence: bytes, start: Optional[Production] = None) -> Iterator[ParseTree]:
+    def find_partial_trees(self, sentence: bytes, start: Optional[Production] = None) -> Iterator[ParseTree[ParseTreeValue]]:
         """Enumerates all partial parse trees that could result in the given starting sentence fragment."""
         if start is None:
             start = self.start
@@ -734,6 +738,126 @@ def production_name(event: TraceEvent) -> str:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
+E = TypeVar('E', bound=TraceEvent)
+
+
+class MimidTraceNode(Generic[E], metaclass=ABCMeta):
+    def __init__(self, event: E):
+        self.events: List[E] = [event]
+        self._children: List[MimidTraceNode] = []
+        self._parent: Optional[MimidTraceNode] = None
+
+    def add(self, event: E):
+        self.events.append(event)
+
+    def add_child(self, node: 'MimidTraceNode'):
+        pass
+
+    @abstractmethod
+    def consumed_bytes(self) -> Set[int]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def last_consumed_bytes(self) -> Set[int]:
+        raise NotImplementedError()
+
+    @property
+    def parent(self) -> Optional['MimidTraceNode']:
+        return self._parent
+
+    @property
+    def byte_range(self) -> Tuple[int, int]:
+        return 0, 0
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        if isinstance(other, MimidTraceNode):
+            return str(self) == str(other)
+        else:
+            return False
+
+    def __str__(self):
+        return str(self.events[0])
+
+
+class MimidTraceBB(MimidTraceNode[BasicBlockEntry]):
+    def __init__(self, entry: BasicBlockEntry):
+        super().__init__(entry)
+
+    def consumed_bytes(self) -> Set[int]:
+        return {
+            bb.consumed for bb in self.events
+        }
+
+    def last_consumed_bytes(self) -> Set[int]:
+        return {
+            bb.last_consumed for bb in self.events
+        }
+
+
+class MimidTraceFunction(MimidTraceNode[FunctionCall]):
+    def __init__(self, entry: FunctionCall):
+        super().__init__(entry)
+
+    def consumed_bytes(self) -> Set[int]:
+        ret = set()
+        for func in self.events:
+            for bb in func.basic_blocks():
+                ret |= set(bb.consumed)
+        return ret
+
+    def last_consumed_bytes(self) -> Set[int]:
+        ret = set()
+        for func in self.events:
+            for bb in func.basic_blocks():
+                ret |= set(bb.last_consumed)
+        return ret
+
+
+def trace_to_tree(trace: PolyTrackerTrace) -> ParseTree[Symbol]:
+    if trace.entrypoint is None:
+        raise ValueError(f"Trace {trace} does not have an entrypoint!")
+
+    root = ParseTree("<START>")
+
+    nodes_by_event: Dict[TraceEvent, ParseTree[Symbol]] = {}
+
+    for event in tqdm(trace, unit=" events", leave=False, desc="extracting a parse tree"):
+        if isinstance(event, BasicBlockEntry):
+            node = ParseTree(str(event))
+            nodes_by_event[event] = node
+            prev_event = event.previous
+            parent = None
+            if prev_event is not None:
+                if isinstance(prev_event, FunctionReturn):
+                    if prev_event.function_call is not None:
+                        parent = nodes_by_event[prev_event.function_call]
+                else:
+                    parent = nodes_by_event[prev_event]
+            if parent is None:
+                parent = root
+            parent.children.append(node)
+            for token in event.last_consumed_tokens:
+                node.children.append(ParseTree(Terminal(token)))
+        elif isinstance(event, FunctionCall):
+            node = ParseTree(event.name)
+            nodes_by_event[event] = node
+            try:
+                if event.caller is not None:
+                    parent = nodes_by_event[event.caller]
+                else:
+                    parent = root
+            except TypeError:
+                # This will be raised by event.caller if the caller cannot be determined
+                # (e.g., if this is the first function in the trace)
+                parent = root
+            parent.children.append(node)
+
+    return root
+
+
 def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -839,13 +963,13 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
                 "Warning: The following byte offsets were never recorded as being read in the trace: "
                 f"{[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
             )
+        tree = trace_to_tree(trace)
+        print(tree)
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         print(grammar)
-        # tree = next(iter(grammar.find_partial_trees(b"{\n")))
-        # print(tree)
         grammar.match(trace.inputstr)
         return grammar
     return Grammar()
