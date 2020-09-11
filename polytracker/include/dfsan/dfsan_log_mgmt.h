@@ -89,6 +89,7 @@ public:
   ~taintManager();
   void logCompare(dfsan_label some_label);
   void logOperation(dfsan_label some_label);
+  void logTaintedData(dfsan_label some_label);
   int logFunctionEntry(char *fname);
   void logFunctionExit();
   void logBBEntry(char *fname, BBIndex bbIndex,

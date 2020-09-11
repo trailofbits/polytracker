@@ -70,6 +70,23 @@ void taintManager::logCompare(dfsan_label some_label) {
   taint_prop_lock.unlock();
 }
 
+/**
+ * NOTE: this function must always be called with a preexisting lock on `taint_prop_lock`
+ */
+void taintManager::logTaintedData(dfsan_label some_label) {
+  taint_node_t* new_node = getTaintNode(some_label);
+  std::thread::id this_id = std::this_thread::get_id();
+  std::vector<std::string> func_stack = thread_stack_map[this_id];
+  (function_to_bytes)[func_stack[func_stack.size() - 1]].insert(new_node);
+  if (auto bb = trace.currentBB()) {
+    // we are recording a full trace, and we know the current basic block
+    if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
+      // this is a canonical label
+      trace.setLastUsage(some_label, bb);
+    }
+  }
+}
+
 void taintManager::logOperation(dfsan_label some_label) {
   if (some_label == 0) {
     return;
@@ -567,6 +584,9 @@ void taintManager::taintTargetRange(char* mem, int offset, int len,
         (curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
       dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
       dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
+
+      // Log that we tainted data within this function from a taint source etc.
+      logTaintedData(new_label);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;
