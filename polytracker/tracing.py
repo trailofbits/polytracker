@@ -250,6 +250,7 @@ class BasicBlockEntry(TraceEvent):
         next_uid: Optional[int] = None,
         entry_count: int = 1,
         consumed: Iterable[int] = (),
+        last_consumed: Iterable[int] = (),
         types: Iterable[str] = (),
     ):
         super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
@@ -263,6 +264,9 @@ class BasicBlockEntry(TraceEvent):
         self.bb_index: int = bb_index
         self.global_index: int = global_index
         self.consumed: List[int] = list(consumed)
+        """The list of input byte offsets \"touched\" during this basic block execution"""
+        self.last_consumed: List[int] = list(last_consumed)
+        """The subset of self.consumed for which this was the last basic block in the trace to ever consume them"""
         self.called_function: Optional[FunctionCall] = None
         """The function this basic block calls"""
         self.types: List[str] = list(types)
@@ -303,9 +307,16 @@ class BasicBlockEntry(TraceEvent):
 
     @property
     def consumed_tokens(self) -> Iterator[bytes]:
+        return self._consumed_tokens(self.consumed)
+
+    @property
+    def last_consumed_tokens(self) -> Iterator[bytes]:
+        return self._consumed_tokens(self.last_consumed)
+
+    def _consumed_tokens(self, offset_list: Iterable[int]) -> Iterator[bytes]:
         start_offset: Optional[int] = None
         last_offset: Optional[int] = None
-        for offset in sorted(self.consumed):
+        for offset in sorted(offset_list):
             if start_offset is None:
                 start_offset = last_offset = offset
             elif start_offset + 1 != offset:

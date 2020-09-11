@@ -318,7 +318,8 @@ public:
     }
   }
   decltype(lastUsages) lastUsageTaints() const { return lastUsages; }
-  const std::list<dfsan_label> &lastUsageTaints(const BasicBlockEntry *bb) const {
+  const std::list<dfsan_label> &
+  lastUsageTaints(const BasicBlockEntry *bb) const {
     const auto ret = lastUsagesByBB.find(bb);
     if (ret == lastUsagesByBB.cend()) {
       return EMPTY_LIST;
