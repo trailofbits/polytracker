@@ -110,15 +110,22 @@ def test_memcpy_propagate():
     target_name = "test_memcpy.c"
     pp = validate_execute_target(target_name)
     raw_taint_sets = pp.taint_sets
-    print(raw_taint_sets)
     assert 1 in raw_taint_sets["dfs$touch_copied_byte"]["input_bytes"]
 
 
-def test_no_taint():
-    target_name = "test_no_taint.c"
+# TODO I think this gets changed.
+# def test_no_taint():
+#    target_name = "test_no_taint.c"
+#    pp = validate_execute_target(target_name)
+#    raw_taint_sets = pp.taint_sets
+#    assert raw_taint_sets is None
+def test_taint_log():
+    target_name = "test_taint_log.c"
+    test_filename = "/polytracker/tests/test_data/test_data.txt"
     pp = validate_execute_target(target_name)
-    raw_taint_sets = pp.taint_sets
-    assert raw_taint_sets is None
+    log_processed_sets = pp.processed_taint_sets
+    for i in range(0, 10):
+        assert i in log_processed_sets["main"]["input_bytes"][test_filename]
 
 
 # This is a bad name for this test

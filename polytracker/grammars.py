@@ -1,6 +1,6 @@
 import itertools
 from collections import defaultdict
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, BinaryIO, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import networkx as nx
 from tqdm import tqdm, trange
@@ -846,3 +846,123 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         grammar.simplify()
         return grammar
     return Grammar()
+
+
+def decl_datalog_fact(name) -> str:
+    return f".decl {name}(x: number, y: number)\n"
+
+
+def gen_datalog_fact(name, start, end) -> str:
+    return f"{name}({start}, {end}).\n"
+
+
+# TODO we might be able to also get this from a trace
+# TODO might need to swap from str to input file.
+# But I think indexing the entire input file is actually fine for now
+def extract_datalog_facts(input_file: BinaryIO) -> str:
+    # Keep track unique bytes in the file and their occurences
+    unique_bytes: Dict[int, bool] = {}
+    # Datalog code to return :)
+    # Turn this into class with @property str
+    datalog_code = ""
+    with open(input_file.name, "rb") as file:
+        data = file.read()
+        for i, byte in enumerate(data):
+            # Declare the new type of byte
+            if byte not in unique_bytes:
+                if chr(byte) == "":
+                    continue
+                else:
+                    datalog_code += decl_datalog_fact(f"GEN_{byte}")
+                unique_bytes[byte] = True
+            if chr(byte) == "":
+                continue
+            else:
+                datalog_code += gen_datalog_fact(f"GEN_{byte}", i, i + 1)
+    return datalog_code
+
+
+def decl_datalog_prod_rule(name):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    return f".decl GEN_{'_'.join(val_list)}(x: number, y: number)\n .output GEN_{'_'.join(val_list)}\n"
+
+
+def decl_output_prod_rule(name):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    return f".output GEN_{'_'.join(val_list)}\n"
+
+
+def gen_datalog_clause(name, start, end):
+    val_list = list(map(ord, name))
+    val_list = list(map(str, val_list))
+    name = "_".join(val_list)
+    return f"GEN_{name}({start}, {end})"
+
+
+def extract_datalog_grammar(traces: Iterable[PolyTrackerTrace], input_files) -> str:
+    datalog_facts = ""
+    datalog_grammar = ""
+    datalog_parser_grammar = ""
+    unique_rules: Dict[str, bool] = {}
+    trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
+    for i, trace in enumerate(trace_iter):
+        datalog_facts += extract_datalog_facts(input_files[i])
+        # TODO: Merge the grammars
+        grammar = trace_to_grammar(trace)
+        # grammar.match(trace.inputstr)
+        trace_iter.set_description("simplifying the grammar")
+        grammar.simplify()
+        # print("Start symbol!", grammar.start.name)
+        # grammar.productions
+        for prod_name in grammar.productions:
+            # print("prod name", prod_name)
+            if prod_name not in unique_rules:
+                unique_rules[prod_name] = True
+                datalog_grammar += decl_datalog_prod_rule(prod_name)
+                if "<START>" in prod_name:
+                    datalog_grammar += decl_output_prod_rule(prod_name)
+
+            # datalog_sentence = f"{prod_name}(i, j) :- "
+            # Start the variable iteration at "a", which is 97.
+            # As we add new rules in the sequence, we need to add new free variables to the datalog.
+            var_iterator_start = 97
+            var_iterator_curr = var_iterator_start
+            datalog_clause_terms = []
+            for rule in grammar.productions[prod_name].rules:
+                for term in rule.sequence:
+                    # if its a production rule, check if we have seen it before.
+                    if isinstance(term, str):
+                        # TODO maybe can do this whenever they are encountered in prod
+                        if term not in unique_rules:
+                            unique_rules[term] = True
+                            datalog_grammar += decl_datalog_prod_rule(term)
+
+                        datalog_clause_terms.append(
+                            gen_datalog_clause(term, chr(var_iterator_curr), chr(var_iterator_curr + 1))
+                        )
+                        var_iterator_curr += 1
+
+                    # If its a terminal, we must make sure the name matches that of the fact.
+                    elif isinstance(term, Terminal):
+                        # print("term is a TERMINAL?", term)
+                        for val in term.terminal:
+                            if chr(val) == "":
+                                continue
+                            datalog_clause_terms.append(
+                                f"GEN_{val}({chr(var_iterator_curr)}, " f"{chr(var_iterator_curr + 1)})"
+                            )
+                            var_iterator_curr += 1
+                    else:
+                        print(f"WARNING term is not string/terminal: {term}")
+                # Add the end of the rule.
+            datalog_clause_terms[len(datalog_clause_terms) - 1] += "."
+            val_list: List[int] = list(map(ord, prod_name))
+            val_list_str: List[str] = list(map(str, val_list))
+            head_name = f"GEN_{'_'.join(val_list_str)}"
+            datalog_parser_grammar += (
+                f"{head_name}({chr(var_iterator_start)},{chr(var_iterator_curr)}) :- " f"{', '.join(datalog_clause_terms)}\n"
+            )
+
+    return datalog_facts + "\n" + datalog_grammar + "\n" + datalog_parser_grammar
