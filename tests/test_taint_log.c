@@ -1,12 +1,21 @@
+/*
+ * test_taint_log.c
+ *
+ *  Created on: Sep 11, 2020
+ *      Author: carson
+ */
+
+
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <string.h>
+/*
+ * Tests that we can acquire the open taint source
+ * and that read sets taint
+ */
 
-//The idea of this testcase is that just moving things around
-//Does not trigger taint, but looking back now I think it should.
 int main(int argc, char * argv[]) {
 	if (argc < 2) {
 		printf("Error, no file specified!");
@@ -17,11 +26,8 @@ int main(int argc, char * argv[]) {
 	}
 	else {
 		char buff[2048];
-		memset(buff, 0, sizeof(buff));
-		char other_buff[2048];
-		memset(other_buff, 0, sizeof(other_buff));
+		//Just reading should mark those bytes as tainted in main
 		int bytes_read = read(fd, buff, 10);
-		memcpy(other_buff, buff, sizeof(other_buff));
 		close(fd);
 	}
 	return 0;

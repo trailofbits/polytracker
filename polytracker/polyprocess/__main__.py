@@ -38,7 +38,7 @@ def main():
         metavar=("polytracker_json", "input_file"),
         type=argparse.FileType("rb"),
         help="extract a datalog parser from the provided pairs of JSON trace files as well as the associated input file"
-             "that was sent to the instrumented parser to generate polytracker_json"
+        "that was sent to the instrumented parser to generate polytracker_json",
     )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
@@ -118,6 +118,7 @@ def main():
         else:
             sys.stderr.write(f"Error: No output file selected, use --outfile")
             exit(1)
+
 
 if __name__ == "__main__":
     main()
