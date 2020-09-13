@@ -331,8 +331,6 @@ def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedPars
                 continue
             if last_end < child.begin_offset:
                 new_children.append(NonGeneralizedParseTree(Terminal(trace.inputstr[last_end:child.begin_offset])))
-                if new_children[-1].value.terminal == b"{\n\t\"foo\": [1, 2, 3, 4],\n\t\"bar\": \"testin":
-                    breakpoint()
             new_children.append(child)
             last_end = child.end_offset
         if last_end < node_end:
