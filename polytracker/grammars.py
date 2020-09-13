@@ -7,7 +7,7 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import escape_byte, ParseTree, Terminal, trace_to_non_generalized_tree
+from .parsing import escape_byte, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -724,6 +724,36 @@ class MimidTraceFunction(MimidTraceNode[FunctionCall]):
         return ret
 
 
+def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
+    grammar = Grammar()
+
+    for node in tree.preorder_traversal():
+        if isinstance(node.value, Terminal):
+            continue
+        sequence = []
+        for child in node.children:
+            if isinstance(child.value, Terminal):
+                sequence.append(child.value)
+            else:
+                sequence.append(production_name(child.value))
+
+        rule = Rule(grammar, *sequence)
+        if isinstance(node.value, Start):
+            prod_name = '<START>'
+        else:
+            prod_name = production_name(node.value)
+        if prod_name in grammar:
+            production = grammar[prod_name]
+            if rule not in production:
+                production.add(rule)
+        else:
+            Production(grammar, prod_name, rule)
+
+    grammar.start = grammar['<START>']
+
+    return grammar
+
+
 def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -830,13 +860,13 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
                 f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
             )
         tree = trace_to_non_generalized_tree(trace)
-        print(tree)
         # TODO: Merge the grammars
-        grammar = trace_to_grammar(trace)
+        grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
+        print(grammar)
+        grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         print(grammar)
-        grammar.match(trace.inputstr)
         return grammar
     return Grammar()
 
