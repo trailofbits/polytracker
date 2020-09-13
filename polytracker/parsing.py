@@ -208,6 +208,13 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
             return -1
         return max(i.data for i in self.intervals[self.end_offset - 1])
 
+    def simplify(self):
+        for node in tqdm(self.postorder_traversal(), leave=False, desc='simplifying parse tree', unit=' nodes'):
+            if len(node.children) == 1:
+                child = node.children[0]
+                if isinstance(child.value, BasicBlockEntry) and len(child.children) == 1:
+                    node.children = [child.children[0]]
+
     def deconflict(self, right_sibling: 'NonGeneralizedParseTree'):
         if self.end_offset <= right_sibling.begin_offset:
             # we do not have overlap

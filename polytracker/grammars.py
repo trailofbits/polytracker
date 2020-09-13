@@ -860,10 +860,11 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
                 f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
             )
         tree = trace_to_non_generalized_tree(trace)
+        tree.simplify()
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
         print(grammar)
-        grammar.match(trace.inputstr)
+        #grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         print(grammar)
