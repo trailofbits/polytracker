@@ -7,25 +7,8 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
+from .parsing import escape_byte, ParseTree, Terminal, trace_to_non_generalized_tree
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
-
-
-def escape_byte(byte_value: int) -> str:
-    if byte_value == ord("\n"):
-        b = "\\n"
-    elif byte_value == ord("\t"):
-        b = "\\t"
-    elif byte_value == ord("\r"):
-        b = "\\r"
-    elif byte_value == ord('"'):
-        b = '\\"'
-    elif byte_value == ord("\\"):
-        b = "\\\\"
-    elif ord(" ") <= byte_value <= ord("~"):
-        b = chr(byte_value)
-    else:
-        b = f"\\x{byte_value:02x}"
-    return b
 
 
 def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
@@ -44,35 +27,6 @@ def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
         ret = f"{ret}{byte_text}"
     ret = f"\"{ret}\"\n {' ' * before}{'^' * offset_len}"
     return ret
-
-
-class Terminal:
-    def __init__(self, terminal: Union[bytes, str]):
-        if isinstance(terminal, str):
-            terminal = terminal.encode("utf-8")
-        self.terminal: bytes = terminal
-
-    def __add__(self, other: Union[bytes, str, "Terminal"]) -> "Terminal":
-        if isinstance(other, Terminal):
-            other = other.terminal
-        elif isinstance(other, str):
-            other = other.encode("utf-8")
-        return Terminal(self.terminal + other)
-
-    def __eq__(self, other):
-        return isinstance(other, Terminal) and other.terminal == self.terminal
-
-    def __hash__(self):
-        return hash(self.terminal)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(terminal={self.terminal!r})"
-
-    def __str__(self):
-        ret = '"'
-        for i in self.terminal:
-            ret = f"{ret}{escape_byte(i)}"
-        return f'{ret}"'
 
 
 NonTerminal = str
@@ -372,54 +326,8 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
-T = TypeVar("T", bound="ParseTree")
-V = TypeVar("V")
-
-
-class ParseTree(Generic[V]):
-    def __init__(self, value: V):
-        self.value: Union[Production, Rule, Terminal] = value
-        self.children: List[ParseTree] = []
-
-    def clone(self: T) -> T:
-        ret = self.__class__(self.value)
-        ret.children = [c.clone() for c in self.children]
-        return ret
-
-    def __iter__(self) -> Iterator["ParseTree"]:
-        return iter(self.children)
-
-    def __len__(self):
-        return len(self.children)
-
-    def __str__(self):
-        ret = ""
-        stack = [self]
-        while stack:
-            n = stack.pop()
-            if isinstance(n, str):
-                ret = f"{ret}{n}"
-                continue
-            if isinstance(n.value, Production):
-                value_name = n.value.name
-            elif isinstance(n.value, Rule):
-                value_name = ""
-            else:
-                value_name = str(n.value)
-            if not n.children:
-                ret = f"{ret}{value_name}"
-            else:
-                if value_name:
-                    ret = f"{ret}{value_name} ["
-                    stack.append("]")
-                for i, c in reversed(list(enumerate(n.children))):
-                    if i > 0:
-                        stack.append(" ")
-                    stack.append(c)
-        return ret
-
-
 ParseTreeValue = Union[Production, Rule, Terminal]
+
 
 class PartialMatch:
     __slots__ = "tree", "remaining_symbols", "remaining_bytes"
@@ -816,48 +724,6 @@ class MimidTraceFunction(MimidTraceNode[FunctionCall]):
         return ret
 
 
-def trace_to_tree(trace: PolyTrackerTrace) -> ParseTree[Symbol]:
-    if trace.entrypoint is None:
-        raise ValueError(f"Trace {trace} does not have an entrypoint!")
-
-    root = ParseTree("<START>")
-
-    nodes_by_event: Dict[TraceEvent, ParseTree[Symbol]] = {}
-
-    for event in tqdm(trace, unit=" events", leave=False, desc="extracting a parse tree"):
-        if isinstance(event, BasicBlockEntry):
-            node = ParseTree(str(event))
-            nodes_by_event[event] = node
-            prev_event = event.previous
-            parent = None
-            if prev_event is not None:
-                if isinstance(prev_event, FunctionReturn):
-                    if prev_event.function_call is not None:
-                        parent = nodes_by_event[prev_event.function_call]
-                else:
-                    parent = nodes_by_event[prev_event]
-            if parent is None:
-                parent = root
-            parent.children.append(node)
-            for token in event.last_consumed_tokens:
-                node.children.append(ParseTree(Terminal(token)))
-        elif isinstance(event, FunctionCall):
-            node = ParseTree(event.name)
-            nodes_by_event[event] = node
-            try:
-                if event.caller is not None:
-                    parent = nodes_by_event[event.caller]
-                else:
-                    parent = root
-            except TypeError:
-                # This will be raised by event.caller if the caller cannot be determined
-                # (e.g., if this is the first function in the trace)
-                parent = root
-            parent.children.append(node)
-
-    return root
-
-
 def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -961,9 +827,9 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         if unused_bytes:
             print(
                 "Warning: The following byte offsets were never recorded as being read in the trace: "
-                f"{[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
+                f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
             )
-        tree = trace_to_tree(trace)
+        tree = trace_to_non_generalized_tree(trace)
         print(tree)
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
