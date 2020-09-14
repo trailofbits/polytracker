@@ -398,7 +398,7 @@ def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedPars
             desc=" finalizing parse tree ranges",
             unit=" nodes"
     ):
-        if node.is_leaf():
+        if isinstance(node.value, Terminal):
             continue
         node_begin = node.begin_offset
         node_end = node.end_offset
@@ -419,6 +419,7 @@ def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedPars
             terminal = NonGeneralizedParseTree(Terminal(trace.inputstr[last_end:node_end]))
             terminal.intervals.addi(last_end, node_end)
             new_children.append(terminal)
+        assert new_children
         node.children = new_children
 
     if __debug__:
