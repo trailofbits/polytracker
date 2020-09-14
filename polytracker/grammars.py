@@ -128,13 +128,13 @@ class Production:
             return
         for rule in self.rules:
 
-            def make_tree() -> Tuple[ParseTree, ParseTree]:
-                root = ParseTree(self)
-                rtree = ParseTree(rule)
-                root.children.append(rtree)
+            def make_tree() -> Tuple[ParseTree[ParseTreeValue], ParseTree[ParseTreeValue]]:
+                root: ParseTree[ParseTreeValue] = ParseTree(self)
+                rtree: ParseTree[ParseTreeValue] = ParseTree(rule)
+                root.children.append(rtree)  # type: ignore
                 return root, rtree
 
-            stack: List[Tuple[bytes, List[ParseTree], List[Symbol]]] = [(sentence, [], list(rule.sequence))]
+            stack: List[Tuple[bytes, List[ParseTree[ParseTreeValue]], List[Symbol]]] = [(sentence, [], list(rule.sequence))]
             while stack:
                 remaining_bytes, trees, remaining_symbols = stack.pop()
                 if not remaining_symbols or not remaining_bytes:
@@ -142,7 +142,7 @@ class Production:
                     if not rule_tree.children:
                         if not trees:
                             trees = [ParseTree(Terminal(""))]
-                        rule_tree.children = trees
+                        rule_tree.children = trees  # type: ignore
                     yield PartialMatch(
                         tree=root_tree, remaining_symbols=tuple(remaining_symbols), remaining_bytes=remaining_bytes
                     )
@@ -151,7 +151,7 @@ class Production:
                     if isinstance(next_symbol, Terminal):
                         if remaining_bytes == next_symbol.terminal:
                             root_tree, rule_tree = make_tree()
-                            rule_tree.children = trees + [ParseTree(next_symbol)]
+                            rule_tree.children = trees + [ParseTree(next_symbol)]  # type: ignore
                             yield PartialMatch(
                                 tree=root_tree, remaining_symbols=tuple(remaining_symbols[1:]), remaining_bytes=b""
                             )
@@ -171,7 +171,7 @@ class Production:
                         for match in self.grammar[next_symbol].partial_match(remaining_bytes):
                             if not match.remaining_bytes or (not match.remaining_symbols and len(remaining_symbols) < 2):
                                 root_tree, rule_tree = make_tree()
-                                rule_tree.children = trees + [match.tree]
+                                rule_tree.children = trees + [match.tree]  # type: ignore
                                 yield PartialMatch(
                                     tree=root_tree,
                                     remaining_symbols=tuple(remaining_symbols[1:]),
@@ -628,87 +628,13 @@ def production_name(event: TraceEvent) -> str:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
-E = TypeVar("E", bound=TraceEvent)
-
-
-class MimidTraceNode(Generic[E], metaclass=ABCMeta):
-    def __init__(self, event: E):
-        self.events: List[E] = [event]
-        self._children: List[MimidTraceNode] = []
-        self._parent: Optional[MimidTraceNode] = None
-
-    def add(self, event: E):
-        self.events.append(event)
-
-    def add_child(self, node: "MimidTraceNode"):
-        pass
-
-    @abstractmethod
-    def consumed_bytes(self) -> Set[int]:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def last_consumed_bytes(self) -> Set[int]:
-        raise NotImplementedError()
-
-    @property
-    def parent(self) -> Optional["MimidTraceNode"]:
-        return self._parent
-
-    @property
-    def byte_range(self) -> Tuple[int, int]:
-        return 0, 0
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __eq__(self, other):
-        if isinstance(other, MimidTraceNode):
-            return str(self) == str(other)
-        else:
-            return False
-
-    def __str__(self):
-        return str(self.events[0])
-
-
-class MimidTraceBB(MimidTraceNode[BasicBlockEntry]):
-    def __init__(self, entry: BasicBlockEntry):
-        super().__init__(entry)
-
-    def consumed_bytes(self) -> Set[int]:
-        return {bb.consumed for bb in self.events}
-
-    def last_consumed_bytes(self) -> Set[int]:
-        return {bb.last_consumed for bb in self.events}
-
-
-class MimidTraceFunction(MimidTraceNode[FunctionCall]):
-    def __init__(self, entry: FunctionCall):
-        super().__init__(entry)
-
-    def consumed_bytes(self) -> Set[int]:
-        ret = set()
-        for func in self.events:
-            for bb in func.basic_blocks():
-                ret |= set(bb.consumed)
-        return ret
-
-    def last_consumed_bytes(self) -> Set[int]:
-        ret = set()
-        for func in self.events:
-            for bb in func.basic_blocks():
-                ret |= set(bb.last_consumed)
-        return ret
-
-
 def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
     grammar = Grammar()
 
     for node in tree.preorder_traversal():
         if isinstance(node.value, Terminal):
             continue
-        sequence = []
+        sequence: List[Union[Terminal, str]] = []
         for child in node.children:
             if isinstance(child.value, Terminal):
                 sequence.append(child.value)

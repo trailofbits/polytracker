@@ -7,8 +7,8 @@ from .cfg import DAG
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
-T = TypeVar("T", bound="ParseTree")
 V = TypeVar("V")
+T = TypeVar("T", bound="ParseTree")
 
 
 class ParseTree(Generic[V]):
@@ -29,8 +29,8 @@ class ParseTree(Generic[V]):
     def descendants(self) -> int:
         if self._descendants is None:
             for n in self.postorder_traversal():
-                n._descendants = sum(c._descendants for c in n.children) + len(n)
-        return self._descendants
+                n._descendants = sum(c._descendants for c in n.children) + len(n)  # type: ignore
+        return self._descendants  # type: ignore
 
     def postorder_traversal(self: T) -> Iterator[T]:
         s: List[Tuple[bool, T]] = [(False, self)]
@@ -61,7 +61,7 @@ class ParseTree(Generic[V]):
     def leaves(self) -> Iterator[T]:
         for t in self.preorder_traversal():
             if t.is_leaf():
-                yield t
+                yield t  # type: ignore
 
     def __iter__(self) -> Iterator["ParseTree"]:
         return iter(self.children)
@@ -165,18 +165,18 @@ N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
 
 
 def trace_to_tree(
-    trace: PolyTrackerTrace, node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]], include_terminals: bool = True
+    trace: PolyTrackerTrace, node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]], include_terminals: bool = True  # type: ignore
 ) -> N:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
     root = node_type(Start())
 
-    nodes_by_event: Dict[TraceEvent, node_type] = {}
+    nodes_by_event: Dict[TraceEvent, N] = {}
 
     for event in tqdm(trace, unit=" events", leave=False, desc="extracting a parse tree"):
         if isinstance(event, BasicBlockEntry):
-            node = node_type(event)
+            node: N = node_type(event)
             nodes_by_event[event] = node
             prev_event = event.previous
             parent = None
@@ -233,7 +233,7 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
         return self.intervals.end()
 
     def terminals(self) -> Iterator[Terminal]:
-        for leaf in self.leaves():
+        for leaf in self.leaves():  # type: ignore
             assert isinstance(leaf.value, Terminal)
             yield leaf.value
 
@@ -369,13 +369,13 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
             elif start_offset + 1 != offset:
                 # this is not a contiguous byte sequence
                 # so yield the previous token
-                yield Interval(start_offset, last_offset + 1, self.value.uid)
+                yield Interval(start_offset, last_offset + 1, self.value.uid)  # type: ignore
                 start_offset = last_offset = offset
             else:
                 # this is a contiguous byte sequence, so update its end
                 last_offset = offset
         if start_offset is not None:
-            yield Interval(start_offset, last_offset + 1, self.value.uid)
+            yield Interval(start_offset, last_offset + 1, self.value.uid)  # type: ignore
 
 
 def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedParseTree:

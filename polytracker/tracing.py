@@ -204,7 +204,7 @@ class FunctionCall(TraceEvent):
 
     def basic_blocks(self) -> Iterator["BasicBlockEntry"]:
         """Yields all of the basic block entries in this function call"""
-        event = self.entrypoint
+        event: Optional[TraceEvent] = self.entrypoint
         while event is not None:
             if isinstance(event, BasicBlockEntry):
                 if event.containing_function == self:
