@@ -3,6 +3,7 @@ from typing import Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
 
+from .cfg import DAG
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -15,6 +16,14 @@ class ParseTree(Generic[V]):
         self.value: V = value
         self.children: List[T] = []
         self._descendants: Optional[int] = None
+
+    def to_dag(self) -> DAG['ParseTree[V]']:
+        dag: DAG[ParseTree[V]] = DAG()
+        if self.children:
+            dag.add_edges_from((node, child) for node in self.preorder_traversal() for child in node.children)
+        else:
+            dag.add_node(self)
+        return dag
 
     @property
     def descendants(self) -> int:
@@ -327,18 +336,9 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
             child.deconflict(right_sibling)
         for child in self.children:
             # update our intervals based off of the child
-            if not self.intervals:
-                self.intervals |= child.intervals
-                continue
-            for interval in child.intervals:
-                existing = self.intervals[interval.begin:interval.end]
-                if existing:
-                    best = max(i.data for i in existing)
-                    if interval.data > best:
-                        self.intervals.chop(interval.begin, interval.end)
-                        self.intervals.addi(interval.begin, interval.end, interval.data)
-                else:
-                    self.intervals.addi(interval.begin, interval.end, interval.data)
+            self.intervals |= child.intervals
+        self.intervals.split_overlaps()
+        self.intervals.merge_overlaps(data_reducer=max)
         if __debug__:
             self.verify_bounds(check_overlap=True, check_coverage=False, check_missing_children=False)
 
