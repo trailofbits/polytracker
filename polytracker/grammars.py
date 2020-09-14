@@ -7,26 +7,10 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import escape_byte, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
+from .parsing import (
+    highlight_offset, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
+)
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
-
-
-def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
-    length_div_2 = highlight_length // 2
-    start_offset = max(offset - length_div_2, 0)
-    end_offset = min(offset + length_div_2, len(text))
-    before = 0
-    offset_len = 1
-    ret = ""
-    for i, b in enumerate(text[start_offset:end_offset]):
-        byte_text = escape_byte(b)
-        if i < offset - start_offset:
-            before += len(byte_text)
-        elif i == offset - start_offset:
-            offset_len = len(byte_text)
-        ret = f"{ret}{byte_text}"
-    ret = f"\"{ret}\"\n {' ' * before}{'^' * offset_len}"
-    return ret
 
 
 NonTerminal = str
@@ -860,11 +844,13 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
                 f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
             )
         tree = trace_to_non_generalized_tree(trace)
+        match_before = tree.matches()
         tree.simplify()
+        assert match_before == tree.matches() == trace.inputstr
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
         print(grammar)
-        #grammar.match(trace.inputstr)
+        grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         print(grammar)
