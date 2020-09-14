@@ -17,7 +17,7 @@ class ParseTree(Generic[V]):
         self.children: List[T] = []
         self._descendants: Optional[int] = None
 
-    def to_dag(self) -> DAG['ParseTree[V]']:
+    def to_dag(self) -> DAG["ParseTree[V]"]:
         dag: DAG[ParseTree[V]] = DAG()
         if self.children:
             dag.add_edges_from((node, child) for node in self.preorder_traversal() for child in node.children)
@@ -161,13 +161,11 @@ class Start:
         return "<START>"
 
 
-N = TypeVar('N', bound=ParseTree[Union[Start, TraceEvent, Terminal]])
+N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
 
 
 def trace_to_tree(
-        trace: PolyTrackerTrace,
-        node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],
-        include_terminals: bool = True
+    trace: PolyTrackerTrace, node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]], include_terminals: bool = True
 ) -> N:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -240,36 +238,37 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
             yield leaf.value
 
     def matches(self) -> bytes:
-        return b''.join(terminal.terminal for terminal in self.terminals())
+        return b"".join(terminal.terminal for terminal in self.terminals())
 
     def verify_bounds(self, check_overlap=True, check_coverage=True, check_missing_children=True):
         covered_input_bytes = IntervalTree()
         for child in self.children:
             if check_overlap and covered_input_bytes.overlaps(child.begin_offset, child.end_offset):
-                overlap = ', '.join(
-                    [interval.data for interval in covered_input_bytes[child.begin_offset:child.end_offset]]
-                )
-                raise ValueError(f"Child node {child.value!s} of {self.value!s} overlaps with these siblings: "
-                                 f"{overlap!r}")
+                overlap = ", ".join([interval.data for interval in covered_input_bytes[child.begin_offset : child.end_offset]])
+                raise ValueError(f"Child node {child.value!s} of {self.value!s} overlaps with these siblings: " f"{overlap!r}")
             if child.end_offset > child.begin_offset:
                 covered_input_bytes.addi(child.begin_offset, child.end_offset, str(child.value))
-        if check_coverage and not self.is_leaf() and (
-                covered_input_bytes.begin() != self.begin_offset or covered_input_bytes.end() != self.end_offset
+        if (
+            check_coverage
+            and not self.is_leaf()
+            and (covered_input_bytes.begin() != self.begin_offset or covered_input_bytes.end() != self.end_offset)
         ):
-            raise ValueError(f"Node {self.value!s} was expected to have bounds ({self.begin_offset}, "
-                             f"{self.end_offset}), but its children only covered bounds "
-                             f"({covered_input_bytes.begin()}, {covered_input_bytes.end()})")
+            raise ValueError(
+                f"Node {self.value!s} was expected to have bounds ({self.begin_offset}, "
+                f"{self.end_offset}), but its children only covered bounds "
+                f"({covered_input_bytes.begin()}, {covered_input_bytes.end()})"
+            )
         if check_missing_children and not self.is_leaf():
             covered_input_bytes.merge_overlaps(strict=False)
             if len(covered_input_bytes) > 1:
                 missing = IntervalTree.from_tuples([(self.begin_offset, self.end_offset)]) - covered_input_bytes
-                missing_str = ', '.join(f"[{i.begin}:{i.end}]" for i in missing)
+                missing_str = ", ".join(f"[{i.begin}:{i.end}]" for i in missing)
                 raise ValueError(f"Node {self.value!s} is missing children that cover these byte ranges: {missing_str}")
 
     def verify(self, string: bytes):
         offset: int = 0
         remaining: bytes = string
-        last_non_terminal: str = '<START>'
+        last_non_terminal: str = "<START>"
         for node in self.preorder_traversal():
             # first, make sure none of our children overlap and that our entire range is covered
             node.verify_bounds()
@@ -278,21 +277,23 @@ class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
                 continue
             terminal = node.value
             if not remaining.startswith(terminal.terminal):
-                raise ValueError(f"Expected byte sequence {terminal!s} at byte offset {offset} produced by production "
-                                 f"{last_non_terminal}, but instead found:\n"
-                                 f"{highlight_offset(text=string, offset=offset)}")
+                raise ValueError(
+                    f"Expected byte sequence {terminal!s} at byte offset {offset} produced by production "
+                    f"{last_non_terminal}, but instead found:\n"
+                    f"{highlight_offset(text=string, offset=offset)}"
+                )
             terminal_length = len(terminal.terminal)
             remaining = remaining[terminal_length:]
             offset += terminal_length
 
     def simplify(self):
-        for node in tqdm(self.postorder_traversal(), leave=False, desc='simplifying parse tree', unit=' nodes'):
+        for node in tqdm(self.postorder_traversal(), leave=False, desc="simplifying parse tree", unit=" nodes"):
             if len(node.children) == 1:
                 child = node.children[0]
                 if isinstance(child.value, BasicBlockEntry) and len(child.children) == 1:
                     node.children = [child.children[0]]
 
-    def deconflict(self, right_sibling: 'NonGeneralizedParseTree'):
+    def deconflict(self, right_sibling: "NonGeneralizedParseTree"):
         if self.end_offset <= right_sibling.begin_offset:
             # we do not have overlap
             return
@@ -381,22 +382,18 @@ def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedPars
     tree = trace_to_tree(trace, NonGeneralizedParseTree, False)
 
     for node in tqdm(
-            tree.postorder_traversal(),
-            total=tree.descendants + 1,
-            leave=False,
-            desc=" deconflicting parse tree ranges",
-            unit=" nodes"
+        tree.postorder_traversal(),
+        total=tree.descendants + 1,
+        leave=False,
+        desc=" deconflicting parse tree ranges",
+        unit=" nodes",
     ):
         if isinstance(node.value, Start):
-            node.intervals[0:len(trace.inputstr)] = 0
+            node.intervals[0 : len(trace.inputstr)] = 0
         node.bottom_up_pass()
 
     for node in tqdm(
-            tree.preorder_traversal(),
-            total=tree.descendants + 1,
-            leave=False,
-            desc=" finalizing parse tree ranges",
-            unit=" nodes"
+        tree.preorder_traversal(), total=tree.descendants + 1, leave=False, desc=" finalizing parse tree ranges", unit=" nodes"
     ):
         if isinstance(node.value, Terminal):
             continue
@@ -410,7 +407,7 @@ def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedPars
             if child.begin_offset >= child.end_offset:
                 continue
             if last_end < child.begin_offset:
-                terminal = NonGeneralizedParseTree(Terminal(trace.inputstr[last_end:child.begin_offset]))
+                terminal = NonGeneralizedParseTree(Terminal(trace.inputstr[last_end : child.begin_offset]))
                 terminal.intervals.addi(last_end, child.begin_offset)
                 new_children.append(terminal)
             new_children.append(child)

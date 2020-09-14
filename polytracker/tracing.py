@@ -202,7 +202,7 @@ class FunctionCall(TraceEvent):
         self.consumes_bytes: bool = consumes_bytes
         self.return_uid: Optional[int] = return_uid
 
-    def basic_blocks(self) -> Iterator['BasicBlockEntry']:
+    def basic_blocks(self) -> Iterator["BasicBlockEntry"]:
         """Yields all of the basic block entries in this function call"""
         event = self.entrypoint
         while event is not None:

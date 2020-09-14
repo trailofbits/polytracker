@@ -7,9 +7,7 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import (
-    highlight_offset, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
-)
+from .parsing import highlight_offset, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -630,7 +628,7 @@ def production_name(event: TraceEvent) -> str:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
-E = TypeVar('E', bound=TraceEvent)
+E = TypeVar("E", bound=TraceEvent)
 
 
 class MimidTraceNode(Generic[E], metaclass=ABCMeta):
@@ -642,7 +640,7 @@ class MimidTraceNode(Generic[E], metaclass=ABCMeta):
     def add(self, event: E):
         self.events.append(event)
 
-    def add_child(self, node: 'MimidTraceNode'):
+    def add_child(self, node: "MimidTraceNode"):
         pass
 
     @abstractmethod
@@ -654,7 +652,7 @@ class MimidTraceNode(Generic[E], metaclass=ABCMeta):
         raise NotImplementedError()
 
     @property
-    def parent(self) -> Optional['MimidTraceNode']:
+    def parent(self) -> Optional["MimidTraceNode"]:
         return self._parent
 
     @property
@@ -679,14 +677,10 @@ class MimidTraceBB(MimidTraceNode[BasicBlockEntry]):
         super().__init__(entry)
 
     def consumed_bytes(self) -> Set[int]:
-        return {
-            bb.consumed for bb in self.events
-        }
+        return {bb.consumed for bb in self.events}
 
     def last_consumed_bytes(self) -> Set[int]:
-        return {
-            bb.last_consumed for bb in self.events
-        }
+        return {bb.last_consumed for bb in self.events}
 
 
 class MimidTraceFunction(MimidTraceNode[FunctionCall]):
@@ -723,7 +717,7 @@ def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
 
         rule = Rule(grammar, *sequence)
         if isinstance(node.value, Start):
-            prod_name = '<START>'
+            prod_name = "<START>"
         else:
             prod_name = production_name(node.value)
         if prod_name in grammar:
@@ -733,7 +727,7 @@ def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
         else:
             Production(grammar, prod_name, rule)
 
-    grammar.start = grammar['<START>']
+    grammar.start = grammar["<START>"]
 
     return grammar
 

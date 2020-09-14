@@ -38,13 +38,13 @@ def main():
         metavar=("polytracker_json", "input_file", "output_dot_path"),
         type=str,
         help="extracts a parse tree from the provided triples of JSON trace file, associated input_file that was "
-             "sent to the instrumented parser to generate polytracker_json, and the output path to which to save the "
-             "parse tree as a Graphviz .dot file"
+        "sent to the instrumented parser to generate polytracker_json, and the output path to which to save the "
+        "parse tree as a Graphviz .dot file",
     )
     commands.add_argument(
         "--raw-parse-tree",
         action="store_true",
-        help="do not simplify the parse tree (used in conjunction with --extract-parse-tree)"
+        help="do not simplify the parse tree (used in conjunction with --extract-parse-tree)",
     )
     commands.add_argument(
         "--extract-datalog",
