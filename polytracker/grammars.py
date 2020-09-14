@@ -847,7 +847,6 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         match_before = tree.matches()
         tree.simplify()
         assert match_before == tree.matches() == trace.inputstr
-        # tree.to_dag().to_dot(labeler=lambda n: str(n.value)).save("/tmp/tree.dot")
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
         print(grammar)
