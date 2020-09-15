@@ -12,6 +12,8 @@ T = TypeVar("T", bound="ParseTree")
 
 
 class ParseTree(Generic[V]):
+    __slots__ = 'value', 'children', '_descendants'
+
     def __init__(self: T, value: V):
         self.value: V = value
         self.children: List[T] = []
