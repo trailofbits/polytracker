@@ -361,18 +361,24 @@ class EarleyState:
 class EarleyQueue:
     def __init__(self):
         self.queue: List[EarleyState] = []
-        self.elements: Set[EarleyState] = set()
+        self.elements: Dict[EarleyState, EarleyState] = {}
+        self.waiting_for: Dict[NonTerminal, Set[EarleyState]] = defaultdict(set)
 
     def add(self, state: EarleyState) -> bool:
         if state in self.elements:
             # We already have this state
             return False
         self.queue.append(state)
-        self.elements.add(state)
+        self.elements[state] = state
+        if not state.finished and isinstance(state.next_element, NonTerminal):
+            self.waiting_for[state.next_element].add(state)
         return True
 
     def __contains__(self, item):
         return item in self.elements
+
+    def __getitem__(self, state: EarleyState) -> EarleyState:
+        return self.elements[state]
 
     def __iter__(self) -> Iterator[EarleyState]:
         # allow the EarleyQueue to be modified during iteration
@@ -419,10 +425,10 @@ class EarleyParser:
                 f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
                 f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}"
             )
-        yield from self.parse_trees()
+        return self.parse_trees()
 
     def parse_trees(self) -> Iterator[ParseTree[ParseTreeValue]]:
-        """Reconstructs all parse trees from the parse. This must be caled after a call to self.parse()"""
+        """Reconstructs all parse trees from the parse. This must be called after a call to self.parse()"""
         states = self.states
 
         class SearchNode:
@@ -495,21 +501,18 @@ class EarleyParser:
         )
         return True
 
-    def _complete(self, state: EarleyState, k: int):
-        for to_add in self.states[state.index]:
-            if (
-                not to_add.finished
-                and isinstance(to_add.next_element, NonTerminal)
-                and to_add.next_element == state.production.name
-            ):
-                new_state = EarleyState(
-                    production=to_add.production,
-                    parsed=to_add.parsed + state.parsed,
-                    expected=to_add.expected[1:],
-                    index=to_add.index,
-                )
-                state.potential_predecessors.add(to_add)
-                self.states[k].add(new_state)
+    def _complete(self, completed: EarleyState, k: int):
+        for state in self.states[completed.index].waiting_for[completed.production.name]:
+            assert not state.finished
+            assert isinstance(state.next_element, NonTerminal)
+            assert state.next_element == completed.production.name
+            new_state = EarleyState(
+                production=state.production,
+                parsed=state.parsed + completed.parsed,
+                expected=state.expected[1:],
+                index=state.index
+            )
+            self.states[k].add(new_state)
 
 
 class Match:
