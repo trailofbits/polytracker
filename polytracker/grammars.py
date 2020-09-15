@@ -338,11 +338,16 @@ class EarleyState:
         return self.expected[0]
 
     def __hash__(self):
-        return hash((self.parsed, self.expected, self.index))
+        return hash((self.parsed, self.expected, self.index, self.production))
 
     def __eq__(self, other):
         if isinstance(other, EarleyState):
-            return self.index == other.index and self.parsed == other.parsed and self.expected == other.expected
+            return (
+                self.index == other.index
+                and self.parsed == other.parsed
+                and self.expected == other.expected
+                and self.production == other.production
+            )
         else:
             return False
 
@@ -400,11 +405,11 @@ class EarleyParser:
                 if not state.finished:
                     next_element = state.next_element
                     if isinstance(next_element, NonTerminal):
-                        print(state)
+                        # print(state)
                         self._predict(state, k)
                     else:
                         if self._scan(state, k):
-                            last_k_with_match = k
+                            last_k_with_match = max(last_k_with_match, k + len(state.next_element.terminal) - 1)
                 else:
                     self._complete(state, k)
         if last_k_with_match < len(self.sentence) - 1:
@@ -450,14 +455,13 @@ class EarleyParser:
                 and isinstance(to_add.next_element, NonTerminal)
                 and to_add.next_element == state.production.name
             ):
-                self.states[k].add(
-                    EarleyState(
-                        production=to_add.production,
-                        parsed=to_add.parsed + state.parsed,
-                        expected=to_add.expected[len(state.parsed) :],
-                        index=to_add.index,
-                    )
+                new_state = EarleyState(
+                    production=to_add.production,
+                    parsed=to_add.parsed + state.parsed,
+                    expected=to_add.expected[1:],
+                    index=to_add.index,
                 )
+                self.states[k].add(new_state)
 
 
 class Grammar:
