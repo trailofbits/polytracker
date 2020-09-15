@@ -321,13 +321,14 @@ class PartialMatch:
 
 
 class EarleyState:
-    __slots__ = ["production", "parsed", "expected", "index"]
+    __slots__ = ["production", "parsed", "expected", "index", "potential_predecessors"]
 
     def __init__(self, production: Production, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
         self.production: Production = production
         self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
         self.index: int = index
+        self.potential_predecessors: Set[EarleyState] = set()
 
     @property
     def finished(self) -> bool:
@@ -396,7 +397,7 @@ class EarleyParser:
             self.start = start
         self.states: List[EarleyQueue] = [EarleyQueue() for _ in range(len(sentence) + 1)]
 
-    def parse(self):
+    def parse(self) -> Iterator[ParseTree[ParseTreeValue]]:
         for rule in self.start.rules:
             self.states[0].add(EarleyState(production=self.start, parsed=(), expected=rule.sequence, index=0))
         last_k_with_match = -1
@@ -418,6 +419,52 @@ class EarleyParser:
                 f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
                 f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}"
             )
+        yield from self.parse_trees()
+
+    def parse_trees(self) -> Iterator[ParseTree[ParseTreeValue]]:
+        """Reconstructs all parse trees from the parse. This must be caled after a call to self.parse()"""
+        states = self.states
+
+        class SearchNode:
+            def __init__(self, state: EarleyState, parent: Optional['SearchNode'] = None):
+                self.state: EarleyState = state
+                self.parent: Optional[SearchNode] = parent
+                if parent is None:
+                    self.k = len(states) - 1
+                else:
+                    self.k = parent.k - 1
+
+            def successors(self) -> Iterator['SearchNode']:
+                if self.k == 0:
+                    return
+                for state in self.state.potential_predecessors:
+                    yield SearchNode(state, self)
+
+            def is_complete(self) -> bool:
+                return self.k == 0
+
+            def ancestors(self) -> Iterator['SearchNode']:
+                p = self.parent
+                while p:
+                    yield p
+                    p = p.parent
+
+            def tree(self) -> ParseTree[ParseTreeValue]:
+                root = ParseTree(self.state.production)
+                node = root
+                for state in self.ancestors():
+                    new_node = ParseTree(state.production)
+                    node.children.append(new_node)
+                    node = new_node
+                return root
+
+        states: List[SearchNode] = [SearchNode(state) for state in self.states[-1]]
+        while states:
+            s = states.pop()
+            if s.is_complete():
+                yield s.tree()
+            else:
+                states.extend(s.successors())
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
@@ -461,7 +508,37 @@ class EarleyParser:
                     expected=to_add.expected[1:],
                     index=to_add.index,
                 )
+                state.potential_predecessors.add(to_add)
                 self.states[k].add(new_state)
+
+
+class Match:
+    def __init__(self, parser: EarleyParser):
+        self.parser: EarleyParser = parser
+        self._is_match: Optional[bool] = None
+
+    @property
+    def parse_tree(self) -> Optional[ParseTree[ParseTreeValue]]:
+        """Returns the first parse tree matched"""
+        if self._is_match is None:
+            try:
+                tree = next(iter(self.parser.parse()))
+                self._is_match = True
+                return tree
+            except StopIteration:
+                self._is_match = False
+        elif self._is_match:
+            return next(iter(self.parser.parse_trees()))
+        return None
+
+    def __bool__(self):
+        if self._is_match is None:
+            return self.parse_tree is not None
+        else:
+            return self._is_match
+
+    def __iter__(self) -> Iterator[ParseTree[ParseTreeValue]]:
+        return self.parser.parse_trees()
 
 
 class Grammar:
@@ -470,11 +547,9 @@ class Grammar:
         self.used_by: Dict[NonTerminal, Set[NonTerminal]] = defaultdict(set)
         self.start: Optional[Production] = None
 
-    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree[ParseTreeValue]:
+    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> Match:
         parser = EarleyParser(grammar=self, sentence=sentence, start=start)
-        parser.parse()
-        # TODO: Describe this parse error
-        raise ValueError()
+        return Match(parser)
 
     def find_partial_trees(self, sentence: bytes, start: Optional[Production] = None) -> Iterator[ParseTree[ParseTreeValue]]:
         """Enumerates all partial parse trees that could result in the given starting sentence fragment."""
@@ -774,7 +849,11 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
         print(grammar)
-        grammar.match(trace.inputstr)
+        if __debug__:
+            m = grammar.match(trace.inputstr)
+            if m:
+                for tree in m:
+                    print(tree)
         trace_iter.set_description("simplifying the grammar")
         grammar.simplify()
         print(grammar)
