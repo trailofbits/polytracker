@@ -441,7 +441,7 @@ class EarleyParser:
         states = self.states
 
         class SearchNode:
-            def __init__(self, state: EarleyState, parent: Optional['SearchNode'] = None):
+            def __init__(self, state: EarleyState, parent: Optional["SearchNode"] = None):
                 self.state: EarleyState = state
                 self.parent: Optional[SearchNode] = parent
                 if parent is None:
@@ -449,7 +449,7 @@ class EarleyParser:
                 else:
                     self.k = parent.k - 1
 
-            def successors(self) -> Iterator['SearchNode']:
+            def successors(self) -> Iterator["SearchNode"]:
                 if self.k == 0:
                     return
                 for state in self.state.potential_predecessors:
@@ -458,7 +458,7 @@ class EarleyParser:
             def is_complete(self) -> bool:
                 return self.k == 0
 
-            def ancestors(self) -> Iterator['SearchNode']:
+            def ancestors(self) -> Iterator["SearchNode"]:
                 p = self.parent
                 while p:
                     yield p
@@ -492,9 +492,7 @@ class EarleyParser:
                 self._complete(new_state, k)
         else:
             for rule in prod.rules:
-                new_state = EarleyState(
-                    production=prod, parsed=(), expected=rule.sequence, index=k, rule_or_terminal=rule
-                )
+                new_state = EarleyState(production=prod, parsed=(), expected=rule.sequence, index=k, rule_or_terminal=rule)
                 if not self.states[k].add(new_state, predecessor=state):
                     # we already encountered this state
                     existing_state = self.states[k][new_state]
@@ -526,7 +524,7 @@ class EarleyParser:
                 production=state.production,
                 parsed=state.parsed + completed.parsed,
                 expected=state.expected[1:],
-                index=state.index
+                index=state.index,
             )
             completed.completes.add(state)
             self.states[k].add(new_state, predecessor=state)
@@ -848,27 +846,36 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 
 
 class TraceProperties:
-    def __init__(self, unused_byte_offsets: List[int], out_of_order_byte_offsets: List[int]):
+    def __init__(
+        self, unused_byte_offsets: List[int], out_of_order_byte_offsets: List[int], file_seeks: List[Tuple[int, int, int]]
+    ):
         self.unused_byte_offsets: List[int] = unused_byte_offsets
+        self.file_seeks: List[Tuple[int, int, int]] = file_seeks
         self.out_of_order_byte_offsets: List[int] = out_of_order_byte_offsets
 
     def __bool__(self):
-        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets
+        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets and not self.file_seeks
 
 
 def check_trace(trace: PolyTrackerTrace) -> TraceProperties:
     # check if the trace has taint data for all input bytes:
     first_usages: List[Optional[int]] = [None] * len(trace.inputstr)
+    file_seeks: List[Tuple[int, int, int]] = []
+    last_offset = None
     for i, (offset, _) in enumerate(trace.consumed_bytes()):
         if first_usages[offset] is None:
             first_usages[offset] = i
+        if last_offset is not None:
+            if offset < last_offset:
+                file_seeks.append((i - 1, last_offset, offset))
+        last_offset = offset
     unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
     out_of_order = [
         previous_offset + 1
         for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
         if previous > first_used
     ]
-    return TraceProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order)
+    return TraceProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order, file_seeks=file_seeks)
 
 
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
@@ -885,6 +892,10 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
                 "Warning: The trace read the following bytes out of order (implying that the trace is of a parser that "
                 f"is not a pure recursive descent parser): {', '.join(map(str, properties.out_of_order_byte_offsets))}"
             )
+        if properties.file_seeks:
+            # this should only ever happen if properties.out_of_order_byte_offsets is also populated
+            seeks = [f"⎆{i}:⎗{from_offset}→{to_offset}⎘" for i, from_offset, to_offset in properties.file_seeks]
+            print(f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}")
         tree = trace_to_non_generalized_tree(trace)
         match_before = tree.matches()
         tree.simplify()
