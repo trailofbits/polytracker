@@ -321,14 +321,23 @@ class PartialMatch:
 
 
 class EarleyState:
-    __slots__ = ["production", "parsed", "expected", "index", "potential_predecessors"]
+    __slots__ = ["production", "parsed", "expected", "index", "rule_or_terminal", "predecessors", "completes"]
 
-    def __init__(self, production: Production, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
+    def __init__(
+        self,
+        production: Production,
+        parsed: Tuple[Symbol, ...],
+        expected: Tuple[Symbol, ...],
+        index: int,
+        rule_or_terminal: Optional[Union[Rule, Terminal]] = None,
+    ):
         self.production: Production = production
         self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
         self.index: int = index
-        self.potential_predecessors: Set[EarleyState] = set()
+        self.rule_or_terminal: Optional[Union[Rule, Terminal]] = rule_or_terminal
+        self.predecessors: Set[EarleyState] = set()
+        self.completes: Set[EarleyState] = set()
 
     @property
     def finished(self) -> bool:
@@ -364,7 +373,7 @@ class EarleyQueue:
         self.elements: Dict[EarleyState, EarleyState] = {}
         self.waiting_for: Dict[NonTerminal, Set[EarleyState]] = defaultdict(set)
 
-    def add(self, state: EarleyState) -> bool:
+    def add(self, state: EarleyState, predecessor: Optional[EarleyState] = None) -> bool:
         if state in self.elements:
             # We already have this state
             return False
@@ -476,14 +485,20 @@ class EarleyParser:
         prod: Production = self.grammar[state.next_element]  # type: ignore
         if not prod.rules:
             new_state = EarleyState(production=prod, parsed=(prod.name,), expected=(), index=k)
-            if not self.states[k].add(new_state):
-                # we already encountered this state, so re-run a completion for it:
+            if not self.states[k].add(new_state, predecessor=state):
+                # we already encountered this state
+                existing_state = self.states[k][new_state]
+                # re-run a completion for it:
                 self._complete(new_state, k)
         else:
             for rule in prod.rules:
-                new_state = EarleyState(production=prod, parsed=(), expected=rule.sequence, index=k)
-                if not self.states[k].add(new_state):
-                    # we already encountered this state, so re-run a completion for it:
+                new_state = EarleyState(
+                    production=prod, parsed=(), expected=rule.sequence, index=k, rule_or_terminal=rule
+                )
+                if not self.states[k].add(new_state, predecessor=state):
+                    # we already encountered this state
+                    existing_state = self.states[k][new_state]
+                    # re-run a completion for it:
                     self._complete(new_state, k)
 
     def _scan(self, state: EarleyState, k: int) -> bool:
@@ -491,14 +506,15 @@ class EarleyParser:
         terminal = expected_element.terminal  # type: ignore
         if not self.sentence[k:].startswith(terminal):
             return False
-        self.states[k + len(terminal)].add(
-            EarleyState(
-                production=state.production,
-                parsed=state.parsed + (state.next_element,),
-                expected=state.expected[1:],
-                index=state.index,
-            )
+        new_state = EarleyState(
+            production=state.production,
+            parsed=state.parsed + (state.next_element,),
+            expected=state.expected[1:],
+            index=state.index,
+            rule_or_terminal=expected_element,  # type: ignore
         )
+        added = self.states[k + len(terminal)].add(new_state, predecessor=state)
+        assert added
         return True
 
     def _complete(self, completed: EarleyState, k: int):
@@ -512,7 +528,8 @@ class EarleyParser:
                 expected=state.expected[1:],
                 index=state.index
             )
-            self.states[k].add(new_state)
+            completed.completes.add(state)
+            self.states[k].add(new_state, predecessor=state)
 
 
 class Match:
