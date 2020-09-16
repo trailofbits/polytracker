@@ -847,20 +847,43 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     return grammar
 
 
+class TraceProperties:
+    def __init__(self, unused_byte_offsets: List[int], out_of_order_byte_offsets: List[int]):
+        self.unused_byte_offsets: List[int] = unused_byte_offsets
+        self.out_of_order_byte_offsets: List[int] = out_of_order_byte_offsets
+
+    def __bool__(self):
+        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets
+
+
+def check_trace(trace: PolyTrackerTrace) -> TraceProperties:
+    # check if the trace has taint data for all input bytes:
+    first_usages: List[Optional[int]] = [None] * len(trace.inputstr)
+    for i, (offset, _) in enumerate(trace.consumed_bytes()):
+        if first_usages[offset] is None:
+            first_usages[offset] = i
+    unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
+    out_of_order = [
+        previous_offset + 1
+        for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
+        if previous > first_used
+    ]
+    return TraceProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order)
+
+
 def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
-        # check if the trace has taint data for all input bytes:
-        unused_bytes = set(range(len(trace.inputstr)))
-        for offset, _ in trace.consumed_bytes():
-            try:
-                unused_bytes.remove(offset)
-            except KeyError:
-                pass
-        if unused_bytes:
+        properties = check_trace(trace)
+        if properties.unused_byte_offsets:
             print(
                 "Warning: The following byte offsets were never recorded as being read in the trace: "
-                f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in sorted(unused_bytes)]!r}"
+                f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in properties.unused_byte_offsets]!r}"
+            )
+        if properties.out_of_order_byte_offsets:
+            print(
+                "Warning: The trace read the following bytes out of order (implying that the trace is of a parser that "
+                f"is not a pure recursive descent parser): {', '.join(map(str, properties.out_of_order_byte_offsets))}"
             )
         tree = trace_to_non_generalized_tree(trace)
         match_before = tree.matches()
