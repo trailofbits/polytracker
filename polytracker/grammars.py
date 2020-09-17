@@ -91,6 +91,9 @@ class Rule:
     def __len__(self):
         return len(self.sequence)
 
+    def __getitem__(self, index):
+        return self.sequence[index]
+
     def __bool__(self):
         return bool(self.sequence)
 
@@ -185,6 +188,12 @@ class Production:
                                         list(match.remaining_symbols) + remaining_symbols[1:],
                                     )
                                 )
+
+    def remove_recursive_rules(self) -> Set[Rule]:
+        """Removes and returns all rules that solely recursively call this same production"""
+        removed = set([rule for rule in self if len(rule) == 1 and rule[0] == self.name])
+        self.rules -= removed
+        return removed
 
     @property
     def can_produce_terminal(self) -> bool:
@@ -665,6 +674,9 @@ class Grammar:
             while modified_last_pass:
                 modified_last_pass = False
                 for prod in list(self.productions.values()):
+                    # remove any rules in the production that just recursively call the same production
+                    recursive_rules = prod.remove_recursive_rules()
+                    modified_last_pass = bool(recursive_rules)
                     if not prod.can_produce_terminal and prod is not self.start:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
@@ -902,15 +914,13 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         assert match_before == tree.matches() == trace.inputstr
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
-        print(grammar)
-        if __debug__:
+        if False and __debug__:
+            trace_iter.set_description("simplifying the grammar")
+            grammar.simplify()
             m = grammar.match(trace.inputstr)
             if m:
                 for tree in m:
                     print(tree)
-        trace_iter.set_description("simplifying the grammar")
-        grammar.simplify()
-        print(grammar)
         return grammar
     return Grammar()
 
