@@ -114,7 +114,7 @@ def main():
             exit(1)
         if args.outfile:
             with open(args.outfile, "w") as out_file:
-                #datalog_code = grammars.extract_datalog_grammar(traces, input_files)
+                # datalog_code = grammars.extract_datalog_grammar(traces, input_files)
                 datalog_code = datalog.DatalogParser(input_file, traces[0])
                 out_file.write(datalog_code.str)
         else:

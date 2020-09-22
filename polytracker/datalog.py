@@ -1,4 +1,4 @@
-from typing import List, BinaryIO, Dict, Iterable
+from typing import List, BinaryIO, Dict, Iterable, Union
 
 from .grammars import Terminal, PolyTrackerTrace, trace_to_grammar
 
@@ -29,7 +29,7 @@ class DatalogTrueFactDecl:
         self.name = get_valid_datalog_name(TRUE_FACT_NAME)
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f".decl {self.name}(x: number)"
 
 
@@ -39,7 +39,7 @@ class DatalogTrueFact:
         self.index = index
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f"{self.name}({self.index})"
 
     @property
@@ -58,7 +58,7 @@ class DatalogFactDecl:
         self.name = get_valid_datalog_name(byte)
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f".decl {self.name}(x: number, y: number)"
 
 
@@ -74,7 +74,7 @@ class DatalogFact:
         self.end_pos = end_pos
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f"{self.name}({self.start_pos}, {self.end_pos})."
 
 
@@ -89,7 +89,7 @@ class DatalogRule:
         self.end_char = end_char
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f"{self.name}({self.start_char}, {self.end_char})"
 
 
@@ -103,7 +103,7 @@ class DatalogOutputDecl:
         self.name = get_valid_datalog_name(name)
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f".output {self.name}"
 
 
@@ -117,7 +117,7 @@ class DatalogRuleDecl:
         self.name = get_valid_datalog_name(name)
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return f".decl {self.name}(x: number, y: number)"
 
 
@@ -128,35 +128,29 @@ class DatalogRuleList:
     """
 
     def __init__(self, rule_sequence, start_term: int):
-        self.rules = []
+        self.rules: List[Union[DatalogTrueFact, DatalogRule]] = []
         for term in rule_sequence:
             # If its a string, its a production rule
             if isinstance(term, str):
                 if term == TRUE_FACT_NAME:
-                    self.rules.append(
-                        DatalogTrueFact(chr(start_term))
-                    )
+                    self.rules.append(DatalogTrueFact(chr(start_term)))
                     start_term += 1
                     continue
 
-                self.rules.append(
-                    DatalogRule(term, chr(start_term), chr(start_term + 1))
-                )
+                self.rules.append(DatalogRule(term, chr(start_term), chr(start_term + 1)))
                 start_term += 1
             # If its a terminal, we must make sure the name matches that of the fact.
             elif isinstance(term, Terminal):
                 for val in term.terminal:
-                    self.rules.append(
-                        DatalogRule(str(val), chr(start_term), chr(start_term + 1))
-                    )
+                    self.rules.append(DatalogRule(str(val), chr(start_term), chr(start_term + 1)))
                     start_term += 1
             else:
                 print(f"WARNING term is not string/terminal: {term}")
                 raise
 
     @property
-    def str(self) -> str:
-        return ",".join([x.str for x in self.rules])
+    def val(self) -> str:
+        return ",".join([x.val for x in self.rules])
 
 
 class DatalogClause:
@@ -166,12 +160,12 @@ class DatalogClause:
         self.head.end_char = self.body.rules[len(self.body.rules) - 1].end_char
 
     @property
-    def str(self) -> str:
-        return f"{self.head.str} :- {self.body.str}."
+    def val(self) -> str:
+        return f"{self.head.val} :- {self.body.val}."
 
 
 class DatalogGrammar:
-    RULE_START = 'a'
+    RULE_START = "a"
 
     def __init__(self, trace: PolyTrackerTrace):
         self.trace = trace
@@ -199,35 +193,24 @@ class DatalogGrammar:
             # There might be no rules anyway :)
             if len(grammar.productions[prod_name].rules) == 0:
                 self.clauses.append(
-                    DatalogClause(
-                        DatalogRule(prod_name),
-                        DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START))
-                    )
+                    DatalogClause(DatalogRule(prod_name), DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)))
                 )
                 continue
             for rule in grammar.productions[prod_name].rules:
                 # Might be an empty tuple
                 if len(rule.sequence) == 0:
                     self.clauses.append(
-                        DatalogClause(
-                            DatalogRule(prod_name),
-                            DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START))
-                        )
+                        DatalogClause(DatalogRule(prod_name), DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)))
                     )
                 else:
                     self.clauses.append(
-                        DatalogClause(
-                            DatalogRule(prod_name),
-                            DatalogRuleList(rule.sequence, ord(self.RULE_START))
-                        )
+                        DatalogClause(DatalogRule(prod_name), DatalogRuleList(rule.sequence, ord(self.RULE_START)))
                     )
 
     @property
-    def str(self) -> str:
+    def val(self) -> str:
         return "\n".join(
-            [x.str for x in self.clause_decls] +
-            [x.str for x in self.output_decls] +
-            [x.str for x in self.clauses]
+            [x.val for x in self.clause_decls] + [x.val for x in self.output_decls] + [x.val for x in self.clauses]
         )
 
 
@@ -255,10 +238,12 @@ class DatalogParser:
                 self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
 
     @property
-    def str(self) -> str:
-        facts = "\n".join([self.true_fact_decl.str] +
-                          [x.str for x in self.true_facts] +
-                          [x.str for x in self.datalog_fact_decls] +
-                          [fact.str for fact in self.datalog_facts])
-        grammar = self.datalog_grammar.str
+    def val(self) -> str:
+        facts = "\n".join(
+            [self.true_fact_decl.val]
+            + [x.val for x in self.true_facts]
+            + [x.val for x in self.datalog_fact_decls]
+            + [fact.val for fact in self.datalog_facts]
+        )
+        grammar = self.datalog_grammar.val
         return f"{facts}\n\n{grammar}"
