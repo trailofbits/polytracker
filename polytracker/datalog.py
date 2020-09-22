@@ -183,7 +183,6 @@ class DatalogGrammar:
     def extract_datalog_grammar(self):
         unique_rules: Dict[str, bool] = {}
         grammar = trace_to_grammar(self.trace)
-        print(str(grammar))
         # Note, this is potentially buggy for now.
         # grammar.simplify()
         for prod_name in grammar.productions:
