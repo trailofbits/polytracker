@@ -241,7 +241,7 @@ class DatalogParser:
     def val(self) -> str:
         facts = "\n".join(
             [self.true_fact_decl.val]
-            + [x.val for x in self.true_facts]
+            + [x.val + "." for x in self.true_facts]
             + [x.val for x in self.datalog_fact_decls]
             + [fact.val for fact in self.datalog_facts]
         )
