@@ -99,6 +99,18 @@ RUN ${CXX} --instrument-bitcode -f pdftotext.bc -o pdftotext_track --output-bitc
 RUN get-bc -b pdfinfo
 RUN ${CXX} --instrument-bitcode -f pdfinfo.bc -o pdfinfo_track --output-bitcode pdfinfo_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
+RUN get-bc -b pdftops 
+RUN ${CXX} --instrument-bitcode -f pdftops.bc -o pdftops_track --output-bitcode pdftops_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+
+RUN get-bc -b pdfunite 
+RUN ${CXX} --instrument-bitcode -f pdfunite.bc -o pdfunite_track --output-bitcode pdfunite_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+
+RUN get-bc -b pdfattach 
+RUN ${CXX} --instrument-bitcode -f pdfattach.bc -o pdfattach_track --output-bitcode pdfattach_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+
+RUN get-bc -b pdfimages 
+RUN ${CXX} --instrument-bitcode -f pdfimages.bc -o pdfimages_track --output-bitcode pdfimages_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
 WORKDIR /workdir
