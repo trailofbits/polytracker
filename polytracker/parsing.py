@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Dict, Generic, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
@@ -69,6 +69,9 @@ class ParseTree(ABC, Generic[V]):
             if t.is_leaf():
                 yield t  # type: ignore
 
+    def __getattr__(self, child_index: int) -> V:
+        return self.children[child_index]
+
     def __iter__(self) -> Iterator["ParseTree"]:
         return iter(self.children)
 
@@ -100,9 +103,9 @@ class ParseTree(ABC, Generic[V]):
 class ImmutableParseTree(Generic[V], ParseTree[V]):
     __slots__ = "_children"
 
-    def __init__(self, value: V):
+    def __init__(self, value: V, children: Iterable[V] = ()):
         super().__init__(value)
-        self._children: List[V] = []
+        self._children: List[V] = list(children)
 
     @property
     def children(self) -> List[V]:
@@ -118,6 +121,9 @@ class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     @ImmutableParseTree.children.setter
     def children(self, new_children: List[V]):
         self._children = new_children
+
+    def __setattr__(self, child_index: int, child: V):
+        self._children[child_index] = child
 
 
 def escape_byte(byte_value: int) -> str:
