@@ -6,7 +6,8 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import highlight_offset, NonGeneralizedParseTree, ParseTree, Start, Terminal, trace_to_non_generalized_tree
+from .parsing import highlight_offset, ImmutableParseTree, NonGeneralizedParseTree, ParseTree, Start, Terminal, \
+    trace_to_non_generalized_tree
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -126,13 +127,13 @@ class Production:
     def partial_match(self, sentence: bytes) -> Iterator["PartialMatch"]:
         """Enumerates all partial parse trees and remaining symbols that match the given sentence"""
         if not self.rules or not sentence:
-            yield PartialMatch(tree=ParseTree(self), remaining_symbols=(), remaining_bytes=sentence)
+            yield PartialMatch(tree=ImmutableParseTree(self), remaining_symbols=(), remaining_bytes=sentence)
             return
         for rule in self.rules:
 
             def make_tree() -> Tuple[ParseTree[ParseTreeValue], ParseTree[ParseTreeValue]]:
-                root: ParseTree[ParseTreeValue] = ParseTree(self)
-                rtree: ParseTree[ParseTreeValue] = ParseTree(rule)
+                root: ParseTree[ParseTreeValue] = ImmutableParseTree(self)
+                rtree: ParseTree[ParseTreeValue] = ImmutableParseTree(rule)
                 root.children.append(rtree)  # type: ignore
                 return root, rtree
 
@@ -143,7 +144,7 @@ class Production:
                     root_tree, rule_tree = make_tree()
                     if not rule_tree.children:
                         if not trees:
-                            trees = [ParseTree(Terminal(""))]
+                            trees = [ImmutableParseTree(Terminal(""))]
                         rule_tree.children = trees  # type: ignore
                     yield PartialMatch(
                         tree=root_tree, remaining_symbols=tuple(remaining_symbols), remaining_bytes=remaining_bytes
@@ -153,7 +154,7 @@ class Production:
                     if isinstance(next_symbol, Terminal):
                         if remaining_bytes == next_symbol.terminal:
                             root_tree, rule_tree = make_tree()
-                            rule_tree.children = trees + [ParseTree(next_symbol)]  # type: ignore
+                            rule_tree.children = trees + [ImmutableParseTree(next_symbol)]  # type: ignore
                             yield PartialMatch(
                                 tree=root_tree, remaining_symbols=tuple(remaining_symbols[1:]), remaining_bytes=b""
                             )
@@ -161,7 +162,7 @@ class Production:
                             stack.append(
                                 (
                                     remaining_bytes[len(next_symbol.terminal) :],
-                                    trees + [ParseTree(next_symbol)],
+                                    trees + [ImmutableParseTree(next_symbol)],
                                     remaining_symbols[1:],
                                 )
                             )
@@ -337,7 +338,7 @@ class PartialMatch:
 
 
 class EarleyState:
-    __slots__ = "production", "parsed", "expected", "index", "rule_or_terminal", "predecessors"
+    __slots__ = "production", "parsed", "expected", "index", "rule_or_terminal", "predecessors", "completed_by"
 
     def __init__(
         self,
@@ -353,6 +354,7 @@ class EarleyState:
         self.index: int = index
         self.rule_or_terminal: Optional[Union[Rule, Terminal]] = rule_or_terminal
         self.predecessors: Set[EarleyState] = set()
+        self.completed_by: Set[EarleyState] = set()
 
     @property
     def finished(self) -> bool:
@@ -558,7 +560,8 @@ class EarleyParser:
                 expected=state.expected[1:],
                 index=state.index,
             )
-            self.states[k].add(new_state, left_sibling=completed)
+            self.states[k].add(new_state, left_sibling=state)
+            state.completed_by.add(completed)
 
 
 class Match:

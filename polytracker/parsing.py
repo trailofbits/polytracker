@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from intervaltree import Interval, IntervalTree
@@ -11,13 +12,17 @@ V = TypeVar("V")
 T = TypeVar("T", bound="ParseTree")
 
 
-class ParseTree(Generic[V]):
-    __slots__ = "value", "children", "_descendants"
+class ParseTree(ABC, Generic[V]):
+    __slots__ = "value", "_descendants"
 
     def __init__(self: T, value: V):
         self.value: V = value
-        self.children: List[T] = []
         self._descendants: Optional[int] = None
+
+    @property
+    @abstractmethod
+    def children(self) -> List[T]:
+        raise NotImplementedError()
 
     def to_dag(self) -> DAG["ParseTree[V]"]:
         dag: DAG[ParseTree[V]] = DAG()
@@ -52,10 +57,9 @@ class ParseTree(Generic[V]):
             yield node
             s.extend(reversed(node.children))
 
+    @abstractmethod
     def clone(self: T) -> T:
-        ret = self.__class__(self.value)
-        ret.children = [c.clone() for c in self.children]
-        return ret
+        raise NotImplementedError()
 
     def is_leaf(self) -> bool:
         return not bool(self.children)
@@ -91,6 +95,29 @@ class ParseTree(Generic[V]):
                         stack.append(" ")
                     stack.append(c)
         return ret
+
+
+class ImmutableParseTree(Generic[V], ParseTree[V]):
+    __slots__ = "_children"
+
+    def __init__(self, value: V):
+        super().__init__(value)
+        self._children: List[V] = []
+
+    @property
+    def children(self) -> List[V]:
+        return self._children
+
+    def clone(self: T) -> T:
+        ret = self.__class__(self.value)
+        ret.children = [c.clone() for c in self.children]
+        return ret
+
+
+class MutableParseTree(Generic[V], ImmutableParseTree[V]):
+    @ImmutableParseTree.children.setter
+    def children(self, new_children: List[V]):
+        self._children = new_children
 
 
 def escape_byte(byte_value: int) -> str:
@@ -211,7 +238,7 @@ def trace_to_tree(
     return root
 
 
-class NonGeneralizedParseTree(ParseTree[Union[Start, TraceEvent, Terminal]]):
+class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal]]):
     def __init__(self, value: Union[Start, TraceEvent, Terminal]):
         super().__init__(value)
         self.consumed: List[Tuple[int, int]]
