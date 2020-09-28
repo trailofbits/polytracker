@@ -6,8 +6,8 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import highlight_offset, ImmutableParseTree, NonGeneralizedParseTree, ParseTree, Start, Terminal, \
-    trace_to_non_generalized_tree
+from .parsing import highlight_offset, ImmutableParseTree, MutableParseTree, NonGeneralizedParseTree, ParseTree, \
+    Start, Terminal, trace_to_non_generalized_tree
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -468,49 +468,91 @@ class EarleyParser:
         if not self.parsed:
             return self.parse()
 
-        class Sequence:
-            def __init__(self, state: EarleyState, parent: Optional['Sequence'] = None):
-                self._state: EarleyState = state
-                if parent is not None:
-                    self._visited: FrozenSet[EarleyState] = parent._visited | frozenset({state})
-                    self._parent: Optional[Sequence] = parent
-                else:
-                    self._parent = None
-                    self._visited = frozenset({state})
+        class NodeState:
+            def __init__(self, state: EarleyState):
+                self.state: EarleyState = state
+                self._predecessors_iter: Iterator[EarleyState] = iter(state.predecessors)
+                self._completed_by_iter: Iterator[EarleyState] = iter(state.completed_by)
+                try:
+                    self._predecessor: Optional[EarleyState] = next(self._predecessors_iter)
+                except StopIteration:
+                    self._predecessor = None
+                try:
+                    self._completed_by: Optional[EarleyState] = next(self._completed_by_iter)
+                except StopIteration:
+                    self._completed_by = None
+                self._predecessor_node: Optional[NodeState] = None
+                self._completed_by_node: Optional[NodeState] = None
 
             @property
-            def head(self) -> EarleyState:
-                return self._state
+            def predecessor(self) -> Optional["NodeState"]:
+                if self._predecessor_node is None and self._predecessor is not None:
+                    self._predecessor_node = NodeState(self._predecessor)
+                return self._predecessor_node
 
-            def prepend(self, state: EarleyState) -> Optional["Sequence"]:
-                if state in self._visited:
-                    return None
-                return Sequence(state, parent=self)
+            @property
+            def completed_by(self) -> Optional["NodeState"]:
+                if self._completed_by_node is None and self._completed_by is not None:
+                    self._completed_by_node = NodeState(self._completed_by)
+                return self._completed_by_node
 
-            def __len__(self):
-                return len(self._visited)
+            def postorder(self) -> Iterator["NodeState"]:
+                stack: List[Tuple[bool, NodeState]] = [(False, self)]
+                while stack:
+                    expanded, node = stack.pop()
+                    if not expanded and (node._predecessor is not None or node._completed_by is not None):
+                        stack.append((True, node))
+                        if node._predecessor is not None:
+                            stack.append((False, node.predecessor))
+                        if node._completed_by is not None:
+                            stack.append((False, node.completed_by))
+                    else:
+                        yield node
 
-            def __contains__(self, state: EarleyState):
-                return state in self._visited
+            def iterate(self) -> bool:
+                i: Iterator[NodeState] = self.postorder()
+                for node in i:
+                    if node._predecessor is not None:
+                        try:
+                            self._predecessor = next(self._predecessors_iter)
+                            self._predecessor_node = None
+                            return True
+                        except StopIteration:
+                            pass
+                    if self._completed_by is not None:
+                        try:
+                            self._completed_by = next(self._completed_by_iter)
+                            self._completed_by_node = None
+                            return True
+                        except StopIteration:
+                            pass
+                    return False
 
-            def __iter__(self) -> Iterator[EarleyState]:
-                s = self
-                while s is not None:
-                    yield s._state
-                    s = s._parent
+            def siblings(self) -> Iterator["NodeState"]:
+                node = self
+                while node.predecessor is not None:
+                    yield node
+                    if not node.parsed:
+                        break
+                    node = node.predecessor
 
-            def __str__(self):
-                return ", ".join(map(str, self))
+            def tree(self) -> MutableParseTree[ParseTreeValue]:
+                tree = MutableParseTree(self.state.rule_or_terminal)
+                if self.completed_by is not None:
+                    assert self.is_non_terminal()
+                    tree.children = list(self.completed_by.siblings())
+                return tree
 
-        sequences: List[Sequence] = [Sequence(state) for state in self.states[-1] if state.finished]
+            def is_non_terminal(self) -> bool:
+                return not self.state.finished and isinstance(self.state.next_element, NonTerminal)
 
-        while sequences:
-            seq = sequences.pop()
-            state = seq.head
-            if not state.predecessors:
-                print(str(seq))
-            else:
-                sequences.extend([Sequence(pred, parent=seq) for pred in state.predecessors if pred not in seq])
+        for final_state in self.states[-1]:
+            if final_state.finished:
+                node = NodeState(final_state)
+                while True:
+                    yield node.tree()
+                    if not node.iterate():
+                        break
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
@@ -939,7 +981,7 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         assert match_before == tree.matches() == trace.inputstr
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
-        bool(grammar.match(trace.inputstr))
+        assert bool(grammar.match(trace.inputstr))
         if False and __debug__:
             trace_iter.set_description("simplifying the grammar")
             grammar.simplify()

@@ -122,9 +122,6 @@ class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     def children(self, new_children: List[V]):
         self._children = new_children
 
-    def __setattr__(self, child_index: int, child: V):
-        self._children[child_index] = child
-
 
 def escape_byte(byte_value: int) -> str:
     if byte_value == ord("\n"):
