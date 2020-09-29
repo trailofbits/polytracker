@@ -404,6 +404,21 @@ class EarleyQueue:
             state.predecessors.add(left_sibling)
         return True
 
+    def remove(self, *states: Union[EarleyState, Iterable]) -> int:
+        num_removed: int = 0
+        for state in states:
+            if isinstance(state, EarleyState):
+                return self.remove({state})
+            elif not isinstance(state, set):
+                return self.remove(set(state))
+            size_before: int = len(self.elements)
+            self.queue = [e for e in self.queue if e not in state]
+            self.elements = {e: e for e in self.queue}
+            for s in self.waiting_for.values():
+                s -= state
+            num_removed += size_before - len(self.elements)
+        return num_removed
+
     def __contains__(self, item):
         return item in self.elements
 
@@ -437,6 +452,27 @@ class EarleyParser:
         self.states: List[EarleyQueue] = [EarleyQueue() for _ in range(len(sentence) + 1)]
         self.parsed: bool = False
 
+    def _prune(self) -> int:
+        """Removes Earley states that cannot lead to a match"""
+        if not self.parsed:
+            self.parse()
+        with tqdm(desc="garbage collecting Earley states", unit=" states", leave=False, total=1) as t:
+            is_valid: Set[EarleyState] = {state for queue in self.states for state in queue if state.finished}
+            to_visit = list(is_valid)
+            while to_visit:
+                state = to_visit.pop()
+                predecessors = [p for p in state.predecessors if p not in is_valid]
+                to_visit.extend(predecessors)
+                is_valid |= set(predecessors)
+                t.total = len(to_visit) + len(is_valid)
+                t.update(1)
+        removed: int = 0
+        with tqdm(desc="pruning unused Earley states", unit=" states", leave=False, initial=0) as t:
+            for queue in tqdm(self.states, desc="processing", unit=" queues", leave=False):
+                removed += queue.remove(*(queue.elements.keys() - is_valid))
+                t.update(removed)
+        return removed
+
     def parse(self) -> Iterator[ParseTree[ParseTreeValue]]:
         if not self.parsed:
             self.parsed = True
@@ -461,6 +497,7 @@ class EarleyParser:
                     f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
                     f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}"
                 )
+            self._prune()
         return self.parse_trees()
 
     def parse_trees(self) -> Iterator[ParseTree[ParseTreeValue]]:
