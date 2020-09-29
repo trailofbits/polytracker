@@ -69,7 +69,7 @@ class ParseTree(ABC, Generic[V]):
             if t.is_leaf():
                 yield t  # type: ignore
 
-    def __getattr__(self, child_index: int) -> V:
+    def __getitem__(self, child_index: int) -> V:
         return self.children[child_index]
 
     def __iter__(self) -> Iterator["ParseTree"]:
@@ -121,6 +121,9 @@ class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     @ImmutableParseTree.children.setter
     def children(self, new_children: List[V]):
         self._children = new_children
+
+    def __setitem__(self, child_index: int, new_child: V):
+        self.children[child_index] = new_child
 
 
 def escape_byte(byte_value: int) -> str:
