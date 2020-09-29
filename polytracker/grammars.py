@@ -529,29 +529,47 @@ class EarleyParser:
                     return False
 
             def siblings(self) -> Iterator["NodeState"]:
-                node = self
-                while node.predecessor is not None:
+                node: Optional[NodeState] = self
+                while node is not None:
                     yield node
-                    if not node.parsed:
+                    if not node.state.parsed:
                         break
                     node = node.predecessor
 
-            def tree(self) -> MutableParseTree[ParseTreeValue]:
-                tree = MutableParseTree(self.state.rule_or_terminal)
-                if self.completed_by is not None:
-                    assert self.is_non_terminal()
-                    tree.children = list(self.completed_by.siblings())
-                return tree
+            def tree(self, parent: Optional[MutableParseTree[ParseTreeValue]]) -> MutableParseTree[ParseTreeValue]:
+                root: Optional[MutableParseTree[ParseTreeValue]] = None
+                to_expand: List[
+                    Tuple[NodeState, Optional[MutableParseTree[ParseTreeValue]]]
+                ] = [(self, parent)]
+                while to_expand:
+                    node, parent = to_expand.pop()
+                    if node.completed_by is not None:
+                        assert node.is_non_terminal()
+                        tree = MutableParseTree(node.state.production)
+                        for sibling in node.completed_by.siblings():
+                            to_expand.append((sibling, tree))
+                    else:
+                        assert not node.is_non_terminal()
+                        tree = MutableParseTree(node.state.rule_or_terminal)
+                    for sibling in itertools.islice(node.siblings(), 1, None):
+                        to_expand.append((sibling, parent))
+                    if root is None:
+                        root = tree
+                    if parent is not None:
+                        parent.children.append(tree)
+                return root
 
             def is_non_terminal(self) -> bool:
                 return not self.state.finished and isinstance(self.state.next_element, NonTerminal)
 
         for final_state in self.states[-1]:
             if final_state.finished:
-                node = NodeState(final_state)
+                ns = NodeState(final_state)
                 while True:
-                    yield node.tree()
-                    if not node.iterate():
+                    start_production = MutableParseTree(self.grammar.start)
+                    ns.tree(parent=start_production)
+                    yield start_production
+                    if not ns.iterate():
                         break
 
     def _predict(self, state: EarleyState, k: int):
