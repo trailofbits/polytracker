@@ -338,7 +338,8 @@ class PartialMatch:
 
 
 class EarleyState:
-    __slots__ = "production", "parsed", "expected", "index", "rule_or_terminal", "predecessors", "completed_by"
+    __slots__ = "production", "parsed", "expected", "index", "rule_or_terminal", "predecessors", "completed_by", \
+                "successors"
 
     def __init__(
         self,
@@ -355,6 +356,7 @@ class EarleyState:
         self.rule_or_terminal: Optional[Union[Rule, Terminal]] = rule_or_terminal
         self.predecessors: Set[EarleyState] = set()
         self.completed_by: Set[EarleyState] = set()
+        self.successors: Set[EarleyState] = set()  # This is populated during pruning
 
     @property
     def finished(self) -> bool:
@@ -451,9 +453,13 @@ class EarleyParser:
             self.start = start
         self.states: List[EarleyQueue] = [EarleyQueue() for _ in range(len(sentence) + 1)]
         self.parsed: bool = False
+        self.start_states: List[EarleyState] = []
 
     def _prune(self) -> int:
-        """Removes Earley states that cannot lead to a match"""
+        """Removes Earley states that cannot lead to a match
+
+        Also sets each state's successors set
+        """
         if not self.parsed:
             self.parse()
         with tqdm(desc="garbage collecting Earley states", unit=" states", leave=False, total=1) as t:
@@ -462,6 +468,8 @@ class EarleyParser:
             while to_visit:
                 state = to_visit.pop()
                 predecessors = [p for p in state.predecessors if p not in is_valid]
+                for p in predecessors:
+                    p.successors.add(state)
                 to_visit.extend(predecessors)
                 is_valid |= set(predecessors)
                 t.total = len(to_visit) + len(is_valid)
@@ -476,8 +484,12 @@ class EarleyParser:
     def parse(self) -> Iterator[ParseTree[ParseTreeValue]]:
         if not self.parsed:
             self.parsed = True
-            for rule in self.start.rules:
-                self.states[0].add(EarleyState(production=self.start, parsed=(), expected=rule.sequence, index=0))
+            self.start_states = [
+                EarleyState(production=self.start, parsed=(), expected=rule.sequence, index=0)
+                for rule in self.start.rules
+            ]
+            for start_state in self.start_states:
+                self.states[0].add(start_state)
             last_k_with_match = -1
             for k in trange(len(self.sentence) + 1, leave=False, desc="Parsing", unit=" bytes"):
                 for state in self.states[k]:
@@ -506,26 +518,27 @@ class EarleyParser:
             return self.parse()
 
         class NodeState:
-            def __init__(self, state: EarleyState):
+            def __init__(self, state: EarleyState, parent: Optional["NodeState"] = None):
                 self.state: EarleyState = state
-                self._predecessors_iter: Iterator[EarleyState] = iter(state.predecessors)
+                self._successors_iter: Iterator[EarleyState] = iter(state.successors)
                 self._completed_by_iter: Iterator[EarleyState] = iter(state.completed_by)
                 try:
-                    self._predecessor: Optional[EarleyState] = next(self._predecessors_iter)
+                    self.successors: Optional[EarleyState] = next(self._successors_iter)
                 except StopIteration:
-                    self._predecessor = None
+                    self._successor = None
                 try:
                     self._completed_by: Optional[EarleyState] = next(self._completed_by_iter)
                 except StopIteration:
                     self._completed_by = None
-                self._predecessor_node: Optional[NodeState] = None
+                self.parent: NodeState = parent
+                self._successor_node: Optional[NodeState] = None
                 self._completed_by_node: Optional[NodeState] = None
 
             @property
-            def predecessor(self) -> Optional["NodeState"]:
-                if self._predecessor_node is None and self._predecessor is not None:
-                    self._predecessor_node = NodeState(self._predecessor)
-                return self._predecessor_node
+            def successor(self) -> Optional["NodeState"]:
+                if self._successor_node is None and self._successor is not None:
+                    self._successor_node = NodeState(self._successor)
+                return self._successor_node
 
             @property
             def completed_by(self) -> Optional["NodeState"]:
@@ -537,10 +550,10 @@ class EarleyParser:
                 stack: List[Tuple[bool, NodeState]] = [(False, self)]
                 while stack:
                     expanded, node = stack.pop()
-                    if not expanded and (node._predecessor is not None or node._completed_by is not None):
+                    if not expanded and (node._successor is not None or node._completed_by is not None):
                         stack.append((True, node))
-                        if node._predecessor is not None:
-                            stack.append((False, node.predecessor))
+                        if node._successor is not None:
+                            stack.append((False, node.successor))
                         if node._completed_by is not None:
                             stack.append((False, node.completed_by))
                     else:
@@ -549,10 +562,10 @@ class EarleyParser:
             def iterate(self) -> bool:
                 i: Iterator[NodeState] = self.postorder()
                 for node in i:
-                    if node._predecessor is not None:
+                    if node._successor is not None:
                         try:
-                            self._predecessor = next(self._predecessors_iter)
-                            self._predecessor_node = None
+                            self._successor = next(self._successors_iter)
+                            self._successor_node = None
                             return True
                         except StopIteration:
                             pass
@@ -569,26 +582,25 @@ class EarleyParser:
                 node: Optional[NodeState] = self
                 while node is not None:
                     yield node
-                    if not node.state.parsed:
+                    if not node.state.finished:
                         break
-                    node = node.predecessor
+                    node = node.successor
 
-            def tree(self, parent: Optional[MutableParseTree[ParseTreeValue]]) -> MutableParseTree[ParseTreeValue]:
+            def tree(self) -> MutableParseTree[ParseTreeValue]:
                 root: Optional[MutableParseTree[ParseTreeValue]] = None
                 to_expand: List[
                     Tuple[NodeState, Optional[MutableParseTree[ParseTreeValue]]]
-                ] = [(self, parent)]
+                ] = [(self, None)]
                 while to_expand:
                     node, parent = to_expand.pop()
                     if node.completed_by is not None:
                         assert node.is_non_terminal()
                         tree = MutableParseTree(node.state.production)
-                        for sibling in node.completed_by.siblings():
-                            to_expand.append((sibling, tree))
+                        to_expand.append((node.completed_by, tree))
                     else:
                         assert not node.is_non_terminal()
                         tree = MutableParseTree(node.state.rule_or_terminal)
-                    for sibling in itertools.islice(node.siblings(), 1, None):
+                    for sibling in reversed(list(node.siblings())[1:]):
                         to_expand.append((sibling, parent))
                     if root is None:
                         root = tree
@@ -599,15 +611,12 @@ class EarleyParser:
             def is_non_terminal(self) -> bool:
                 return not self.state.finished and isinstance(self.state.next_element, NonTerminal)
 
-        for final_state in self.states[-1]:
-            if final_state.finished:
-                ns = NodeState(final_state)
-                while True:
-                    start_production = MutableParseTree(self.grammar.start)
-                    ns.tree(parent=start_production)
-                    yield start_production
-                    if not ns.iterate():
-                        break
+        for start_state in self.start_states:
+            ns = NodeState(start_state)
+            while True:
+                yield ns.tree()
+                if not ns.iterate():
+                    break
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
@@ -657,7 +666,7 @@ class EarleyParser:
                 expected=state.expected[1:],
                 index=state.index,
             )
-            self.states[k].add(new_state, left_sibling=state)
+            self.states[k].add(new_state, left_sibling=completed)
             state.completed_by.add(completed)
 
 
