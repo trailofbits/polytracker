@@ -518,81 +518,89 @@ class EarleyParser:
             return self.parse()
 
         class NodeState:
-            def __init__(self, state: EarleyState, parent: Optional["NodeState"] = None):
+            def __init__(self, state: EarleyState, successor: Optional["NodeState"] = None):
                 self.state: EarleyState = state
-                self._successors_iter: Iterator[EarleyState] = iter(state.successors)
-                self._completed_by_iter: Iterator[EarleyState] = iter(state.completed_by)
+                self._predecessors_iter: Iterator[EarleyState] = iter(state.predecessors)
                 try:
-                    self.successors: Optional[EarleyState] = next(self._successors_iter)
+                    self._predecessor: Optional[EarleyState] = next(self._predecessors_iter)
                 except StopIteration:
-                    self._successor = None
-                try:
-                    self._completed_by: Optional[EarleyState] = next(self._completed_by_iter)
-                except StopIteration:
-                    self._completed_by = None
-                self.parent: NodeState = parent
-                self._successor_node: Optional[NodeState] = None
-                self._completed_by_node: Optional[NodeState] = None
+                    self._predecessor = None
+                self._predecessor_node: Optional[NodeState] = None
+                self._tree: Optional[MutableParseTree] = None
+                self.successor: Optional[NodeState] = successor
 
             @property
-            def successor(self) -> Optional["NodeState"]:
-                if self._successor_node is None and self._successor is not None:
-                    self._successor_node = NodeState(self._successor)
-                return self._successor_node
+            def predecessor(self) -> Optional["NodeState"]:
+                if self._predecessor_node is None and self._predecessor is not None:
+                    self._predecessor_node = NodeState(self._predecessor)
+                return self._predecessor_node
 
-            @property
-            def completed_by(self) -> Optional["NodeState"]:
-                if self._completed_by_node is None and self._completed_by is not None:
-                    self._completed_by_node = NodeState(self._completed_by)
-                return self._completed_by_node
+            def left_sibling(self) -> Optional["NodeState"]:
+                pred = self.predecessor
+                if pred is not None and len(self.state.parsed) >= len(pred.state.parsed):
+                    return pred
+                else:
+                    return None
 
-            def postorder(self) -> Iterator["NodeState"]:
-                stack: List[Tuple[bool, NodeState]] = [(False, self)]
-                while stack:
-                    expanded, node = stack.pop()
-                    if not expanded and (node._successor is not None or node._completed_by is not None):
-                        stack.append((True, node))
-                        if node._successor is not None:
-                            stack.append((False, node.successor))
-                        if node._completed_by is not None:
-                            stack.append((False, node.completed_by))
-                    else:
-                        yield node
+            def parent(self) -> Optional["NodeState"]:
+                pass
 
             def iterate(self) -> bool:
-                i: Iterator[NodeState] = self.postorder()
-                for node in i:
-                    if node._successor is not None:
-                        try:
-                            self._successor = next(self._successors_iter)
-                            self._successor_node = None
-                            return True
-                        except StopIteration:
-                            pass
-                    if self._completed_by is not None:
-                        try:
-                            self._completed_by = next(self._completed_by_iter)
-                            self._completed_by_node = None
-                            return True
-                        except StopIteration:
-                            pass
-                    return False
-
-            def siblings(self) -> Iterator["NodeState"]:
-                node: Optional[NodeState] = self
+                nodes = []
+                node = self
                 while node is not None:
-                    yield node
-                    if not node.state.finished:
-                        break
-                    node = node.successor
+                    nodes.append(node)
+                    node = node.predecessor
+                for node in reversed(nodes):
+                    if node._predecessor is not None:
+                        try:
+                            node._predecessor = next(node._predecessors_iter)
+                            node._predecessor_node = None
+                            return True
+                        except StopIteration:
+                            pass
+                return False
 
             def tree(self) -> MutableParseTree[ParseTreeValue]:
+                self._tree = MutableParseTree(self.state.rule_or_terminal)
+                sibling_stack: List[List[NodeState]] = [[self]]
+                while sibling_stack:
+                    reversed_siblings = sibling_stack.pop()
+                    last_sibling = reversed_siblings[-1]
+                    predecessor: Optional[NodeState] = last_sibling.predecessor
+                    if predecessor is None:
+                        assert len(sibling_stack) == 0
+                        if len(reversed_siblings) == 1:
+                            return last_sibling._tree
+                        else:
+                            root = MutableParseTree(reversed_siblings[0].state.production)
+                            root.children = [sibling._tree for sibling in reversed(reversed_siblings)]
+                            return root
+                    elif len(predecessor.state.parsed) < len(last_sibling.state.parsed):
+                        # This is a
+                        pass
+
+                    last_sibling = siblings[-1][-1]
+                    if last_sibling.
+                    while leftmost_sibling is not None:
+                        if leftmost_sibling.state.finished:
+
+                    if leftmost_sibling.is_non_terminal()
+
+
                 root: Optional[MutableParseTree[ParseTreeValue]] = None
-                to_expand: List[
-                    Tuple[NodeState, Optional[MutableParseTree[ParseTreeValue]]]
-                ] = [(self, None)]
+                to_expand: List[NodeState] = [self]
                 while to_expand:
-                    node, parent = to_expand.pop()
+                    node = to_expand.pop()
+                    if node._tree is not None:
+                        if node.predecessor is None:
+                            return node._tree
+                    else:
+                        if node.is_non_terminal():
+                            node._tree = MutableParseTree(node.state.production)
+                        else:
+                            node._tree = MutableParseTree(node.state.rule_or_terminal)
+
                     if node.completed_by is not None:
                         assert node.is_non_terminal()
                         tree = MutableParseTree(node.state.production)
