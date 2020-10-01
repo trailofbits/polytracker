@@ -122,6 +122,9 @@ class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     def children(self, new_children: List[V]):
         self._children = new_children
 
+    def add_child(self, new_child: V):
+        self._children.append(new_child)
+
     def __setitem__(self, child_index: int, new_child: V):
         self.children[child_index] = new_child
 

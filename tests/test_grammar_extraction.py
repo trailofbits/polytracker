@@ -203,6 +203,9 @@ def parse_list(tracer: Tracer) -> List[Union[int, str]]:
         if first_byte == b"(":
             tracer.bb_entry("found_paren")
             ret.append(parse_parens(tracer))
+        elif first_byte == b")":
+            tracer.bb_entry("found_close_paren")
+            break
         else:
             tracer.bb_entry("no_paren")
             ret.append(parse_terminal(tracer))
@@ -254,9 +257,10 @@ class GrammarTestCase:
 
 @pytest.fixture
 def simple_grammar() -> GrammarTestCase:
-    input_str = b"(1, 2, (\"foo\", 5, \"bar\"), 3, 4)"
+    #input_str = b"(1, 2, (\"foo\", 5, \"bar\"), 3, 4)"
+    input_str = b"()"
     result, trace = make_trace(input_str)
-    assert result == [1, 2, ["foo", 5, "bar"], 3, 4]
+    #assert result == [1, 2, ["foo", 5, "bar"], 3, 4]
     return GrammarTestCase(input_str, trace)
 
 
@@ -280,3 +284,4 @@ def test_grammar_matching(simple_grammar: GrammarTestCase):
     print(simple_grammar.grammar)
     m = simple_grammar.grammar.match(simple_grammar.input_string)
     assert bool(m)
+    print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
