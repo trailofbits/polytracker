@@ -339,21 +339,25 @@ class PartialMatch:
 
 
 class EarleyState(metaclass=ABCMeta):
-    __slots__ = "production", "parsed", "expected", "index", "depth", "predecessors"
+    __slots__ = "prediction", "parsed", "expected", "index", "depth", "predecessors"
 
     def __init__(
         self,
-        production: Production,
+        prediction: "Prediction",
         parsed: Tuple[Symbol, ...],
         expected: Tuple[Symbol, ...],
         index: int
     ):
-        self.production: Production = production
+        self.prediction: Prediction = prediction
         self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
         self.index: int = index
         self.depth: int = 0
         self.predecessors: FrozenSet[EarleyState] = frozenset()
+
+    @property
+    def production(self) -> Production:
+        return self.prediction.production
 
     def add_predecessor(self, left_sibling: "EarleyState"):
         self.predecessors = self.predecessors | {left_sibling}
@@ -372,7 +376,7 @@ class EarleyState(metaclass=ABCMeta):
         raise NotImplementedError()
 
     def __hash__(self):
-        return hash((self.parsed, self.expected, self.index, self.production))
+        return hash((self.parsed, self.expected, self.index, self.prediction))
 
     def __eq__(self, other):
         if isinstance(other, EarleyState):
@@ -380,7 +384,7 @@ class EarleyState(metaclass=ABCMeta):
                 self.index == other.index
                 and self.parsed == other.parsed
                 and self.expected == other.expected
-                and self.production == other.production
+                and self.prediction == other.prediction
             )
         else:
             return False
@@ -392,7 +396,7 @@ class EarleyState(metaclass=ABCMeta):
 
 
 class Prediction(EarleyState):
-    __slots__ = "rule"
+    __slots__ = "_production", "rule"
 
     def __init__(
         self,
@@ -402,11 +406,30 @@ class Prediction(EarleyState):
         index: int,
         rule: Rule
     ):
-        super().__init__(production, parsed, expected, index)
+        super().__init__(self, parsed, expected, index)
+        self._production: Production = production
         self.rule: Rule = rule
+
+    @property
+    def production(self) -> Production:
+        return self._production
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.rule)
+
+    def __hash__(self):
+        return hash((self.parsed, self.expected, self.index, self.production))
+
+    def __eq__(self, other):
+        if isinstance(other, Prediction):
+            return (
+                    self.index == other.index
+                    and self.parsed == other.parsed
+                    and self.expected == other.expected
+                    and self.production == other.production
+            )
+        else:
+            return False
 
 
 class EmptyProduction(EarleyState):
@@ -415,6 +438,28 @@ class EmptyProduction(EarleyState):
 
 
 class Completion(EarleyState):
+    __slots__ = "completed_prediction"
+
+    def __init__(
+        self,
+        completed_prediction: Prediction,
+        prediction: Prediction,
+        parsed: Tuple[Symbol, ...],
+        expected: Tuple[Symbol, ...],
+        index: int
+    ):
+        super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
+        self.completed_prediction = completed_prediction
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.completed_prediction))
+
+    def __eq__(self, other):
+        if isinstance(other, Completion):
+            return self.completed_prediction == other.completed_prediction and super().__eq__(other)
+        else:
+            return False
+
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.production)
 
@@ -424,13 +469,13 @@ class ScannedTerminal(EarleyState):
 
     def __init__(
         self,
-        production: Production,
+        prediction: Prediction,
         parsed: Tuple[Symbol, ...],
         expected: Tuple[Symbol, ...],
         index: int,
         terminal: Terminal
     ):
-        super().__init__(production, parsed, expected, index)
+        super().__init__(prediction, parsed, expected, index)
         self.terminal: Terminal = terminal
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
@@ -450,7 +495,8 @@ class EarleyQueue:
         assert isinstance(state.next_element, NonTerminal)
         assert state.next_element == completed.production.name
         new_state = Completion(
-            production=state.production,
+            completed_prediction=completed.prediction,
+            prediction=state.prediction,
             parsed=state.parsed + completed.parsed,
             expected=state.expected[1:],
             index=state.index
@@ -565,8 +611,12 @@ class EarleyParser:
                     if not state.finished:
                         next_element = state.next_element
                         if isinstance(next_element, NonTerminal):
-                            # print(state)
-                            self._predict(state, k)
+                            # print(f"{type(state)}: {state}")
+                            # do not predict off of a non-initial Prediction
+                            if not isinstance(state, Prediction) or not state.parsed:
+                                # state is either a Completion, a Scanned Terminal, or a Prediction that has nothing
+                                # parsed yet
+                                self._predict(state, k)
                         else:
                             if self._scan(state, k):
                                 last_k_with_match = max(last_k_with_match, k + len(state.next_element.terminal) - 1)
@@ -583,10 +633,16 @@ class EarleyParser:
 
     def event_sequences(self) -> Iterator[List[EarleyState]]:
         """Enumerates all state sequences from a start state to a valid end state"""
+        #print("\n".join(["zero index state: " + str(state) for state in self.states[-1] if state.index == 0]))
+        #assert any(
+        #    True for state in self.states[-1]
+        #    if state.finished and isinstance(state, Completion) and state.index == 0 #and state.production == self.grammar.start
+        #)
         iterators: List[Tuple[Optional[EarleyState], Iterator[EarleyState]]] = [
             (None, (
                 state for state in self.states[-1]
-                if state.finished and isinstance(state, Completion) and state.production == self.grammar.start
+                if (state.finished and isinstance(state, Completion)
+                    and state.completed_prediction.production == self.grammar.start)
             ))
         ]
         history: Set[EarleyState] = set()
@@ -664,7 +720,7 @@ class EarleyParser:
         if not self.sentence[k:].startswith(terminal):
             return False
         new_state = ScannedTerminal(
-            production=state.production,
+            prediction=state.prediction,
             parsed=state.parsed + (state.next_element,),
             expected=state.expected[1:],
             index=state.index,
