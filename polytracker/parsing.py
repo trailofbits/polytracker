@@ -220,8 +220,8 @@ def trace_to_tree(
             parent = None
             if prev_event is not None:
                 if isinstance(prev_event, FunctionReturn):
-                    if prev_event.function_call is not None:
-                        parent = nodes_by_event[prev_event.function_call]
+                    if prev_event.function_call is not None and prev_event.function_call.caller is not None:
+                        parent = nodes_by_event[prev_event.function_call.caller]
                 else:
                     parent = nodes_by_event[prev_event]
             if parent is None:
