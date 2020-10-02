@@ -633,16 +633,11 @@ class EarleyParser:
 
     def event_sequences(self) -> Iterator[List[EarleyState]]:
         """Enumerates all state sequences from a start state to a valid end state"""
-        #print("\n".join(["zero index state: " + str(state) for state in self.states[-1] if state.index == 0]))
-        #assert any(
-        #    True for state in self.states[-1]
-        #    if state.finished and isinstance(state, Completion) and state.index == 0 #and state.production == self.grammar.start
-        #)
         iterators: List[Tuple[Optional[EarleyState], Iterator[EarleyState]]] = [
             (None, (
                 state for state in self.states[-1]
                 if (state.finished and isinstance(state, Completion)
-                    and state.completed_prediction.production == self.grammar.start)
+                    and state.production == self.grammar.start)
             ))
         ]
         history: Set[EarleyState] = set()
@@ -726,8 +721,7 @@ class EarleyParser:
             index=state.index,
             terminal=expected_element
         )
-        added = self.states[k + len(terminal)].add(new_state, left_sibling=state)
-        assert added
+        self.states[k + len(terminal)].add(new_state, left_sibling=state)
         return True
 
     def _complete(self, completed: EarleyState, k: int):

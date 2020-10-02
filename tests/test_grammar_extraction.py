@@ -245,6 +245,7 @@ class GrammarTestCase:
         self.trace: PolyTrackerTrace = trace
         self._tree: Optional[NonGeneralizedParseTree] = None
         self._grammar: Optional[Grammar] = None
+        self._simplified_grammar: Optional[Grammar] = None
 
     @property
     def tree(self) -> NonGeneralizedParseTree:
@@ -257,6 +258,13 @@ class GrammarTestCase:
         if self._grammar is None:
             self._grammar = parse_tree_to_grammar(self.tree)
         return self._grammar
+
+    @property
+    def simplified_grammar(self) -> Grammar:
+        if self._simplified_grammar is None:
+            self._simplified_grammar = parse_tree_to_grammar(self.tree)
+            self._simplified_grammar.simplify()
+        return self._simplified_grammar
 
 
 @pytest.fixture
@@ -290,30 +298,36 @@ def test_parser_event_sequence_correctness(simple_grammar: GrammarTestCase):
     assert any(state for state in parser.states[-1] if (
             state.finished and
             isinstance(state, Completion) and
-            state.completed_prediction.production == simple_grammar.grammar.start)), \
+            state.production == simple_grammar.grammar.start)), \
         "No completion for a grammar start symbol"
     # ignore the output of parser.parse(), because operating on it will call parser.event_sequences(), and we want to
     # call parser.event_sequences() manually. We need to call parser.parse() to populate the Earley graph first, though.
     for sequence in parser.event_sequences():
         # ensure that each prediction has an associated completion:
-        predictions: Set[Prediction] = set()
-        mapping: Dict[Prediction, Completion] = {}
+        predictions: List[Prediction] = []
         for event in sequence:
             if isinstance(event, Prediction):
-                predictions.add(event)
+                predictions.append(event)
             elif isinstance(event, Completion):
-                assert event.completed_prediction not in mapping, f"For completion {event}, prediction "\
-                                                                  f"{event.completed_prediction} was already completed"\
-                                                                  f" by {mapping[event.completed_prediction]}"
+                assert predictions, f"Unexpected completion: {event}"
+                assert event.completed_prediction == predictions[-1], f"Event {event} completed prediction "\
+                                                                      f"{event.completed_prediction} but was expected "\
+                                                                      f"to complete {predictions[-1]}"
+                predictions.pop()
                 print(f"{event} completes {event.completed_prediction}")
-                mapping[event.completed_prediction] = event
-        uncompleted_predictions = sorted(predictions - mapping.keys(), key=lambda p: (p.index, str(p)))
-        assert not uncompleted_predictions, "These predictions were never completed:\n" + \
-                                            "\n".join([str(p) for p in uncompleted_predictions])
+        assert not predictions, "These predictions were never completed:\n" + \
+                                "\n".join([str(p) for p in predictions])
 
 
 def test_grammar_matching(simple_grammar: GrammarTestCase):
     print(simple_grammar.grammar)
     m = simple_grammar.grammar.match(simple_grammar.input_string)
+    assert bool(m)
+    print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
+
+
+def test_grammar_simplification(simple_grammar: GrammarTestCase):
+    print(simple_grammar.simplified_grammar)
+    m = simple_grammar.simplified_grammar.match(simple_grammar.input_string)
     assert bool(m)
     print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
