@@ -331,27 +331,39 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
                 if isinstance(child.value, BasicBlockEntry) and len(child.children) == 1:
                     node.children = [child.children[0]]
 
-    def deconflict(self, right_sibling: "NonGeneralizedParseTree"):
-        if self.end_offset <= right_sibling.begin_offset:
+    def _winners(self, to_compare: "NonGeneralizedParseTree") -> Optional[List[int]]:
+        if self.end_offset <= to_compare.begin_offset:
             # we do not have overlap
-            return
+            return None
         # record all of our last-used times in the overlap
         our_last_used = []
         their_last_used = []
-        for i in range(right_sibling.begin_offset, self.end_offset + 1):
+        for i in range(to_compare.begin_offset, self.end_offset + 1):
             our_intervals = self.intervals[i]
             if our_intervals:
                 assert len(our_intervals) == 1
-                our_last_used.append(next(iter(our_intervals)).data)
+                last_used = next(iter(our_intervals)).data
+                if last_used is None:
+                    last_used = -1
+                our_last_used.append(last_used)
             else:
                 our_last_used.append(-1)
-            their_intervals = right_sibling.intervals[i]
+            their_intervals = to_compare.intervals[i]
             if their_intervals:
                 assert len(their_intervals) == 1
-                their_last_used.append(next(iter(their_intervals)).data)
+                last_used = next(iter(their_intervals)).data
+                if last_used is None:
+                    last_used = -1
+                their_last_used.append(last_used)
             else:
                 their_last_used.append(-1)
-        winners = [our_last - their_last for our_last, their_last in zip(our_last_used, their_last_used)]
+        return [our_last - their_last for our_last, their_last in zip(our_last_used, their_last_used)]
+
+    def best_partition(self, right_sibling: "NonGeneralizedParseTree") -> Optional[int]:
+        winners = self._winners(right_sibling)
+        if winners is None:
+            # we do not overlap
+            return None
         # TODO: See if we can improve this algorithm
         best_point = self.end_offset
         best_badness = None
@@ -364,15 +376,37 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
             if best_badness is None or badness < best_badness:
                 best_point = point
                 best_badness = badness
-        self.intervals.chop(right_sibling.begin_offset + best_point, self.end_offset)
-        right_sibling.intervals.chop(0, right_sibling.begin_offset + best_point)
+        return best_point
+
+    def best_subset(self, parent: "NonGeneralizedParseTree") -> Tuple[int, int]:
+        winners = self._winners(parent)
+        if winners is None:
+            raise ValueError("The child does not overlap with its parent! This should never happen.")
+        # TODO: See if we can improve this algorithm
+        left_offset = 0
+        right_offset = len(winners)
+        while winners[left_offset] < 0 and left_offset < right_offset:
+            left_offset += 1
+        while left_offset < right_offset and winners[right_offset - 1] < 0:
+            right_offset -= 1
+        return left_offset, right_offset
+
+    def deconflict_sibling(self, right_sibling: "NonGeneralizedParseTree"):
+        best_point = self.best_partition(right_sibling)
+        if best_point is not None:
+            self.intervals.chop(right_sibling.begin_offset + best_point, self.end_offset)
+            right_sibling.intervals.chop(0, right_sibling.begin_offset + best_point)
+
+    def deconflict_parent(self, parent: "NonGeneralizedParseTree"):
+        left_offset, right_offset = self.best_subset(parent)
+        self.intervals.chop(self.begin_offset + left_offset, self.end_offset - right_offset)
 
     def bottom_up_pass(self):
         # first, remove any children that do not produce a terminal
         self.children = [child for child in self.children if child.begin_offset < child.end_offset]
         # ensure that none of our children's intervals overlap
         for child, right_sibling in zip(self.children, self.children[1:]):
-            child.deconflict(right_sibling)
+            child.deconflict_sibling(right_sibling)
         for child in self.children:
             # update our intervals based off of the child
             self.intervals |= child.intervals
@@ -394,7 +428,9 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
                 child.intervals.chop(0, self._begin)
                 if child.end_offset > self._end:
                     child.intervals.chop(self._end, child.end_offset)
-                self.intervals.chop(child.begin_offset, child.end_offset)
+                if child.begin_offset < child.end_offset:
+                    # did we touch a byte more recently than one of our children? if so, rob them of that terminal
+                    child.deconflict_parent(self)
 
     def _consumed_intervals(self) -> Iterator[Interval]:
         if not isinstance(self.value, BasicBlockEntry):

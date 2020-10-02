@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import pytest
 
-from polytracker.grammars import Completion, EarleyParser, Grammar, parse_tree_to_grammar, Prediction, Production
+from polytracker.grammars import Completion, EarleyParser, Grammar, parse_tree_to_grammar, Prediction
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
 from polytracker.tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
@@ -27,7 +27,7 @@ E = TypeVar("E", bound=TraceEvent)
 class Tracer:
     def __init__(self, inputstr: bytes):
         self.call_stack: List[FunctionCall] = []
-        self.bb_stack: List[List[BasicBlockEntry]] = []
+        self.bb_stack: List[List[Tuple[str, BasicBlockEntry]]] = []
         self.events: List[TraceEvent] = []
         self.functions: Dict[str, int] = {}
         self.bbs: Dict[str, Dict[str, int]] = defaultdict(dict)
@@ -43,7 +43,11 @@ class Tracer:
 
     @property
     def current_bb(self) -> BasicBlockEntry:
-        return self.bb_stack[-1][-1]
+        return self.bb_stack[-1][-1][1]
+
+    @property
+    def current_bb_name(self) -> str:
+        return self.bb_stack[-1][-1][0]
 
     def peek(self, num_bytes: int) -> bytes:
         bytes_read = self.inputstr[self.input_offset:self.input_offset + num_bytes]
@@ -99,6 +103,8 @@ class Tracer:
             self.call_stack[-1].return_uid = f.uid
             self.call_stack.pop()
             self.bb_stack[-1].pop()
+            if self.call_stack:
+                self.bb_entry(f"{self.current_bb_name}_after_call_to_{name}")
         return f
 
     def bb_entry(self, name: str) -> BasicBlockEntry:
@@ -108,7 +114,7 @@ class Tracer:
         if name not in bbs:
             bbs[name] = len(bbs)
         bb_index = bbs[name]
-        entry_count = sum(1 for bb in self.bb_stack[-1] if bb_index == bb.bb_index) + 1
+        entry_count = sum(1 for _, bb in self.bb_stack[-1] if bb_index == bb.bb_index) + 1
         bb = self.emplace(
             BasicBlockEntry,
             function_index=f_index,
@@ -117,7 +123,7 @@ class Tracer:
             global_index=(f_index << 32) | bb_index,
             function_call_uid=self.call_stack[-1].uid
         )
-        self.bb_stack[-1].append(bb)
+        self.bb_stack[-1].append((name, bb))
         return bb
 
     def to_trace(self) -> PolyTrackerTrace:
@@ -264,6 +270,7 @@ def simple_grammar() -> GrammarTestCase:
 def test_parse_tree_generation(simple_grammar: GrammarTestCase):
     """Tests the generation of a non-generalized parse tree from a program trace"""
     assert simple_grammar.tree.matches() == simple_grammar.trace.inputstr
+    # print(simple_grammar.tree.to_dag().to_dot(labeler=lambda n: repr(str(n.value))))
 
 
 def test_parse_tree_simplification(simple_grammar: GrammarTestCase):
