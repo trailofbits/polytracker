@@ -355,6 +355,9 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanLogCmpFnTy;
   Constant *DFSanLogCmpFn;
 
+  FunctionType *DFSanTraceInstFnTy;
+  Constant *DFSanTraceInstFn;
+
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
   FunctionType *DFSanEntryBBFnTy;
@@ -478,6 +481,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
+  void traceTaintedBinaryOp(Instruction *I);
 };
 
 } // end anonymous namespace
@@ -607,6 +611,13 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   Type *DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
   DFSanEntryFnTy =
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
+
+  Type *DFSanTraceInstArgs[5] = {
+      IntegerType::getInt32Ty(*Ctx), IntegerType::getInt64PtrTy(*Ctx),
+      IntegerType::getInt64PtrTy(*Ctx), ShadowTy, ShadowTy};
+
+  DFSanTraceInstFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanTraceInstArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type *DFSanEntryBBArgs[4] = {
@@ -821,7 +832,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBFnTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
-
+  DFSanTraceInstFn =
+      Mod->getOrInsertFunction("__dfsan_test_fn", DFSanTraceInstFnTy);
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   for (Function &i : M) {
@@ -830,7 +842,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn)
+        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn &&
+        &i != DFSanTraceInstFn)
       FnsToInstrument.push_back(&i);
   }
 
@@ -985,7 +998,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     if (!i || i->isDeclaration()) {
       continue;
     }
-
     Value *FuncIndex =
         ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
@@ -1568,6 +1580,60 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   DFSF.setShadow(&CI, CombinedShadow);
   IRBuilder<> IRB(&CI);
   CallInst *Call = IRB.CreateCall(DFSF.DFS.DFSanLogCmpFn, CombinedShadow);
+  traceTaintedBinaryOp(&CI);
+}
+
+// TODO These allocas can all be made once per function
+// Value * opt_zero_shadow = IRB.CreateAlloca(ShadowTy);
+// Value * opt_one_shadow = IRB.CreateAlloca(ShadowTy);
+
+// auto store_shad_0 = IRB.CreateStore(shad_0, opt_zero_shadow);
+// auto store_shad_1 = IRB.CreateStore(shad_1, opt_one_shadow);
+
+void DFSanVisitor::traceTaintedBinaryOp(Instruction *Inst) {
+  IRBuilder<> IRB(Inst);
+  // Issue, opt_0 and opt_1 could be of immediate types, int pointer types
+  // Struct pointer types, etc.
+  Value *opt_0 = Inst->getOperand(0);
+  Value *opt_1 = Inst->getOperand(1);
+  Value *shad_0 = DFSF.getShadow(opt_0);
+  Value *shad_1 = DFSF.getShadow(opt_1);
+  Value *opt_0_ptr =
+      IRB.CreateBitOrPointerCast(opt_0, Type::getInt64PtrTy(*DFSF.DFS.Ctx));
+  Value *opt_1_ptr =
+      IRB.CreateBitOrPointerCast(opt_1, Type::getInt64PtrTy(*DFSF.DFS.Ctx));
+  IntegerType *ShadowTy = IntegerType::get(*DFSF.DFS.Ctx, DFSF.DFS.ShadowWidth);
+  Value *ExtZeroShadow = ConstantInt::get(ShadowTy, Inst->getOpcode());
+  // Value * opt_zero_val =
+  // IRB.CreateAlloca(IntegerType::getInt64Ty(*(DFSF.DFS.Ctx))); Value *
+  // opt_one_val = IRB.CreateAlloca(IntegerType::getInt64Ty(*(DFSF.DFS.Ctx)));
+  // OtherPtr*
+  // IntPtr*
+
+  // Previous idea, try storing pointers/values into allocas, then normalizing
+  // the parameter type to be pointer LLVM doesn't like the type mismatch for
+  // stores, even if the sizes are probably fine.
+  /*
+  Value * opt_zero_val =
+  IRB.CreateAlloca(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx))); Value *
+  opt_one_val = IRB.CreateAlloca(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx)));
+  Value * opt_zero_shadow =
+  IRB.CreateAlloca(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx))); Value *
+  opt_one_shadow  = IRB.CreateAlloca(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx)));
+  auto store_val_opt0 = IRB.CreateStore(opt_1, opt_zero_val);
+  auto store_val_opt1 = IRB.CreateStore(opt_2, opt_one_val);
+  auto store_shad_0 = IRB.CreateStore(shad_1, opt_zero_shadow);
+  auto store_shad_1 = IRB.CreateStore(shad_2, opt_one_shadow);
+   */
+
+  CallInst *CallTest =
+      IRB.CreateCall(DFSF.DFS.DFSanTraceInstFn, {
+                                                    ExtZeroShadow,
+                                                    opt_0_ptr,
+                                                    opt_1_ptr,
+                                                    shad_0,
+                                                    shad_1,
+                                                });
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
