@@ -134,6 +134,21 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
   return taint_manager->logFunctionEntry(fname);
 }
 
+//TODO rename
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_test_fn(
+    BBIndex bbIndex, uint32_t op_code, uint32_t * val_a, uint32_t * val_b, dfsan_label *labela, dfsan_label *labelb) {
+  //NOTE This might be relevant with implicit control flow
+  //until we implement the strict dependency and LDX work
+  //If it's not a tainted instruction, or we are not tracing, ignore.
+  if ((*labela == 0 && *labelb == 0) || taint_manager->recordInstructionTrace() == false) {
+    return;
+  }
+  else {
+    taint_manager->logTaintedBinaryInst(bbIndex, op_code, *val_a, *val_b, *labela, *labelb);
+  }
+}
+
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
     char *fname, uint32_t functionIndex, uint32_t bbIndex,
     std::underlying_type<polytracker::BasicBlockType>::type bbType) {
