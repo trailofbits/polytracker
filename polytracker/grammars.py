@@ -379,15 +379,12 @@ class EarleyState(metaclass=ABCMeta):
         return hash((self.parsed, self.expected, self.index, self.prediction))
 
     def __eq__(self, other):
-        if isinstance(other, EarleyState):
-            return (
-                self.index == other.index
-                and self.parsed == other.parsed
-                and self.expected == other.expected
-                and self.prediction == other.prediction
-            )
-        else:
-            return False
+        return self.__class__ == other.__class__ and (
+            self.index == other.index
+            and self.parsed == other.parsed
+            and self.expected == other.expected
+            and self.prediction == other.prediction
+        )
 
     def __str__(self):
         parsed = "".join(map(str, self.parsed))
@@ -396,7 +393,7 @@ class EarleyState(metaclass=ABCMeta):
 
 
 class Prediction(EarleyState):
-    __slots__ = "_production", "rule"
+    __slots__ = "_production", "completed_by", "rule"
 
     def __init__(
         self,
@@ -408,6 +405,7 @@ class Prediction(EarleyState):
     ):
         super().__init__(self, parsed, expected, index)
         self._production: Production = production
+        self.completed_by: Set[Completion] = set()
         self.rule: Rule = rule
 
     @property
@@ -450,6 +448,10 @@ class Completion(EarleyState):
     ):
         super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
         self.completed_prediction = completed_prediction
+
+    def add_predecessor(self, left_sibling: "EarleyState"):
+        assert left_sibling.prediction == self.completed_prediction
+        return super().add_predecessor(left_sibling=left_sibling)
 
     def __hash__(self):
         return hash((super().__hash__(), self.completed_prediction))
@@ -501,6 +503,7 @@ class EarleyQueue:
             expected=state.expected[1:],
             index=state.index
         )
+        completed.prediction.completed_by.add(new_state)
         self.add(new_state, left_sibling=completed)
 
     def add(self, state: EarleyState, left_sibling: Optional[EarleyState] = None) -> bool:
@@ -579,20 +582,46 @@ class EarleyParser:
         """Removes Earley states that cannot lead to a match"""
         if not self.parsed:
             self.parse()
-        with tqdm(desc="garbage collecting Earley states", unit=" states", leave=False, total=1) as t:
-            finished: Set[EarleyState] = {state for state in self.states[-1] if state.finished}
+        # first, remove any predictions that were never completed:
+        to_remove: Set[Prediction] = {
+            state for state in tqdm(
+                    [state for queue in self.states for state in queue if isinstance(state, Prediction)],
+                    desc="removing false predictions",
+                    unit=" predictions", leave=False
+            ) if len(state.completed_by) == 0
+        }
+        successors: Dict[EarleyState, Set[EarleyState]] = defaultdict(set)
+        with tqdm(desc="pruning unfinished states", unit=" states", leave=False, total=1) as t:
+            finished: Set[EarleyState] = {
+                state for state in self.states[-1] if state.finished
+            } - to_remove
             to_visit = list(finished)
             while to_visit:
                 state = to_visit.pop()
-                predecessors = [p for p in state.predecessors if p not in finished]
+                predecessors = [p for p in state.predecessors if p not in finished and p not in to_remove]
+                for p in predecessors:
+                    successors[p].add(state)
                 to_visit.extend(predecessors)
                 finished |= set(predecessors)
                 t.total = len(to_visit) + len(finished)
                 t.update(1)
+        # now remove any states that do not have a path back to a start state
+        with tqdm(desc="garbage collecting orphaned states", unit=" states", leave=False, total=1) as t:
+            connected_to_start: Set[EarleyState] = (set(self.start_states) & finished) - to_remove
+            to_visit = list(connected_to_start)
+            while to_visit:
+                state = to_visit.pop()
+                succ = {s for s in successors[state] if s not in connected_to_start}
+                if isinstance(state, Prediction):
+                    succ |= {c for c in state.completed_by if c not in connected_to_start}
+                to_visit.extend(succ)
+                connected_to_start |= succ
+                t.total = len(to_visit) + len(connected_to_start)
+                t.update(1)
         removed: int = 0
         with tqdm(desc="pruning unused Earley states", unit=" states", leave=False, initial=0) as t:
             for queue in tqdm(self.states, desc="processing", unit=" queues", leave=False):
-                removed += queue.remove(*(queue.elements.keys() - finished))
+                removed += queue.remove(*(queue.elements.keys() - (finished & connected_to_start)))
                 t.update(removed)
         return removed
 
@@ -728,6 +757,9 @@ class EarleyParser:
         self.states[completed.index].already_completed[completed.production.name][completed].add(k)
         for state in self.states[completed.index].waiting_for[completed.production.name]:
             self.states[k].complete_state(state, completed)
+        if isinstance(completed, Completion) and completed.production == self.start:
+            for start_state in self.start_states:
+                start_state.completed_by.add(completed)
 
 
 class Match:

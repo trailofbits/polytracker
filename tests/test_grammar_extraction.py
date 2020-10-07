@@ -303,18 +303,21 @@ def test_parser_event_sequence_correctness(simple_grammar: GrammarTestCase):
     # ignore the output of parser.parse(), because operating on it will call parser.event_sequences(), and we want to
     # call parser.event_sequences() manually. We need to call parser.parse() to populate the Earley graph first, though.
     for sequence in parser.event_sequences():
+        print('\n'.join([str(s) for s in sequence]))
         # ensure that each prediction has an associated completion:
         predictions: List[Prediction] = []
+        last_event = None
         for event in sequence:
             if isinstance(event, Prediction):
                 predictions.append(event)
             elif isinstance(event, Completion):
                 assert predictions, f"Unexpected completion: {event}"
-                assert event.completed_prediction == predictions[-1], f"Event {event} completed prediction "\
+                assert event.completed_prediction == predictions[-1], f"Event {last_event} completed prediction "\
                                                                       f"{event.completed_prediction} but was expected "\
                                                                       f"to complete {predictions[-1]}"
                 predictions.pop()
                 print(f"{event} completes {event.completed_prediction}")
+            last_event = event
         assert not predictions, "These predictions were never completed:\n" + \
                                 "\n".join([str(p) for p in predictions])
 
