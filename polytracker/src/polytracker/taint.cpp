@@ -1,24 +1,28 @@
-#include "include/dfsan/dfsan_types.h"
-#include "include/dfsan/dfsan_log_mgmt.h"
-#include "include/polytracker/logging.h"
+
 #include <unordered_map>
 #include <vector>
+#include <map>
 #include <mutex>
+#include <iostream>
+#include "include/dfsan/dfsan_types.h"
+#include "include/polytracker/logging.h"
+#include "include/dfsan/dfsan.h"
+#include "sanitizer_common/sanitizer_common.h"
 
-extern decay_val taint_node_ttl;
+extern decay_val taint_node_ttl; 
+#define TAINT_GRANULARITY 1
 
 std::atomic<dfsan_label> next_label{0};
 std::unordered_map<const char *, std::vector<std::pair<int, int>>> tainted_input_chunks;
 std::unordered_map<const char *, std::unordered_map<dfsan_label, int>> canonical_mapping;
+std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
 std::mutex canonical_mapping_lock;
 std::mutex tainted_input_chunks_lock;
-taintSourceManager taint_source_manager;
-
 std::mutex fd_target_map_lock;
 std::unordered_map<int, int> fd_target_map;
 std::unordered_map<FILE*, int> fd_target_map;
 
-static dfsan_label createCanonicalLabel(int file_byte_offset, const char * name) {
+[[nodiscard]] static dfsan_label createCanonicalLabel(int file_byte_offset, const char * name) {
   dfsan_label new_label = next_label.fetch_add(1);
   checkMaxLabel(new_label);
   taint_node_t* new_node = getTaintNode(new_label);
@@ -31,7 +35,7 @@ static dfsan_label createCanonicalLabel(int file_byte_offset, const char * name)
   return new_label;
 }
 
-dfsan_label createReturnLabel(int file_byte_offset, const char* name) {
+[[nodiscard]] dfsan_label createReturnLabel(int file_byte_offset, const char* name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
   tainted_input_chunks_lock.lock();
   tainted_input_chunks[name].emplace_back(file_byte_offset, file_byte_offset);
@@ -40,7 +44,7 @@ dfsan_label createReturnLabel(int file_byte_offset, const char* name) {
 }
 
 template<typename FileType>
-bool isTracking(FileType fd) {
+[[nodiscard]] bool isTracking(FileType fd) {
   fd_target_map_lock.lock();
   if (fd_target_map.find(fd) != fd_target_map.end()) {
     fd_target_map_lock.unlock();
@@ -51,7 +55,7 @@ bool isTracking(FileType fd) {
 }
 
 template <typename FileType>
-bool taintData(FileType fd, char * mem, int offset, int len) {
+[[nodiscard]] bool taintData(FileType fd, char * mem, int offset, int len) {
   if (!isTracking(fd)) {
     taint_prop_lock.unlock();
     return false;
@@ -96,7 +100,7 @@ void taintTargetRange(char* mem, int offset, int len,
       dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
 
       // Log that we tainted data within this function from a taint source etc.
-      logTaintedData(new_label);
+      logOperation(new_label);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;
@@ -107,15 +111,14 @@ void taintTargetRange(char* mem, int offset, int len,
     }
   }
   if (processed_bytes) {
-    taint_bytes_processed[name].push_back(
-        std::pair<int, int>(taint_offset_start, taint_offset_end));
+    tainted_input_chunks_lock.lock();
+    tainted_input_chunks[name].emplace_back(taint_offset_start, taint_offset_end);
+    tainted_input_chunks_lock.unlock();
   }
 }
 
-dfsan_label taintManager::_unionLabel(dfsan_label l1, dfsan_label l2,
-                                      decay_val init_decay) {
-  dfsan_label ret_label = next_label;
-  next_label += 1;
+[[nodiscard]] static inline dfsan_label unionLabels(dfsan_label& l1, dfsan_label& l2, const decay_val& init_decay) {
+  dfsan_label ret_label = next_label.fetch_add(1);
   checkMaxLabel(ret_label);
   taint_node_t* new_node = getTaintNode(ret_label);
   new_node->p1 = getTaintNode(l1);
@@ -124,16 +127,13 @@ dfsan_label taintManager::_unionLabel(dfsan_label l1, dfsan_label l2,
   return ret_label;
 }
 
-dfsan_label taintManager::createUnionLabel(dfsan_label l1, dfsan_label l2) {
-  taint_prop_lock.lock();
+[[nodiscard]] dfsan_label createUnionLabel(dfsan_label& l1, dfsan_label& l2) {
   // If sanitizer debug is on, this checks that l1 != l2
   DCHECK_NE(l1, l2);
   if (l1 == 0) {
-    taint_prop_lock.unlock();
     return l2;
   }
   if (l2 == 0) {
-    taint_prop_lock.unlock();
     return l1;
   }
   if (l1 > l2) {
@@ -142,36 +142,23 @@ dfsan_label taintManager::createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // Quick union table check
   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
     auto val = union_table[l1].find(l2);
-    taint_prop_lock.unlock();
     return val->second;
   }
-  // Check for max decay
-  taint_node_t* p1 = getTaintNode(l1);
-  taint_node_t* p2 = getTaintNode(l2);
   // This calculates the average of the two decays, and then decreases it by a
   // factor of 2.
-  decay_val max_decay = (p1->decay + p2->decay) / 4;
+  const decay_val max_decay = (getTaintNode(l1)->decay + getTaintNode(l2)->decay) / 4;
   if (max_decay == 0) {
-    taint_prop_lock.unlock();
-    return 0;
+      return 0;
   }
-  dfsan_label label = _unionLabel(l1, l2, max_decay);
+  dfsan_label label = unionLabels(l1, l2, max_decay);
   (union_table[l1])[l2] = label;
-  taint_prop_lock.unlock();
   return label;
 }
 
-void taintManager::checkMaxLabel(dfsan_label label) {
+void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
     std::cout << "ERROR: MAX LABEL REACHED, ABORTING!" << std::endl;
     // Cant exit due to our exit handlers
     abort();
   }
-}
-
-dfsan_label taintManager::getLastLabel() {
-  taint_prop_lock.lock();
-  dfsan_label last_label = next_label - 1;
-  taint_prop_lock.unlock();
-  return last_label;
 }
