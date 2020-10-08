@@ -7,8 +7,16 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from .cfg import DiGraph
-from .parsing import highlight_offset, ImmutableParseTree, MutableParseTree, NonGeneralizedParseTree, ParseTree, \
-    Start, Terminal, trace_to_non_generalized_tree
+from .parsing import (
+    highlight_offset,
+    ImmutableParseTree,
+    MutableParseTree,
+    NonGeneralizedParseTree,
+    ParseTree,
+    Start,
+    Terminal,
+    trace_to_non_generalized_tree,
+)
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
@@ -200,7 +208,8 @@ class Production:
     def can_produce_terminal(self) -> bool:
         if self._can_produce_terminal is None:
             queue: List[Production] = [
-                prod for prod in self.grammar.productions.values()
+                prod
+                for prod in self.grammar.productions.values()
                 if prod._can_produce_terminal is None and any(r.has_terminals for r in prod.rules)
             ]
             visited: Set[Production] = set(queue)
@@ -341,13 +350,7 @@ class PartialMatch:
 class EarleyState(metaclass=ABCMeta):
     __slots__ = "prediction", "parsed", "expected", "index", "depth", "predecessors"
 
-    def __init__(
-        self,
-        prediction: "Prediction",
-        parsed: Tuple[Symbol, ...],
-        expected: Tuple[Symbol, ...],
-        index: int
-    ):
+    def __init__(self, prediction: "Prediction", parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
         self.prediction: Prediction = prediction
         self.parsed: Tuple[Symbol, ...] = parsed
         self.expected: Tuple[Symbol, ...] = expected
@@ -397,12 +400,7 @@ class Prediction(EarleyState):
     __slots__ = "_production", "rule"
 
     def __init__(
-        self,
-        production: Production,
-        parsed: Tuple[Symbol, ...],
-        expected: Tuple[Symbol, ...],
-        index: int,
-        rule: Rule
+        self, production: Production, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int, rule: Rule
     ):
         super().__init__(self, parsed, expected, index)
         self._production: Production = production
@@ -421,10 +419,10 @@ class Prediction(EarleyState):
     def __eq__(self, other):
         if isinstance(other, Prediction):
             return (
-                    self.index == other.index
-                    and self.parsed == other.parsed
-                    and self.expected == other.expected
-                    and self.production == other.production
+                self.index == other.index
+                and self.parsed == other.parsed
+                and self.expected == other.expected
+                and self.production == other.production
             )
         else:
             return False
@@ -442,7 +440,7 @@ class EmptyProduction(EarleyState):
         prediction: Prediction,
         parsed: Tuple[Symbol, ...],
         expected: Tuple[Symbol, ...],
-        index: int
+        index: int,
     ):
         super().__init__(prediction, parsed, expected, index)
         self._production: Production = production
@@ -450,8 +448,7 @@ class EmptyProduction(EarleyState):
     __hash__ = EarleyState.__hash__
 
     def __eq__(self, other):
-        return isinstance(other, EmptyProduction) \
-               and EarleyState.__eq__(self, other) and self._production == other._production
+        return isinstance(other, EmptyProduction) and EarleyState.__eq__(self, other) and self._production == other._production
 
     __ne__ = EarleyState.__ne__
 
@@ -462,13 +459,7 @@ class EmptyProduction(EarleyState):
 class Completion(EarleyState):
     __slots__ = "completed_by"
 
-    def __init__(
-        self,
-        prediction: Prediction,
-        parsed: Tuple[Symbol, ...],
-        expected: Tuple[Symbol, ...],
-        index: int
-    ):
+    def __init__(self, prediction: Prediction, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
         super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
         self.completed_by: Set[EarleyState] = set()
 
@@ -486,12 +477,7 @@ class ScannedTerminal(EarleyState):
     __slots__ = "terminal"
 
     def __init__(
-        self,
-        prediction: Prediction,
-        parsed: Tuple[Symbol, ...],
-        expected: Tuple[Symbol, ...],
-        index: int,
-        terminal: Terminal
+        self, prediction: Prediction, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int, terminal: Terminal
     ):
         super().__init__(prediction, parsed, expected, index)
         self.terminal: Terminal = terminal
@@ -524,10 +510,7 @@ class EarleyQueue:
         assert isinstance(state.next_element, NonTerminal)
         assert state.next_element == completed.production.name
         new_state = Completion(
-            prediction=state.prediction,
-            parsed=state.parsed + completed.parsed,
-            expected=state.expected[1:],
-            index=state.index
+            prediction=state.prediction, parsed=state.parsed + completed.parsed, expected=state.expected[1:], index=state.index
         )
         self.add(new_state, left_sibling=state).completed_by.add(completed)
 
@@ -608,10 +591,12 @@ class EarleyParser:
     def parse(self) -> Iterator[ParseTree[ParseTreeValue]]:
         if not self.parsed:
             self.parsed = True
-            self.start_states = frozenset([
-                Prediction(production=self.start, parsed=(), expected=rule.sequence, index=0, rule=rule)
-                for rule in self.start.rules
-            ])
+            self.start_states = frozenset(
+                [
+                    Prediction(production=self.start, parsed=(), expected=rule.sequence, index=0, rule=rule)
+                    for rule in self.start.rules
+                ]
+            )
             for start_state in self.start_states:
                 self.states[0].add(start_state)
             last_k_with_match = -1
@@ -674,7 +659,7 @@ class EarleyParser:
             parsed=state.parsed + (state.next_element,),
             expected=state.expected[1:],
             index=state.index,
-            terminal=expected_element
+            terminal=expected_element,
         )
         self.states[k + len(terminal)].add(new_state, left_sibling=state)
         return True

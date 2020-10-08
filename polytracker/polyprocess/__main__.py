@@ -148,7 +148,7 @@ def main():
                 exit(1)
             if args.outfile:
                 with open(args.outfile, "w") as out_file:
-                    with open(input_files[0], 'rb') as in_file:
+                    with open(input_files[0], "rb") as in_file:
                         datalog_code = datalog.DatalogParser(in_file, traces[0])
                         out_file.write(datalog_code.val)
             else:

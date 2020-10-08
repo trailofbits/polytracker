@@ -50,7 +50,7 @@ class Tracer:
         return self.bb_stack[-1][-1][0]
 
     def peek(self, num_bytes: int) -> bytes:
-        bytes_read = self.inputstr[self.input_offset:self.input_offset + num_bytes]
+        bytes_read = self.inputstr[self.input_offset : self.input_offset + num_bytes]
         self.current_bb.consumed.extend(range(self.input_offset, self.input_offset + len(bytes_read)))
         return bytes_read
 
@@ -94,10 +94,7 @@ class Tracer:
 
     def function_return(self, name) -> FunctionReturn:
         f = self.emplace(
-            FunctionReturn,
-            name=name,
-            call_event_uid=self._call_event_uid(),
-            returning_to_uid=self._returning_to_uid()
+            FunctionReturn, name=name, call_event_uid=self._call_event_uid(), returning_to_uid=self._returning_to_uid()
         )
         if self.call_stack:
             self.call_stack[-1].return_uid = f.uid
@@ -121,7 +118,7 @@ class Tracer:
             bb_index=bb_index,
             entry_count=entry_count,
             global_index=(f_index << 32) | bb_index,
-            function_call_uid=self.call_stack[-1].uid
+            function_call_uid=self.call_stack[-1].uid,
         )
         self.bb_stack[-1].append((name, bb))
         return bb
@@ -137,6 +134,7 @@ def traced(func):
         ret = func(tracer, *args, **kwargs)
         tracer.function_return(func.__name__)
         return ret
+
     return wrapped
 
 
@@ -156,14 +154,14 @@ def skip_whitespace(tracer: Tracer):
 @traced
 def parse_string(tracer: Tracer) -> str:
     first_byte = tracer.read(1)
-    assert first_byte == b"\""
+    assert first_byte == b'"'
     ret = bytearray()
     while True:
         tracer.bb_entry("while_in_string")
         next_byte = tracer.read(1)
         if len(next_byte) == 0:
             raise ValueError()
-        elif next_byte == b"\"":
+        elif next_byte == b'"':
             tracer.bb_entry("string_finished")
             break
         tracer.bb_entry("string_not_finished")
@@ -177,7 +175,7 @@ def parse_int(tracer: Tracer) -> int:
     while True:
         tracer.bb_entry("while_in_int")
         next_byte = tracer.peek(1)
-        if len(next_byte) == 0 or next_byte[0] < ord('0') or next_byte[0] > ord('9'):
+        if len(next_byte) == 0 or next_byte[0] < ord("0") or next_byte[0] > ord("9"):
             tracer.bb_entry("int_finished")
             break
         tracer.bb_entry("int_not_finished")
@@ -189,7 +187,7 @@ def parse_int(tracer: Tracer) -> int:
 @traced
 def parse_terminal(tracer: Tracer) -> Union[int, str]:
     next_byte = tracer.peek(1)
-    if next_byte == b"\"":
+    if next_byte == b'"':
         tracer.bb_entry("terminal_is_string")
         return parse_string(tracer)
     else:
@@ -269,7 +267,7 @@ class GrammarTestCase:
 
 @pytest.fixture
 def simple_grammar() -> GrammarTestCase:
-    input_str = b"(1, 2, (\"foo\", 5, \"bar\"), 3, 4)"
+    input_str = b'(1, 2, ("foo", 5, "bar"), 3, 4)'
     result, trace = make_trace(input_str)
     assert result == [1, 2, ["foo", 5, "bar"], 3, 4]
     return GrammarTestCase(input_str, trace)
