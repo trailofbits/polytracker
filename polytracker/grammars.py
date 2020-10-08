@@ -1,7 +1,7 @@
 import itertools
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import networkx as nx
 from tqdm import tqdm, trange
@@ -460,26 +460,21 @@ class EmptyProduction(EarleyState):
 
 
 class Completion(EarleyState):
-    __slots__ = "completed_state"
+    __slots__ = "completed_by"
 
     def __init__(
         self,
-        completed_state: EarleyState,
         prediction: Prediction,
         parsed: Tuple[Symbol, ...],
         expected: Tuple[Symbol, ...],
         index: int
     ):
         super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
-        self.completed_state = completed_state
+        self.completed_by: Set[EarleyState] = set()
 
     __hash__ = EarleyState.__hash__
 
-    def __eq__(self, other):
-        if isinstance(other, Completion):
-            return EarleyState.__eq__(self, other) and self.completed_state == other.completed_state
-        else:
-            return False
+    __eq__ = EarleyState.__eq__
 
     __ne__ = EarleyState.__ne__
 
@@ -513,6 +508,9 @@ class ScannedTerminal(EarleyState):
         return MutableParseTree(self.terminal)
 
 
+S = TypeVar("S", bound=EarleyState)
+
+
 class EarleyQueue:
     def __init__(self, parser: "EarleyParser"):
         self.parser: EarleyParser = parser
@@ -526,21 +524,18 @@ class EarleyQueue:
         assert isinstance(state.next_element, NonTerminal)
         assert state.next_element == completed.production.name
         new_state = Completion(
-            completed_state=completed,
             prediction=state.prediction,
             parsed=state.parsed + completed.parsed,
             expected=state.expected[1:],
             index=state.index
         )
-        self.add(new_state, left_sibling=state)
+        self.add(new_state, left_sibling=state).completed_by.add(completed)
 
-    def add(self, state: EarleyState, left_sibling: Optional[EarleyState] = None) -> bool:
+    def add(self, state: S, left_sibling: Optional[EarleyState] = None) -> S:
         if state in self.elements:
             # We already have this state
-            added = False
             state = self.elements[state]
         else:
-            added = True
             self.queue.append(state)
             self.elements[state] = state
         if not state.finished and isinstance(state.next_element, NonTerminal):
@@ -550,7 +545,7 @@ class EarleyQueue:
                     self.parser.states[k].complete_state(state, completed)
         if left_sibling is not None:
             state.add_predecessor(left_sibling)
-        return added
+        return state
 
     def remove(self, *states: Union[EarleyState, Iterable]) -> int:
         num_removed: int = 0
@@ -644,42 +639,6 @@ class EarleyParser:
                 )
         return self.parse_trees()
 
-    def event_sequences(self) -> Iterator[List[EarleyState]]:
-        """Enumerates all state sequences from a start state to a valid end state"""
-        iterators: List[Tuple[Optional[EarleyState], Iterator[EarleyState]]] = [
-            (None, self.end_states)
-        ]
-        history: Set[EarleyState] = set()
-        while iterators:
-            assert len(history) == sum(1 for s, _ in iterators if s is not None)
-            state, iterator = iterators.pop()
-            if state is None:
-                while True:
-                    try:
-                        state = next(iterator)
-                        if state in history:
-                            continue
-                        history.add(state)
-                        iterators.append((state, iterator))
-                        break
-                    except StopIteration:
-                        break
-            elif not state.predecessors:
-                history.remove(state)
-                if state in self.start_states:
-                    yield [state] + [s for s, _ in reversed(iterators)]
-                iterators.append((None, iterator))
-            else:
-                iterators.extend([
-                    (state, iterator),
-                    (None, iter(sorted(
-                        [s for s in state.predecessors if s not in history],
-                        key=lambda p: p.depth
-                    ))),
-                ])
-                if isinstance(state, Completion):
-                    iterators.append((None, iter((state.completed_state,))))
-
     def parse_trees(self) -> Iterator[ParseTree[ParseTreeValue]]:
         """Reconstructs all parse trees from the parse"""
         if not self.parsed:
@@ -739,7 +698,7 @@ class _Node:
         self.state: EarleyState = state
         self.sibling_possibilities: Iterator[EarleyState] = iter(sorted(state.predecessors, key=lambda p: p.depth))
         if isinstance(state, Completion):
-            self.child_possibilities: Iterator[EarleyState] = iter((state.completed_state,))
+            self.child_possibilities: Iterator[EarleyState] = iter(sorted(state.completed_by, key=lambda p: p.depth))
         else:
             self.child_possibilities: Iterator[EarleyState] = iter(())
         self.rightmost_child: Optional[_Node] = None
