@@ -7,6 +7,7 @@
 #include <set>
 #include <stack>
 #include <tuple>
+
 using polytracker::BasicBlockEntry;
 using polytracker::BasicBlockType;
 using polytracker::FunctionCall;
@@ -65,14 +66,11 @@ static inline void initThreadInfo() {
 }
 
 [[nodiscard]] inline taint_node_t* getTaintNode(dfsan_label label) {
-  taint_node_t* ret_node =
-      (taint_node_t*)(forest_mem + (label * sizeof(taint_node_t)));
-  return ret_node;
+   return (taint_node_t*)(forest_mem + (label * sizeof(taint_node_t)));
 }
 
 [[nodiscard]] inline dfsan_label getTaintLabel(taint_node_t* node) {
-  dfsan_label ret_label = ((char*)node - forest_mem) / sizeof(taint_node_t);
-  return ret_label;
+  return (dfsan_label)(((char*)node - forest_mem) / sizeof(taint_node_t));
 }
 
 [[nodiscard]] static inline auto getPolytrackerTrace(void) -> polytracker::Trace& {
@@ -176,7 +174,7 @@ void logFunctionExit() {
  */
 void logBBEntry(char* fname, BBIndex bbIndex,
                               BasicBlockType bbType) {
-  auto currentStack = trace.currentStack();
+  auto currentStack = getPolytrackerTrace().currentStack();
   BasicBlockEntry* newBB;
   if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
     // this is not the first occurrence of this basic block in the current
