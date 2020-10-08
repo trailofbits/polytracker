@@ -1,11 +1,17 @@
 import json
 from abc import ABCMeta
-from typing import Any, BinaryIO, cast, Dict, IO, Iterable, Iterator, List, Optional, Protocol, Set, Tuple, Union
+import sys
+from typing import Any, BinaryIO, cast, Dict, IO, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from tqdm import tqdm
 
 from .bitmap import Bitmap, BitmapValue
 from polytracker.cfg import DiGraph
+
+if sys.version_info.major == 3 and sys.version_info.minor < 8:
+    from typing_extensions import Protocol  # type: ignore
+else:
+    from typing import Protocol  # type: ignore
 
 
 class TraceEventConstructor(Protocol):
