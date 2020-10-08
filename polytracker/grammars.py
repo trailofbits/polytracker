@@ -1,7 +1,7 @@
 import itertools
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import Any, cast, Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple, TypeVar, Union
 
 import networkx as nx
 from tqdm import tqdm, trange
@@ -445,12 +445,12 @@ class EmptyProduction(EarleyState):
         super().__init__(prediction, parsed, expected, index)
         self._production: Production = production
 
-    __hash__ = EarleyState.__hash__
+    __hash__ = EarleyState.__hash__  # type: ignore
+
+    __ne__ = EarleyState.__ne__  # type: ignore
 
     def __eq__(self, other):
         return isinstance(other, EmptyProduction) and EarleyState.__eq__(self, other) and self._production == other._production
-
-    __ne__ = EarleyState.__ne__
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self._production)
@@ -463,11 +463,11 @@ class Completion(EarleyState):
         super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
         self.completed_by: Set[EarleyState] = set()
 
-    __hash__ = EarleyState.__hash__
+    __hash__ = EarleyState.__hash__  # type: ignore
 
-    __eq__ = EarleyState.__eq__
+    __eq__ = EarleyState.__eq__  # type: ignore
 
-    __ne__ = EarleyState.__ne__
+    __ne__ = EarleyState.__ne__  # type: ignore
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.production)
@@ -488,7 +488,7 @@ class ScannedTerminal(EarleyState):
     def __eq__(self, other):
         return isinstance(other, ScannedTerminal) and other.terminal == self.terminal and EarleyState.__eq__(self, other)
 
-    __ne__ = EarleyState.__ne__
+    __ne__ = EarleyState.__ne__  # type: ignore
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.terminal)
@@ -517,7 +517,7 @@ class EarleyQueue:
     def add(self, state: S, left_sibling: Optional[EarleyState] = None) -> S:
         if state in self.elements:
             # We already have this state
-            state = self.elements[state]
+            state = cast(S, self.elements[state])
         else:
             self.queue.append(state)
             self.elements[state] = state
@@ -635,14 +635,16 @@ class EarleyParser:
             while True:
                 tree = MutableParseTree(self.start)
                 tree.children = [n.tree.clone() for n in root.siblings]
-                yield tree
+                yield tree  # type: ignore
                 if not root.iterate():
                     break
 
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
         if not prod.can_produce_terminal:
-            new_state = EmptyProduction(prediction=state.prediction, production=prod, parsed=(), expected=(), index=k)
+            new_state: EarleyState = EmptyProduction(
+                prediction=state.prediction, production=prod, parsed=(), expected=(), index=k
+            )
             self.states[k].add(new_state)
             return
         for rule in prod.rules:
@@ -659,7 +661,7 @@ class EarleyParser:
             parsed=state.parsed + (state.next_element,),
             expected=state.expected[1:],
             index=state.index,
-            terminal=expected_element,
+            terminal=expected_element,  # type: ignore
         )
         self.states[k + len(terminal)].add(new_state, left_sibling=state)
         return True
@@ -673,7 +675,7 @@ class EarleyParser:
 class _Node:
     def __init__(self, state: EarleyState, parent: Optional["_Node"] = None, _initialize: bool = True):
         self.parent: Optional[_Node] = parent
-        if self.parent is None:
+        if parent is None:
             self.root: _Node = self
             self.history: Set[EarleyState] = {state}
         else:
@@ -685,7 +687,7 @@ class _Node:
         if isinstance(state, Completion):
             self.child_possibilities: Iterator[EarleyState] = iter(sorted(state.completed_by, key=lambda p: p.depth))
         else:
-            self.child_possibilities: Iterator[EarleyState] = iter(())
+            self.child_possibilities = iter(())
         self.rightmost_child: Optional[_Node] = None
         self.left_sibling: Optional[_Node] = None
         if isinstance(self.state, Prediction) and parent is not None:
@@ -719,15 +721,15 @@ class _Node:
 
     def next_sibling(self) -> EarleyState:
         while True:
-            right_sibling = next(self.sibling_possibilities)
-            if right_sibling not in self.history:
-                return right_sibling
+            left_sibling = next(self.sibling_possibilities)
+            if left_sibling not in self.history:
+                return left_sibling
 
     def next_child(self) -> EarleyState:
         while True:
-            leftmost_child = next(self.child_possibilities)
-            if leftmost_child not in self.history:
-                return leftmost_child
+            rightmost_child = next(self.child_possibilities)
+            if rightmost_child not in self.history:
+                return rightmost_child
 
     def descendants(self) -> Iterator[EarleyState]:
         stack: List[_Node] = [self]
@@ -754,14 +756,16 @@ class _Node:
     def _iterate_local(self) -> bool:
         try:
             left_sibling = self.next_sibling()
-            self.history -= set(self.left_sibling.descendants())
+            if self.left_sibling is not None:
+                self.history -= set(self.left_sibling.descendants())
             self.left_sibling = _Node(left_sibling, parent=self.parent)
             return True
         except StopIteration:
             pass
         try:
             rightmost_child = self.next_child()
-            self.history -= set(self.rightmost_child.descendants())
+            if self.rightmost_child is not None:
+                self.history -= set(self.rightmost_child.descendants())
             self.rightmost_child = _Node(rightmost_child, parent=self)
             return True
         except StopIteration:
@@ -1134,7 +1138,7 @@ def check_trace(trace: PolyTrackerTrace) -> TraceProperties:
     out_of_order = [
         previous_offset + 1
         for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
-        if previous > first_used
+        if previous > first_used  # type: ignore
     ]
     return TraceProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order, file_seeks=file_seeks)
 
@@ -1163,14 +1167,5 @@ def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
         assert match_before == tree.matches() == trace.inputstr
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
-        if __debug__:
-            m = grammar.match(trace.inputstr)
-            assert bool(m)
-            print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
-            trace_iter.set_description("simplifying the grammar")
-            grammar.simplify()
-            m = grammar.match(trace.inputstr)
-            assert bool(m)
-            print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
         return grammar
     return Grammar()

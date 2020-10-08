@@ -1,9 +1,9 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 import pytest
 
-from polytracker.grammars import Completion, EarleyParser, Grammar, parse_tree_to_grammar, Prediction
+from polytracker.grammars import Grammar, parse_tree_to_grammar
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
 from polytracker.tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
@@ -65,10 +65,10 @@ class Tracer:
     def emplace(self, event_type: Type[E], **kwargs) -> E:
         uid = len(self.events)
         if uid > 0:
-            event = event_type(uid=uid, previous_uid=uid - 1, **kwargs)
+            event: E = event_type(uid=uid, previous_uid=uid - 1, **kwargs)
             self.events[uid - 1].next_uid = uid
         else:
-            event: E = event_type(uid=uid, **kwargs)
+            event = event_type(uid=uid, **kwargs)
         self.events.append(event)
         return event
 
@@ -291,14 +291,14 @@ def test_grammar_extraction(simple_grammar: GrammarTestCase):
 
 
 def test_grammar_matching(simple_grammar: GrammarTestCase):
-    print(simple_grammar.grammar)
+    # print(simple_grammar.grammar)
     m = simple_grammar.grammar.match(simple_grammar.input_string)
     assert bool(m)
-    print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
+    # print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
 
 
 def test_grammar_simplification(simple_grammar: GrammarTestCase):
-    print(simple_grammar.simplified_grammar)
+    # print(simple_grammar.simplified_grammar)
     m = simple_grammar.simplified_grammar.match(simple_grammar.input_string)
     assert bool(m)
-    print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))
+    # print(m.parse_tree.to_dag().to_dot(labeler=lambda t: repr(str(t.value))))

@@ -9,19 +9,19 @@ from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerT
 
 
 V = TypeVar("V")
-T = TypeVar("T", bound="ParseTree")
+T = TypeVar("T")
 
 
 class ParseTree(ABC, Generic[V]):
     __slots__ = "value", "_descendants"
 
-    def __init__(self: T, value: V):
+    def __init__(self, value: V):
         self.value: V = value
         self._descendants: Optional[int] = None
 
     @property
     @abstractmethod
-    def children(self) -> List[T]:
+    def children(self: T) -> List[T]:
         raise NotImplementedError()
 
     def to_dag(self) -> DAG["ParseTree[V]"]:
@@ -45,7 +45,7 @@ class ParseTree(ABC, Generic[V]):
             expanded_children, node = s.pop()
             if not expanded_children and node.children:
                 s.append((True, node))
-                s.extend((False, child) for child in reversed(node.children))
+                s.extend((False, child) for child in reversed(node.children))  # type: ignore
             else:
                 # all of node's children have been expanded
                 yield node
@@ -64,15 +64,15 @@ class ParseTree(ABC, Generic[V]):
     def is_leaf(self) -> bool:
         return not bool(self.children)
 
-    def leaves(self) -> Iterator[T]:
+    def leaves(self: T) -> Iterator[T]:
         for t in self.preorder_traversal():
             if t.is_leaf():
                 yield t  # type: ignore
 
-    def __getitem__(self, child_index: int) -> V:
+    def __getitem__(self: T, child_index: int) -> T:
         return self.children[child_index]
 
-    def __iter__(self) -> Iterator["ParseTree"]:
+    def __iter__(self: T) -> Iterator[T]:
         return iter(self.children)
 
     def __len__(self):
@@ -103,12 +103,12 @@ class ParseTree(ABC, Generic[V]):
 class ImmutableParseTree(Generic[V], ParseTree[V]):
     __slots__ = "_children"
 
-    def __init__(self, value: V, children: Iterable[V] = ()):
+    def __init__(self: T, value: V, children: Iterable[T] = ()):
         super().__init__(value)
-        self._children: List[V] = list(children)
+        self._children: List[T] = list(children)
 
     @property
-    def children(self) -> List[V]:
+    def children(self: T) -> List[T]:
         return self._children
 
     def clone(self: T) -> T:
@@ -119,13 +119,13 @@ class ImmutableParseTree(Generic[V], ParseTree[V]):
 
 class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     @ImmutableParseTree.children.setter
-    def children(self, new_children: List[V]):
+    def children(self: T, new_children: List[T]):
         self._children = new_children
 
-    def add_child(self, new_child: V):
+    def add_child(self: T, new_child: T):
         self._children.append(new_child)
 
-    def __setitem__(self, child_index: int, new_child: V):
+    def __setitem__(self: T, child_index: int, new_child: T):
         self.children[child_index] = new_child
 
 
