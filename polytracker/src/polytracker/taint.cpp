@@ -12,17 +12,26 @@
 extern decay_val taint_node_ttl; 
 #define TAINT_GRANULARITY 1
 
-std::atomic<dfsan_label> next_label{0};
+//This is the current taint label, 0 is the null label, start at 1. 
+std::atomic<dfsan_label> next_label{1};
+//These structures do book keeping for shared execution state, like reading input chunks, the canonical mapping, and union table. 
 std::unordered_map<const char *, std::vector<std::pair<int, int>>> tainted_input_chunks;
 std::unordered_map<const char *, std::unordered_map<dfsan_label, int>> canonical_mapping;
 std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>> union_table;
 std::mutex canonical_mapping_lock;
 std::mutex tainted_input_chunks_lock;
-std::mutex fd_target_map_lock;
-std::unordered_map<int, int> fd_target_map;
-std::unordered_map<FILE*, int> fd_target_map;
+//TODO use this
+std::mutex union_table_lock;
 
-[[nodiscard]] static dfsan_label createCanonicalLabel(int file_byte_offset, const char * name) {
+//These structures do book keeping of taint sources we are tracking, either by fd or FILE*
+//We also keep track of named taint sources, like file names. 
+//This is how we determine to track the fd/file* returned from open/fopen
+std::mutex track_target_map_lock;
+std::unordered_map<int, std::pair<int, int>> track_target_map;
+std::unordered_map<FILE*, std::pair<int, int>> track_target_map;
+std::unordered_map<const char*, std::pair<int, int>> track_target_map;
+
+[[nodiscard]] static inline dfsan_label createCanonicalLabel(int file_byte_offset, const char * name) {
   dfsan_label new_label = next_label.fetch_add(1);
   checkMaxLabel(new_label);
   taint_node_t* new_node = getTaintNode(new_label);
@@ -35,29 +44,38 @@ std::unordered_map<FILE*, int> fd_target_map;
   return new_label;
 }
 
-[[nodiscard]] dfsan_label createReturnLabel(int file_byte_offset, const char* name) {
+[[nodiscard]] inline dfsan_label createReturnLabel(int file_byte_offset, const char* name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
-  tainted_input_chunks_lock.lock();
+  std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
   tainted_input_chunks[name].emplace_back(file_byte_offset, file_byte_offset);
-  tainted_input_chunks_lock.unlock();
   return ret_label;
 }
 
 template<typename FileType>
-[[nodiscard]] bool isTracking(FileType fd) {
-  fd_target_map_lock.lock();
-  if (fd_target_map.find(fd) != fd_target_map.end()) {
-    fd_target_map_lock.unlock();
+[[nodiscard]] static inline auto getTargetTaintRange(FileType& fd) -> std::pair<int, int>& {
+  return track_target_map[fd];
+}
+
+template<typename FileType>
+[[nodiscard]] bool isTrackingSource(FileType& fd) {
+  std::lock_guard<std::mutex> guard(track_target_map_lock);
+  if (track_target_map.find(fd) != track_target_map.end()) {
     return true;
   }
-  fd_target_map_lock.unlock();
   return false;
 }
 
-template <typename FileType>
-[[nodiscard]] bool taintData(FileType fd, char * mem, int offset, int len) {
-  if (!isTracking(fd)) {
-    taint_prop_lock.unlock();
+template<typename FileType>
+void closeSource(FileType& fd) {
+  std::lock_guard<std::mutex> guard(track_target_map_lock);
+  if (track_target_map.find(fd) != track_target_map.end()) {
+    track_target_map.erase(fd);
+  }
+}
+
+template<typename FileType>
+[[nodiscard]] bool taintData(FileType& fd, char * mem, int offset, int len) {
+  if (!isTrackingSource(fd)) {
     return false;
   }
   targetInfo* targ_info = getTargetInfo(fd);
@@ -139,6 +157,7 @@ void taintTargetRange(char* mem, int offset, int len,
   if (l1 > l2) {
     Swap(l1, l2);
   }
+  std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check
   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
     auto val = union_table[l1].find(l2);
@@ -162,3 +181,4 @@ void checkMaxLabel(dfsan_label label) {
     abort();
   }
 }
+
