@@ -9,7 +9,7 @@ from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerT
 
 
 V = TypeVar("V")
-T = TypeVar("T")
+T = TypeVar("T", bound="ParseTree")
 
 
 class ParseTree(ABC, Generic[V]):
@@ -100,32 +100,57 @@ class ParseTree(ABC, Generic[V]):
         return ret
 
 
+IPT = TypeVar("IPT", bound="ImmutableParseTree")
+
+
 class ImmutableParseTree(Generic[V], ParseTree[V]):
     __slots__ = "_children"
 
-    def __init__(self: T, value: V, children: Iterable[T] = ()):
+    def __init__(self: IPT, value: V, children: Iterable[IPT] = ()):
         super().__init__(value)
-        self._children: List[T] = list(children)
+        self._children: List[IPT] = list(children)
 
     @property
-    def children(self: T) -> List[T]:
+    def children(self: IPT) -> List[IPT]:
         return self._children
 
-    def clone(self: T) -> T:
-        ret = self.__class__(self.value)
-        ret.children = [c.clone() for c in self.children]
-        return ret
+    def clone(self: IPT) -> IPT:
+        class IPTNode:
+            def __init__(self, node: IPT, parent: Optional["IPTNode"] = None):
+                self.node: IPT = node
+                self.children: Optional[List[IPT]] = None
+                self.parent: Optional[IPTNode] = parent
+
+        to_clone: List[IPTNode] = [IPTNode(self)]
+        while to_clone:
+            ipt_node = to_clone[-1]
+            if ipt_node.children is None:
+                ipt_node.children = []
+                to_clone.extend(IPTNode(child, ipt_node) for child in reversed(ipt_node.node.children))
+            else:
+                to_clone.pop()
+                cloned = self.__class__(value=ipt_node.node.value, children=ipt_node.children)
+                if ipt_node.parent is not None:
+                    assert ipt_node.parent.children is not None
+                    ipt_node.parent.children.append(cloned)
+                else:
+                    assert len(to_clone) == 0
+                    return cloned
+        raise ValueError("This should never be reachable")
+
+
+MPT = TypeVar("MPT", bound="MutableParseTree")
 
 
 class MutableParseTree(Generic[V], ImmutableParseTree[V]):
-    @ImmutableParseTree.children.setter
-    def children(self: T, new_children: List[T]):
+    @ImmutableParseTree.children.setter  # type: ignore
+    def children(self: MPT, new_children: List[MPT]):
         self._children = new_children
 
-    def add_child(self: T, new_child: T):
+    def add_child(self: MPT, new_child: MPT):
         self._children.append(new_child)
 
-    def __setitem__(self: T, child_index: int, new_child: T):
+    def __setitem__(self: MPT, child_index: int, new_child: MPT):
         self.children[child_index] = new_child
 
 
@@ -247,9 +272,12 @@ def trace_to_tree(
     return root
 
 
+G = TypeVar("G", bound="NonGeneralizedParseTree")
+
+
 class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal]]):
-    def __init__(self, value: Union[Start, TraceEvent, Terminal]):
-        super().__init__(value)
+    def __init__(self: G, value: Union[Start, TraceEvent, Terminal], children: Iterable[G] = ()):
+        super().__init__(value=value, children=children)
         self.consumed: List[Tuple[int, int]]
         if isinstance(value, BasicBlockEntry):
             self.intervals: IntervalTree = IntervalTree(self._consumed_intervals())
