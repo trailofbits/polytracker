@@ -16,27 +16,20 @@ can be found in the polytracker/doc directory
 extern bool polytracker_trace;
 
 
-//TODO USE these mutexes 
-extern std::mutex canonical_mapping_lock;
-extern std::mutex tainted_input_chunks_lock;
-extern std::mutex taint_source_manager_lock;
+//TODO Lock these structures! 
 extern std::unordered_map<const char *, std::unordered_map<dfsan_label, int>> canonical_mapping;
 extern std::unordered_map<const char *, std::vector<std::pair<int, int>>> tainted_input_chunks;
-extern thread_local std::unordered_map<const char *, std::unordered_set<const char *>>& runtime_cfg;
-extern thread_local std::unordered_map<const char *, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
-extern thread_local std::unordered_map<const char *, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
-extern thread_local polytracker::Trace &trace;
-extern std::atomic<dfsan_label> curr_label;
+extern std::atomic<dfsan_label> next_label;
 extern taintSourceManager taint_source_manager;
 
 void addJsonVersion(json& output_json) {
   output_json["version"] = POLYTRACKER_VERSION;
 }
 
-void addJsonRuntimeCFG(json& output_json) {
-  for (auto cfg_it = runtime_cfg.begin(); cfg_it != runtime_cfg.end(); cfg_it++) {
+void addJsonRuntimeCFG(json& output_json, const RuntimeInfo * runtime_info) {
+  for (auto cfg_it = runtime_info->runtime_cfg.begin(); cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
     json j_set(cfg_it->second);
-    output_json["runtime_cfg"][cfg_it->first] = j_set;
+    output_json["runtime_info->runtime_cfg"][cfg_it->first] = j_set;
   }
 }
 
@@ -81,7 +74,7 @@ json escapeChar(int c) {
   return json::parse(s.str());
 }
 
-static void addJsonRuntimeTrace(json& output_json) {
+static void addJsonRuntimeTrace(json& output_json, const RuntimeInfo * runtime_info) {
   if (!polytracker_trace) {
     return;
   }
@@ -89,7 +82,6 @@ static void addJsonRuntimeTrace(json& output_json) {
    * that corresponds to POLYPATH. If/when we support multiple taint sources,
    * this code will have to be updated!
    */
-  canonical_mapping_lock.lock();
   if (canonical_mapping.size() < 1) {
     std::cerr << "Unexpected number of taint sources: "
               << canonical_mapping.size() << std::endl;
@@ -104,7 +96,7 @@ static void addJsonRuntimeTrace(json& output_json) {
   size_t threadStack = 0;
   const auto startTime = std::chrono::system_clock::now();
   auto lastLogTime = startTime;
-  for (const auto& kvp : trace.eventStacks) {
+  for (const auto& kvp : runtime_info->trace.eventStacks) {
     const auto& stack = kvp.second;
     std::cerr << "Processing events from thread " << threadStack << std::endl
               << std::flush;
@@ -127,7 +119,7 @@ static void addJsonRuntimeTrace(json& output_json) {
       if (const auto call = dynamic_cast<const FunctionCall*>(event)) {
         j = json::object({{"type", "FunctionCall"},
                           {"name", call->fname},
-                          {"consumes_bytes", call->consumesBytes(trace)}});
+                          {"consumes_bytes", call->consumesBytes(runtime_info->trace)}});
         if (call->ret) {
           j["return_uid"] = call->ret->eventIndex;
         }
@@ -144,7 +136,7 @@ static void addJsonRuntimeTrace(json& output_json) {
         if (entryCount != 1) {
           j["entry_count"] = entryCount;
         }
-        const auto& taints = trace.taints(bb);
+        const auto& taints = runtime_info->trace.taints(bb);
         if (!taints.empty()) {
           std::vector<int> byteOffsets;
           byteOffsets.reserve(taints.size());
@@ -196,7 +188,7 @@ static void addJsonRuntimeTrace(json& output_json) {
         // to JSON is very slow. So speed things up by just eliding it!
         // TODO: If/when we implement another means of output (e.g., sqlite),
         //       we can experiment with emitting all functions
-        if (ret->call && !(call->consumesBytes(trace))) {
+        if (ret->call && !(call->consumesBytes(runtime_info->trace))) {
           std::cerr << "\rSkipping emitting the trace for function " << call->fname << " because it did not consume any tainted bytes." << std::endl << std::flush;
           event = ret->call;
           continue;
@@ -230,7 +222,7 @@ static void addJsonRuntimeTrace(json& output_json) {
         // constituent events!
         // TODO: If/when we implement another means of output (e.g., sqlite),
         //       we can experiment with emitting all functions
-        if (call->ret && !(call->consumesBytes(trace))) {
+        if (call->ret && !(call->consumesBytes(runtime_info->trace))) {
           std::cerr << "\rSkipping emitting the trace for function "
                     << call->fname
                     << " because it did not consume any tainted bytes."
@@ -246,14 +238,14 @@ static void addJsonRuntimeTrace(json& output_json) {
   std::cerr << "Done emitting the trace events." << std::endl << std::flush;
 }
 
-static void outputTaintForest(const std::string& outfile) {
+static void outputTaintForest(const std::string& outfile, const RuntimeInfo* runtime_info) {
   std::string forest_fname = std::string(outfile) + "_forest.bin";
   FILE* forest_file = fopen(forest_fname.c_str(), "w");
   if (forest_file == NULL) {
     std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
     exit(1);
   }
-  const dfsan_label& num_labels = curr_label;
+  const dfsan_label& num_labels = next_label;
   for (int i = 0; i < num_labels; i++) {
     taint_node_t *curr = getTaintNode(i);
     dfsan_label node_p1 = getTaintLabel(curr->p1);
@@ -264,26 +256,25 @@ static void outputTaintForest(const std::string& outfile) {
   fclose(forest_file);
 }
 
-
-static void outputJsonInformation(const std::string &outfile) {
+static void outputJsonInformation(const std::string &outfile, const RuntimeInfo* runtime_info) {
   // NOTE: Whenever the output JSON format changes, make sure to:
   //       (1) Up the version number in
   //       /polytracker/include/polytracker/polytracker.h; and (2) Add support
   //       for parsing the changes in /polytracker/polytracker.py
   json output_json;
   addJsonVersion(output_json);
-  addJsonRuntimeCFG(output_json);
-  addJsonRuntimeTrace(output_json);
+  addJsonRuntimeCFG(output_json, runtime_info);
+  addJsonRuntimeTrace(output_json, runtime_info);
   addJsonTaintSources(output_json);
   addJsonCanonicalMapping(output_json);
   addJsonTaintedBlocks(output_json);
   
-  for (const auto& it : tainted_funcs_all_ops) {
+  for (const auto& it : runtime_info->tainted_funcs_all_ops) {
     auto& label_set = it.second;
     // Take label set and create a json based on source.
     json byte_set(label_set);
     output_json["tainted_functions"][it.first]["input_bytes"] = byte_set;
-    if (tainted_funcs_cmp.find(it.first) != tainted_funcs_cmp.end()) {
+    if (runtime_info->tainted_funcs_cmp.find(it.first) != runtime_info->tainted_funcs_cmp.end()) {
       auto cmp_set = it.second;
       std::set<dfsan_label> cmp_label_set;
       for (auto it = cmp_set.begin(); it != cmp_set.end(); it++) {
@@ -299,11 +290,11 @@ static void outputJsonInformation(const std::string &outfile) {
   o.close();
 }
 
-void output(const char * outfile) {
+void output(const char * outfile, const RuntimeInfo* runtime_info) {
   static size_t current_thread = 0;
   const std::string output_file_prefix = [i = current_thread++, outfile]() {
       return std::string(outfile) + std::to_string(i);
   }();
-  outputTaintForest(output_file_prefix);
-  outputJsonInformation(output_file_prefix);
+  outputTaintForest(output_file_prefix, runtime_info);
+  outputJsonInformation(output_file_prefix, runtime_info);
 }
