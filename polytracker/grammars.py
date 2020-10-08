@@ -394,7 +394,7 @@ class EarleyState(metaclass=ABCMeta):
 
 
 class Prediction(EarleyState):
-    __slots__ = "_production", "completed_by", "rule"
+    __slots__ = "_production", "rule"
 
     def __init__(
         self,
@@ -406,7 +406,6 @@ class Prediction(EarleyState):
     ):
         super().__init__(self, parsed, expected, index)
         self._production: Production = production
-        self.completed_by: Set[Completion] = set()
         self.rule: Rule = rule
 
     @property
@@ -430,10 +429,34 @@ class Prediction(EarleyState):
         else:
             return False
 
+    def __ne__(self, other):
+        return not (self == other)
+
 
 class EmptyProduction(EarleyState):
+    __slots__ = "_production"
+
+    def __init__(
+        self,
+        production: Production,
+        prediction: Prediction,
+        parsed: Tuple[Symbol, ...],
+        expected: Tuple[Symbol, ...],
+        index: int
+    ):
+        super().__init__(prediction, parsed, expected, index)
+        self._production: Production = production
+
+    __hash__ = EarleyState.__hash__
+
+    def __eq__(self, other):
+        return isinstance(other, EmptyProduction) \
+               and EarleyState.__eq__(self, other) and self._production == other._production
+
+    __ne__ = EarleyState.__ne__
+
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
-        return MutableParseTree(self.production)
+        return MutableParseTree(self._production)
 
 
 class Completion(EarleyState):
@@ -450,14 +473,15 @@ class Completion(EarleyState):
         super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
         self.completed_state = completed_state
 
-    def __hash__(self):
-        return hash((super().__hash__(), self.completed_state))
+    __hash__ = EarleyState.__hash__
 
     def __eq__(self, other):
         if isinstance(other, Completion):
-            return self.completed_state == other.completed_state and super().__eq__(other)
+            return EarleyState.__eq__(self, other) and self.completed_state == other.completed_state
         else:
             return False
+
+    __ne__ = EarleyState.__ne__
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.production)
@@ -476,6 +500,14 @@ class ScannedTerminal(EarleyState):
     ):
         super().__init__(prediction, parsed, expected, index)
         self.terminal: Terminal = terminal
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.terminal))
+
+    def __eq__(self, other):
+        return isinstance(other, ScannedTerminal) and other.terminal == self.terminal and EarleyState.__eq__(self, other)
+
+    __ne__ = EarleyState.__ne__
 
     def to_tree(self) -> MutableParseTree[ParseTreeValue]:
         return MutableParseTree(self.terminal)
@@ -500,7 +532,6 @@ class EarleyQueue:
             expected=state.expected[1:],
             index=state.index
         )
-        completed.prediction.completed_by.add(new_state)
         self.add(new_state, left_sibling=state)
 
     def add(self, state: EarleyState, left_sibling: Optional[EarleyState] = None) -> bool:
@@ -667,7 +698,7 @@ class EarleyParser:
     def _predict(self, state: EarleyState, k: int):
         prod: Production = self.grammar[state.next_element]  # type: ignore
         if not prod.can_produce_terminal:
-            new_state = Prediction(production=prod, parsed=(), expected=(), index=k, rule=Rule(self.grammar))
+            new_state = EmptyProduction(prediction=state.prediction, production=prod, parsed=(), expected=(), index=k)
             self.states[k].add(new_state)
             return
         for rule in prod.rules:
@@ -693,9 +724,6 @@ class EarleyParser:
         self.states[completed.index].already_completed[completed.production.name][completed].add(k)
         for state in self.states[completed.index].waiting_for[completed.production.name]:
             self.states[k].complete_state(state, completed)
-        if isinstance(completed, Completion) and completed.production == self.start:
-            for start_state in self.start_states:
-                start_state.completed_by.add(completed)
 
 
 class _Node:
