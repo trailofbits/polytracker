@@ -169,16 +169,24 @@ class FunctionInfo:
         self,
         name: str,
         cmp_bytes: Dict[str, List[int]],
-        input_bytes: Dict[str, List[int]] = None,
+        input_bytes: Optional[Dict[str, List[int]]] = None,
         called_from: Iterable[str] = (),
     ):
         self.name: str = name
         self.called_from: FrozenSet[str] = frozenset(called_from)
-        self.cmp_bytes: Dict[str, List[int]] = cmp_bytes
+        self._cmp_bytes: Dict[str, List[int]] = cmp_bytes
         if input_bytes is None:
-            self.input_bytes: Dict[str, List[int]] = cmp_bytes
+            self._input_bytes: Dict[str, List[int]] = cmp_bytes
         else:
-            self.input_bytes = input_bytes
+            self._input_bytes = input_bytes
+
+    @property
+    def input_bytes(self) -> Dict[str, List[int]]:
+        return self._input_bytes
+
+    @property
+    def cmp_bytes(self) -> Dict[str, List[int]]:
+        return self._cmp_bytes
 
     @property
     def taint_sources(self) -> KeysView[str]:
