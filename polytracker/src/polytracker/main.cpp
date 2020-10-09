@@ -15,7 +15,7 @@
 extern int errno;
 const char * polytracker_output_filename;
 bool polytracker_trace = false;
-const decay_val taint_node_ttl;
+decay_val taint_node_ttl;
 
 extern std::vector<RuntimeInfo*> thread_runtime_info;
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
