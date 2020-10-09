@@ -1,6 +1,5 @@
 import logging
-from functools import cache
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from .cfg import CFG, FunctionInfo
 from .taint_forest import TaintForest
@@ -32,6 +31,9 @@ class ProgramTrace:
                 else:
                     self._cfg.add_edge(self.functions[caller], f)
         return self._cfg
+
+    def diff(self, trace: "ProgramTrace"):
+        pass
 
     def __repr__(self):
         return f"{self.__class__.__name__}(polytracker_version={self.polytracker_version!r}, function_data={list(self.functions.values())!r})"
@@ -158,41 +160,40 @@ class TaintForestFunctionInfo(FunctionInfo):
     def __init__(
         self,
         name: str,
-        canonical_mapping: Dict[int, int],
         forest: TaintForest,
         cmp_byte_labels: Dict[str, List[int]],
         input_byte_labels: Optional[Dict[str, List[int]]] = None,
         called_from: Iterable[str] = (),
     ):
         super().__init__(name=name, cmp_bytes={}, called_from=called_from)
-        self.canonical_mapping: Dict[int, int] = canonical_mapping
         self.forest: TaintForest = forest
         self.cmp_byte_labels: Dict[str, List[int]] = cmp_byte_labels
         if input_byte_labels is None:
             self.input_byte_labels: Dict[str, List[int]] = self.cmp_byte_labels
         else:
             self.input_byte_labels = input_byte_labels
-
-    def _lookup_taints(self, labels: List[int]) -> List[int]:
-        return list({self.canonical_mapping[canonical_label] for canonical_label in self.forest.tainted_bytes(*labels)})
+        self._cached_input_bytes: Optional[Dict[str, List[int]]] = None
+        self._cached_cmp_bytes: Optional[Dict[str, List[int]]] = None
 
     @property
-    @cache
     def input_bytes(self) -> Dict[str, List[int]]:
-        return {
-            source: self._lookup_taints(labels) for source, labels in self.input_byte_labels.items()
-        }
+        if self._cached_input_bytes is None:
+            self._cached_input_bytes = {
+                source: list(self.forest.tainted_bytes(*labels)) for source, labels in self.input_byte_labels.items()
+            }
+        return self._cached_input_bytes
 
     @property
-    @cache
     def cmp_bytes(self) -> Dict[str, List[int]]:
-        return {
-            source: self._lookup_taints(labels) for source, labels in self.cmp_byte_labels.items()
-        }
+        if self._cached_cmp_bytes is None:
+            self._cached_cmp_bytes = {
+                source: list(self.forest.tainted_bytes(*labels)) for source, labels in self.cmp_byte_labels.items()
+            }
+        return self._cached_cmp_bytes
 
 
 @polytracker_version(2, 2, 0)
-def parse_format_v3(polytracker_json_obj: dict, polytracker_forest_path: str) -> ProgramTrace:
+def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) -> ProgramTrace:
     version = polytracker_json_obj["version"].split(".")
     function_data = []
     tainted_functions = set()
@@ -201,7 +202,7 @@ def parse_format_v3(polytracker_json_obj: dict, polytracker_forest_path: str) ->
         raise ValueError(f"Expected only a single taint source, but found {sources}")
     source = next(iter(sources))
     canonical_mapping: Dict[int, int] = dict(polytracker_json_obj['canonical_mapping'][source])
-    forest = TaintForest(polytracker_forest_path)
+    forest = TaintForest(path=polytracker_forest_path, canonical_mapping=canonical_mapping)
     for function_name, data in polytracker_json_obj["tainted_functions"].items():
         if "input_bytes" not in data:
             if "cmp_bytes" in data:
@@ -221,7 +222,6 @@ def parse_format_v3(polytracker_json_obj: dict, polytracker_forest_path: str) ->
         function_data.append(
             TaintForestFunctionInfo(
                 name=function_name,
-                canonical_mapping=canonical_mapping,
                 forest=forest,
                 cmp_byte_labels=cmp_bytes,
                 input_byte_labels=input_bytes,

@@ -1,6 +1,6 @@
 import os
 import struct
-from typing import List, Set
+from typing import Dict, List, Set
 from typing_extensions import Final
 
 from tqdm import trange
@@ -13,8 +13,9 @@ TAINT_NODE_SIZE: Final[int] = 8
 
 
 class TaintForest:
-    def __init__(self, path: str):
+    def __init__(self, path: str, canonical_mapping: Dict[int, int]):
         self.path: str = path
+        self.canonical_mapping: Dict[int, int] = canonical_mapping
         self.num_nodes: int = 0  # this is set in self.validate()
         self.validate()
 
@@ -42,6 +43,11 @@ class TaintForest:
                             raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
                         if parent2 >= label:
                             raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
+                    elif parent1 == 0 and parent2 == 0:
+                        if label not in self.canonical_mapping:
+                            raise ValueError(f"Canonical taint label {label} is missing from the canonical mapping")
+                    else:
+                        raise ValueError(f"Taint label {label} has one non-zero parent and another zero parent")
 
     def tainted_bytes(self, *labels: int) -> Set[int]:
         # reverse the labels to reduce the likelihood of reproducing work
@@ -55,7 +61,9 @@ class TaintForest:
                 parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
                 if parent1 == 0:
                     assert parent2 == 0
-                    taints.add(label)
+                    if label not in self.canonical_mapping:
+                        raise ValueError(f"Taint label {label} is not in the canonical mapping!")
+                    taints.add(self.canonical_mapping[label])
                 else:
                     if parent1 not in history:
                         history.add(parent1)

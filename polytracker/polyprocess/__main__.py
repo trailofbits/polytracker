@@ -1,11 +1,12 @@
 import argparse
+import json
 import logging
 import sys
 from typing import List
 
 from .. import grammars, tracing
 from .polyprocess import PolyProcess
-from .. import datalog
+from .. import datalog, polytracker
 
 logger = logging.getLogger("polyprocess")
 
@@ -41,6 +42,14 @@ def main():
         help="extract a datalog parser from the provided pairs of JSON trace files as well as the associated input file"
         "that was sent to the instrumented parser to generate polytracker_json",
     )
+    commands.add_argument(
+        "--diff",
+        nargs=4,
+        action="append",
+        metavar=("polytracker_json1", "taint_forest_bin1", "polytracker_json2", "taint_forest_bin2"),
+        type=str,
+        help="perform a diff of against the output of two instrumented runs",
+    )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
 
@@ -54,6 +63,14 @@ def main():
     if args.draw_forest and args.forest is None:
         sys.stderr.write("Error: Path to forest bin not specified\n\n")
         exit(1)
+
+    if args.diff is not None:
+        for json1, forest1, json2, forest2 in args.diff:
+            with open(json1) as f:
+                trace1 = polytracker.parse(json.load(f), forest1)
+            with open(json2) as f:
+                trace2 = polytracker.parse(json.load(f), forest2)
+            trace1.diff(trace2)
 
     if args.forest is not None:
         poly_process = PolyProcess(args.json, args.forest)
