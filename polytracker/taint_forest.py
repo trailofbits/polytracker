@@ -3,6 +3,8 @@ import struct
 from typing import List, Set
 from typing_extensions import Final
 
+from tqdm import trange
+
 """
 This "Final" type means this is just a const
 The 8 comes from two uint32_t's representing a nodes parents
@@ -16,13 +18,30 @@ class TaintForest:
         self.num_nodes: int = 0  # this is set in self.validate()
         self.validate()
 
-    def validate(self):
+    def validate(self, full: bool = __debug__):
         if not os.path.exists(self.path):
             raise ValueError(f"Taint forest file does not exist: {self.path}")
         filesize = os.stat(self.path).st_size
         if filesize % TAINT_NODE_SIZE != 0:
             raise ValueError(f"Taint forest is not a multiple of {TAINT_NODE_SIZE} bytes!")
         self.num_nodes = filesize // TAINT_NODE_SIZE
+        if full:
+            # ensure that every label's parents are less than its own label value
+            with open(self.path, "rb") as forest:
+                for label in trange(
+                        self.num_nodes,
+                        desc="Validating taint forest topology",
+                        leave=False,
+                        unit=" labels"
+                ):
+                    parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
+                    if parent1 == parent2 and parent1 != 0:
+                        raise ValueError(f"Taint label {label} has two parents that both have label {parent1}")
+                    elif parent1 != 0 and parent2 != 0:
+                        if parent1 >= label:
+                            raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
+                        if parent2 >= label:
+                            raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
 
     def tainted_bytes(self, *labels: int) -> Set[int]:
         # reverse the labels to reduce the likelihood of reproducing work
