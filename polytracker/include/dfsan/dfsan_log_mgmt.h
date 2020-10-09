@@ -26,7 +26,6 @@ typedef std::unordered_map<std::thread::id, std::vector<std::string>>
     thread_id_map;
 typedef std::unordered_map<std::string, std::unordered_set<taint_node_t *>>
     string_node_map;
-typedef std::unordered_map<std::string, Roaring> string_roaring_map;
 
 class targetInfo {
 public:
