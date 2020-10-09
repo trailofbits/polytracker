@@ -3,7 +3,7 @@ import struct
 from typing import Dict, List, Set
 from typing_extensions import Final
 
-from tqdm import trange
+from tqdm import tqdm, trange
 
 """
 This "Final" type means this is just a const
@@ -19,7 +19,7 @@ class TaintForest:
         self.num_nodes: int = 0  # this is set in self.validate()
         self.validate()
 
-    def validate(self, full: bool = __debug__):
+    def validate(self, full: bool = False):
         if not os.path.exists(self.path):
             raise ValueError(f"Taint forest file does not exist: {self.path}")
         filesize = os.stat(self.path).st_size
@@ -44,7 +44,7 @@ class TaintForest:
                         if parent2 >= label:
                             raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
                     elif parent1 == 0 and parent2 == 0:
-                        if label not in self.canonical_mapping:
+                        if label not in self.canonical_mapping and label != 0:
                             raise ValueError(f"Canonical taint label {label} is missing from the canonical mapping")
                     else:
                         raise ValueError(f"Taint label {label} has one non-zero parent and another zero parent")
@@ -54,9 +54,15 @@ class TaintForest:
         node_stack: List[int] = sorted(list(set(labels)), reverse=True)
         history: Set[int] = set(node_stack)
         taints = set()
-        with open(self.path, "rb") as forest:
+        with open(self.path, "rb") as forest, tqdm(
+            desc=f"finding canonical taints for {', '.join(map(str, labels))}",
+            leave=False,
+            bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
+            total=sum(node_stack)
+        ) as t:
             while node_stack:
                 label = node_stack.pop()
+                t.update(label)
                 forest.seek(TAINT_NODE_SIZE * label)
                 parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
                 if parent1 == 0:
@@ -68,7 +74,9 @@ class TaintForest:
                     if parent1 not in history:
                         history.add(parent1)
                         node_stack.append(parent1)
+                        t.total += parent1
                     if parent2 not in history:
                         history.add(parent2)
                         node_stack.append(parent2)
+                        t.total += parent2
         return taints

@@ -33,7 +33,7 @@ class ProgramTrace:
         return self._cfg
 
     def diff(self, trace: "ProgramTrace"):
-        pass
+        print(next(iter(self.functions.values())).input_bytes)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(polytracker_version={self.polytracker_version!r}, function_data={list(self.functions.values())!r})"
@@ -72,10 +72,12 @@ def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = N
                         "is newer than the latest supported by the polytracker Python module "
                         f"({'.'.join(known_version)})"
                     )
-                if int(known_version[0]) >= 2 and int(known_version[1]) > 0 and polytracker_forest_path is None:
-                    raise ValueError("A polytracker taint forest binary is required for version "
-                                     f"{'.'.join(map(str, known_version))} and above")
-                return parser(polytracker_json_obj)
+                if int(known_version[0]) >= 2 and int(known_version[1]) > 0:
+                    if polytracker_forest_path is None:
+                        raise ValueError("A polytracker taint forest binary is required for version "
+                                         f"{'.'.join(map(str, known_version))} and above")
+                    else:
+                        return parser(polytracker_json_obj, polytracker_forest_path)
         raise ValueError(f"Unsupported PolyTracker version {polytracker_json_obj['version']!r}")
     for function_name, function_data in polytracker_json_obj.items():
         if isinstance(function_data, dict) and "called_from" in function_data:
@@ -179,7 +181,7 @@ class TaintForestFunctionInfo(FunctionInfo):
     def input_bytes(self) -> Dict[str, List[int]]:
         if self._cached_input_bytes is None:
             self._cached_input_bytes = {
-                source: list(self.forest.tainted_bytes(*labels)) for source, labels in self.input_byte_labels.items()
+                source: sorted(self.forest.tainted_bytes(*labels)) for source, labels in self.input_byte_labels.items()
             }
         return self._cached_input_bytes
 
