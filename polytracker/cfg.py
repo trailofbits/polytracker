@@ -18,6 +18,7 @@ from typing import (
     Union,
 )
 
+import cxxfilt
 import graphviz
 import networkx as nx
 
@@ -179,6 +180,15 @@ class FunctionInfo:
             self._input_bytes: Dict[str, List[int]] = cmp_bytes
         else:
             self._input_bytes = input_bytes
+        self._demangled_name: Optional[str] = None
+
+    def demangled_name(self) -> str:
+        if self._demangled_name is None:
+            self._demangled_name = self.name
+            if self._demangled_name.startswith('dfs$'):
+                self._demangled_name = self._demangled_name[4:]
+            self._demangled_name = cxxfilt.demangle(self._demangled_name)
+        return self._demangled_name
 
     @property
     def input_bytes(self) -> Dict[str, List[int]]:
@@ -205,7 +215,7 @@ class FunctionInfo:
         return hash(self.name)
 
     def __str__(self):
-        return self.name
+        return self.demangled_name
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"

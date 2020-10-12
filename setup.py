@@ -60,6 +60,7 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=[
+        'cxxfilt==0.2.2',
         'graphviz==0.14.1',
         'matplotlib==3.3.0',
         'networkx==2.4',
