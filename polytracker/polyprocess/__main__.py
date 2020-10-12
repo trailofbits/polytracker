@@ -70,7 +70,7 @@ def main():
                 trace1 = polytracker.parse(json.load(f), forest1)
             with open(json2) as f:
                 trace2 = polytracker.parse(json.load(f), forest2)
-            trace1.diff(trace2)
+            print(str(trace1.diff(trace2)))
 
     if args.forest is not None:
         poly_process = PolyProcess(args.json, args.forest)

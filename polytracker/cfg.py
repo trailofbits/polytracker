@@ -9,6 +9,7 @@ from typing import (
     Generic,
     ItemsView,
     Iterable,
+    Iterator,
     KeysView,
     List,
     Optional,
@@ -171,7 +172,7 @@ class FunctionInfo:
         name: str,
         cmp_bytes: Dict[str, List[int]],
         input_bytes: Optional[Dict[str, List[int]]] = None,
-        called_from: Iterable[str] = (),
+        called_from: Iterable[str] = ()
     ):
         self.name: str = name
         self.called_from: FrozenSet[str] = frozenset(called_from)
@@ -182,6 +183,7 @@ class FunctionInfo:
             self._input_bytes = input_bytes
         self._demangled_name: Optional[str] = None
 
+    @property
     def demangled_name(self) -> str:
         if self._demangled_name is None:
             self._demangled_name = self.name
@@ -202,6 +204,30 @@ class FunctionInfo:
     def taint_sources(self) -> KeysView[str]:
         return self.input_bytes.keys()
 
+    @staticmethod
+    def tainted_chunks(byte_offsets: Iterable[int]) -> Iterator[Tuple[int, int]]:
+        start_offset: Optional[int] = None
+        last_offset: Optional[int] = None
+        for offset in sorted(byte_offsets):
+            if last_offset is None:
+                start_offset = offset
+            elif offset != last_offset and offset != last_offset + 1:
+                yield start_offset, last_offset + 1
+                start_offset = offset
+            last_offset = offset
+        if last_offset is not None:
+            yield start_offset, last_offset + 1
+
+    def input_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.input_bytes.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
+
+    def cmp_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.cmp_bytes.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
+
     def __getitem__(self, input_source_name: str) -> List[int]:
         return self.input_bytes[input_source_name]
 
@@ -213,6 +239,9 @@ class FunctionInfo:
 
     def __hash__(self):
         return hash(self.name)
+
+    def __eq__(self, other):
+        return isinstance(other, FunctionInfo) and other.name == self.name
 
     def __str__(self):
         return self.demangled_name

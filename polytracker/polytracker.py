@@ -1,5 +1,7 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from io import StringIO
+import os
+from typing import Any, Callable, Dict, FrozenSet, Iterable, KeysView, List, Optional, TextIO, Tuple, Union
 
 from .cfg import CFG, FunctionInfo
 from .taint_forest import TaintForest
@@ -14,6 +16,13 @@ class ProgramTrace:
         self.polytracker_version: Tuple[VersionElement, ...] = version
         self.functions: Dict[str, FunctionInfo] = {f.name: f for f in function_data}
         self._cfg: Optional[CFG] = None
+        self._taint_sources: Optional[FrozenSet[str]] = None
+
+    @property
+    def taint_sources(self) -> FrozenSet[str]:
+        if self._taint_sources is None:
+            self._taint_sources = frozenset([s for func in self.functions.values() for s in func.taint_sources])
+        return self._taint_sources
 
     @property
     def cfg(self) -> CFG:
@@ -32,11 +41,106 @@ class ProgramTrace:
                     self._cfg.add_edge(self.functions[caller], f)
         return self._cfg
 
-    def diff(self, trace: "ProgramTrace"):
-        print(next(iter(self.functions.values())).input_bytes)
+    def diff(self, trace: "ProgramTrace") -> "TraceDiff":
+        return TraceDiff(self, trace)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(polytracker_version={self.polytracker_version!r}, function_data={list(self.functions.values())!r})"
+
+    def __str__(self):
+        if len(self.taint_sources) == 0:
+            return repr(self)
+        elif len(self.taint_sources) == 1:
+            return next(iter(self.taint_sources))
+        else:
+            return f"{{{', '.join(self.taint_sources)}}}"
+
+
+def print_file_context(output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, indent: str = ""):
+    extra_context_bytes = max(0, num_bytes_context - length)
+    extra_context_before = extra_context_bytes // 2
+    if offset - extra_context_before < 0:
+        extra_context_before = offset
+    start = offset - extra_context_before
+    output.write(f"{indent}@{offset}\n{indent}")
+    with open(path, "rb") as s:
+        s.seek(start)
+        data = s.read(length + extra_context_bytes)
+        highlight_start = -1
+        highlight_length = 0
+        written = 0
+        for i, b in enumerate(data):
+            if b == ord("\n"):
+                to_write = "\\n"
+            elif b == ord("\r"):
+                to_write = "\\r"
+            elif b == ord("\\"):
+                to_write = "\\\\"
+            elif b == ord("\t"):
+                to_write = "\\t"
+            elif ord(" ") <= b <= ord("~"):
+                to_write = chr(b)
+            else:
+                to_write = f"\\x{b:02x}"
+            if i == extra_context_before:
+                highlight_start = written
+            if i == extra_context_before + length:
+                highlight_length = written - highlight_start
+            written += len(to_write)
+            output.write(to_write)
+        output.write("\n")
+        if highlight_length > 0:
+            output.write(f"{indent}{' ' * highlight_start}{'^' * highlight_length}\n")
+
+
+class TraceDiff:
+    def __init__(self, trace1: ProgramTrace, trace2: ProgramTrace):
+        self.trace1: ProgramTrace = trace1
+        self.trace2: ProgramTrace = trace2
+        self._functions_only_in_first: Optional[FrozenSet[FunctionInfo]] = None
+        self._functions_only_in_second: Optional[FrozenSet[FunctionInfo]] = None
+
+    @property
+    def functions_only_in_first(self) -> FrozenSet[FunctionInfo]:
+        if self._functions_only_in_first is None:
+            self._diff()
+        return self._functions_only_in_first
+
+    @property
+    def functions_only_in_second(self) -> FrozenSet[FunctionInfo]:
+        if self._functions_only_in_second is None:
+            self._diff()
+        return self._functions_only_in_second
+
+    def _diff(self):
+        if self._functions_only_in_first is None:
+            first_funcs = frozenset(self.trace1.functions.values())
+            second_funcs = frozenset(self.trace2.functions.values())
+            self._functions_only_in_first = first_funcs - second_funcs
+            self._functions_only_in_second = second_funcs - first_funcs
+
+    def __bool__(self):
+        return bool(self.functions_only_in_first) or bool(self.functions_only_in_second)
+
+    def __str__(self):
+        status = StringIO()
+
+        def print_function_info(info: FunctionInfo):
+            for source, (start, end) in info.input_chunks():
+                if os.path.exists(source):
+                    print_file_context(status, path=source, offset=start, length=end - start, indent="\t")
+                else:
+                    status.write(f"\tTouched {end - start} bytes at offset {start}\n")
+
+        for func in self.functions_only_in_first:
+            status.write(f"Function {func!s} was called in {self.trace1!s} but not in {self.trace2!s}\n")
+            print_function_info(func)
+        for func in self.functions_only_in_second:
+            status.write(f"Function {func!s} was called in {self.trace2!s} but not in {self.trace1!s}\n")
+            print_function_info(func)
+        if not self:
+            status.write(f"Traces {self.trace1!s} and {self.trace2!s} do not differ")
+        return status.getvalue()
 
 
 POLYTRACKER_JSON_FORMATS: List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
@@ -178,6 +282,10 @@ class TaintForestFunctionInfo(FunctionInfo):
         self._cached_cmp_bytes: Optional[Dict[str, List[int]]] = None
 
     @property
+    def taint_sources(self) -> KeysView[str]:
+        return self.input_byte_labels.keys()
+
+    @property
     def input_bytes(self) -> Dict[str, List[int]]:
         if self._cached_input_bytes is None:
             self._cached_input_bytes = {
@@ -231,6 +339,7 @@ def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) ->
             )
         )
         tainted_functions.add(function_name)
+    # Add any additional functions from the CFG that didn't operate on tainted bytes
     # Add any additional functions from the CFG that didn't operate on tainted bytes
     for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
         function_data.append(

@@ -54,8 +54,12 @@ class TaintForest:
         node_stack: List[int] = sorted(list(set(labels)), reverse=True)
         history: Set[int] = set(node_stack)
         taints = set()
+        if len(labels) < 10:
+            labels_str = ", ".join(map(str, labels))
+        else:
+            labels_str = f"{len(labels)} labels"
         with open(self.path, "rb") as forest, tqdm(
-            desc=f"finding canonical taints for {', '.join(map(str, labels))}",
+            desc=f"finding canonical taints for {labels_str}",
             leave=False,
             bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
             total=sum(node_stack)
