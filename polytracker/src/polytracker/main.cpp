@@ -1,4 +1,5 @@
 #include "include/dfsan/dfsan_types.h"
+#include "include/dfsan/dfsan.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
@@ -7,6 +8,7 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "include/polytracker/logging.h"
 #include "include/polytracker/output.h"
+#include "include/polytracker/taint.h"
 #include <string>
 #include <errno.h>
 
@@ -16,6 +18,7 @@ extern int errno;
 const char * polytracker_output_filename;
 bool polytracker_trace = false;
 decay_val taint_node_ttl;
+char * forest_mem;
 
 extern std::vector<RuntimeInfo*> thread_runtime_info;
 // This function is like `getenv`.  So why does it exist?  It's because dfsan
@@ -116,17 +119,14 @@ void polytracker_parse_env() {
   }
   fclose(temp_file);
 
+  //Add named source for polytracker
+  addInitialSource(poly_start, byte_start, byte_end - 1, poly_start);
+  //Add source for standard input 
+  addInitialSource(stdin, 0, MAX_LABELS, poly_start);
 
   polytracker_parse_output();
   polytracker_parse_polytrace();
-  //taint_manager->setOutputFilename(std::string(polytracker_output_filename));
-  //taint_manager->setTrace(polytracker_trace);
   polytracker_parse_ttl();
-
-  //taint_manager->createNewTargetInfo(target_file, byte_start, byte_end - 1);
-  // Special tracking for standard input
-  //taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
-  //taint_manager->createNewTaintInfo("stdin", stdin);
 }
 
 
@@ -143,7 +143,10 @@ static void polytracker_start() {
   //Set up the atexit call 
   Atexit(polytracker_end);
 
+  //Pre_init_array should have already gone, meaning DFsan should have set up memory. 
+  forest_mem = (char*)ForestAddr();
 }
 
+//TODO confirm that this works! 
 __attribute__((section(".init_array"),
                used)) static void (*polytracker_init_ptr)() = polytracker_start;
