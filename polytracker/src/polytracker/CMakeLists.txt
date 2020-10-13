@@ -1,0 +1,5 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -fPIC")
+add_library(Polytracker STATIC main.cpp logging.cpp taint.cpp output.cpp)
+target_link_libraries(Polytracker)
+install (TARGETS Polytracker DESTINATION ${POLYTRACK_LIB_DIR}) 
