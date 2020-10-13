@@ -133,13 +133,13 @@ class TraceDiff:
                     status.write(f"\tTouched {end - start} bytes at offset {start}\n")
 
         for func in self.functions_only_in_first:
-            status.write(f"Function {func!s} was called in {self.trace1!s} but not in {self.trace2!s}\n")
+            status.write(f"Function {func!s} was called in the reference trace but not in the diffed trace\n")
             print_function_info(func)
         for func in self.functions_only_in_second:
-            status.write(f"Function {func!s} was called in {self.trace2!s} but not in {self.trace1!s}\n")
+            status.write(f"Function {func!s} was called in the diffed trace but not in the reference trace\n")
             print_function_info(func)
         if not self:
-            status.write(f"Traces {self.trace1!s} and {self.trace2!s} do not differ")
+            status.write(f"Traces do not differ")
         return status.getvalue()
 
 
