@@ -1,21 +1,17 @@
 #include <iostream>
 #include <mutex>
 #include <sstream>
-
+#include <atomic>
 #include "polytracker/tracing.h"
+#include "tracing.h"
 
 namespace polytracker {
 
-size_t numTraceEvents = 0;
-std::mutex traceEventLock;
+std::atomic<size_t> numTraceEvents(0);
 
 const std::list<dfsan_label> Trace::EMPTY_LIST = {};
 
-TraceEvent::TraceEvent() : previous(nullptr), next(nullptr) {
-  traceEventLock.lock();
-  eventIndex = numTraceEvents++;
-  traceEventLock.unlock();
-};
+TraceEvent::TraceEvent() : previous(nullptr), next(nullptr), eventIndex(numTraceEvents.fetch_add(1)) {}
 
 std::string BasicBlockTrace::str() const {
   std::stringstream s;
