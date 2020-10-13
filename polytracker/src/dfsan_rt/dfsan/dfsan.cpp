@@ -20,7 +20,6 @@
 //===----------------------------------------------------------------------===//
 #include "dfsan/dfsan.h"
 
-#include "dfsan/dfsan_log_mgmt.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/tracing.h"
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -47,9 +46,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "dfsan/roaring.c"
+#include "include/polytracker/logging.h"
+#include "include/polytracker/taint.h"
 
-using json = nlohmann::json;
 using namespace __dfsan;
 
 // This keeps track of the current taint label we are on
@@ -63,6 +62,7 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 // This is a boundary we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
 
+/*
 // This is a decay value, its a practical choice made due to the inherent
 // problems when using taint analysis Specifically, when analyzing functions
 // that manipulate a lot of data, like decompression functions, youll get way
@@ -76,12 +76,15 @@ static decay_val taint_node_ttl = DEFAULT_TTL;
 static const char *polytracker_output_filename;
 
 // Whether or not to perform a full program trace
-static bool polytracker_trace = false;
+bool polytracker_trace = false;
 
 // Manages taint info/propagation
 taintManager *taint_manager = nullptr;
 static bool is_init = false;
 std::mutex init_lock;
+*/
+
+extern bool polytracker_trace;
 
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
@@ -118,20 +121,11 @@ static uptr UnusedAddr() {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
-  taint_manager->resetFrame(index);
+  resetFrame(index);
 }
 
-void dfsan_late_late_init();
-
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
-  init_lock.lock();
-  if (is_init == false) {
-    dfsan_late_late_init();
-    is_init = true;
-  }
-  init_lock.unlock();
-
-  return taint_manager->logFunctionEntry(fname);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(const char *fname) {
+  return logFunctionEntry(fname);
 }
 
 // TODO rename
@@ -149,33 +143,25 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_test_fn(
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
-    char *fname, uint32_t functionIndex, uint32_t bbIndex,
+    const char *fname, uint32_t functionIndex, uint32_t bbIndex,
     std::underlying_type<polytracker::BasicBlockType>::type bbType) {
-  init_lock.lock();
-  if (is_init == false) {
-    dfsan_late_late_init();
-    is_init = true;
-  }
-  init_lock.unlock();
-
-  if (taint_manager->recordTrace()) {
-    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex),
-                              static_cast<polytracker::BasicBlockType>(bbType));
+  if (polytracker_trace) {
+    logBBEntry(fname, BBIndex(functionIndex, bbIndex), static_cast<polytracker::BasicBlockType>(bbType));
   }
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
     dfsan_label some_label) {
-  taint_manager->logCompare(some_label);
+  logComparison(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint(
     dfsan_label some_label) {
-  taint_manager->logOperation(some_label);
+  logOperation(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
-  taint_manager->logFunctionExit();
+  logFunctionExit();
 }
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
@@ -183,7 +169,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
 // The union table prevents there from being dupilcate labels
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 __dfsan_union(dfsan_label l1, dfsan_label l2) {
-  return taint_manager->createUnionLabel(l1, l2);
+  return createUnionLabel(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
@@ -325,45 +311,10 @@ static void InitializePlatformEarly() {
 }
 
 static void dfsan_fini() {
-  if (taint_manager == nullptr) {
-    return;
-  }
-  taint_manager->output();
-  delete taint_manager;
+  return;
 }
 
-// This function is like `getenv`.  So why does it exist?  It's because dfsan
-// gets initialized before all the internal data structures for `getenv` are
-// set up. This is similar to how ASAN does it
-static char *dfsan_getenv(const char *name) {
-  char *environ;
-  uptr len;
-  uptr environ_size;
-  if (!ReadFileToBuffer("/proc/self/environ", &environ, &environ_size, &len)) {
-    return NULL;
-  }
-  uptr namelen = strlen(name);
-  char *p = environ;
-  while (*p != '\0') {  // will happen at the \0\0 that terminates the buffer
-    // proc file has the format NAME=value\0NAME=value\0NAME=value\0...
-    char *endp = (char *)memchr(p, '\0', len - (p - environ));
-    if (!endp) {  // this entry isn't NUL terminated
-      fprintf(stderr,
-              "Something in the env is not null terminated, exiting!\n");
-      return NULL;
-    }
-    // match
-    else if (!memcmp(p, name, namelen) && p[namelen] == '=') {
-#ifdef DEBUG_INFO
-      fprintf(stderr, "Found target file\n");
-#endif
-      return p + namelen + 1;
-    }
-    p = endp + 1;
-  }
-  return NULL;
-}
-
+/*
 void dfsan_parse_env() {
   // Check for path to input file
   const char *target_file = dfsan_getenv("POLYPATH");
@@ -430,6 +381,8 @@ void dfsan_parse_env() {
   taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
   taint_manager->createNewTaintInfo("stdin", stdin);
 }
+*/
+/*
 void dfsan_late_late_init() {
   taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
                                    (char *)ForestAddr());
@@ -439,6 +392,7 @@ void dfsan_late_late_init() {
   }
   dfsan_parse_env();
 }
+*/
 void dfsan_late_init() {
   InitializeFlags();
   InitializePlatformEarly();
