@@ -16,8 +16,7 @@ using polytracker::hasType;
 using polytracker::TraceEvent;
 using namespace __dfsan;
 
-extern const char * shad_mem_ptr; 
-extern const char * forest_mem; 
+extern char * forest_mem; 
 extern bool polytracker_trace;
 
 thread_local RuntimeInfo * runtime_info = nullptr;
@@ -172,7 +171,7 @@ void logFunctionExit() {
  * It will only be called if polytracker_trace is true,
  * which will only be set if the POLYTRACE environment variable is set.
  */
-void logBBEntry(char* fname, BBIndex bbIndex,
+void logBBEntry(const char* fname, BBIndex bbIndex,
                               BasicBlockType bbType) {
   auto currentStack = getPolytrackerTrace().currentStack();
   BasicBlockEntry* newBB;
