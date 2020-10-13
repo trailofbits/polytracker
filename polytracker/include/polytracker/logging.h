@@ -2,11 +2,17 @@
 #define POLYTRACKER_LOGGING 
 #include "include/polytracker/tracing.h"
 #include "include/dfsan/dfsan_types.h"
+
+using namespace polytracker; 
+
 [[nodiscard]] inline taint_node_t* getTaintNode(dfsan_label label);
 [[nodiscard]] inline dfsan_label getTaintLabel(taint_node_t* node);
 void logOperation(dfsan_label some_label);
 void logComparison(dfsan_label some_label);
 void resetFrame(int* index);
+int logFunctionEntry(const char* fname);
+void logFunctionExit();
+void logBBEntry(const char* fname, BBIndex bbIndex, BasicBlockType bbType);
 [[nodiscard]] static inline auto getTaintFuncOps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>&;
 [[nodiscard]] static inline auto getTaintFuncCmps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>&;
 [[nodiscard]] static inline auto getRuntimeCfg(void) -> std::unordered_map<const char*, std::unordered_set<const char *>>&;
