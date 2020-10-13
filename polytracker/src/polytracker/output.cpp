@@ -1,7 +1,12 @@
-#include "include/dfsan/dfsan_log_mgmt.h"
+#include "include/polytracker/polytracker.h"
 #include "include/polytracker/tracing.h"
 #include "include/polytracker/logging.h"
+#include "include/polytracker/taint.h"
+#include "include/dfsan/json.hpp"
+#include <string>
+#include <sstream>
 #include <iomanip>
+#include <set>
 #include <iostream>
 #include <fstream>
 using json = nlohmann::json;
@@ -20,7 +25,6 @@ extern bool polytracker_trace;
 extern std::unordered_map<const char *, std::unordered_map<dfsan_label, int>> canonical_mapping;
 extern std::unordered_map<const char *, std::vector<std::pair<int, int>>> tainted_input_chunks;
 extern std::atomic<dfsan_label> next_label;
-extern taintSourceManager taint_source_manager;
 
 void addJsonVersion(json& output_json) {
   output_json["version"] = POLYTRACKER_VERSION;
@@ -34,16 +38,11 @@ void addJsonRuntimeCFG(json& output_json, const RuntimeInfo * runtime_info) {
 }
 
 void addJsonTaintSources(json& output_json) {
-  auto name_target_map = taint_source_manager.getTargets();
+  auto name_target_map = getInitialSources();
   for (const auto& it : name_target_map) {
-    targetInfo* targ_info = it.second;
-    output_json["taint_sources"][it.first]["start_byte"] =
-        targ_info->byte_start;
-    output_json["taint_sources"][it.first]["end_byte"] = targ_info->byte_end;
-    auto target_metadata = taint_source_manager.getMetadata(targ_info);
-    if (!target_metadata.is_null()) {
-      output_json["taint_sources"][it.first]["metadata"] = target_metadata;
-    }
+    auto& pair_map = it.second;
+    output_json["taint_sources"][it.first]["start_byte"] = pair_map.first;
+    output_json["taint_sources"][it.first]["end_byte"] = pair_map.second;
   }
 }
 
