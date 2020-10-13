@@ -16,18 +16,19 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <atomic>
 
 #include "dfsan/dfsan_types.h"
 #include "polytracker/basic_block_types.h"
 
 namespace polytracker {
 
-extern size_t numTraceEvents;
+extern std::atomic<size_t> numTraceEvents;
 
 struct TraceEvent {
   TraceEvent *previous;
   TraceEvent *next;
-  size_t eventIndex;
+  const size_t eventIndex;
   TraceEvent();
   virtual ~TraceEvent() = default;
 };
