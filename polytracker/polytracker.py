@@ -1,7 +1,7 @@
 import logging
 from io import StringIO
 import os
-from typing import Any, Callable, Dict, FrozenSet, Iterable, KeysView, List, Optional, TextIO, Tuple, Union
+from typing import Any, Callable, Dict, FrozenSet, Iterable, Iterator, KeysView, List, Optional, Set, TextIO, Tuple, Union
 
 from .cfg import CFG, FunctionInfo
 from .taint_forest import TaintForest
@@ -93,6 +93,68 @@ def print_file_context(output: TextIO, path: str, offset: int, length: int, num_
             output.write(f"{indent}{' ' * highlight_start}{'^' * highlight_length}\n")
 
 
+class FunctionDiff:
+    def __init__(self, func1: FunctionInfo, func2: FunctionInfo):
+        assert func1.name == func2.name
+        self.func1: FunctionInfo = func1
+        self.func2: FunctionInfo = func2
+        self._cmp_bytes_only_in_first: Optional[Dict[str, Set[int]]] = None
+        self._cmp_bytes_only_in_second: Optional[Dict[str, Set[int]]] = None
+
+    @property
+    def cmp_bytes_only_in_first(self) -> Dict[str, Set[int]]:
+        if self._cmp_bytes_only_in_first is None:
+            self._diff()
+        return self._cmp_bytes_only_in_first
+
+    @property
+    def cmp_bytes_only_in_second(self) -> Dict[str, Set[int]]:
+        if self._cmp_bytes_only_in_second is None:
+            self._diff()
+        return self._cmp_bytes_only_in_second
+
+    def cmp_chunks_only_in_first(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.cmp_bytes_only_in_first.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
+
+    def cmp_chunks_only_in_second(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.cmp_bytes_only_in_second.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
+
+    def __hash__(self):
+        return hash((self.func1, self.func2))
+
+    def __eq__(self, other):
+        return isinstance(other, FunctionDiff) and other.func1 == self.func1 and other.func2 == self.func2
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def _diff(self):
+        if self._cmp_bytes_only_in_first is None:
+            shared_sources = self.func1.cmp_bytes.keys() & self.func2.cmp_bytes.keys()
+            self._cmp_bytes_only_in_first = {
+                source: set(cmp) for source, cmp in self.func1.cmp_bytes.items() if source not in shared_sources
+            }
+            self._cmp_bytes_only_in_second = {
+                source: set(cmp) for source, cmp in self.func2.cmp_bytes.items() if source not in shared_sources
+            }
+            for shared_source in shared_sources:
+                in_first = set(self.func1.cmp_bytes[shared_source])
+                in_second = set(self.func1.cmp_bytes[shared_source])
+                only_in_first = in_first - in_second
+                if only_in_first:
+                    self._cmp_bytes_only_in_first[shared_source] = only_in_first
+                only_in_second = in_second - in_first
+                if only_in_second:
+                    self._cmp_bytes_only_in_second[shared_source] = only_in_second
+
+    def __bool__(self):
+        return bool(self.cmp_bytes_only_in_first) or bool(self.cmp_bytes_only_in_second)
+
+
 class TraceDiff:
     def __init__(self, trace1: ProgramTrace, trace2: ProgramTrace):
         self.trace1: ProgramTrace = trace1
@@ -112,6 +174,16 @@ class TraceDiff:
             self._diff()
         return self._functions_only_in_second
 
+    @property
+    def functions_in_both(self) -> Iterator[FunctionDiff]:
+        for fname in {
+            name for name in self.trace1.functions.keys()
+            if name not in {
+                f.name for f in (self.functions_only_in_first | self.functions_only_in_second)
+            }
+        }:
+            yield FunctionDiff(self.trace1.functions[fname], self.trace2.functions[fname])
+
     def _diff(self):
         if self._functions_only_in_first is None:
             first_funcs = frozenset(self.trace1.functions.values())
@@ -125,8 +197,8 @@ class TraceDiff:
     def __str__(self):
         status = StringIO()
 
-        def print_function_info(info: FunctionInfo):
-            for source, (start, end) in info.input_chunks():
+        def print_function_info(chunks: Iterable[Tuple[str, Tuple[int, int]]]):
+            for source, (start, end) in chunks:
                 if os.path.exists(source):
                     print_file_context(status, path=source, offset=start, length=end - start, indent="\t")
                 else:
@@ -134,10 +206,22 @@ class TraceDiff:
 
         for func in self.functions_only_in_first:
             status.write(f"Function {func!s} was called in the reference trace but not in the diffed trace\n")
-            print_function_info(func)
+            print_function_info(func.input_chunks())
         for func in self.functions_only_in_second:
             status.write(f"Function {func!s} was called in the diffed trace but not in the reference trace\n")
-            print_function_info(func)
+            print_function_info(func.input_chunks())
+        for func in self.functions_in_both:
+            if func:
+                # different input bytes affected control flow
+                if func.cmp_bytes_only_in_first:
+                    status.write(f"Function {func.func1!s} in the reference trace had the following bytes that tainted "
+                                 "control flow which did not affect control flow in the diffed trace:\n")
+                    print_function_info(func.cmp_chunks_only_in_first())
+                if func.cmp_bytes_only_in_second:
+                    status.write(f"Function {func.func2!s} in the diffed trace had the following bytes that tainted "
+                                 "control flow which did not affect control flow in the reference trace:\n")
+                    print_function_info(func.cmp_chunks_only_in_second())
+
         if not self:
             status.write(f"Traces do not differ")
         return status.getvalue()
