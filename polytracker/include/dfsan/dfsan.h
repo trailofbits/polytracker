@@ -16,7 +16,6 @@
 #define DFSAN_H
 #include "dfsan_platform.h"
 #include "dfsan_types.h"
-#include "roaring.hh"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include <stdint.h>
 #include <unordered_map>
