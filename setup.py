@@ -62,6 +62,7 @@ setup(
     install_requires=[
         'cxxfilt==0.2.2',
         'graphviz==0.14.1',
+        'intervaltree==3.0.2',
         'matplotlib==3.3.0',
         'networkx==2.4',
         'pygraphviz==1.5',

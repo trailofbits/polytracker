@@ -1,7 +1,11 @@
 import logging
-from io import StringIO
 import os
+from collections import defaultdict
+from io import StringIO
 from typing import Any, Callable, Dict, FrozenSet, Iterable, Iterator, KeysView, List, Optional, Set, TextIO, Tuple, Union
+
+from intervaltree import Interval, IntervalTree
+from tqdm import tqdm
 
 from .cfg import CFG, FunctionInfo
 from .taint_forest import TaintForest
@@ -56,9 +60,16 @@ class ProgramTrace:
             return f"{{{', '.join(self.taint_sources)}}}"
 
 
-def print_file_context(output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, indent: str = ""):
+def print_file_context(output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, max_highlight_bytes=32, indent: str = ""):
+    if length > max_highlight_bytes:
+        extra_bytes = length - max_highlight_bytes
+        length = max_highlight_bytes
+    else:
+        extra_bytes = 0
     extra_context_bytes = max(0, num_bytes_context - length)
     extra_context_before = extra_context_bytes // 2
+    if extra_bytes > 0:
+        extra_context_bytes = extra_context_before
     if offset - extra_context_before < 0:
         extra_context_before = offset
     start = offset - extra_context_before
@@ -88,6 +99,8 @@ def print_file_context(output: TextIO, path: str, offset: int, length: int, num_
                 highlight_length = written - highlight_start
             written += len(to_write)
             output.write(to_write)
+        if extra_bytes:
+            output.write(f" [ … plus {extra_bytes} additional byte{['', 's'][extra_bytes > 1]} … ]")
         output.write("\n")
         if highlight_length < 0 <= highlight_start:
             highlight_length = written - highlight_start
@@ -163,17 +176,19 @@ class TraceDiff:
         self.trace2: ProgramTrace = trace2
         self._functions_only_in_first: Optional[FrozenSet[FunctionInfo]] = None
         self._functions_only_in_second: Optional[FrozenSet[FunctionInfo]] = None
+        self._bytes_only_in_first: Optional[Dict[str, IntervalTree]] = None
+        self._bytes_only_in_second: Optional[Dict[str, IntervalTree]] = None
 
     @property
     def functions_only_in_first(self) -> FrozenSet[FunctionInfo]:
         if self._functions_only_in_first is None:
-            self._diff()
+            self._diff_functions()
         return self._functions_only_in_first
 
     @property
     def functions_only_in_second(self) -> FrozenSet[FunctionInfo]:
         if self._functions_only_in_second is None:
-            self._diff()
+            self._diff_functions()
         return self._functions_only_in_second
 
     @property
@@ -186,12 +201,71 @@ class TraceDiff:
         }:
             yield FunctionDiff(self.trace1.functions[fname], self.trace2.functions[fname])
 
-    def _diff(self):
+    def _diff_functions(self):
         if self._functions_only_in_first is None:
             first_funcs = frozenset(self.trace1.functions.values())
             second_funcs = frozenset(self.trace2.functions.values())
             self._functions_only_in_first = first_funcs - second_funcs
             self._functions_only_in_second = second_funcs - first_funcs
+
+    def _diff_bytes(self):
+        if self._bytes_only_in_first is not None:
+            return
+        with tqdm(desc="Diffing tainted byte regions", leave=False, unit=" trace", total=2) as t:
+            first_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
+            for func in tqdm(self.trace1.functions.values(), desc="Trace 1", unit=" functions", leave=False):
+                for source, (start, end) in func.input_chunks():
+                    first_intervals[source].add(Interval(start, end))
+            for interval in first_intervals.values():
+                interval.merge_overlaps()
+            t.update(1)
+            second_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
+            for func in tqdm(self.trace2.functions.values(), desc="Trace 2", unit=" functions", leave=False):
+                for source, (start, end) in func.input_chunks():
+                    second_intervals[source].add(Interval(start, end))
+            for interval in second_intervals.values():
+                interval.merge_overlaps()
+            t.update(2)
+            self._bytes_only_in_first = {}
+            self._bytes_only_in_second = {}
+            for source in first_intervals.keys() & second_intervals.keys():
+                # shared sources
+                self._bytes_only_in_first[source] = first_intervals[source] - second_intervals[source]
+                self._bytes_only_in_second[source] = second_intervals[source] - first_intervals[source]
+            for source in first_intervals.keys() - second_intervals.keys():
+                # sources only in first
+                self._bytes_only_in_first[source] = first_intervals[source]
+            for source in second_intervals.keys() - first_intervals.keys():
+                # sources only in second
+                self._bytes_only_in_second[source] = second_intervals[source]
+
+    @property
+    def input_chunks_only_in_first(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        if self._bytes_only_in_first is None:
+            self._diff_bytes()
+        for source, tree in self._bytes_only_in_first.items():
+            for interval in sorted(tree):
+                yield source, (interval.begin, interval.end)
+
+    @property
+    def input_chunks_only_in_second(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        if self._bytes_only_in_second is None:
+            self._diff_bytes()
+        for source, tree in self._bytes_only_in_second.items():
+            for interval in sorted(tree):
+                yield source, (interval.begin, interval.end)
+
+    @property
+    def has_input_chunks_only_in_first(self) -> bool:
+        if self._bytes_only_in_first is None:
+            self._diff_bytes()
+        return any(len(tree) > 0 for tree in self._bytes_only_in_first.values())
+
+    @property
+    def has_input_chunks_only_in_second(self) -> bool:
+        if self._bytes_only_in_second is None:
+            self._diff_bytes()
+        return any(len(tree) > 0 for tree in self._bytes_only_in_second.values())
 
     def __bool__(self):
         return bool(self.functions_only_in_first) or bool(self.functions_only_in_second)
@@ -199,30 +273,43 @@ class TraceDiff:
     def __str__(self):
         status = StringIO()
 
-        def print_function_info(chunks: Iterable[Tuple[str, Tuple[int, int]]]):
+        def print_chunk_info(chunks: Iterable[Tuple[str, Tuple[int, int]]]):
             for source, (start, end) in chunks:
                 if os.path.exists(source):
                     print_file_context(status, path=source, offset=start, length=end - start, indent="\t")
                 else:
                     status.write(f"\tTouched {end - start} bytes at offset {start}\n")
 
+        if self.has_input_chunks_only_in_first:
+            status.write("The reference trace touched the following byte regions that were not touched by the diffed "
+                         "trace:\n")
+            print_chunk_info(self.input_chunks_only_in_first)
+
+        if self.has_input_chunks_only_in_second:
+            status.write("The diffed trace touched the following byte regions that were not touched by the reference "
+                         "trace:\n")
+            print_chunk_info(self.input_chunks_only_in_second)
+
+        if not self.has_input_chunks_only_in_first and not self.has_input_chunks_only_in_second:
+            status.write("Both traces consumed the exact same input byte regions\n")
+
         for func in self.functions_only_in_first:
             status.write(f"Function {func!s} was called in the reference trace but not in the diffed trace\n")
-            print_function_info(func.input_chunks())
+            print_chunk_info(func.input_chunks())
         for func in self.functions_only_in_second:
             status.write(f"Function {func!s} was called in the diffed trace but not in the reference trace\n")
-            print_function_info(func.input_chunks())
+            print_chunk_info(func.input_chunks())
         for func in self.functions_in_both:
             if func:
                 # different input bytes affected control flow
                 if func.cmp_bytes_only_in_first:
                     status.write(f"Function {func.func1!s} in the reference trace had the following bytes that tainted "
                                  "control flow which did not affect control flow in the diffed trace:\n")
-                    print_function_info(func.cmp_chunks_only_in_first())
+                    print_chunk_info(func.cmp_chunks_only_in_first())
                 if func.cmp_bytes_only_in_second:
                     status.write(f"Function {func.func2!s} in the diffed trace had the following bytes that tainted "
                                  "control flow which did not affect control flow in the reference trace:\n")
-                    print_function_info(func.cmp_chunks_only_in_second())
+                    print_chunk_info(func.cmp_chunks_only_in_second())
 
         if not self:
             status.write(f"Traces do not differ")
