@@ -211,6 +211,7 @@ class TraceDiff:
     def _diff_bytes(self):
         if self._bytes_only_in_first is not None:
             return
+        # TODO: Instead of looking at what functions touched, just look at the bytes in the canonical mapping!
         with tqdm(desc="Diffing tainted byte regions", leave=False, unit=" trace", total=2) as t:
             first_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
             for func in tqdm(self.trace1.functions.values(), desc="Trace 1", unit=" functions", leave=False):
@@ -230,8 +231,13 @@ class TraceDiff:
             self._bytes_only_in_second = {}
             for source in first_intervals.keys() & second_intervals.keys():
                 # shared sources
-                self._bytes_only_in_first[source] = first_intervals[source] - second_intervals[source]
-                self._bytes_only_in_second[source] = second_intervals[source] - first_intervals[source]
+                for interval in tqdm(second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False):
+                    first_intervals[source].remove_overlap(interval.begin, interval.end)
+                self._bytes_only_in_first[source] = first_intervals[source]
+                for interval in tqdm(first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False):
+                    second_intervals[source].remove_overlap(interval.begin, interval.end)
+                self._bytes_only_in_second[source] = second_intervals[source]
+                assert len(self._bytes_only_in_first[source] & self._bytes_only_in_second[source]) == 0
             for source in first_intervals.keys() - second_intervals.keys():
                 # sources only in first
                 self._bytes_only_in_first[source] = first_intervals[source]
