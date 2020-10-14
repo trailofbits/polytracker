@@ -29,12 +29,7 @@ class TaintForest:
         if full:
             # ensure that every label's parents are less than its own label value
             with open(self.path, "rb") as forest:
-                for label in trange(
-                        self.num_nodes,
-                        desc="Validating taint forest topology",
-                        leave=False,
-                        unit=" labels"
-                ):
+                for label in trange(self.num_nodes, desc="Validating taint forest topology", leave=False, unit=" labels"):
                     parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
                     if parent1 == parent2 and parent1 != 0:
                         raise ValueError(f"Taint label {label} has two parents that both have label {parent1}")
@@ -62,7 +57,7 @@ class TaintForest:
             desc=f"finding canonical taints for {labels_str}",
             leave=False,
             bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
-            total=sum(node_stack)
+            total=sum(node_stack),
         ) as t:
             while node_stack:
                 label = node_stack.pop()

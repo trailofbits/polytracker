@@ -60,7 +60,9 @@ class ProgramTrace:
             return f"{{{', '.join(self.taint_sources)}}}"
 
 
-def print_file_context(output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, max_highlight_bytes=32, indent: str = ""):
+def print_file_context(
+    output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, max_highlight_bytes=32, indent: str = ""
+):
     if length > max_highlight_bytes:
         extra_bytes = length - max_highlight_bytes
         length = max_highlight_bytes
@@ -194,10 +196,9 @@ class TraceDiff:
     @property
     def functions_in_both(self) -> Iterator[FunctionDiff]:
         for fname in {
-            name for name in self.trace1.functions.keys()
-            if name not in {
-                f.name for f in (self.functions_only_in_first | self.functions_only_in_second)
-            }
+            name
+            for name in self.trace1.functions.keys()
+            if name not in {f.name for f in (self.functions_only_in_first | self.functions_only_in_second)}
         }:
             yield FunctionDiff(self.trace1.functions[fname], self.trace2.functions[fname])
 
@@ -231,7 +232,9 @@ class TraceDiff:
             self._bytes_only_in_second = {}
             for source in first_intervals.keys() & second_intervals.keys():
                 # shared sources
-                for interval in tqdm(second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False):
+                for interval in tqdm(
+                    second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False
+                ):
                     first_intervals[source].remove_overlap(interval.begin, interval.end)
                 self._bytes_only_in_first[source] = first_intervals[source]
                 for interval in tqdm(first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False):
@@ -287,13 +290,15 @@ class TraceDiff:
                     status.write(f"\tTouched {end - start} bytes at offset {start}\n")
 
         if self.has_input_chunks_only_in_first:
-            status.write("The reference trace touched the following byte regions that were not touched by the diffed "
-                         "trace:\n")
+            status.write(
+                "The reference trace touched the following byte regions that were not touched by the diffed " "trace:\n"
+            )
             print_chunk_info(self.input_chunks_only_in_first)
 
         if self.has_input_chunks_only_in_second:
-            status.write("The diffed trace touched the following byte regions that were not touched by the reference "
-                         "trace:\n")
+            status.write(
+                "The diffed trace touched the following byte regions that were not touched by the reference " "trace:\n"
+            )
             print_chunk_info(self.input_chunks_only_in_second)
 
         if not self.has_input_chunks_only_in_first and not self.has_input_chunks_only_in_second:
@@ -309,12 +314,16 @@ class TraceDiff:
             if func:
                 # different input bytes affected control flow
                 if func.cmp_bytes_only_in_first:
-                    status.write(f"Function {func.func1!s} in the reference trace had the following bytes that tainted "
-                                 "control flow which did not affect control flow in the diffed trace:\n")
+                    status.write(
+                        f"Function {func.func1!s} in the reference trace had the following bytes that tainted "
+                        "control flow which did not affect control flow in the diffed trace:\n"
+                    )
                     print_chunk_info(func.cmp_chunks_only_in_first())
                 if func.cmp_bytes_only_in_second:
-                    status.write(f"Function {func.func2!s} in the diffed trace had the following bytes that tainted "
-                                 "control flow which did not affect control flow in the reference trace:\n")
+                    status.write(
+                        f"Function {func.func2!s} in the diffed trace had the following bytes that tainted "
+                        "control flow which did not affect control flow in the reference trace:\n"
+                    )
                     print_chunk_info(func.cmp_chunks_only_in_second())
 
         if not self:
@@ -357,8 +366,10 @@ def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = N
                     )
                 if int(known_version[0]) >= 2 and int(known_version[1]) > 0:
                     if polytracker_forest_path is None:
-                        raise ValueError("A polytracker taint forest binary is required for version "
-                                         f"{'.'.join(map(str, known_version))} and above")
+                        raise ValueError(
+                            "A polytracker taint forest binary is required for version "
+                            f"{'.'.join(map(str, known_version))} and above"
+                        )
                     else:
                         return parser(polytracker_json_obj, polytracker_forest_path)
         raise ValueError(f"Unsupported PolyTracker version {polytracker_json_obj['version']!r}")
@@ -486,11 +497,11 @@ def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) ->
     version = polytracker_json_obj["version"].split(".")
     function_data = []
     tainted_functions = set()
-    sources = polytracker_json_obj['canonical_mapping'].keys()
+    sources = polytracker_json_obj["canonical_mapping"].keys()
     if len(sources) != 1:
         raise ValueError(f"Expected only a single taint source, but found {sources}")
     source = next(iter(sources))
-    canonical_mapping: Dict[int, int] = dict(polytracker_json_obj['canonical_mapping'][source])
+    canonical_mapping: Dict[int, int] = dict(polytracker_json_obj["canonical_mapping"][source])
     forest = TaintForest(path=polytracker_forest_path, canonical_mapping=canonical_mapping)
     for function_name, data in polytracker_json_obj["tainted_functions"].items():
         if "input_bytes" not in data:
@@ -514,7 +525,7 @@ def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) ->
                 forest=forest,
                 cmp_byte_labels=cmp_bytes,
                 input_byte_labels=input_bytes,
-                called_from=called_from
+                called_from=called_from,
             )
         )
         tainted_functions.add(function_name)

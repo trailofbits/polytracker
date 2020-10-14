@@ -172,7 +172,7 @@ class FunctionInfo:
         name: str,
         cmp_bytes: Dict[str, List[int]],
         input_bytes: Optional[Dict[str, List[int]]] = None,
-        called_from: Iterable[str] = ()
+        called_from: Iterable[str] = (),
     ):
         self.name: str = name
         self.called_from: FrozenSet[str] = frozenset(called_from)
@@ -187,7 +187,7 @@ class FunctionInfo:
     def demangled_name(self) -> str:
         if self._demangled_name is None:
             self._demangled_name = self.name
-            if self._demangled_name.startswith('dfs$'):
+            if self._demangled_name.startswith("dfs$"):
                 self._demangled_name = self._demangled_name[4:]
             self._demangled_name = cxxfilt.demangle(self._demangled_name)
         return self._demangled_name
