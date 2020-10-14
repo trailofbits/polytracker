@@ -67,7 +67,7 @@ def print_file_context(output: TextIO, path: str, offset: int, length: int, num_
         s.seek(start)
         data = s.read(length + extra_context_bytes)
         highlight_start = -1
-        highlight_length = 0
+        highlight_length = -1
         written = 0
         for i, b in enumerate(data):
             if b == ord("\n"):
@@ -89,6 +89,8 @@ def print_file_context(output: TextIO, path: str, offset: int, length: int, num_
             written += len(to_write)
             output.write(to_write)
         output.write("\n")
+        if highlight_length < 0 <= highlight_start:
+            highlight_length = written - highlight_start
         if highlight_length > 0:
             output.write(f"{indent}{' ' * highlight_start}{'^' * highlight_length}\n")
 
