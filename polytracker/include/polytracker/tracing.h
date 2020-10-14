@@ -82,7 +82,7 @@ struct BasicBlockTraceComparator {
   }
 };
 
-struct FunctionCall;
+class FunctionCall;
 
 struct BasicBlockEntry : public TraceEvent {
   const char *fname;
@@ -287,7 +287,6 @@ public:
    * Returns the current basic block for the calling thread
    */
   const BasicBlockEntry *currentBB() const {
-    auto event = lastEvent();
     for (auto event = lastEvent(); event; event = event->previous) {
       if (auto bbe = dynamic_cast<BasicBlockEntry *>(event)) {
         return bbe;
