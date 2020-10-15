@@ -39,28 +39,28 @@ static inline void initThreadInfo() {
 }
 
 [[nodiscard]] static inline std::vector<const char *>& getFuncStack(void) {
-  if (UNLIKELY(runtime_info)) {
+  if (!runtime_info) [[unlikely]] {
     initThreadInfo();
   }
   return runtime_info->tFuncStack;
 }
 
 [[nodiscard]] static inline auto getTaintFuncOps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>& {
-  if (UNLIKELY(runtime_info)) {
+  if (!runtime_info) [[unlikely]] {
     initThreadInfo();
   }
   return runtime_info->tainted_funcs_all_ops;
 }
 
 [[nodiscard]] static inline auto getTaintFuncCmps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>& {
-    if (UNLIKELY(runtime_info)) {
+  if (!runtime_info) [[unlikely]] {
     initThreadInfo();
   }
   return runtime_info->tainted_funcs_cmp;
 }
 
 [[nodiscard]] static inline auto getRuntimeCfg(void) -> std::unordered_map<const char*, std::unordered_set<const char *>>& {
-      if (UNLIKELY(runtime_info)) {
+  if (!runtime_info) [[unlikely]] {
     initThreadInfo();
   }
   return runtime_info->runtime_cfg;
@@ -75,7 +75,7 @@ static inline void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getPolytrackerTrace(void) -> polytracker::Trace& {
-   if (UNLIKELY(runtime_info)) {
+   if (!runtime_info) [[unlikely]] {
     initThreadInfo();
   }
   return runtime_info->trace;
@@ -124,7 +124,7 @@ int logFunctionEntry(const char* fname) {
       getRuntimeCfg()[fname].insert(func_stack.back());
   }
   else {
-      getRuntimeCfg()[fname].insert(func_stack.back());
+      getRuntimeCfg()[fname].insert("");
   }
   func_stack.push_back(fname);
   if (polytracker_trace) {
