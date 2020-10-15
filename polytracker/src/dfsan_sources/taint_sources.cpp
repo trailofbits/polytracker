@@ -18,8 +18,8 @@
 #include <unistd.h>
 #include <vector>
 #include <stdio.h>
-#include "include/dfsan/dfsan.h"
-#include "include/polytracker/taint.h"
+#include "dfsan/dfsan.h"
+#include "polytracker/taint.h"
 
 #define BYTE 1
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
@@ -150,7 +150,10 @@ EXT_C_FUNC ssize_t __dfsw_read(int fd, void *buff, size_t size,
   // Check if we are tracking this fd.
   if (isTrackingSource(fd)) {
     if (ret_val > 0) {
-      taintData(fd, (char *)buff, read_start, ret_val);
+      bool res = taintData(fd, (char *)buff, read_start, ret_val);
+      if (res == false) {
+        std::cerr << "### read: error, data not tainted" << std::endl;
+      }
     }
     *ret_label = 0;
   } else {
@@ -167,7 +170,10 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
   ssize_t ret = pread(fd, buf, count, offset);
   if (isTrackingSource(fd)) {
     if (ret > 0) {
-      taintData(fd, (char *)buf, offset, ret);
+      bool res = taintData(fd, (char *)buf, offset, ret);
+      if (res == false) {
+        std::cerr << "### pread: error, data not tainted" << std::endl;
+      }
     }
     *ret_label = 0;
   } else {
@@ -187,7 +193,10 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
   ssize_t ret = pread(fd, buf, count, offset);
   if (isTrackingSource(fd)) {
     if (ret > 0) {
-      taintData(fd, (char *)buf, offset, ret);
+      bool res = taintData(fd, (char *)buf, offset, ret);
+      if (res == false) {
+        std::cerr << "### pread64: error, data not tainted" << std::endl;
+      }
     }
     *ret_label = 0;
   } else {
@@ -209,7 +218,10 @@ EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
   if (isTrackingSource(fd)) {
     if (ret > 0) {
       // fread returns number of objects read specified by size
-      taintData(fd, (char *)buff, offset, ret * size);
+      bool res = taintData(fd, (char *)buff, offset, ret * size);
+      if (res == false) {
+        std::cerr << "### fread: error, data not tainted" << std::endl;
+      }
     }
     *ret_label = 0;
   } else {
@@ -236,7 +248,10 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
 #endif
   if (isTrackingSource(fd)) {
     if (ret > 0) {
-      taintData(fd, (char *)buff, offset, ret * size);
+      bool res = taintData(fd, (char *)buff, offset, ret * size);
+      if (res == false) {
+        std::cerr << "### fread_unlocked: error, data not tainted" << std::endl;
+      }
     }
     *ret_label = 0;
   } else {
@@ -313,7 +328,10 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
 #endif
   if (ret && isTrackingSource(fd)) {
     int len = strlen(ret);
-    taintData(fd, str, offset, len);
+    bool res = taintData(fd, str, offset, len);
+    if (res == false) {
+      std::cerr << "### fgets: error, data not tainted" << std::endl;
+    }
     *ret_label = str_label;
   } else {
     *ret_label = 0;
@@ -328,7 +346,10 @@ EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
   fprintf(stderr, "gets stdin, range is %ld, %ld \n", offset, strlen(ret) + 1);
 #endif
   if (ret) {
-    taintData(stdin, str, offset, strlen(ret));
+    bool res = taintData(stdin, str, offset, strlen(ret));
+    if (res == false) {
+      std::cerr << "### gets: error, data not tainted" << std::endl;
+    }
     *ret_label = str_label;
   } else {
     *ret_label = 0;
@@ -348,7 +369,10 @@ EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
   fprintf(stderr, "### getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
   if (ret > 0 && isTrackingSource(fd)) {
-    taintData(fd, *lineptr, offset, ret);
+    bool res = taintData(fd, *lineptr, offset, ret);
+    if (res == false) {
+      std::cerr << "### getdelim: error, data not tainted" << std::endl;
+    }
   }
   *ret_label = 0;
   return ret;
@@ -366,7 +390,10 @@ EXT_C_FUNC ssize_t __dfsw___getdelim(char **lineptr, size_t *n, int delim,
   fprintf(stderr, "### __getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
   if (ret > 0 && isTrackingSource(fd)) {
-    taintData(fd, *lineptr, offset, ret);
+    bool res = taintData(fd, *lineptr, offset, ret);
+    if (res == false) {
+      std::cerr << "### __getdelim: error, data not tainted" << std::endl;
+    }
   }
   *ret_label = 0;
   return ret;
@@ -379,7 +406,10 @@ EXT_C_FUNC void *__dfsw_mmap(void *start, size_t length, int prot, int flags,
                              dfsan_label offset_label, dfsan_label *ret_label) {
   void *ret = mmap(start, length, prot, flags, fd, offset);
   if (ret && isTrackingSource(fd)) {
-    taintData(fd, (char *)ret, offset, length);
+    bool res = taintData(fd, (char *)ret, offset, length);
+    if (res == false) {
+      std::cerr << "### mmap: error, data not tainted" << std::endl;
+    }
   }
   *ret_label = 0;
   return ret;
