@@ -68,7 +68,7 @@ def print_file_context(
         length = max_highlight_bytes
     else:
         extra_bytes = 0
-    extra_context_bytes = max(0, num_bytes_context - length)
+    extra_context_bytes = num_bytes_context
     extra_context_before = extra_context_bytes // 2
     if extra_bytes > 0:
         extra_context_bytes = extra_context_before
