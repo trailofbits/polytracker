@@ -3,7 +3,6 @@
 #include <sstream>
 #include <atomic>
 #include "polytracker/tracing.h"
-#include "tracing.h"
 
 namespace polytracker {
 
