@@ -5,7 +5,7 @@ set(DFSAN_RTL_SOURCES
 	dfsan.cpp
 	dfsan_custom.cpp
 	dfsan_interceptors.cpp
-	polytracker_tracing.cpp)
+	)
 
 set(DFSAN_RTL_HEADERS
 	dfsan.h
