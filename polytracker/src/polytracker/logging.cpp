@@ -1,5 +1,5 @@
-#include "include/polytracker/tracing.h"
-#include "include/polytracker/logging.h"
+#include "polytracker/tracing.h"
+#include "polytracker/logging.h"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -7,6 +7,8 @@
 #include <set>
 #include <stack>
 #include <tuple>
+#include <mutex>
+#include <thread> 
 
 using polytracker::BasicBlockEntry;
 using polytracker::BasicBlockType;
