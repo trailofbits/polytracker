@@ -26,7 +26,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_flags.h"
+//#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 // Only include this in here, headers are shared via dfsan.h
 #include <stdint.h>
@@ -46,8 +46,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "include/polytracker/logging.h"
-#include "include/polytracker/taint.h"
+#include "polytracker/logging.h"
+#include "polytracker/taint.h"
 
 using namespace __dfsan;
 
@@ -108,6 +108,10 @@ extern bool polytracker_trace;
 // [0x000000008000,0x100000000000).  Then the address is shifted left by 1 to
 // account for the double byte representation of shadow labels and move the
 // address into the shadow memory range.  See the function shadow_for below.
+
+static void InitializeFlags();
+static void dfsan_fini();
+static void InitializePlatformEarly();
 
 #ifdef DFSAN_RUNTIME_VMA
 // Runtime detected VMA size.
@@ -393,7 +397,7 @@ void dfsan_late_late_init() {
   dfsan_parse_env();
 }
 */
-void dfsan_late_init() {
+void dfsan_init() {
   InitializeFlags();
   InitializePlatformEarly();
 
@@ -405,7 +409,7 @@ void dfsan_late_init() {
   // will load our executable in the middle of our unused region. This mostly
   // works so long as the program doesn't use too much memory. We support this
   // case by disabling memory protection when ASLR is disabled.
-  uptr init_addr = (uptr)&dfsan_late_init;
+  uptr init_addr = (uptr)&dfsan_init;
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr())) {
     MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
   }
@@ -426,4 +430,4 @@ void dfsan_late_init() {
 }
 
 __attribute__((section(".preinit_array"),
-               used)) static void (*dfsan_init_ptr)() = dfsan_late_init;
+               used)) static void (*dfsan_init_ptr)() = dfsan_init;
