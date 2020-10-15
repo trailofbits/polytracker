@@ -1,14 +1,16 @@
-#include "include/polytracker/polytracker.h"
-#include "include/polytracker/tracing.h"
-#include "include/polytracker/logging.h"
-#include "include/polytracker/taint.h"
-#include "include/dfsan/json.hpp"
+#include "polytracker/polytracker.h"
+#include "polytracker/tracing.h"
+#include "polytracker/logging.h"
+#include "polytracker/taint.h"
+#include "dfsan/json.hpp"
 #include <string>
 #include <sstream>
 #include <iomanip>
 #include <set>
 #include <iostream>
 #include <fstream>
+#include <mutex>
+#include <thread>
 using json = nlohmann::json;
 using namespace polytracker;
 

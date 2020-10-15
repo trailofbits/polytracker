@@ -4,10 +4,13 @@
 #include <map>
 #include <mutex>
 #include <iostream>
-#include "include/dfsan/dfsan_types.h"
-#include "include/polytracker/logging.h"
-#include "include/dfsan/dfsan.h"
+#include <mutex>
+#include <thread>
+#include "dfsan/dfsan_types.h"
+#include "polytracker/logging.h"
+#include "dfsan/dfsan.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "polytracker/taint.h"
 
 extern decay_val taint_node_ttl; 
 #define TAINT_GRANULARITY 1
@@ -40,6 +43,16 @@ std::unordered_map<FileType, const char *> fd_name_map;
 //Its just to keep track of the targets we set at the start, and at the end for output. 
 std::unordered_map<const char *, std::pair<int, int>> named_targets;
 
+
+void checkMaxLabel(dfsan_label label) {
+  if (label == MAX_LABELS) {
+    std::cout << "ERROR: MAX LABEL REACHED, ABORTING!" << std::endl;
+    // Cant exit due to our exit handlers
+    abort();
+  }
+}
+
+
 [[nodiscard]] static inline dfsan_label createCanonicalLabel(const int file_byte_offset, const char * name) {
   dfsan_label new_label = next_label.fetch_add(1);
   checkMaxLabel(new_label);
@@ -47,57 +60,46 @@ std::unordered_map<const char *, std::pair<int, int>> named_targets;
   new_node->p1 = NULL;
   new_node->p2 = NULL;
   new_node->decay = taint_node_ttl;
-  std::lock_guard<std::mutex> guard(canonical_mapping_lock);
+  const std::lock_guard<std::mutex> guard(canonical_mapping_lock);
   canonical_mapping[name][new_label] = file_byte_offset;
   return new_label;
 }
 
-[[nodiscard]] inline dfsan_label createReturnLabel(const int file_byte_offset, const char* name) {
+[[nodiscard]] dfsan_label createReturnLabel(const int file_byte_offset, const char* name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
-  std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
+  const std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
   tainted_input_chunks[name].emplace_back(file_byte_offset, file_byte_offset);
   return ret_label;
 }
 
-inline auto getInitialSources() -> std::unordered_map<const char*, std::pair<int, int>>& {
-  return named_targets;
-}
-
-template<typename FileType>
-inline auto getSourceName(const FileType& fd) -> const char * {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  return fd_name_map[fd];
-}
-
 //This will be called by polytracker to add new taint source info.
-//TODO require name 
 template<typename FileType>
 void addInitialSource(const FileType& fd, const int start, const int end, const char * name) {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  track_target_map.emplace(fd, std::make_pair(start, end));
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  track_target_map<FileType>.emplace(fd, std::make_pair(start, end));
   named_targets.emplace(name, std::make_pair(start, end));
-  fd_name_map.emplace(fd, name);
+  fd_name_map<FileType>.emplace(fd, name);
 }
 
 //Have another FileType with the same information as an exisiting one 
 //For example, open is called on a file path we are tracking, have the returned fd map to the same target information
 template<typename FileType1, typename FileType2>
 void addDerivedSource(const FileType1& old_fd, const FileType2& new_fd) {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  track_target_map[new_fd] = track_target_map[old_fd];
-  fd_name_map[new_fd] = fd_name_map[old_fd];
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  track_target_map<FileType2>[new_fd] = track_target_map<FileType1>[old_fd];
+  fd_name_map<FileType2>[new_fd] = fd_name_map<FileType1>[old_fd];
 }
 
 template<typename FileType>
 [[nodiscard]] static inline auto getTargetTaintRange(const FileType& fd) -> std::pair<int, int>& {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  return track_target_map[fd];
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  return track_target_map<FileType>[fd];
 }
 
 template<typename FileType>
 [[nodiscard]] bool isTrackingSource(const FileType& fd) {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_map.find(fd) != track_target_map.end()) {
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  if (track_target_map<FileType>.find(fd) != track_target_map<FileType>.end()) {
     return true;
   }
   return false;
@@ -105,9 +107,9 @@ template<typename FileType>
 
 template<typename FileType>
 void closeSource(const FileType& fd) {
-  std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_map.find(fd) != track_target_map.end()) {
-    track_target_map.erase(fd);
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  if (track_target_map<FileType>.find(fd) != track_target_map<FileType>.end()) {
+    track_target_map<FileType>.erase(fd);
   }
 }
 
@@ -118,7 +120,7 @@ template<typename FileType>
   }
   std::pair<int, int>& targ_info = getTargetTaintRange(fd);
   const char * name = getSourceName(fd);
-  taintTargetRange(mem, offset, len, targ_info->first, targ_info->second, name);
+  taintTargetRange(mem, offset, len, targ_info.first, targ_info.second, name);
   return true;
 }
 
@@ -164,7 +166,7 @@ void taintTargetRange(const char* mem, int offset, int len, int byte_start, int 
     }
   }
   if (processed_bytes) {
-    std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
+    const std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
     tainted_input_chunks[name].emplace_back(taint_offset_start, taint_offset_end);
   }
 }
@@ -179,7 +181,14 @@ void taintTargetRange(const char* mem, int offset, int len, int byte_start, int 
   return ret_label;
 }
 
-[[nodiscard]] dfsan_label createUnionLabel(const dfsan_label& l1, const dfsan_label& l2) {
+template<typename FileType>
+auto getSourceName(const FileType& fd) -> const char * {
+  const std::lock_guard<std::mutex> guard(track_target_map_lock);
+  return fd_name_map<FileType>[fd];
+}
+
+
+[[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // If sanitizer debug is on, this checks that l1 != l2
   DCHECK_NE(l1, l2);
   if (l1 == 0) {
@@ -191,7 +200,7 @@ void taintTargetRange(const char* mem, int offset, int len, int byte_start, int 
   if (l1 > l2) {
     Swap(l1, l2);
   }
-  std::lock_guard<std::mutex> guard(union_table_lock);
+  const std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check
   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
     auto val = union_table[l1].find(l2);
@@ -207,12 +216,3 @@ void taintTargetRange(const char* mem, int offset, int len, int byte_start, int 
   (union_table[l1])[l2] = label;
   return label;
 }
-
-void checkMaxLabel(dfsan_label label) {
-  if (label == MAX_LABELS) {
-    std::cout << "ERROR: MAX LABEL REACHED, ABORTING!" << std::endl;
-    // Cant exit due to our exit handlers
-    abort();
-  }
-}
-

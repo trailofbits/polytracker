@@ -1,14 +1,14 @@
-#include "include/dfsan/dfsan_types.h"
-#include "include/dfsan/dfsan.h"
+#include "dfsan/dfsan_types.h"
+#include "dfsan/dfsan.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "include/polytracker/logging.h"
-#include "include/polytracker/output.h"
-#include "include/polytracker/taint.h"
+#include "polytracker/logging.h"
+#include "polytracker/output.h"
+#include "polytracker/taint.h"
 #include <string>
 #include <errno.h>
 
