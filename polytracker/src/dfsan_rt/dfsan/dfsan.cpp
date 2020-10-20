@@ -133,18 +133,15 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
   return logFunctionEntry(fname);
 }
 
-// TODO rename
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_test_fn(
+// This shouldn't be called right now
+// Some issues with it are that when dealing with floating points, casting them to int
+// causes error in LLVM. Might need to support floats/doubles as operands in the trace
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_trace_inst_fn(
     uint32_t op_code, int val_a, int val_b, dfsan_label labela,
     dfsan_label labelb) {
-  // NOTE This might be relevant with implicit control flow
-  // until we implement the strict dependency and LDX work
-  // If it's not a tainted instruction, or we are not tracing, ignore.
   if ((labela == 0 && labelb == 0)) {
     return;
   }
-  // std::cout << op_code << " " << labela << "  " << labelb << " " << val_a <<
-  // " " << val_b << std::endl;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
