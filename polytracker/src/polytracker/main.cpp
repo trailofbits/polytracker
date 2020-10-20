@@ -11,6 +11,7 @@
 #include "polytracker/taint.h"
 #include <string>
 #include <errno.h>
+#include <iostream>
 
 #define DEFAULT_TTL 32
 
@@ -105,7 +106,7 @@ void polytracker_parse_env() {
     exit(1);
   }
 
-  uint64_t byte_start = 0, byte_end = 0;
+  int byte_start = 0, byte_end = 0;
   const char *poly_start = polytracker_getenv("POLYSTART");
   if (poly_start != nullptr) {
     byte_start = atoi(poly_start);
@@ -118,17 +119,17 @@ void polytracker_parse_env() {
     byte_end = atoi(poly_end);
   }
   fclose(temp_file);
-
+  std::string poly_str(target_file);
+  std::string stdin_string("stdin");
   //Add named source for polytracker
-  addInitialSource(poly_start, byte_start, byte_end - 1, poly_start);
+  addInitialTaintSource(poly_str, byte_start, byte_end - 1, poly_str);
   //Add source for standard input 
-  addInitialSource(stdin, 0, MAX_LABELS, poly_start);
-
+  addInitialTaintSource(fileno(stdin), 0, MAX_LABELS, stdin_string);
+  //Parse env vars  
   polytracker_parse_output();
   polytracker_parse_polytrace();
   polytracker_parse_ttl();
 }
-
 
 static void polytracker_end() {
   //Go over the array of thread info, and call output on everything.
@@ -137,7 +138,7 @@ static void polytracker_end() {
   }
 }
 
-static void polytracker_start() {
+void polytracker_start() {
   //Parse the enviornment vars
   polytracker_parse_env();
   //Set up the atexit call 
@@ -146,7 +147,3 @@ static void polytracker_start() {
   //Pre_init_array should have already gone, meaning DFsan should have set up memory. 
   forest_mem = (char*)ForestAddr();
 }
-
-//TODO confirm that this works! 
-__attribute__((section(".init_array"),
-               used)) static void (*polytracker_init_ptr)() = polytracker_start;
