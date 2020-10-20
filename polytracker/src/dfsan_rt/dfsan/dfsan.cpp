@@ -142,8 +142,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_test_fn(
   if ((labela == 0 && labelb == 0)) {
     return;
   }
-  std::cout << op_code << " " << labela << "  " << labelb << " " << val_a << " "
-            << val_b << std::endl;
+  //std::cout << op_code << " " << labela << "  " << labelb << " " << val_a << " " << val_b << std::endl;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
@@ -156,7 +155,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
     dfsan_label some_label) {
-  logComparison(some_label);
+  logCompare(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint(
@@ -285,18 +284,6 @@ static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 }
 
 static void InitializeFlags() {
-  SetCommonFlagsDefaults();
-  flags().SetDefaults();
-
-  FlagParser parser;
-  RegisterCommonFlags(&parser);
-  RegisterDfsanFlags(&parser, &flags());
-  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
-  InitializeCommonFlags();
-  if (Verbosity())
-    ReportUnrecognizedFlags();
-  if (common_flags()->help)
-    parser.PrintFlagDescriptions();
 }
 
 static void InitializePlatformEarly() {
@@ -398,7 +385,7 @@ void dfsan_late_late_init() {
 }
 */
 void dfsan_init() {
-  InitializeFlags();
+  //InitializeFlags();
   InitializePlatformEarly();
 
   if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr())) {
