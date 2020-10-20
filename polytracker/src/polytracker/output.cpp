@@ -79,7 +79,7 @@ json escapeChar(int c) {
 
 static void addJsonRuntimeTrace(json &output_json,
                                 const RuntimeInfo *runtime_info) {
-  if (!polytracker_trace) {
+  if (!polytracker_trace || runtime_info == nullptr) {
     return;
   }
   /* FIXME: This assumes that there is a single key in this->canonical_mapping
@@ -187,7 +187,7 @@ static void addJsonRuntimeTrace(json &output_json,
           j["types"] = types;
         }
       } else if (const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
-#if 1
+#if 0
         // does this function call consume bytes?
         // if not, we do not need it to do grammar extraction, and saving
         // to JSON is very slow. So speed things up by just eliding it!
