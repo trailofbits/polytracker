@@ -78,16 +78,9 @@ void closeSource(const int &fd) {
 }
 
 // This will be called by polytracker to add new taint source info.
-// TODO just make two functions
-// TODO what to do with the name here?
 void addInitialTaintSource(std::string &fd, const int start, const int end,
                            std::string &name) {
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  std::cout << track_target_name_map.bucket_count() << std::endl;
-  std::cout << "fd is " << fd << std::endl;
-  std::cout << "start: " << start << std::endl;
-  std::cout << end << std::endl;
-  std::cout << name << std::endl;
   track_target_name_map[fd] = std::make_pair(start, end);
 }
 
