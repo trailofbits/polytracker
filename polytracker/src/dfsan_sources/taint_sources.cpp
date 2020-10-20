@@ -48,7 +48,11 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 #ifdef DEBUG_INFO
     std::cout << "open: adding new taint info!" << std::endl;
 #endif
-    addDerivedSource(path, fd);
+    //This should be passed by reference all the way down
+    //This should only be called a few times, typically once to create the taint source
+    //So creating an object here is low-ish overhead. 
+    std::string track_path{path};
+    addDerivedSource(track_path, fd);
   }
   *ret_label = 0;
   return fd;
@@ -69,7 +73,8 @@ EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
 #ifdef DEBUG_INFO
     std::cout << "openat: adding new taint info!" << std::endl;
 #endif
-    addDerivedSource(path, fd);
+    std::string track_path{path};
+    addDerivedSource(track_path, fd);
   }
   *ret_label = 0;
   return fd;
@@ -87,7 +92,8 @@ EXT_C_FUNC FILE *__dfsw_fopen64(const char *filename, const char *mode,
 #ifdef DEBUG_INFO
     std::cout << "fopen64: adding new taint info!" << std::endl;
 #endif
-    addDerivedSource(filename, fd);
+    std::string track_path{filename};
+addDerivedSource(track_path, fileno(fd));
   }
   *ret_label = 0;
   return fd;
@@ -104,7 +110,8 @@ EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
 #ifdef DEBUG_INFO
     std::cout << "fopen: adding new taint info!" << std::endl;
 #endif
-    addDerivedSource(filename, fd);
+    std::string track_path{filename};
+addDerivedSource(track_path, fileno(fd));
   }
 
   *ret_label = 0;
@@ -130,8 +137,8 @@ EXT_C_FUNC int __dfsw_fclose(FILE *fd, dfsan_label fd_label,
 #ifdef DEBUG_INFO
   fprintf(stderr, "### close, fd is %p, ret is %d \n", fd, ret);
 #endif
-  if (ret == 0 && isTrackingSource(fd)) {
-    closeSource(fd);
+  if (ret == 0 && isTrackingSource(fileno(fd))) {
+    closeSource(fileno(fd));
   }
   *ret_label = 0;
   return ret;
@@ -215,10 +222,10 @@ EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
   fprintf(stderr, "### fread, fd is %p \n", fd);
   fflush(stderr);
 #endif
-  if (isTrackingSource(fd)) {
+  if (isTrackingSource(fileno(fd))) {
     if (ret > 0) {
       // fread returns number of objects read specified by size
-      bool res = taintData(fd, (char *)buff, offset, ret * size);
+      bool res = taintData(fileno(fd), (char *)buff, offset, ret * size);
       if (res == false) {
         std::cerr << "### fread: error, data not tainted" << std::endl;
       }
@@ -246,9 +253,9 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
   fprintf(stderr, "### fread_unlocked %p,range is %ld, %ld/%ld\n", fd, offset,
           ret, count);
 #endif
-  if (isTrackingSource(fd)) {
+  if (isTrackingSource(fileno(fd))) {
     if (ret > 0) {
-      bool res = taintData(fd, (char *)buff, offset, ret * size);
+      bool res = taintData(fileno(fd), (char *)buff, offset, ret * size);
       if (res == false) {
         std::cerr << "### fread_unlocked: error, data not tainted" << std::endl;
       }
@@ -267,9 +274,9 @@ EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
 #ifdef DEBUG_INFO
   fprintf(stderr, "### fgetc %p, range is %ld, 1 \n", fd, offset);
 #endif
-  if (c != EOF && isTrackingSource(fd)) {
+  if (c != EOF && isTrackingSource(fileno(fd))) {
     *ret_label = createReturnLabel(
-        offset, getSourceName(fd));
+        offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -282,9 +289,9 @@ EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
 #ifdef DEBUG_INFO
   fprintf(stderr, "### fgetc_unlocked %p, range is %ld, 1 \n", fd, offset);
 #endif
-  if (c != EOF && isTrackingSource(fd)) {
+  if (c != EOF && isTrackingSource(fileno(fd))) {
     *ret_label = createReturnLabel(
-        offset, getSourceName(fd));
+        offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -297,9 +304,9 @@ EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
   fprintf(stderr, "### _IO_getc %p, range is %ld, 1 , c is %d\n", fd, offset,
           c);
 #endif
-  if (isTrackingSource(fd) && c != EOF) {
+  if (isTrackingSource(fileno(fd)) && c != EOF) {
     *ret_label = createReturnLabel(
-        offset, getSourceName(fd));
+        offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -313,7 +320,7 @@ EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
 #endif
   if (c != EOF) {
     *ret_label = createReturnLabel(
-        offset, getSourceName(stdin));
+        offset, getSourceName(fileno(stdin)));
   }
   return c;
 }
@@ -326,9 +333,9 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
 #ifdef DEBUG_INFO
   fprintf(stderr, "fgets %p, range is %ld, %ld \n", fd, offset, strlen(ret));
 #endif
-  if (ret && isTrackingSource(fd)) {
+  if (ret && isTrackingSource(fileno(fd))) {
     int len = strlen(ret);
-    bool res = taintData(fd, str, offset, len);
+    bool res = taintData(fileno(fd), str, offset, len);
     if (res == false) {
       std::cerr << "### fgets: error, data not tainted" << std::endl;
     }
@@ -346,7 +353,7 @@ EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
   fprintf(stderr, "gets stdin, range is %ld, %ld \n", offset, strlen(ret) + 1);
 #endif
   if (ret) {
-    bool res = taintData(stdin, str, offset, strlen(ret));
+    bool res = taintData(fileno(stdin), str, offset, strlen(ret));
     if (res == false) {
       std::cerr << "### gets: error, data not tainted" << std::endl;
     }
@@ -368,8 +375,8 @@ EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
 #ifdef DEBUG_INFO
   fprintf(stderr, "### getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
-  if (ret > 0 && isTrackingSource(fd)) {
-    bool res = taintData(fd, *lineptr, offset, ret);
+  if (ret > 0 && isTrackingSource(fileno(fd))) {
+    bool res = taintData(fileno(fd), *lineptr, offset, ret);
     if (res == false) {
       std::cerr << "### getdelim: error, data not tainted" << std::endl;
     }
@@ -389,8 +396,8 @@ EXT_C_FUNC ssize_t __dfsw___getdelim(char **lineptr, size_t *n, int delim,
 #ifdef DEBUG_INFO
   fprintf(stderr, "### __getdelim %p,range is %ld, %ld\n", fd, offset, ret);
 #endif
-  if (ret > 0 && isTrackingSource(fd)) {
-    bool res = taintData(fd, *lineptr, offset, ret);
+  if (ret > 0 && isTrackingSource(fileno(fd))) {
+    bool res = taintData(fileno(fd), *lineptr, offset, ret);
     if (res == false) {
       std::cerr << "### __getdelim: error, data not tainted" << std::endl;
     }
