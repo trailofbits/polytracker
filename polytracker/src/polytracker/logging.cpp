@@ -1,5 +1,6 @@
 #include "polytracker/tracing.h"
 #include "polytracker/logging.h"
+#include "polytracker/main.h"
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -28,54 +29,57 @@ thread_local RuntimeInfo * runtime_info = nullptr;
 std::vector<RuntimeInfo *> thread_runtime_info;
 std::mutex thread_runtime_info_lock;
 
+static bool is_init = false;
+std::mutex is_init_mutex;
+
 /*
 This function should only be called once per thread, but it initializes the thread local storage 
 And stores the pointer to it in the vector. 
 */
-static inline void initThreadInfo() {
+static void initThreadInfo() {
     runtime_info = new RuntimeInfo();
     std::lock_guard<std::mutex> locker(thread_runtime_info_lock);
     thread_runtime_info.emplace_back(runtime_info);
 }
 
-[[nodiscard]] static inline std::vector<const char *>& getFuncStack(void) {
-  if (!runtime_info) [[unlikely]] {
+[[nodiscard]] static inline std::vector<std::string>& getFuncStack(void) {
+  if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->tFuncStack;
 }
 
-[[nodiscard]] static inline auto getTaintFuncOps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>& {
-  if (!runtime_info) [[unlikely]] {
+[[nodiscard]] static inline auto getTaintFuncOps(void) -> std::unordered_map<std::string, std::unordered_set<dfsan_label>>& {
+  if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->tainted_funcs_all_ops;
 }
 
-[[nodiscard]] static inline auto getTaintFuncCmps(void) -> std::unordered_map<const char *, std::unordered_set<dfsan_label>>& {
-  if (!runtime_info) [[unlikely]] {
+[[nodiscard]] static inline auto getTaintFuncCmps(void) -> std::unordered_map<std::string, std::unordered_set<dfsan_label>>& {
+  if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->tainted_funcs_cmp;
 }
 
-[[nodiscard]] static inline auto getRuntimeCfg(void) -> std::unordered_map<const char*, std::unordered_set<const char *>>& {
-  if (!runtime_info) [[unlikely]] {
+[[nodiscard]] static inline auto getRuntimeCfg(void) -> std::unordered_map<std::string, std::unordered_set<std::string>>& {
+  if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->runtime_cfg;
 }
 
-[[nodiscard]] inline taint_node_t* getTaintNode(dfsan_label label) {
+[[nodiscard]] taint_node_t* getTaintNode(dfsan_label label) {
    return (taint_node_t*)(forest_mem + (label * sizeof(taint_node_t)));
 }
 
-[[nodiscard]] inline dfsan_label getTaintLabel(taint_node_t* node) {
+[[nodiscard]] dfsan_label getTaintLabel(taint_node_t* node) {
   return (dfsan_label)(((char*)node - forest_mem) / sizeof(taint_node_t));
 }
 
 [[nodiscard]] static inline auto getPolytrackerTrace(void) -> polytracker::Trace& {
-   if (!runtime_info) [[unlikely]] {
+   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->trace;
@@ -86,7 +90,7 @@ void logCompare(dfsan_label some_label) {
     return;
   }
   auto curr_node = getTaintNode(some_label); 
-  std::vector<const char *>& func_stack = getFuncStack();
+  std::vector<std::string>& func_stack = getFuncStack();
   getTaintFuncOps()[func_stack.back()].insert(some_label);
   //TODO Confirm that we only call logCmp once instead of logOp along with it. 
   getTaintFuncCmps()[func_stack.back()].insert(some_label);
@@ -104,7 +108,7 @@ void logOperation(dfsan_label some_label) {
   if (some_label == 0) {
       return;
   }
-  std::vector<const char *>& func_stack = getFuncStack();
+  std::vector<std::string>& func_stack = getFuncStack();
   getTaintFuncOps()[func_stack.back()].insert(some_label);
   polytracker::Trace &trace = getPolytrackerTrace();
   if (auto bb = trace.currentBB()) {
@@ -118,8 +122,17 @@ void logOperation(dfsan_label some_label) {
 }
 
 int logFunctionEntry(const char* fname) {
+  //The pre init/init array hasn't played friendly with our use of C++ 
+  //For example, the bucket count for unordered_map is 0 when accessing one during the init phase 
+  if (UNLIKELY(!is_init)) {
+    if (strcmp(fname, "main") != 0) {
+      return 0;
+    }
+    is_init = true; 
+    polytracker_start();
+  }
   //Lots of object creations etc. 
-  std::vector<const char *>& func_stack = getFuncStack();
+  std::vector<std::string>& func_stack = getFuncStack();
   if (func_stack.size() > 0) {
       getRuntimeCfg()[fname].insert(func_stack.back());
   }
@@ -138,6 +151,9 @@ int logFunctionEntry(const char* fname) {
 }
 
 void logFunctionExit() {
+  if (UNLIKELY(!is_init)) {
+    return;
+  }
   getFuncStack().pop_back();
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
@@ -197,8 +213,8 @@ void resetFrame(int* index) {
         << std::endl;
     abort();
   }
-  std::vector<const char *>& func_stack = getFuncStack();
-  const char * caller_func = getFuncStack().back();
+  std::vector<std::string>& func_stack = getFuncStack();
+  std::string& caller_func = getFuncStack().back();
   // Reset the frame
   func_stack.resize(*index + 1);
   getRuntimeCfg()[func_stack.back()].insert(caller_func);

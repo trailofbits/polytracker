@@ -8,7 +8,7 @@ using namespace polytracker;
 [[nodiscard]] taint_node_t* getTaintNode(dfsan_label label);
 [[nodiscard]] dfsan_label getTaintLabel(taint_node_t* node);
 void logOperation(dfsan_label some_label);
-void logComparison(dfsan_label some_label);
+void logCompare(dfsan_label some_label);
 void resetFrame(int* index);
 int logFunctionEntry(const char* fname);
 void logFunctionExit();
@@ -28,10 +28,10 @@ once we do basic block summarization
 the runtime cfg is the flow sensitive runtime control flow graph  
 */
 struct RuntimeInfo {
-  std::vector<const char *> tFuncStack;
+  std::vector<std::string> tFuncStack;
   polytracker::Trace trace;
-  std::unordered_map<const char *, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
-  std::unordered_map<const char *, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
-  std::unordered_map<const char*, std::unordered_set<const char *>> runtime_cfg;
+  std::unordered_map<std::string, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
+  std::unordered_map<std::string, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
+  std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
 };
 #endif
