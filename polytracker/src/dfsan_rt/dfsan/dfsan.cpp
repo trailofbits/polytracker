@@ -128,7 +128,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
   resetFrame(index);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(const char *fname) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
+    const char *fname) {
   return logFunctionEntry(fname);
 }
 
@@ -142,14 +143,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_test_fn(
   if ((labela == 0 && labelb == 0)) {
     return;
   }
-  //std::cout << op_code << " " << labela << "  " << labelb << " " << val_a << " " << val_b << std::endl;
+  // std::cout << op_code << " " << labela << "  " << labelb << " " << val_a <<
+  // " " << val_b << std::endl;
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
     const char *fname, uint32_t functionIndex, uint32_t bbIndex,
     std::underlying_type<polytracker::BasicBlockType>::type bbType) {
   if (polytracker_trace) {
-    logBBEntry(fname, BBIndex(functionIndex, bbIndex), static_cast<polytracker::BasicBlockType>(bbType));
+    logBBEntry(fname, BBIndex(functionIndex, bbIndex),
+               static_cast<polytracker::BasicBlockType>(bbType));
   }
 }
 
@@ -283,8 +286,7 @@ static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #undef DFSAN_FLAG
 }
 
-static void InitializeFlags() {
-}
+static void InitializeFlags() {}
 
 static void InitializePlatformEarly() {
   AvoidCVE_2016_2143();
@@ -301,9 +303,7 @@ static void InitializePlatformEarly() {
 #endif
 }
 
-static void dfsan_fini() {
-  return;
-}
+static void dfsan_fini() { return; }
 
 /*
 void dfsan_parse_env() {
@@ -385,7 +385,7 @@ void dfsan_late_late_init() {
 }
 */
 void dfsan_init() {
-  //InitializeFlags();
+  // InitializeFlags();
   InitializePlatformEarly();
 
   if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr())) {

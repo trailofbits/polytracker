@@ -1,3 +1,5 @@
+#include "dfsan/dfsan.h"
+#include "polytracker/taint.h"
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
@@ -12,14 +14,11 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <wchar.h>
 #include <thread>
 #include <time.h>
 #include <unistd.h>
 #include <vector>
-#include <stdio.h>
-#include "dfsan/dfsan.h"
-#include "polytracker/taint.h"
+#include <wchar.h>
 
 #define BYTE 1
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
@@ -48,9 +47,9 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 #ifdef DEBUG_INFO
     std::cout << "open: adding new taint info!" << std::endl;
 #endif
-    //This should be passed by reference all the way down
-    //This should only be called a few times, typically once to create the taint source
-    //So creating an object here is low-ish overhead. 
+    // This should be passed by reference all the way down
+    // This should only be called a few times, typically once to create the
+    // taint source So creating an object here is low-ish overhead.
     std::string track_path{path};
     addDerivedSource(track_path, fd);
   }
@@ -93,7 +92,7 @@ EXT_C_FUNC FILE *__dfsw_fopen64(const char *filename, const char *mode,
     std::cout << "fopen64: adding new taint info!" << std::endl;
 #endif
     std::string track_path{filename};
-addDerivedSource(track_path, fileno(fd));
+    addDerivedSource(track_path, fileno(fd));
   }
   *ret_label = 0;
   return fd;
@@ -111,7 +110,7 @@ EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
     std::cout << "fopen: adding new taint info!" << std::endl;
 #endif
     std::string track_path{filename};
-addDerivedSource(track_path, fileno(fd));
+    addDerivedSource(track_path, fileno(fd));
   }
 
   *ret_label = 0;
@@ -275,8 +274,7 @@ EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
   fprintf(stderr, "### fgetc %p, range is %ld, 1 \n", fd, offset);
 #endif
   if (c != EOF && isTrackingSource(fileno(fd))) {
-    *ret_label = createReturnLabel(
-        offset, getSourceName(fileno(fd)));
+    *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -290,8 +288,7 @@ EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
   fprintf(stderr, "### fgetc_unlocked %p, range is %ld, 1 \n", fd, offset);
 #endif
   if (c != EOF && isTrackingSource(fileno(fd))) {
-    *ret_label = createReturnLabel(
-        offset, getSourceName(fileno(fd)));
+    *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -305,8 +302,7 @@ EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
           c);
 #endif
   if (isTrackingSource(fileno(fd)) && c != EOF) {
-    *ret_label = createReturnLabel(
-        offset, getSourceName(fileno(fd)));
+    *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
   }
   return c;
 }
@@ -319,8 +315,7 @@ EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
   fprintf(stderr, "### getchar stdin, range is %ld, 1 \n", offset);
 #endif
   if (c != EOF) {
-    *ret_label = createReturnLabel(
-        offset, getSourceName(fileno(stdin)));
+    *ret_label = createReturnLabel(offset, getSourceName(fileno(stdin)));
   }
   return c;
 }

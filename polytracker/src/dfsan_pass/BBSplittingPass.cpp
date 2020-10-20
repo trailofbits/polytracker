@@ -57,7 +57,7 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       bool includeFunctionName =
           (fname != "llvm.dbg.declare" && fname != "llvm.dbg.value" &&
            fname != "llvm.lifetime.end.p0i8" && fname != "__assert_fail");
-      #ifdef DEBUG_INFO
+#ifdef DEBUG_INFO
       if (fname.length() == 0 || bb->hasName() || includeFunctionName) {
         if (bb->hasName()) {
           llvm::errs() << " " << bb->getName().data();
@@ -67,7 +67,7 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
         }
         llvm::errs() << "\n";
       }
-      #endif
+#endif
       newBBs.push_back(bb->splitBasicBlock(next));
     }
   }
