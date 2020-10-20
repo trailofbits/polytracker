@@ -22,10 +22,9 @@ can be found in the polytracker/doc directory
 
 extern bool polytracker_trace;
 
-
-//TODO Lock these structures! 
-extern std::unordered_map<const char *, std::unordered_map<dfsan_label, int>> canonical_mapping;
-extern std::unordered_map<const char *, std::vector<std::pair<int, int>>> tainted_input_chunks;
+//Could there be a race condition here?
+extern std::unordered_map<std::string, std::unordered_map<dfsan_label, int>> canonical_mapping;
+extern std::unordered_map<std::string, std::vector<std::pair<int, int>>> tainted_input_chunks;
 extern std::atomic<dfsan_label> next_label;
 
 void addJsonVersion(json& output_json) {
@@ -34,8 +33,7 @@ void addJsonVersion(json& output_json) {
 
 void addJsonRuntimeCFG(json& output_json, const RuntimeInfo * runtime_info) {
   for (auto cfg_it = runtime_info->runtime_cfg.begin(); cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
-    json j_set(cfg_it->second);
-    output_json["runtime_info->runtime_cfg"][cfg_it->first] = j_set;
+    output_json["runtime_info->runtime_cfg"][cfg_it->first] = json(cfg_it->second);
   }
 }
 
@@ -58,8 +56,7 @@ void addJsonCanonicalMapping(json& output_json) {
 
 void addJsonTaintedBlocks(json& output_json) {
   for (const auto& it : tainted_input_chunks) {
-    json tainted_chunks(it.second);
-    output_json["tainted_input_blocks"][it.first] = tainted_chunks;
+    output_json["tainted_input_blocks"][it.first] = json(it.second);
   }
 }
 
