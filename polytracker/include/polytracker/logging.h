@@ -29,9 +29,9 @@ the runtime cfg is the flow sensitive runtime control flow graph
 */
 struct RuntimeInfo {
   std::vector<std::string> tFuncStack;
-  polytracker::Trace trace;
   std::unordered_map<std::string, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
   std::unordered_map<std::string, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
   std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
+  polytracker::Trace trace;
 };
 #endif
