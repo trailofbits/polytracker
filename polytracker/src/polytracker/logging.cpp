@@ -40,7 +40,7 @@ thread local storage And stores the pointer to it in the vector.
 static void initThreadInfo() {
   runtime_info = new RuntimeInfo();
   std::lock_guard<std::mutex> locker(thread_runtime_info_lock);
-  thread_runtime_info.emplace_back(runtime_info);
+  thread_runtime_info.push_back(runtime_info);
 }
 
 [[nodiscard]] static inline std::vector<std::string> &getFuncStack(void) {
