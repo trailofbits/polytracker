@@ -1,5 +1,6 @@
 #include "dfsan/dfsan.h"
 #include "dfsan/dfsan_types.h"
+#include "dfsan/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
@@ -10,62 +11,83 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include <errno.h>
+#include <fstream>
 #include <iostream>
 #include <string>
+
+using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
 
 extern int errno;
-const char *polytracker_output_filename;
+std::string polytracker_output_filename = "";
+int byte_start = -1;
+int byte_end = -1;
 bool polytracker_trace = false;
-decay_val taint_node_ttl;
+decay_val taint_node_ttl = -1;
+std::string target_file = "";
 char *forest_mem;
 
 extern std::vector<RuntimeInfo *> thread_runtime_info;
-// This function is like `getenv`.  So why does it exist?  It's because dfsan
-// gets initialized before all the internal data structures for `getenv` are
-// set up. This is ripped from ASAN
-static char *polytracker_getenv(const char *name) {
-  char *environ;
-  uptr len;
-  uptr environ_size;
-  if (!ReadFileToBuffer("/proc/self/environ", &environ, &environ_size, &len)) {
-    return NULL;
-  }
-  uptr namelen = strlen(name);
-  char *p = environ;
-  while (*p != '\0') { // will happen at the \0\0 that terminates the buffer
-    // proc file has the format NAME=value\0NAME=value\0NAME=value\0...
-    char *endp = (char *)memchr(p, '\0', len - (p - environ));
-    if (!endp) { // this entry isn't NUL terminated
-      fprintf(stderr,
-              "Something in the env is not null terminated, exiting!\n");
-      return NULL;
-    }
-    // match
-    else if (!memcmp(p, name, namelen) && p[namelen] == '=') {
-      return p + namelen + 1;
-    }
-    p = endp + 1;
-  }
-  return NULL;
-}
 
-static inline void polytracker_parse_ttl() {
-  const char *env_ttl = polytracker_getenv("POLYTTL");
-  if (env_ttl != NULL) {
-    taint_node_ttl = atoi(env_ttl);
+// For settings that have not been initialized, set to default if one exists
+void setRemainingToDefault() {
+  // If a target is set, set the default start/end.
+  if (target_file.empty()) {
+    fprintf(stderr, "Error! No target file specified, set with POLYPATH\n");
+    exit(1);
   } else {
+    FILE *temp_file = fopen(target_file.c_str(), "r");
+    if (temp_file == NULL) {
+      fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
+              target_file.c_str(), strerror(errno));
+      exit(1);
+    }
+    // Init start and end
+    if (byte_start == -1) {
+      byte_start = 0;
+    }
+    if (byte_end == -1) {
+      fseek(temp_file, 0L, SEEK_END);
+      // Last byte, len - 1
+      byte_end = ftell(temp_file) - 1;
+    }
+    fclose(temp_file);
+  }
+  // If taint/output not set, set their defaults as well.
+  if (taint_node_ttl == -1) {
     taint_node_ttl = DEFAULT_TTL;
   }
+  if (polytracker_output_filename.empty()) {
+    polytracker_output_filename = "polytracker";
+  }
 }
 
-static inline void polytracker_parse_polytrace() {
-  const char *poly_trace = polytracker_getenv("POLYTRACE");
-  if (poly_trace == NULL) {
-    polytracker_trace = false;
-  } else {
-    auto trace_str = std::string(poly_trace);
+// This function parses the config file
+// Overwrites env vars if not already specified.
+void polytracker_parse_config(std::ifstream &config_file) {
+  std::string line;
+  std::string json_str;
+  while (getline(config_file, line)) {
+    json_str += line;
+  }
+  auto config_json = json::parse(json_str);
+  if (config_json.contains("POLYPATH")) {
+    target_file = config_json["POLYPATH"].get<std::string>();
+  }
+  if (config_json.contains("POLYSTART")) {
+    byte_start = config_json["POLYSTART"].get<int>();
+    std::cout << "Set polystart to " << byte_start << std::endl;
+  }
+  if (config_json.contains("POLYEND")) {
+    byte_end = config_json["POLYEND"].get<int>();
+    std::cout << "set polyend to " << byte_end << std::endl;
+  }
+  if (config_json.contains("POLYOUTPUT")) {
+    polytracker_output_filename = config_json["POLYOUTPUT"].get<std::string>();
+  }
+  if (config_json.contains("POLYTRACE")) {
+    std::string trace_str = config_json["POLYTRACE"].get<std::string>();
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
     if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
@@ -74,73 +96,92 @@ static inline void polytracker_parse_polytrace() {
       polytracker_trace = true;
     }
   }
+  if (config_json.contains("POLYTTL")) {
+    taint_node_ttl = config_json["POLYTTL"].get<int>();
+  }
 }
 
-static inline void polytracker_parse_output() {
-  const char *poly_output = polytracker_getenv("POLYOUTPUT");
-  if (poly_output != NULL) {
-    polytracker_output_filename = poly_output;
-  } else {
-    polytracker_output_filename = "polytracker";
+// Determines if a polytracker config is in use or not.
+// Returns NULL if no config found.
+bool polytracker_detect_config(std::ifstream &config) {
+  // Check current dir.
+  config.open("./polytracker_config.json");
+  if (config.good()) {
+    return true;
+  }
+  // Check home config path
+  config.open("~/.config/polytracker/polytracker_config.json");
+  if (config.good()) {
+    return true;
+  }
+  return false;
+}
+
+// Parses the env looking to override current settings
+void polytracker_parse_env() {
+  if (getenv("POLYPATH")) {
+    target_file = getenv("POLYPATH");
+  }
+  if (getenv("POLYSTART")) {
+    byte_start = atoi(getenv("POLYSTART"));
+  }
+  if (getenv("POLYEND")) {
+    byte_end = atoi(getenv("POLYEND"));
+  }
+  if (getenv("POLYOUTPUT")) {
+    polytracker_output_filename = getenv("POLYOUTPUT");
+  }
+  if (getenv("POLYTRACE")) {
+    std::string trace_str = getenv("POLYTRACE");
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace = false;
+    } else {
+      polytracker_trace = true;
+    }
+  }
+  if (getenv("POLYTTL")) {
+    taint_node_ttl = atoi(getenv("POLYTTL"));
   }
 }
 
 /*
 This code parses the enviornment variables and sets the globals which work as
 polytrackers settings
+
+1. Parse config if exists
+2. Parse env (overrides config settings if env is set)
+3. Set rest to default if possible and error if no polypath.
 */
-void polytracker_parse_env() {
-  // Check for path to input file
-  const char *target_file = polytracker_getenv("POLYPATH");
-  if (target_file == NULL) {
-    fprintf(stderr,
-            "Unable to get required POLYPATH environment variable -- perhaps "
-            "it's not set?\n");
-    exit(1);
+void polytracker_get_settings() {
+  std::ifstream config;
+  if (polytracker_detect_config(config)) {
+    std::cout << "Config detected!" << std::endl;
+    polytracker_parse_config(config);
   }
+  std::cout << "Parsing env!" << std::endl;
+  polytracker_parse_env();
 
-  FILE *temp_file = fopen(target_file, "r");
-  if (temp_file == NULL) {
-    fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-            target_file, strerror(errno));
-    exit(1);
-  }
+  setRemainingToDefault();
 
-  int byte_start = 0, byte_end = 0;
-  const char *poly_start = polytracker_getenv("POLYSTART");
-  if (poly_start != nullptr) {
-    byte_start = atoi(poly_start);
-  }
-
-  fseek(temp_file, 0L, SEEK_END);
-  byte_end = ftell(temp_file);
-  const char *poly_end = polytracker_getenv("POLYEND");
-  if (poly_end != nullptr) {
-    byte_end = atoi(poly_end);
-  }
-  fclose(temp_file);
   std::string poly_str(target_file);
   std::string stdin_string("stdin");
   // Add named source for polytracker
-  addInitialTaintSource(poly_str, byte_start, byte_end - 1, poly_str);
+  addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
   // Add source for standard input
   addInitialTaintSource(fileno(stdin), 0, MAX_LABELS, stdin_string);
-  // Parse env vars
-  polytracker_parse_output();
-  polytracker_parse_polytrace();
-  polytracker_parse_ttl();
 }
 
 static void polytracker_end() {
   // Go over the array of thread info, and call output on everything.
   for (const auto thread_info : thread_runtime_info) {
-    output(polytracker_output_filename, thread_info);
+    output(polytracker_output_filename.c_str(), thread_info);
   }
 }
 
 void polytracker_start() {
-  // Parse the enviornment vars
-  polytracker_parse_env();
+  polytracker_get_settings();
   // Set up the atexit call
   Atexit(polytracker_end);
 
