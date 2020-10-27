@@ -2,11 +2,13 @@ import pytest
 import os
 from polytracker.polyprocess import PolyProcess
 import subprocess
+from shutil import copyfile
 
 TEST_DIR = os.path.realpath(os.path.dirname(__file__))
 BIN_DIR = os.path.join(TEST_DIR, "bin")
 TEST_RESULTS_DIR = os.path.join(BIN_DIR, "test_results")
 BITCODE_DIR = os.path.join(TEST_DIR, "bitcode")
+CONFIG_DIR = os.path.join(TEST_DIR, "configs")
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -121,22 +123,31 @@ def test_taint_log():
         assert i in log_processed_sets["main"]["input_bytes"][test_filename]
 
 
-# This is a bad name for this test
-# This test compares the taint sources info with the tainted block info
-# When reading an entire file in a single block
-# Basically make sure the start/end match to prevent off-by-one errors
-# TODO
-def test_block_target_values():
-    target_name = "test_memcpy.c"
+def test_config_files():
+    target_name = "test_taint_log.c"
+    target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
+    assert os.path.exists(target_bin_path) is True
     test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    res = pp.source_metadata[test_filename]
-
-    assert 0 == 0
-
-
-# TODO
-# test last byte in file touch.
+    os.environ["POLYPATH"] = test_filename
+    os.environ["POLYOUTPUT"] = os.path.join(TEST_RESULTS_DIR, target_name)
+    # Test config, this changes the polystart/polyend
+    # POLYSTART: 1, POLYEND: 3
+    copyfile(os.path.join(CONFIG_DIR, "new_range.json"), "./polytracker_config.json")
+    ret_val = subprocess.call([target_bin_path, test_filename])
+    assert ret_val == 0
+    # Assert that the appropriate files were created
+    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
+    # Add the 0 here for thread counting.
+    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
+    assert os.path.exists(forest_path) is True
+    assert os.path.exists(json_path) is True
+    pp = PolyProcess(json_path, forest_path)
+    pp.process_taint_sets()
+    for i in range(1, 4):
+        assert i in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
+    for i in range(4, 10):
+        assert i not in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
+    os.remove("./polytracker_config.json")
 
 
 def test_source_fopen():
