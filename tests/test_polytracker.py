@@ -67,8 +67,6 @@ def polyclang_compile_target(target_name: str) -> int:
     return ret_val
 
 
-# TODO Parameterize test files?
-
 # Returns the Polyprocess object
 def validate_execute_target(target_name):
     target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
@@ -79,8 +77,9 @@ def validate_execute_target(target_name):
     ret_val = subprocess.call([target_bin_path, test_filename])
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "_forest.bin")
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "_process_set.json")
+    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
+    # Add the 0 here for thread counting.
+    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
     assert os.path.exists(forest_path) is True
     assert os.path.exists(json_path) is True
     pp = PolyProcess(json_path, forest_path)
@@ -113,12 +112,6 @@ def test_memcpy_propagate():
     assert 1 in raw_taint_sets["dfs$touch_copied_byte"]["input_bytes"]
 
 
-# TODO I think this gets changed.
-# def test_no_taint():
-#    target_name = "test_no_taint.c"
-#    pp = validate_execute_target(target_name)
-#    raw_taint_sets = pp.taint_sets
-#    assert raw_taint_sets is None
 def test_taint_log():
     target_name = "test_taint_log.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -137,7 +130,13 @@ def test_block_target_values():
     target_name = "test_memcpy.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
     pp = validate_execute_target(target_name)
+    res = pp.source_metadata[test_filename]
+
     assert 0 == 0
+
+
+# TODO
+# test last byte in file touch.
 
 
 def test_source_fopen():

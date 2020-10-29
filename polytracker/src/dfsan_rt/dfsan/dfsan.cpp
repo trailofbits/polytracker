@@ -20,14 +20,13 @@
 //===----------------------------------------------------------------------===//
 #include "dfsan/dfsan.h"
 
-#include "dfsan/dfsan_log_mgmt.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/tracing.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_flags.h"
+//#include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 // Only include this in here, headers are shared via dfsan.h
 #include <stdint.h>
@@ -47,9 +46,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "dfsan/roaring.c"
+#include "polytracker/logging.h"
+#include "polytracker/taint.h"
 
-using json = nlohmann::json;
 using namespace __dfsan;
 
 // This keeps track of the current taint label we are on
@@ -63,6 +62,7 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __dfsan_shadow_ptr_mask;
 // This is a boundary we use when setting up the address space
 static uptr forest_base_addr = MappingArchImpl<MAPPING_TAINT_FOREST_ADDR>();
 
+/*
 // This is a decay value, its a practical choice made due to the inherent
 // problems when using taint analysis Specifically, when analyzing functions
 // that manipulate a lot of data, like decompression functions, youll get way
@@ -76,12 +76,15 @@ static decay_val taint_node_ttl = DEFAULT_TTL;
 static const char *polytracker_output_filename;
 
 // Whether or not to perform a full program trace
-static bool polytracker_trace = false;
+bool polytracker_trace = false;
 
 // Manages taint info/propagation
 taintManager *taint_manager = nullptr;
 static bool is_init = false;
 std::mutex init_lock;
+*/
+
+extern bool polytracker_trace;
 
 // We only support linux x86_64 now
 // On Linux/x86_64, memory is laid out as follows:
@@ -106,6 +109,10 @@ std::mutex init_lock;
 // account for the double byte representation of shadow labels and move the
 // address into the shadow memory range.  See the function shadow_for below.
 
+static void InitializeFlags();
+static void dfsan_fini();
+static void InitializePlatformEarly();
+
 #ifdef DFSAN_RUNTIME_VMA
 // Runtime detected VMA size.
 int __dfsan::vmaSize;
@@ -118,50 +125,46 @@ static uptr UnusedAddr() {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
-  taint_manager->resetFrame(index);
+  resetFrame(index);
 }
 
-void dfsan_late_late_init();
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
+    const char *fname) {
+  return logFunctionEntry(fname);
+}
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(char *fname) {
-  init_lock.lock();
-  if (is_init == false) {
-    dfsan_late_late_init();
-    is_init = true;
+// This shouldn't be called right now
+// Some issues with it are that when dealing with floating points, casting them to int
+// causes error in LLVM. Might need to support floats/doubles as operands in the trace
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_trace_inst_fn(
+    uint32_t op_code, int val_a, int val_b, dfsan_label labela,
+    dfsan_label labelb) {
+  if ((labela == 0 && labelb == 0)) {
+    return;
   }
-  init_lock.unlock();
-
-  return taint_manager->logFunctionEntry(fname);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_bb_entry(
-    char *fname, uint32_t functionIndex, uint32_t bbIndex,
+    const char *fname, uint32_t functionIndex, uint32_t bbIndex,
     std::underlying_type<polytracker::BasicBlockType>::type bbType) {
-  init_lock.lock();
-  if (is_init == false) {
-    dfsan_late_late_init();
-    is_init = true;
-  }
-  init_lock.unlock();
-
-  if (taint_manager->recordTrace()) {
-    taint_manager->logBBEntry(fname, BBIndex(functionIndex, bbIndex),
-                              static_cast<polytracker::BasicBlockType>(bbType));
+  if (polytracker_trace) {
+    logBBEntry(fname, BBIndex(functionIndex, bbIndex),
+               static_cast<polytracker::BasicBlockType>(bbType));
   }
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint_cmp(
     dfsan_label some_label) {
-  taint_manager->logCompare(some_label);
+  logCompare(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint(
     dfsan_label some_label) {
-  taint_manager->logOperation(some_label);
+  logOperation(some_label);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
-  taint_manager->logFunctionExit();
+  logFunctionExit();
 }
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
@@ -169,7 +172,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
 // The union table prevents there from being dupilcate labels
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
 __dfsan_union(dfsan_label l1, dfsan_label l2) {
-  return taint_manager->createUnionLabel(l1, l2);
+  return createUnionLabel(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label
@@ -280,20 +283,7 @@ static void RegisterDfsanFlags(FlagParser *parser, Flags *f) {
 #undef DFSAN_FLAG
 }
 
-static void InitializeFlags() {
-  SetCommonFlagsDefaults();
-  flags().SetDefaults();
-
-  FlagParser parser;
-  RegisterCommonFlags(&parser);
-  RegisterDfsanFlags(&parser, &flags());
-  parser.ParseString(GetEnv("DFSAN_OPTIONS"));
-  InitializeCommonFlags();
-  if (Verbosity())
-    ReportUnrecognizedFlags();
-  if (common_flags()->help)
-    parser.PrintFlagDescriptions();
-}
+static void InitializeFlags() {}
 
 static void InitializePlatformEarly() {
   AvoidCVE_2016_2143();
@@ -310,123 +300,9 @@ static void InitializePlatformEarly() {
 #endif
 }
 
-static void dfsan_fini() {
-  if (taint_manager == nullptr) {
-    return;
-  }
-  taint_manager->output();
-  delete taint_manager;
-}
+static void dfsan_fini() { return; }
 
-// This function is like `getenv`.  So why does it exist?  It's because dfsan
-// gets initialized before all the internal data structures for `getenv` are
-// set up. This is similar to how ASAN does it
-static char *dfsan_getenv(const char *name) {
-  char *environ;
-  uptr len;
-  uptr environ_size;
-  if (!ReadFileToBuffer("/proc/self/environ", &environ, &environ_size, &len)) {
-    return NULL;
-  }
-  uptr namelen = strlen(name);
-  char *p = environ;
-  while (*p != '\0') {  // will happen at the \0\0 that terminates the buffer
-    // proc file has the format NAME=value\0NAME=value\0NAME=value\0...
-    char *endp = (char *)memchr(p, '\0', len - (p - environ));
-    if (!endp) {  // this entry isn't NUL terminated
-      fprintf(stderr,
-              "Something in the env is not null terminated, exiting!\n");
-      return NULL;
-    }
-    // match
-    else if (!memcmp(p, name, namelen) && p[namelen] == '=') {
-#ifdef DEBUG_INFO
-      fprintf(stderr, "Found target file\n");
-#endif
-      return p + namelen + 1;
-    }
-    p = endp + 1;
-  }
-  return NULL;
-}
-
-void dfsan_parse_env() {
-  // Check for path to input file
-  const char *target_file = dfsan_getenv("POLYPATH");
-  if (target_file == NULL) {
-    fprintf(stderr,
-            "Unable to get required POLYPATH environment variable -- perhaps "
-            "it's not set?\n");
-    exit(1);
-  }
-
-  FILE *temp_file = fopen(target_file, "r");
-  if (temp_file == NULL) {
-    fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-            target_file, strerror(errno));
-    exit(1);
-  }
-
-  uint64_t byte_start = 0, byte_end = 0;
-  const char *poly_start = dfsan_getenv("POLYSTART");
-  if (poly_start != nullptr) {
-    byte_start = atoi(poly_start);
-  }
-
-  fseek(temp_file, 0L, SEEK_END);
-  byte_end = ftell(temp_file);
-  const char *poly_end = dfsan_getenv("POLYEND");
-  if (poly_end != nullptr) {
-    byte_end = atoi(poly_end);
-  }
-  fclose(temp_file);
-
-  const char *poly_output = dfsan_getenv("POLYOUTPUT");
-  if (poly_output != NULL) {
-    polytracker_output_filename = poly_output;
-  } else {
-    polytracker_output_filename = "polytracker";
-  }
-
-  const char *poly_trace = dfsan_getenv("POLYTRACE");
-  if (poly_trace == NULL) {
-    polytracker_trace = false;
-  } else {
-    auto trace_str = std::string(poly_trace);
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
-      polytracker_trace = false;
-    } else {
-      polytracker_trace = true;
-    }
-  }
-
-  taint_manager->setOutputFilename(std::string(polytracker_output_filename));
-  taint_manager->setTrace(polytracker_trace);
-
-  const char *env_ttl = dfsan_getenv("POLYTTL");
-  decay_val taint_node_ttl = DEFAULT_TTL;
-  if (env_ttl != NULL) {
-    taint_node_ttl = atoi(env_ttl);
-  }
-
-  taint_manager->createNewTargetInfo(target_file, byte_start, byte_end - 1);
-  // Special tracking for standard input
-  taint_manager->createNewTargetInfo("stdin", 0, MAX_LABELS);
-  taint_manager->createNewTaintInfo("stdin", stdin);
-}
-void dfsan_late_late_init() {
-  taint_manager = new taintManager(taint_node_ttl, (char *)ShadowAddr(),
-                                   (char *)ForestAddr());
-  if (taint_manager == nullptr) {
-    fprintf(stderr, "Taint prop manager null!\n");
-    exit(1);
-  }
-  dfsan_parse_env();
-}
-void dfsan_late_init() {
-  InitializeFlags();
+void dfsan_init() {
   InitializePlatformEarly();
 
   if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr())) {
@@ -437,7 +313,7 @@ void dfsan_late_init() {
   // will load our executable in the middle of our unused region. This mostly
   // works so long as the program doesn't use too much memory. We support this
   // case by disabling memory protection when ASLR is disabled.
-  uptr init_addr = (uptr)&dfsan_late_init;
+  uptr init_addr = (uptr)&dfsan_init;
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr())) {
     MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
   }
@@ -458,4 +334,4 @@ void dfsan_late_init() {
 }
 
 __attribute__((section(".preinit_array"),
-               used)) static void (*dfsan_init_ptr)() = dfsan_late_init;
+               used)) static void (*dfsan_init_ptr)() = dfsan_init;

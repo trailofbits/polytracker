@@ -355,6 +355,9 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanLogCmpFnTy;
   Constant *DFSanLogCmpFn;
 
+  FunctionType *DFSanTraceInstFnTy;
+  Constant *DFSanTraceInstFn;
+
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
   FunctionType *DFSanEntryBBFnTy;
@@ -478,6 +481,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitMemSetInst(MemSetInst &I);
   void visitMemTransferInst(MemTransferInst &I);
+  void traceTaintedBinaryOp(Instruction *I);
 };
 
 } // end anonymous namespace
@@ -607,6 +611,13 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   Type *DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
   DFSanEntryFnTy =
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
+
+  Type *DFSanTraceInstArgs[5] = {
+      IntegerType::getInt32Ty(*Ctx), IntegerType::getInt64PtrTy(*Ctx),
+      IntegerType::getInt64PtrTy(*Ctx), ShadowTy, ShadowTy};
+
+  DFSanTraceInstFnTy =
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanTraceInstArgs, false);
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
   Type *DFSanEntryBBArgs[4] = {
@@ -821,7 +832,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBFnTy);
   DFSanResetFrameFn =
       Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
-
+  DFSanTraceInstFn =
+      Mod->getOrInsertFunction("__dfsan_trace_inst_fn", DFSanTraceInstFnTy);
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
   for (Function &i : M) {
@@ -830,7 +842,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn)
+        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn &&
+        &i != DFSanTraceInstFn)
       FnsToInstrument.push_back(&i);
   }
 
@@ -985,7 +998,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     if (!i || i->isDeclaration()) {
       continue;
     }
-
     Value *FuncIndex =
         ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
