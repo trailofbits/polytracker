@@ -110,6 +110,52 @@ def print_file_context(
             output.write(f"{indent}{' ' * highlight_start}{'^' * highlight_length}\n")
 
 
+class ControlFlowDiff:
+    def __init__(self, trace1: ProgramTrace, trace2: ProgramTrace, function_name: str):
+        self.trace1: ProgramTrace = trace1
+        self.trace2: ProgramTrace = trace2
+        self.func: str = function_name
+        self._first_function_with_different_control_flow: Optional[str] = None
+        self._diffed: bool = False
+
+    @property
+    def first_function_with_different_control_flow(self) -> Optional[str]:
+        if not self._diffed:
+            self._diff()
+        return self._first_function_with_different_control_flow
+
+    def _diff(self):
+        if self._diffed:
+            return
+        self._diffed = True
+        if self.func not in self.trace1.functions or self.func not in self.trace2.functions:
+            return
+        func1 = self.trace1.functions[self.func]
+        func2 = self.trace2.functions[self.func]
+        doms1 = self.trace1.cfg.dominator_forest
+        doms2 = self.trace2.cfg.dominator_forest
+
+        ancestors1 = doms1.ancestors(func1)
+        ancestors2 = doms2.ancestors(func2)
+
+        ancestors1 &= ancestors2
+        ancestors2 &= ancestors1
+
+        if not ancestors1 or not ancestors2:
+            # they have no ancestors in common
+            return
+
+        for a1, a2 in zip(ancestors1, ancestors2):
+            if a1.name != a2.name:
+                continue
+            if a1.cmp_bytes != a2.cmp_bytes:
+                self._first_function_with_different_control_flow = a1.name
+                break
+
+    def __bool__(self):
+        return self.first_function_with_different_control_flow is not None
+
+
 class FunctionDiff:
     def __init__(self, func1: FunctionInfo, func2: FunctionInfo):
         assert func1.name == func2.name
@@ -282,10 +328,10 @@ class TraceDiff:
     def __str__(self):
         status = StringIO()
 
-        def print_chunk_info(chunks: Iterable[Tuple[str, Tuple[int, int]]]):
+        def print_chunk_info(chunks: Iterable[Tuple[str, Tuple[int, int]]], indent: str="\t"):
             for source, (start, end) in chunks:
                 if os.path.exists(source):
-                    print_file_context(status, path=source, offset=start, length=end - start, indent="\t")
+                    print_file_context(status, path=source, offset=start, length=end - start, indent=indent)
                 else:
                     status.write(f"\tTouched {end - start} bytes at offset {start}\n")
 
@@ -293,13 +339,63 @@ class TraceDiff:
             status.write(
                 "The reference trace touched the following byte regions that were not touched by the diffed " "trace:\n"
             )
-            print_chunk_info(self.input_chunks_only_in_first)
+            # generate the CFG first, because that can add functions to the trace:
+            _ = self.trace1.cfg
+            for src, (st, en) in self.input_chunks_only_in_first:
+                print_chunk_info(((src, (st, en)),))
+                for func in self.trace1.functions.values():
+                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st, en):
+                        # find the control flows that could have caused the diff
+                        cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
+                        if cfd:
+                            different_function = cfd.first_function_with_different_control_flow
+                            function_diff = FunctionDiff(
+                                self.trace1.functions[different_function],
+                                self.trace2.functions[different_function]
+                            )
+                            if not bool(function_diff):
+                                continue
+                            status.write(f"\tFunction {function_diff.func1!s} could contain the control flow that led "
+                                         "to this differential\n")
+                            if function_diff.cmp_bytes_only_in_first:
+                                status.write("\t\tHere are the bytes that affected control flow only in the reference "
+                                             "trace:\n")
+                                print_chunk_info(function_diff.cmp_chunks_only_in_first(), indent="\t\t\t")
+                            if function_diff.cmp_bytes_only_in_first:
+                                status.write("\t\tHere are the bytes that affected control flow only in the differed "
+                                             "trace:\n")
+                                print_chunk_info(function_diff.cmp_chunks_only_in_second(), indent="\t\t\t")
 
         if self.has_input_chunks_only_in_second:
             status.write(
                 "The diffed trace touched the following byte regions that were not touched by the reference " "trace:\n"
             )
-            print_chunk_info(self.input_chunks_only_in_second)
+            # generate the CFG first, because that can add functions to the trace:
+            _ = self.trace2.cfg
+            for src, (st, en) in self.input_chunks_only_in_second:
+                print_chunk_info(((src, (st, en)),))
+                for func in self.trace2.functions.values():
+                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st, en):
+                        # find the control flows that could have caused the diff
+                        cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
+                        if cfd:
+                            different_function = cfd.first_function_with_different_control_flow
+                            function_diff = FunctionDiff(
+                                self.trace1.functions[different_function],
+                                self.trace2.functions[different_function]
+                            )
+                            if not bool(function_diff):
+                                continue
+                            status.write(f"\tFunction {function_diff.func1!s} could contain the control flow that led "
+                                         "to this differential\n")
+                            if function_diff.cmp_bytes_only_in_first:
+                                status.write("\t\tHere are the bytes that affected control flow only in the reference "
+                                             "trace:\n")
+                                print_chunk_info(function_diff.cmp_chunks_only_in_first(), indent="\t\t\t")
+                            if function_diff.cmp_bytes_only_in_first:
+                                status.write("\t\tHere are the bytes that affected control flow only in the differed "
+                                             "trace:\n")
+                                print_chunk_info(function_diff.cmp_chunks_only_in_second(), indent="\t\t\t")
 
         if not self.has_input_chunks_only_in_first and not self.has_input_chunks_only_in_second:
             status.write("Both traces consumed the exact same input byte regions\n")

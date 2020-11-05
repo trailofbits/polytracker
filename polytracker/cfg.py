@@ -23,6 +23,9 @@ import cxxfilt
 import graphviz
 import networkx as nx
 
+from .cache import OrderedSet
+
+
 N = TypeVar("N")
 D = TypeVar("D", bound="DiGraph")
 
@@ -57,8 +60,12 @@ class DiGraph(nx.DiGraph, Generic[N]):
     def depth(self, node: N) -> Union[int, float]:
         return min(self.path_length(root, node) for root in self.roots)
 
-    def ancestors(self, node: N) -> Set[N]:
-        return nx.ancestors(self, node)
+    def ancestors(self, node: N) -> OrderedSet[N]:
+        if not self.has_node(node):
+            raise nx.NetworkXError(f"Node {node} is not in the graph")
+        return OrderedSet(*(x for _, x in sorted(
+            (d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node)
+        ))
 
     def has_one_predecessor(self, node: N) -> bool:
         """Returns whether the given node has exactly one predecessor"""
