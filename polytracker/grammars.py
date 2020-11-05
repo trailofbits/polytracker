@@ -120,6 +120,7 @@ class Production:
         self.grammar: Grammar = grammar
         self.name: str = name
         self.rules: Set[Rule] = set(rules)
+        self.removable: bool = True
         grammar.productions[name] = self
         for rule in rules:
             for term in rule.sequence:
@@ -921,6 +922,38 @@ class Grammar:
                     )
 
     def simplify(self) -> bool:
+        with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
+            for prod in tqdm(
+                    list(self.productions.values()),
+                    desc="simplifying trivial productions",
+                    unit=" productions",
+                    leave=False,
+                    unit_divisor=1
+            ):
+                # remove any rules in the production that just recursively call the same production
+                prod.remove_recursive_rules()
+                if prod.removable and len(prod.rules) == 1:
+                    # this production has a single rule, so replace all uses with that rule
+                    for user in list(prod.used_by):
+                        user.replace_sub_production(prod.name, prod.first_rule())  # type: ignore
+                    self.remove(prod)
+                    # print(f"replaced {prod} with {prod.first_rule()}")
+                    # self.verify(test_disconnection=False)
+                    status.update(1)
+            for prod in tqdm(
+                    list(self.productions.values()),
+                    desc="removing empty productions",
+                    unit=" productions",
+                    leave=False,
+                    unit_divisor=1
+            ):
+                if prod.removable and not prod.can_produce_terminal:
+                    removed = self.remove(prod)
+                    assert removed
+                    # print(f"removed {prod} because it was empty")
+                    # self.verify(test_disconnection=False)
+                    status.update(1)
+        return
         modified = False
         modified_last_pass = True
         with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
@@ -1013,7 +1046,10 @@ def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
             if rule not in production:
                 production.add(rule)
         else:
-            Production(grammar, prod_name, rule)
+            prod = Production(grammar, prod_name, rule)
+            if prod_name == "<START>" or isinstance(node.value, FunctionCall):
+                # do not allow the START production or function calls to be simplified out of the grammar
+                prod.removable = False
 
     grammar.start = grammar["<START>"]
 

@@ -122,7 +122,9 @@ def main():
                 sys.stderr.write(str(e))
                 sys.stderr.write("\n\n")
                 exit(1)
-            print(str(grammars.extract(traces)))
+            grammar = grammars.extract(traces)
+            grammar.simplify()
+            print(str(grammar))
 
         if args.extract_datalog:
             traces = []
