@@ -198,13 +198,13 @@ class FunctionDiff:
     def cmp_bytes_only_in_first(self) -> Dict[str, Set[int]]:
         if self._cmp_bytes_only_in_first is None:
             self._diff()
-        return self._cmp_bytes_only_in_first
+        return self._cmp_bytes_only_in_first  # type: ignore
 
     @property
     def cmp_bytes_only_in_second(self) -> Dict[str, Set[int]]:
         if self._cmp_bytes_only_in_second is None:
             self._diff()
-        return self._cmp_bytes_only_in_second
+        return self._cmp_bytes_only_in_second  # type: ignore
 
     def cmp_chunks_only_in_first(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
         for source, byte_offsets in self.cmp_bytes_only_in_first.items():
@@ -261,13 +261,13 @@ class TraceDiff:
     def functions_only_in_first(self) -> FrozenSet[FunctionInfo]:
         if self._functions_only_in_first is None:
             self._diff_functions()
-        return self._functions_only_in_first
+        return self._functions_only_in_first  # type: ignore
 
     @property
     def functions_only_in_second(self) -> FrozenSet[FunctionInfo]:
         if self._functions_only_in_second is None:
             self._diff_functions()
-        return self._functions_only_in_second
+        return self._functions_only_in_second  # type: ignore
 
     @property
     def functions_in_both(self) -> Iterator[FunctionDiff]:
@@ -328,7 +328,7 @@ class TraceDiff:
     def input_chunks_only_in_first(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
         if self._bytes_only_in_first is None:
             self._diff_bytes()
-        for source, tree in self._bytes_only_in_first.items():
+        for source, tree in self._bytes_only_in_first.items():  # type: ignore
             for interval in sorted(tree):
                 yield source, (interval.begin, interval.end)
 
@@ -336,7 +336,7 @@ class TraceDiff:
     def input_chunks_only_in_second(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
         if self._bytes_only_in_second is None:
             self._diff_bytes()
-        for source, tree in self._bytes_only_in_second.items():
+        for source, tree in self._bytes_only_in_second.items():  # type: ignore
             for interval in sorted(tree):
                 yield source, (interval.begin, interval.end)
 
@@ -344,13 +344,13 @@ class TraceDiff:
     def has_input_chunks_only_in_first(self) -> bool:
         if self._bytes_only_in_first is None:
             self._diff_bytes()
-        return any(len(tree) > 0 for tree in self._bytes_only_in_first.values())
+        return any(len(tree) > 0 for tree in self._bytes_only_in_first.values())  # type: ignore
 
     @property
     def has_input_chunks_only_in_second(self) -> bool:
         if self._bytes_only_in_second is None:
             self._diff_bytes()
-        return any(len(tree) > 0 for tree in self._bytes_only_in_second.values())
+        return any(len(tree) > 0 for tree in self._bytes_only_in_second.values())  # type: ignore
 
     def to_image(self) -> Image:
         self._diff_bytes()
@@ -359,8 +359,8 @@ class TraceDiff:
             num_bytes = max(self.trace1.source_size(source), self.trace2.source_size(source))
             return file_diff(
                 num_bytes,
-                lambda offset: source in self._bytes_only_in_first and self._bytes_only_in_first[source].overlaps(offset),
-                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset),
+                lambda offset: source in self._bytes_only_in_first and self._bytes_only_in_first[source].overlaps(offset),  # type: ignore
+                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset),  # type: ignore
             )
 
     def __bool__(self):
@@ -514,7 +514,7 @@ def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = N
                             f"{'.'.join(map(str, known_version))} and above"
                         )
                     else:
-                        return parser(polytracker_json_obj, polytracker_forest_path)
+                        return parser(polytracker_json_obj, polytracker_forest_path)  # type: ignore
         raise ValueError(f"Unsupported PolyTracker version {polytracker_json_obj['version']!r}")
     for function_name, function_data in polytracker_json_obj.items():
         if isinstance(function_data, dict) and "called_from" in function_data:
@@ -649,7 +649,7 @@ class TaintForestFunctionInfo(FunctionInfo):
 @polytracker_version(2, 2, 0)
 def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) -> ProgramTrace:
     version = polytracker_json_obj["version"].split(".")
-    function_data = []
+    function_data: List[FunctionInfo] = []
     tainted_functions = set()
     sources = polytracker_json_obj["canonical_mapping"].keys()
     if len(sources) != 1:

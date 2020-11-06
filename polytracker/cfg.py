@@ -198,7 +198,7 @@ class FunctionInfo:
             if self._demangled_name.startswith("dfs$"):
                 self._demangled_name = self._demangled_name[4:]
             self._demangled_name = cxxfilt.demangle(self._demangled_name)
-        return self._demangled_name
+        return self._demangled_name  # type: ignore
 
     def source_size(self, source: str) -> int:
         if source not in self.taint_sources:
@@ -232,11 +232,11 @@ class FunctionInfo:
             if last_offset is None:
                 start_offset = offset
             elif offset != last_offset and offset != last_offset + 1:
-                yield start_offset, last_offset + 1
+                yield start_offset, last_offset + 1  # type: ignore
                 start_offset = offset
             last_offset = offset
         if last_offset is not None:
-            yield start_offset, last_offset + 1
+            yield start_offset, last_offset + 1  # type: ignore
 
     def input_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
         for source, byte_offsets in self.input_bytes.items():

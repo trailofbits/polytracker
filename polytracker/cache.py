@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from collections.abc import MutableSet as AbstractMutableSet
-from typing import Callable, Generic, MutableSet as MutableSetType, Optional, TypeVar, Iterator
+from typing import Callable, Generic, Optional, TypeVar, Iterator
 
 R = TypeVar("R")
 
@@ -15,14 +15,14 @@ class Memoized(Generic[R]):
         if not self._set:
             self._set = True
             self.cached = self.func(*args, **kwargs)
-        return self.cached
+        return self.cached  # type: ignore
 
 
 def memoize(func: Callable[..., R]) -> Callable[..., R]:
     return Memoized(func)
 
 
-class OrderedSet(Generic[R], AbstractMutableSet, MutableSetType[R]):
+class OrderedSet(Generic[R], AbstractMutableSet[R]):
     def __init__(self, *items: R):
         self._items: OrderedDict[R, R] = OrderedDict()
         for i in items:
