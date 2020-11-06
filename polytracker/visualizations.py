@@ -1,7 +1,10 @@
 import math
-from typing import Callable
+from typing import Callable, List
 
-from PIL import Image
+from PIL import Image, ImageEnhance
+from tqdm import tqdm
+
+from .taint_forest import TaintForest
 
 
 def file_diff(
@@ -25,3 +28,28 @@ def file_diff(
             else:
                 image.putpixel((col, row), (0, 0, 0))
     return image
+
+
+def temporal_animation(output_path: str, forest: TaintForest, aspect_ratio: float = 1.61803398875):
+    num_labels = forest.num_nodes
+    height = max(int(math.ceil(math.sqrt(aspect_ratio) * math.sqrt(num_labels))), 1)
+    width = max(int(math.ceil(num_labels / height)), 1)
+    while width * height < num_labels:
+        height += 1
+    images: List[Image] = []
+    for taints in tqdm(forest.access_sequence(), desc="building temporal animation", leave=False, unit=" frames", total=forest.num_nodes):
+        if not images:
+            image = Image.new(size=(width, height), mode="L", color=255)
+        else:
+            enhancer = ImageEnhance.Brightness(images[-1])
+            image = enhancer.enhance(1.1)
+        for offset in taints:
+            row = offset // width
+            col = offset % width
+            image.putpixel((col, row), 0)
+        images.append(image)
+    images[0].save(output_path, save_all=True,
+                   append_images=images[1:],
+                   fps=100.0,
+                   loop=True
+                   )

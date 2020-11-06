@@ -1,9 +1,11 @@
 import os
 import struct
-from typing import Dict, List, Set
+from typing import Dict, FrozenSet, Iterator, List, Optional, Set
 from typing_extensions import Final
 
 from tqdm import tqdm, trange
+
+from .cache import LRUCache
 
 """
 This "Final" type means this is just a const
@@ -18,6 +20,34 @@ class TaintForest:
         self.canonical_mapping: Dict[int, int] = canonical_mapping
         self.num_nodes: int = 0  # this is set in self.validate()
         self.validate()
+
+    def access_sequence(self, max_cache_size: Optional[int] = None) -> Iterator[FrozenSet[int]]:
+        cache: LRUCache[int, FrozenSet[int]] = LRUCache(max_cache_size)
+        with open(self.path, "rb") as forest:
+            for label in range(self.num_nodes):
+                if label == 0:
+                    continue
+                parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
+                if parent1 == 0:
+                    assert parent2 == 0
+                    if label not in self.canonical_mapping:
+                        # raise ValueError(f"Taint label {label} is not in the canonical mapping!")
+                        continue
+                    ret = frozenset([self.canonical_mapping[label]])
+                else:
+                    if parent1 in cache:
+                        p1 = cache[parent1]
+                    else:
+                        p1 = frozenset(self.tainted_bytes(parent1))
+                        cache[parent1] = p1
+                    if parent2 in cache:
+                        p2 = cache[parent2]
+                    else:
+                        p2 = frozenset(self.tainted_bytes(parent2))
+                        cache[parent2] = p2
+                    ret = p1 | p2
+                yield ret
+                cache[label] = ret
 
     def validate(self, full: bool = False):
         if not os.path.exists(self.path):
