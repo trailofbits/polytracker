@@ -7,8 +7,8 @@ from PIL import Image
 def file_diff(
     num_bytes: int, in_first: Callable[[int], bool], in_second: Callable[[int], bool], aspect_ratio: float = 1.61803398875
 ) -> Image:
-    height = int(math.sqrt(aspect_ratio) * math.sqrt(num_bytes) + 0.5)
-    width = int(num_bytes / height + 0.5)
+    height = max(int(math.ceil(math.sqrt(aspect_ratio) * math.sqrt(num_bytes))), 1)
+    width = max(int(math.ceil(num_bytes / height)), 1)
     while width * height < num_bytes:
         height += 1
     image = Image.new(size=(width, height), mode="RGB", color=(255, 255, 255))
