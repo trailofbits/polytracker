@@ -15,7 +15,7 @@ def file_diff(
     for i in range(num_bytes):
         first = in_first(i)
         second = in_second(i)
-        if first ^ second or (first == second and not first):
+        if not (first and second):
             row = i // width
             col = i % width
             if first:

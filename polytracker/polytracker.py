@@ -256,6 +256,18 @@ class TraceDiff:
         self._functions_only_in_second: Optional[FrozenSet[FunctionInfo]] = None
         self._bytes_only_in_first: Optional[Dict[str, IntervalTree]] = None
         self._bytes_only_in_second: Optional[Dict[str, IntervalTree]] = None
+        self._first_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
+        self._second_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
+
+    @property
+    def first_intervals(self) -> Dict[str, IntervalTree]:
+        self._diff_bytes()
+        return self._first_intervals
+
+    @property
+    def second_intervals(self) -> Dict[str, IntervalTree]:
+        self._diff_bytes()
+        return self._second_intervals
 
     @property
     def functions_only_in_first(self) -> FrozenSet[FunctionInfo]:
@@ -290,39 +302,39 @@ class TraceDiff:
             return
         # TODO: Instead of looking at what functions touched, just look at the bytes in the canonical mapping!
         with tqdm(desc="Diffing tainted byte regions", leave=False, unit=" trace", total=2) as t:
-            first_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
             for func in tqdm(self.trace1.functions.values(), desc="Trace 1", unit=" functions", leave=False):
                 for source, (start, end) in func.input_chunks():
-                    first_intervals[source].add(Interval(start, end))
-            for interval in first_intervals.values():
+                    self._first_intervals[source].add(Interval(start, end))
+            for interval in self._first_intervals.values():
                 interval.merge_overlaps()
             t.update(1)
-            second_intervals: Dict[str, IntervalTree] = defaultdict(IntervalTree)
             for func in tqdm(self.trace2.functions.values(), desc="Trace 2", unit=" functions", leave=False):
                 for source, (start, end) in func.input_chunks():
-                    second_intervals[source].add(Interval(start, end))
-            for interval in second_intervals.values():
+                    self._second_intervals[source].add(Interval(start, end))
+            for interval in self._second_intervals.values():
                 interval.merge_overlaps()
             t.update(2)
             self._bytes_only_in_first = {}
             self._bytes_only_in_second = {}
-            for source in first_intervals.keys() & second_intervals.keys():
+            for source in self._first_intervals.keys() & self._second_intervals.keys():
                 # shared sources
+                self._bytes_only_in_first[source] = self._first_intervals[source].copy()
                 for interval in tqdm(
-                    second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False
+                    self._second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False
                 ):
-                    first_intervals[source].remove_overlap(interval.begin, interval.end)
-                self._bytes_only_in_first[source] = first_intervals[source]
-                for interval in tqdm(first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False):
-                    second_intervals[source].remove_overlap(interval.begin, interval.end)
-                self._bytes_only_in_second[source] = second_intervals[source]
+                    self._bytes_only_in_first[source].remove_overlap(interval.begin, interval.end)
+                self._bytes_only_in_second[source] = self._second_intervals[source].copy()
+                for interval in tqdm(
+                    self._first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False
+                ):
+                    self._bytes_only_in_second[source].remove_overlap(interval.begin, interval.end)
                 assert len(self._bytes_only_in_first[source] & self._bytes_only_in_second[source]) == 0
-            for source in first_intervals.keys() - second_intervals.keys():
+            for source in self._first_intervals.keys() - self._second_intervals.keys():
                 # sources only in first
-                self._bytes_only_in_first[source] = first_intervals[source]
-            for source in second_intervals.keys() - first_intervals.keys():
+                self._bytes_only_in_first[source] = self._first_intervals[source]
+            for source in self._second_intervals.keys() - self._first_intervals.keys():
                 # sources only in second
-                self._bytes_only_in_second[source] = second_intervals[source]
+                self._bytes_only_in_second[source] = self._second_intervals[source]
 
     @property
     def input_chunks_only_in_first(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
@@ -359,8 +371,8 @@ class TraceDiff:
             num_bytes = max(self.trace1.source_size(source), self.trace2.source_size(source))
             return file_diff(
                 num_bytes,
-                lambda offset: source in self._bytes_only_in_first and self._bytes_only_in_first[source].overlaps(offset),  # type: ignore
-                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset),  # type: ignore
+                lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),  # type: ignore
+                lambda offset: source in self._second_intervals and self._second_intervals[source].overlaps(offset),  # type: ignore
             )
 
     def __bool__(self):

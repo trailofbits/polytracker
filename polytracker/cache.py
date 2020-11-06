@@ -22,7 +22,7 @@ def memoize(func: Callable[..., R]) -> Callable[..., R]:
     return Memoized(func)
 
 
-class OrderedSet(Generic[R], AbstractMutableSet[R]):
+class OrderedSet(Generic[R], AbstractMutableSet):  # type: ignore
     def __init__(self, *items: R):
         self._items: OrderedDict[R, R] = OrderedDict()
         for i in items:
