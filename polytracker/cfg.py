@@ -22,6 +22,7 @@ from typing import (
 import cxxfilt
 import graphviz
 import networkx as nx
+import os
 
 from .cache import OrderedSet
 
@@ -198,6 +199,18 @@ class FunctionInfo:
                 self._demangled_name = self._demangled_name[4:]
             self._demangled_name = cxxfilt.demangle(self._demangled_name)
         return self._demangled_name
+
+    def source_size(self, source: str) -> int:
+        if source not in self.taint_sources:
+            raise KeyError(source)
+        elif os.path.exists(source):
+            return os.stat(source).st_size
+        else:
+            # find the largest byte this trace touched
+            return max(self.input_bytes.get(source, default=[]))
+
+    def taint_source_sizes(self) -> Dict[str, int]:
+        return {source: self.source_size(source) for source in self.taint_sources}
 
     @property
     def input_bytes(self) -> Dict[str, List[int]]:

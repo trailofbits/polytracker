@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from .cfg import CFG, FunctionInfo
 from .taint_forest import TaintForest
+from .visualizations import file_diff, Image
 
 log = logging.getLogger("PolyTracker")
 
@@ -31,6 +32,16 @@ class ProgramTrace:
         if self._taint_sources is None:
             self._taint_sources = frozenset([s for func in self.functions.values() for s in func.taint_sources])
         return self._taint_sources
+
+    def source_size(self, source: str) -> int:
+        first_function = next(iter(self.functions.values()))
+        if os.path.exists(source) or (len(self.taint_sources) == 1 and isinstance(first_function, TaintForestFunctionInfo)):
+            return first_function.source_size(source)
+        else:
+            return max(func.source_size(source) for func in self.functions.values())
+
+    def taint_source_sizes(self) -> Dict[str, int]:
+        return {source: self.source_size(source) for source in self.taint_sources}
 
     @property
     def cfg(self) -> CFG:
@@ -326,13 +337,24 @@ class TraceDiff:
             self._diff_bytes()
         return any(len(tree) > 0 for tree in self._bytes_only_in_second.values())
 
+    def to_image(self) -> Image:
+        self._diff_bytes()
+        sources = self.trace1.taint_sources | self.trace2.taint_sources
+        for source in sources:
+            num_bytes = max(self.trace1.source_size(source), self.trace2.source_size(source))
+            return file_diff(
+                num_bytes,
+                lambda offset: source in self._bytes_only_in_first and self._bytes_only_in_first[source].overlaps(offset),
+                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset)
+            )
+
     def __bool__(self):
         return bool(self.functions_only_in_first) or bool(self.functions_only_in_second)
 
     def __str__(self):
         status = StringIO()
 
-        def print_chunk_info(chunks: Iterable[Tuple[str, Tuple[int, int]]], indent: str="\t"):
+        def print_chunk_info(chunks: Iterable[Tuple[str, Tuple[int, int]]], indent: str = "\t"):
             for source, (start, end) in chunks:
                 if os.path.exists(source):
                     print_file_context(status, path=source, offset=start, length=end - start, indent=indent)
@@ -575,6 +597,17 @@ class TaintForestFunctionInfo(FunctionInfo):
     def taint_sources(self) -> KeysView[str]:
         return self.input_byte_labels.keys()
 
+    def source_size(self, source: str) -> int:
+        if source not in self.input_byte_labels:
+            raise KeyError(source)
+        elif os.path.exists(source):
+            return super().source_size(source)
+        elif len(self.taint_sources) == 1:
+            # we can exactly calculate the last byte rad from the canonical mapping
+            return max(offset for _, offset in self.forest.canonical_mapping.items())
+        else:
+            return super().source_size(source)
+
     @property
     def input_bytes(self) -> Dict[str, List[int]]:
         if self._cached_input_bytes is None:
@@ -694,10 +727,15 @@ class TraceDiffCommand(Command):
         parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
         parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
         parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
+        parser.add_argument("--image", type=str, default=None, help="path to optionally output a visualization of the"
+                            "diff")
 
     def run(self, args: Namespace):
         with open(args.polytracker_json1) as f:
             trace1 = parse(json.load(f), args.taint_forest_bin1)
         with open(args.polytracker_json2) as f:
             trace2 = parse(json.load(f), args.taint_forest_bin2)
-        print(str(trace1.diff(trace2)))
+        diff = trace1.diff(trace2)
+        print(str(diff))
+        if args.image is not None:
+            diff.to_image().save(args.image)
