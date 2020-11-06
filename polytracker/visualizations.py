@@ -5,10 +5,7 @@ from PIL import Image
 
 
 def file_diff(
-        num_bytes: int,
-        in_first: Callable[[int], bool],
-        in_second: Callable[[int], bool],
-        aspect_ratio: float = 1.61803398875
+    num_bytes: int, in_first: Callable[[int], bool], in_second: Callable[[int], bool], aspect_ratio: float = 1.61803398875
 ) -> Image:
     height = int(math.sqrt(aspect_ratio) * math.sqrt(num_bytes) + 0.5)
     width = int(num_bytes / height + 0.5)

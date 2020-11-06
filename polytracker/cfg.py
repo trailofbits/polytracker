@@ -64,9 +64,9 @@ class DiGraph(nx.DiGraph, Generic[N]):
     def ancestors(self, node: N) -> OrderedSet[N]:
         if not self.has_node(node):
             raise nx.NetworkXError(f"Node {node} is not in the graph")
-        return OrderedSet(*(x for _, x in sorted(
-            (d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node)
-        ))
+        return OrderedSet(
+            *(x for _, x in sorted((d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node))
+        )
 
     def has_one_predecessor(self, node: N) -> bool:
         """Returns whether the given node has exactly one predecessor"""

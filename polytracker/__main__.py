@@ -11,7 +11,7 @@ logger = logging.getLogger("polytracker")
 def main():
     parser = argparse.ArgumentParser(
         description="PolyTracker can instrument programs to track dataflow and controlflow information through their "
-                    "execution, and process the resulting traces."
+        "execution, and process the resulting traces."
     )
 
     add_command_subparsers(parser)

@@ -6,7 +6,22 @@ from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from inspect import isabstract
 from io import StringIO
-from typing import Any, Callable, Dict, FrozenSet, Iterable, Iterator, KeysView, List, Optional, Set, TextIO, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Iterator,
+    KeysView,
+    List,
+    Optional,
+    Set,
+    TextIO,
+    Tuple,
+    Type,
+    Union,
+)
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
@@ -345,7 +360,7 @@ class TraceDiff:
             return file_diff(
                 num_bytes,
                 lambda offset: source in self._bytes_only_in_first and self._bytes_only_in_first[source].overlaps(offset),
-                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset)
+                lambda offset: source in self._bytes_only_in_second and self._bytes_only_in_second[source].overlaps(offset),
             )
 
     def __bool__(self):
@@ -376,20 +391,23 @@ class TraceDiff:
                         if cfd:
                             different_function = cfd.first_function_with_different_control_flow
                             function_diff = FunctionDiff(
-                                self.trace1.functions[different_function],
-                                self.trace2.functions[different_function]
+                                self.trace1.functions[different_function], self.trace2.functions[different_function]
                             )
                             if not bool(function_diff):
                                 continue
-                            status.write(f"\tFunction {function_diff.func1!s} could contain the control flow that led "
-                                         "to this differential\n")
+                            status.write(
+                                f"\tFunction {function_diff.func1!s} could contain the control flow that led "
+                                "to this differential\n"
+                            )
                             if function_diff.cmp_bytes_only_in_first:
-                                status.write("\t\tHere are the bytes that affected control flow only in the reference "
-                                             "trace:\n")
+                                status.write(
+                                    "\t\tHere are the bytes that affected control flow only in the reference " "trace:\n"
+                                )
                                 print_chunk_info(function_diff.cmp_chunks_only_in_first(), indent="\t\t\t")
                             if function_diff.cmp_bytes_only_in_first:
-                                status.write("\t\tHere are the bytes that affected control flow only in the differed "
-                                             "trace:\n")
+                                status.write(
+                                    "\t\tHere are the bytes that affected control flow only in the differed " "trace:\n"
+                                )
                                 print_chunk_info(function_diff.cmp_chunks_only_in_second(), indent="\t\t\t")
 
         if self.has_input_chunks_only_in_second:
@@ -407,20 +425,23 @@ class TraceDiff:
                         if cfd:
                             different_function = cfd.first_function_with_different_control_flow
                             function_diff = FunctionDiff(
-                                self.trace1.functions[different_function],
-                                self.trace2.functions[different_function]
+                                self.trace1.functions[different_function], self.trace2.functions[different_function]
                             )
                             if not bool(function_diff):
                                 continue
-                            status.write(f"\tFunction {function_diff.func1!s} could contain the control flow that led "
-                                         "to this differential\n")
+                            status.write(
+                                f"\tFunction {function_diff.func1!s} could contain the control flow that led "
+                                "to this differential\n"
+                            )
                             if function_diff.cmp_bytes_only_in_first:
-                                status.write("\t\tHere are the bytes that affected control flow only in the reference "
-                                             "trace:\n")
+                                status.write(
+                                    "\t\tHere are the bytes that affected control flow only in the reference " "trace:\n"
+                                )
                                 print_chunk_info(function_diff.cmp_chunks_only_in_first(), indent="\t\t\t")
                             if function_diff.cmp_bytes_only_in_first:
-                                status.write("\t\tHere are the bytes that affected control flow only in the differed "
-                                             "trace:\n")
+                                status.write(
+                                    "\t\tHere are the bytes that affected control flow only in the differed " "trace:\n"
+                                )
                                 print_chunk_info(function_diff.cmp_chunks_only_in_second(), indent="\t\t\t")
 
         if not self.has_input_chunks_only_in_first and not self.has_input_chunks_only_in_second:
@@ -682,8 +703,10 @@ class PluginMeta(ABCMeta):
             if "name" not in clsdict:
                 raise TypeError(f"Fluxture plugin {name} does not define a name")
             elif clsdict["name"] in PLUGINS:
-                raise TypeError(f"Cannot instaitiate class {cls.__name__} because a plugin named {name} already exists,"
-                                f" implemented by class {PLUGINS[clsdict['name']]}")
+                raise TypeError(
+                    f"Cannot instaitiate class {cls.__name__} because a plugin named {name} already exists,"
+                    f" implemented by class {PLUGINS[clsdict['name']]}"
+                )
             PLUGINS[clsdict["name"]] = cls
             if issubclass(cls, Command):
                 if "help" not in clsdict:
@@ -711,8 +734,11 @@ class Command(Plugin):
 
 
 def add_command_subparsers(parser: ArgumentParser):
-    subparsers = parser.add_subparsers(title="command", description="valid PolyTracker commands",
-                                       help="run `polyprocess command --help` for help on a specific command")
+    subparsers = parser.add_subparsers(
+        title="command",
+        description="valid PolyTracker commands",
+        help="run `polyprocess command --help` for help on a specific command",
+    )
     for name, command_type in COMMANDS.items():
         p = subparsers.add_parser(name, parents=command_type.parent_parsers, help=command_type.help)
         p.set_defaults(func=command_type(p).run)
@@ -727,8 +753,7 @@ class TraceDiffCommand(Command):
         parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
         parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
         parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
-        parser.add_argument("--image", type=str, default=None, help="path to optionally output a visualization of the"
-                            "diff")
+        parser.add_argument("--image", type=str, default=None, help="path to optionally output a visualization of the" "diff")
 
     def run(self, args: Namespace):
         with open(args.polytracker_json1) as f:

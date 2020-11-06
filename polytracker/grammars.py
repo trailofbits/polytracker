@@ -675,7 +675,7 @@ class ExtractGrammarCommand(Command):
             metavar=("polytracker_json", "input_file"),
             type=FileType("rb"),
             help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
-                 "was sent to the instrumented parser to generate polytracker_json",
+            "was sent to the instrumented parser to generate polytracker_json",
         )
         parser.add_argument("--simplify", "-s", action="store_true", help="simplify the grammar")
 
