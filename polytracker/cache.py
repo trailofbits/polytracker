@@ -56,15 +56,16 @@ class LRUCache(Generic[R, V], MutableMapping):
 
     def __getitem__(self, k: R) -> V:
         ret = self._items[k]
-        self._items.move_to_end(ret, last=True)
+        self._items.move_to_end(k, last=True)
+        return ret
 
     def __setitem__(self, k: R, v: V) -> None:
         self._items[k] = v
         while self.max_size is not None and len(self._items) > self.max_size:
             self._items.popitem(last=False)
 
-    def __delitem__(self, v: V) -> None:
-        del self._items[v]
+    def __delitem__(self, k: R) -> None:
+        del self._items[k]
 
     def __len__(self) -> int:
         return len(self._items)
