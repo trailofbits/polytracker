@@ -75,7 +75,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'polyprocess = polytracker.polyprocess.__main__:main'
+            'polyprocess = polytracker.polyprocess.__main__:main',
+            'polytracker = polytracker.__main__:main'
         ]
     },
     classifiers=[
