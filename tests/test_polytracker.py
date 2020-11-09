@@ -105,6 +105,7 @@ def test_source_open():
     open_processed_sets = pp.processed_taint_sets
     assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
 
+
 def test_source_open_full_validate_schema():
     target_name = "test_open.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -114,6 +115,7 @@ def test_source_open_full_validate_schema():
     open_processed_sets = pp.processed_taint_sets
     assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
     test_polyprocess_taint_sets(json_path, forest_path)
+
 
 def test_memcpy_propagate():
     target_name = "test_memcpy.c"
