@@ -132,6 +132,7 @@ void polytracker_parse_env() {
 }
 
 static void polytracker_end() {
+	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
   for (const auto thread_info : thread_runtime_info) {
     output(polytracker_output_filename, thread_info);
