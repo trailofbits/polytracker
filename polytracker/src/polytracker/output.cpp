@@ -37,7 +37,7 @@ void addJsonVersion(json &output_json) {
 void addJsonRuntimeCFG(json &output_json, const RuntimeInfo *runtime_info) {
   for (auto cfg_it = runtime_info->runtime_cfg.begin();
        cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
-    output_json["runtime_info->runtime_cfg"][cfg_it->first] =
+    output_json["runtime_cfg"][cfg_it->first] =
         json(cfg_it->second);
   }
 }
