@@ -129,8 +129,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
-    const char *fname) {
-  return logFunctionEntry(fname);
+    const char *fname, uint32_t index) {
+  return logFunctionEntry(fname, index);
 }
 
 // This shouldn't be called right now
