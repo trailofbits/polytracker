@@ -11,12 +11,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
  && echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-7 main" >>/etc/apt/sources.list
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      clang-7                                         \
-      cmake                                           \
-      git                                             \
+RUN DEBAIN_FRONTEND=noninteractive apt-get -y update \
+&&  apt-get install -y \
+		  git																							\
       lld-7                                           \
+      clang-7																					\
       llvm-7                                          \
 			libc++abi-dev																		\
       ninja-build                                     \
@@ -24,7 +23,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       python3.7-dev																		\
 			golang																					\
 			libgraphviz-dev																	\
-			graphviz
+			graphviz																				\
+			libsqlite3-dev																	\
+			cmake		\
+			sqlite3																				
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
 RUN python3 -m pip install pip
