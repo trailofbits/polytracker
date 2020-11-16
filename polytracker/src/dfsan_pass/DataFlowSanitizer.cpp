@@ -608,7 +608,7 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   DFSanLogCmpFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanLogCmpArgs, false);
 
-  Type *DFSanEntryArgs[1] = {Type::getInt8PtrTy(*Ctx)};
+  Type *DFSanEntryArgs[2] = {Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx)};
   DFSanEntryFnTy =
       FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
 
@@ -836,6 +836,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
       Mod->getOrInsertFunction("__dfsan_trace_inst_fn", DFSanTraceInstFnTy);
   std::vector<Function *> FnsToInstrument;
   SmallPtrSet<Function *, 2> FnsWithNativeABI;
+
   for (Function &i : M) {
     if (!i.isIntrinsic() && &i != DFSanUnionFn && &i != DFSanCheckedUnionFn &&
         &i != DFSanUnionLoadFn && &i != DFSanUnimplementedFn &&
@@ -1030,8 +1031,9 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     IRBuilder<> IRB(InsertPoint);
     Value *FuncName = IRB.CreateGlobalStringPtr(i->getName());
     Value *FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
+    //TODO FIXME
     auto store_inst =
-        IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, FuncName), FrameIndex);
+        IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, {FuncName, FuncIndex}), FrameIndex);
 
 #ifdef DEBUG_INFO
     llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
