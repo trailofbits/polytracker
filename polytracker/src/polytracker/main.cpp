@@ -120,11 +120,8 @@ void polytracker_parse_env() {
   }
   fclose(temp_file);
   std::string poly_str(target_file);
-  std::string stdin_string("stdin");
   // Add named source for polytracker
   addInitialTaintSource(poly_str, byte_start, byte_end - 1, poly_str);
-  // Add source for standard input
-  addInitialTaintSource(fileno(stdin), 0, MAX_LABELS, stdin_string);
   // Parse env vars
   polytracker_parse_output();
   polytracker_parse_polytrace();
