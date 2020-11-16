@@ -43,7 +43,7 @@ static void initThreadInfo() {
   thread_runtime_info.push_back(runtime_info);
 }
 
-[[nodiscard]] static inline std::vector<std::string> &getFuncStack(void) {
+[[nodiscard]] static inline std::vector<uint32_t> &getFuncStack(void) {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -51,7 +51,7 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getTaintFuncOps(void)
-    -> std::unordered_map<std::string, std::unordered_set<dfsan_label>> & {
+    -> std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -59,7 +59,7 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getTaintFuncCmps(void)
-    -> std::unordered_map<std::string, std::unordered_set<dfsan_label>> & {
+    -> std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -67,7 +67,7 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getRuntimeCfg(void)
-    -> std::unordered_map<std::string, std::unordered_set<std::string>> & {
+    -> std::unordered_map<uint32_t, std::unordered_set<uint32_t>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -89,13 +89,27 @@ static void initThreadInfo() {
   }
   return runtime_info->trace;
 }
+[[nodiscard]] auto getIndexMap(void) -> std::unordered_map<std::string, uint32_t>& {
+	if (UNLIKELY(!runtime_info)) {
+	    initThreadInfo();
+	}
+	return runtime_info->func_name_to_index;
+}
+
+[[nodiscard]] bool getFuncIndex(const std::string& func_name, uint32_t& index) {
+	if (runtime_info->func_name_to_index.find(func_name) != runtime_info->func_name_to_index.end()) {
+		index = runtime_info->func_name_to_index[func_name];
+		return true;
+	}
+	return false;
+}
 
 void logCompare(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
   auto curr_node = getTaintNode(some_label);
-  std::vector<std::string> &func_stack = getFuncStack();
+  std::vector<uint32_t> &func_stack = getFuncStack();
   getTaintFuncOps()[func_stack.back()].insert(some_label);
   // TODO Confirm that we only call logCmp once instead of logOp along with it.
   getTaintFuncCmps()[func_stack.back()].insert(some_label);
@@ -113,7 +127,7 @@ void logOperation(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  std::vector<std::string> &func_stack = getFuncStack();
+  std::vector<uint32_t> &func_stack = getFuncStack();
   getTaintFuncOps()[func_stack.back()].insert(some_label);
   polytracker::Trace &trace = getPolytrackerTrace();
   if (auto bb = trace.currentBB()) {
@@ -126,7 +140,7 @@ void logOperation(dfsan_label some_label) {
   }
 }
 
-int logFunctionEntry(const char *fname) {
+int logFunctionEntry(const char *fname, uint32_t index) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
@@ -138,13 +152,15 @@ int logFunctionEntry(const char *fname) {
     polytracker_start();
   }
   // Lots of object creations etc.
-  std::vector<std::string> &func_stack = getFuncStack();
+  std::vector<uint32_t> &func_stack = getFuncStack();
   if (func_stack.size() > 0) {
-    getRuntimeCfg()[fname].insert(func_stack.back());
+    getRuntimeCfg()[index].insert(func_stack.back());
   } else {
-    getRuntimeCfg()[fname].insert("");
+    getRuntimeCfg()[index].insert(0);
   }
-  func_stack.push_back(fname);
+  func_stack.push_back(index);
+  //Add index map
+  getIndexMap()[fname] = index;
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
@@ -217,8 +233,8 @@ void resetFrame(int *index) {
         << std::endl;
     abort();
   }
-  std::vector<std::string> &func_stack = getFuncStack();
-  std::string &caller_func = getFuncStack().back();
+  std::vector<uint32_t> &func_stack = getFuncStack();
+  uint32_t caller_func = getFuncStack().back();
   // Reset the frame
   func_stack.resize(*index + 1);
   getRuntimeCfg()[func_stack.back()].insert(caller_func);
