@@ -16,7 +16,8 @@
 #define DEFAULT_TTL 32
 
 extern int errno;
-const char *polytracker_output_filename;
+const char *polytracker_forest_name;
+const char *polytracker_db_name;
 bool polytracker_trace = false;
 decay_val taint_node_ttl;
 char *forest_mem;
@@ -76,12 +77,22 @@ static inline void polytracker_parse_polytrace() {
   }
 }
 
-static inline void polytracker_parse_output() {
-  const char *poly_output = polytracker_getenv("POLYOUTPUT");
+static inline void polytracker_parse_forest() {
+  const char *poly_output = polytracker_getenv("POLYFOREST");
   if (poly_output != NULL) {
-    polytracker_output_filename = poly_output;
+    polytracker_forest_name = poly_output;
   } else {
-    polytracker_output_filename = "polytracker";
+    polytracker_forest_name = "polytracker";
+  }
+}
+
+static inline void polytracker_parse_db() {
+  const char * poly_db = polytracker_getenv("POLYDB");
+  if (poly_db != NULL) {
+    polytracker_db_name = poly_db;
+  }
+  else {
+    polytracker_db_name = "polytracker";
   }
 }
 
@@ -123,16 +134,18 @@ void polytracker_parse_env() {
   // Add named source for polytracker
   addInitialTaintSource(poly_str, byte_start, byte_end - 1, poly_str);
   // Parse env vars
-  polytracker_parse_output();
+  polytracker_parse_forest();
+  polytracker_parse_db();
   polytracker_parse_polytrace();
   polytracker_parse_ttl();
 }
 
 static void polytracker_end() {
+	static size_t thread_id = 0;
 	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
   for (const auto thread_info : thread_runtime_info) {
-    output(polytracker_output_filename, thread_info);
+    output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id);
   }
 }
 
