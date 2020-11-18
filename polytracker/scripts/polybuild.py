@@ -101,6 +101,7 @@ class PolyBuilder:
         compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
         compile_command += ["-ldl", "-lrt"]
         compile_command.append("-lstdc++")
+        compile_command.append("-lsqlite3")
         for lib in libs:
             if ".a" not in lib and ".o" not in lib:
                 compile_command.append("-l" + lib)
