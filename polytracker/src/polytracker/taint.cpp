@@ -20,7 +20,7 @@ std::atomic<dfsan_label> next_label{1};
 // input chunks, the canonical mapping, and union table.
 std::unordered_map<std::string, std::vector<std::pair<int, int>>>
     tainted_input_chunks;
-std::unordered_map<std::string, std::unordered_map<dfsan_label, int>>
+std::unordered_map<std::string, std::unordered_map<dfsan_label, uint32_t>>
     canonical_mapping;
 std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>>
     union_table;
