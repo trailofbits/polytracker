@@ -54,6 +54,23 @@ static void sql_exec(sqlite3 * output_db, const char * cmd) {
 	}
 }
 
+static void sql_prep(sqlite3 * db, const char * sql, int max_len, sqlite3_stmt ** stmt, const char ** tail) {
+	int err = sqlite3_prepare_v2(db, sql, max_len, stmt, tail);
+	if (err != SQLITE_OK) {
+		fprintf(stderr, "SQL prep error: %s\n", sqlite3_errmsg(db));
+		exit(1);
+	}
+}
+
+static void sql_step(sqlite3 * db, sqlite3_stmt * stmt) {
+	int err = sqlite3_step(stmt);
+    if (err != SQLITE_DONE) {
+        printf("execution failed: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        exit(1);
+    }
+}
+
 static int sql_fetch_input_id_callback(void * res, int argc, char **data, char **columns) {
 	size_t * temp = (size_t*)res;
 	if (argc == 0) {
@@ -76,67 +93,6 @@ static size_t get_input_id(sqlite3 * output_db) {
 		exit(1);
 	}
 	return count;
-}
-
-static void storeFuncCFG(const RuntimeInfo *runtime_info, sqlite3 * output_db, const size_t& input_id, const size_t& curr_thread_id) {
-	std::string insert_query = "";
-	for (auto cfg_it = runtime_info->runtime_cfg.begin();
-			cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
-		for (auto item : cfg_it->second) {
-			insert_query += fmt::format("INSERT INTO func_cfg (callee, caller, thread_id, input_id)"
-					"VALUES ({}, {}, {}, {});\n", cfg_it->first, item, curr_thread_id, input_id);
-		}
-	}
-	sql_exec(output_db, insert_query.c_str());
-}
-
-static const size_t storeNewInput(sqlite3 * output_db) {
-	auto name_target_map = getInitialSources();
-	if (name_target_map.size() == 0) {
-		return 0;
-	}
-	if (name_target_map.size() > 1) {
-		std::cout << "More than once taint source detected!" << std::endl;
-		std::cout << "This is currently broken, exiting!" << std::endl;
-		exit(1);
-	}
-	for (const auto pair : name_target_map) {
-		std::string s = fmt::format("INSERT INTO input (path, track_start, track_end, size)"
-				"VALUES('{}',{},{},{});\n",
-				pair.first,
-				pair.second.first,
-				pair.second.second,
-				[](const std::string& filename){
-			std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
-			return file.tellg();
-		}(pair.first)
-		);
-		sql_exec(output_db, s.c_str());
-	}
-	return get_input_id(output_db);
-}
-
-static void storeCanonicalMapping(sqlite3 * output_db, const size_t& input_id) {
-	std::string insert_query = "";
-	for (const auto &it : canonical_mapping) {
-		auto mapping = it.second;
-		for (auto map_item: mapping) {
-			insert_query += fmt::format("INSERT INTO canonical_map (input_id, taint_label, file_offset)"
-					"VALUES ({}, {}, {});\n", input_id, map_item.first, map_item.second);
-		}
-	}
-	sql_exec(output_db, insert_query.c_str());
-}
-
-static void storeTaintedBlocks(sqlite3 * output_db, const size_t& input_id) {
-	std::string insert_query = "";
-	for (const auto &it : tainted_input_chunks) {
-		for (auto byte_chunk : it.second) {
-			insert_query += fmt::format("INSERT INTO tainted_chunks (input_id, start_offset, end_offset)"
-					"VALUES ({}, {}, {});\n", input_id, byte_chunk.first, byte_chunk.second);
-		}
-	}
-	sql_exec(output_db, insert_query.c_str());
 }
 
 static constexpr const char * createInputTable() {
@@ -228,8 +184,10 @@ static constexpr const char * createTaintTable() {
 
 static constexpr const char * createPolytrackerTable() {
 	return  "CREATE TABLE IF NOT EXISTS polytracker( "
-           "  key TEXT PRIMARY KEY,"
-           "  value TEXT"
+           "  key TEXT,"
+           "  value TEXT,"
+		   "  PRIMARY KEY (key, value),"
+		   "  UNIQUE (key, value)"
            "  ) WITHOUT ROWID;";
 }
 
@@ -239,7 +197,7 @@ static constexpr const char * createCanonicalTable() {
                "taint_label BIGINT NOT NULL,"
                "file_offset BIGINT NOT NULL,"
                "PRIMARY KEY (input_id, taint_label, file_offset),"
-               "FOREIGN KEY (input_id) REFERENCES input(id)"
+			   "FOREIGN KEY (input_id) REFERENCES input(id)"
            ") WITHOUT ROWID;";
 }
 
@@ -281,12 +239,96 @@ static void createDBTables(sqlite3 * output_db) {
 	sql_exec(output_db, table_gen.c_str());
 }
 
-static void storeFunctionMap(const RuntimeInfo* runtime_info, sqlite3 * output_db) {
+static void storeFuncCFG(const RuntimeInfo *runtime_info, sqlite3 * output_db, const size_t& input_id, const size_t& curr_thread_id) {
 	std::string insert_query = "";
-	for (const auto it : runtime_info->func_name_to_index) {
-		insert_query += fmt::format("INSERT INTO func (id, name) VALUES ({}, '{}');\n", it.second, it.first);
+	for (auto cfg_it = runtime_info->runtime_cfg.begin();
+			cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
+		for (auto item : cfg_it->second) {
+			insert_query += fmt::format("INSERT INTO func_cfg (callee, caller, thread_id, input_id)"
+					"VALUES ({}, {}, {}, {});\n", cfg_it->first, item, curr_thread_id, input_id);
+		}
 	}
 	sql_exec(output_db, insert_query.c_str());
+}
+
+static const size_t storeNewInput(sqlite3 * output_db) {
+	auto name_target_map = getInitialSources();
+	if (name_target_map.size() == 0) {
+		return 0;
+	}
+	if (name_target_map.size() > 1) {
+		std::cout << "More than once taint source detected!" << std::endl;
+		std::cout << "This is currently broken, exiting!" << std::endl;
+		exit(1);
+	}
+	for (const auto pair : name_target_map) {
+		std::string s = fmt::format("INSERT INTO input (path, track_start, track_end, size)"
+				"VALUES('{}',{},{},{});\n",
+				pair.first,
+				pair.second.first,
+				pair.second.second,
+				[](const std::string& filename){
+			std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
+			return file.tellg();
+		}(pair.first)
+		);
+		sql_exec(output_db, s.c_str());
+	}
+	return get_input_id(output_db);
+}
+
+static void storeCanonicalMapping(sqlite3 * output_db, const size_t& input_id) {
+	sqlite3_stmt * stmt;
+	const char * insert = "INSERT INTO canonical_map(input_id, taint_label, file_offset) VALUES (?, ?, ?);";
+	sql_prep(output_db, insert, -1, &stmt, NULL);
+	for (const auto &it : canonical_mapping) {
+		const auto& mapping = it.second;
+		for (const auto& map_item : mapping) {
+			sqlite3_bind_int64(stmt, 1, input_id);
+			sqlite3_bind_int(stmt, 2, map_item.first);
+			sqlite3_bind_int64(stmt, 3, map_item.second);
+			sql_step(output_db, stmt);
+			//sqlite3_clear_bindings(stmt);
+			sqlite3_reset(stmt);
+		}
+	}
+	sqlite3_finalize(stmt);
+}
+
+static void storeTaintedChunks(sqlite3 * output_db, const size_t& input_id) {
+	std::string insert_query = "";
+	sqlite3_stmt * stmt;
+	const char * insert = "INSERT OR IGNORE INTO tainted_chunks(input_id, start_offset, end_offset) VALUES (?, ?, ?);";
+	sql_prep(output_db, insert, -1, &stmt, NULL);
+	for (const auto &it : tainted_input_chunks) {
+		for (auto byte_chunk : it.second) {
+			sqlite3_bind_int64(stmt, 1, input_id);
+			sqlite3_bind_int64(stmt, 2, byte_chunk.first);
+			sqlite3_bind_int64(stmt, 3, byte_chunk.second);
+			sql_step(output_db, stmt);
+			sqlite3_reset(stmt);
+			insert_query += fmt::format("INSERT OR IGNORE INTO tainted_chunks (input_id, start_offset, end_offset)"
+					"VALUES ({}, {}, {});\n", input_id, byte_chunk.first, byte_chunk.second);
+		}
+	}
+	std::cout << insert_query << std::endl;
+	sql_exec(output_db, insert_query.c_str());
+}
+
+
+static void storeFunctionMap(const RuntimeInfo* runtime_info, sqlite3 * output_db) {
+	//std::string insert_query = "";
+	sqlite3_stmt * stmt;
+	const char * insert = "INSERT OR IGNORE INTO func (id, name) VALUES (?, ?);";
+	sql_prep(output_db, insert, -1, &stmt, NULL);
+	for (const auto it : runtime_info->func_name_to_index) {
+		sqlite3_bind_int64(stmt, 1, it.second);
+		sqlite3_bind_text(stmt, 2, it.first.c_str(), it.first.length(), SQLITE_STATIC);
+		sql_step(output_db, stmt);
+		sqlite3_reset(stmt);
+		//insert_query += fmt::format("INSERT OR IGNORE INTO func (id, name) VALUES ({}, '{}');\n", it.second, it.first);
+	}
+	//sql_exec(output_db, insert_query.c_str());
 }
 
 static void storeTaintAccess(std::string& insert_query, const std::list<dfsan_label>& labels,
@@ -407,28 +449,13 @@ static void storeRuntimeTrace(const RuntimeInfo *runtime_info, sqlite3 * output_
 		std::cerr << "Warning: More than one taint source found! The resulting "
 				<< "runtime trace will likely be incorrect!" << std::endl;
 	}
-	std::cerr << "Saving runtime trace to SQL..." << std::endl << std::flush;
 	size_t threadStack = 0;
-	const auto startTime = std::chrono::system_clock::now();
-	auto lastLogTime = startTime;
 	for (const auto &kvp : runtime_info->trace.eventStacks) {
 		std::string insert_query = "";
 		const auto &stack = kvp.second;
-		std::cerr << "Processing events from thread " << threadStack << std::endl
-				<< std::flush;
 		++threadStack;
 		size_t eventNumber = 0;
 		for (auto event = stack.firstEvent(); event; event = event->next) {
-			const auto currentTime = std::chrono::system_clock::now();
-			auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-					currentTime - lastLogTime).count();
-			++eventNumber;
-			if (milliseconds >= 1000) {
-				// Log our progress every second or so
-				lastLogTime = currentTime;
-				//std::cerr << "\r" << std::string(80, ' ') << "\r";
-				//std::cerr << "Event " << eventNumber << " / " << stack.numEvents() << std::flush;
-			}
 			if (const auto call = dynamic_cast<const FunctionCall *>(event)) {
 				storeCallEvent(insert_query, runtime_info, call, input_id, thread_id);
 			} else if (const auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
@@ -481,7 +508,7 @@ static void storeTaintForest(const std::string &outfile,
   fclose(forest_file);
 }
 void storeVersion(sqlite3 * output_db) {
-	std::string insert_query = fmt::format("INSERT INTO polytracker(key, value)"
+	std::string insert_query = fmt::format("INSERT OR IGNORE INTO polytracker(key, value)"
 			"VALUES ('{}', '{}');\n", "version", POLYTRACKER_VERSION);
 	sql_exec(output_db, insert_query.c_str());
 }
@@ -491,21 +518,17 @@ static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest
 	createDBTables(output_db);
 	const size_t input_id = storeNewInput(output_db);
 	if (input_id) {
-		std::cout << "Storing taint forest" << std::endl;
 		storeTaintForest(forest_out_path, runtime_info);
-		std::cout << "Storing version" << std::endl;
 	    storeVersion(output_db);
-		std::cout << "Storing func map" << std::endl;
 		storeFunctionMap(runtime_info, output_db);
-		std::cout << "STORING TAINTED BLOCKS" << std::endl;
-		storeTaintedBlocks(output_db, input_id);
-		std::cout << "STORING CANONICAL MAP" << std::endl;
+		storeTaintedChunks(output_db, input_id);
 		storeCanonicalMapping(output_db, input_id);
-		std::cout << "STORING FUNC CFG" << std::endl;
 		storeFuncCFG(runtime_info, output_db, input_id, current_thread);
-		std::cout << "STORING RUNTIME TRACE" << std::endl;
+		//Note, try and store the trace first if it exists 
+		//The trace has more fine grained information than taint func access 
+		//This means that if we encounter some bytes already seen in the trace,
+		//We will ignore them
 		storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
-		std::cout << "STORING TAINT FUNC ACCESS" << std::endl;
 		storeTaintFuncAccess(runtime_info, output_db, input_id);
 	}
 }
@@ -519,6 +542,13 @@ void output(const char *forest_path, const char * db_path, const RuntimeInfo *ru
 		std::cout << "Error! Could not open output db " << db_path << std::endl;
 		exit(1);
 	}
+	char * errorMessage;
+	sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL, &errorMessage);
+	sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 	outputDB(runtime_info, forest_path_str, output_db, current_thread);
+	sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 	sqlite3_close(output_db);
 }
