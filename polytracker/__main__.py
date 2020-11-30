@@ -2,7 +2,7 @@ import argparse
 import logging
 
 # the following line imports modules so their commands can register themselves
-from . import grammars
+from . import datalog, grammars
 from .polytracker import add_command_subparsers
 
 logger = logging.getLogger("polytracker")

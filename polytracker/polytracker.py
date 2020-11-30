@@ -11,6 +11,7 @@ from typing import (
     Callable,
     Dict,
     FrozenSet,
+    Generic,
     Iterable,
     Iterator,
     KeysView,
@@ -20,6 +21,7 @@ from typing import (
     TextIO,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 
@@ -733,15 +735,62 @@ class Plugin(ABC, metaclass=PluginMeta):
 class Command(Plugin):
     help: str
     parent_parsers: Tuple[ArgumentParser, ...] = ()
+    extension_types: Optional[List[Type["CommandExtension"]]] = None
 
     def __init__(self, argument_parser: ArgumentParser):
+        if self.extension_types is not None:
+            self.extensions: List[CommandExtension] = [et() for et in self.extension_types]
+        else:
+            self.extensions = []
         self.__init_arguments__(argument_parser)
+        for e in self.extensions:
+            e.__init_arguments__(argument_parser)
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        pass
+
+    def __getattribute__(self, item):
+        if item == "run" and Plugin.__getattribute__(self, "extensions"):
+            return Plugin.__getattribute__(self, "_run")
+        else:
+            return Plugin.__getattribute__(self, item)
+
+    def _run(self, args: Namespace):
+        Plugin.__getattribute__(self, "run")(args)
+        for extension in self.extensions:
+            extension.run(self, args)
+
+    @abstractmethod
+    def run(self, args: Namespace):
+        raise NotImplementedError()
+
+
+C = TypeVar('C', bound=Command)
+
+
+class CommandExtension(Plugin, Generic[C]):
+    parent_command: Type[C]
+    parent_parsers: Tuple[ArgumentParser, ...] = ()
+
+    def __init_subclass__(cls, **kwargs):
+        if not isabstract(cls):
+            if not hasattr(cls, "parent_command") or cls.parent_command is None:
+                raise TypeError(f"CommandExtension {cls.__name__} does not define its `parent_command`")
+            elif isabstract(cls.parent_command):
+                raise TypeError(f"CommandExtension {cls.__name__} extends off of abstract command "
+                                f"{cls.parent_command.__name__}; CommandExtensions must extend non-abstract Commands.")
+            elif cls.parent_command.extension_types is not None and cls in cls.parent_command.extension_types:
+                raise TypeError(f"CommandExtension {cls.__name__} is already registered to Command "
+                                f"{cls.parent_command.__name__}")
+            if cls.parent_command.extension_types is None:
+                cls.parent_command.extension_types = []
+            cls.parent_command.extension_types.append(cls)
 
     def __init_arguments__(self, parser: ArgumentParser):
         pass
 
     @abstractmethod
-    def run(self, args: Namespace):
+    def run(self, command: C, args: Namespace):
         raise NotImplementedError()
 
 
@@ -749,7 +798,7 @@ def add_command_subparsers(parser: ArgumentParser):
     subparsers = parser.add_subparsers(
         title="command",
         description="valid PolyTracker commands",
-        help="run `polyprocess command --help` for help on a specific command",
+        help="run `polytracker command --help` for help on a specific command",
     )
     for name, command_type in COMMANDS.items():
         p = subparsers.add_parser(name, parents=command_type.parent_parsers, help=command_type.help)

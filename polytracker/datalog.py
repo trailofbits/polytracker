@@ -1,11 +1,14 @@
-from typing import List, BinaryIO, Dict, Iterable, Union
+from argparse import ArgumentParser, Namespace
+from typing import List, BinaryIO, Dict, Union
 
-from .grammars import Terminal, PolyTrackerTrace, trace_to_grammar
+from .grammars import ExtractGrammarCommand, Terminal, PolyTrackerTrace, trace_to_grammar
+from .polytracker import CommandExtension
 
 import re
 
 
 TRUE_FACT_NAME = "POLYTRACKER_TRUE_FACT"
+
 
 # Replaces non alpha numeric characters with their numerical value.
 def datalog_repl_match(matched_str) -> str:
@@ -214,31 +217,40 @@ class DatalogGrammar:
         )
 
 
-class DatalogParser:
-    def __init__(self, input_file: BinaryIO, trace: PolyTrackerTrace):
-        self.input_file = input_file
-        self.datalog_fact_decls: List[DatalogFactDecl] = []
-        self.datalog_facts: List[DatalogFact] = []
+class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
+    name = "datalog"
+    parent_command = ExtractGrammarCommand
+    datalog_grammar: DatalogGrammar
+    datalog_fact_decls: List[DatalogFactDecl]
+    datalog_facts: List[DatalogFact]
+    true_fact_decl: DatalogTrueFactDecl
+    true_facts: List[DatalogTrueFact]
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("--extract-datalog", "-d", type=str, default=None,
+                            help="path to which to optionally save a datalog grammar")
+
+    def run(self, command: ExtractGrammarCommand, args: Namespace):
+        if len(command.traces) > 1:
+            raise NotImplementedError("TODO: Add support for generating DataLog grammars from multiple traces")
+        trace = command.traces[0]
         self.datalog_grammar = DatalogGrammar(trace)
-        self.true_fact_decl = DatalogTrueFactDecl()
-        self.true_facts: List[DatalogTrueFact] = []
-        self.extract_datalog_facts()
-
-    def extract_datalog_facts(self):
         unique_bytes: Dict[int, bool] = {}
-        with open(self.input_file.name, "rb") as file:
-            data = file.read()
-            for i, byte in enumerate(data):
-                # Add another true fact
-                self.true_facts.append(DatalogTrueFact(i))
-                # Declare the new type of byte
-                if byte not in unique_bytes:
-                    self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
-                    unique_bytes[byte] = True
-                self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
+        data = trace.inputstr
+        self.datalog_fact_decls = []
+        self.datalog_facts = []
+        self.true_fact_decl = DatalogTrueFactDecl()
+        self.true_facts = []
+        for i, byte in enumerate(data):
+            # Add another true fact
+            self.true_facts.append(DatalogTrueFact(i))
+            # Declare the new type of byte
+            if byte not in unique_bytes:
+                self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
+                unique_bytes[byte] = True
+            self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
 
-    @property
-    def val(self) -> str:
+    def __str__(self):
         facts = "\n".join(
             [self.true_fact_decl.val]
             + [x.val + "." for x in self.true_facts]

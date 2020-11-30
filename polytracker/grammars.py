@@ -667,23 +667,31 @@ class ExtractGrammarCommand(Command):
     name = "grammar"
     help = "extract a grammar from one or more program traces"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.traces: List[PolyTrackerTrace] = []
+        self.grammar: Optional[Grammar] = None
+
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument(
-            "TRACE",
-            nargs=2,
+            "TRACES",
+            nargs="+",
             action="append",
-            metavar=("polytracker_json", "input_file"),
-            type=FileType("rb"),
+            type=str,
             help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
             "was sent to the instrumented parser to generate polytracker_json",
         )
         parser.add_argument("--simplify", "-s", action="store_true", help="simplify the grammar")
 
     def run(self, args: Namespace):
-        traces = []
+        if len(args.TRACES[0]) % 2 != 0:
+            raise ValueError("The number of files provided in the TRACES argument must be a multiple of two!")
+        self.traces = []
         try:
-            for json_file, input_file in args.extract_grammar:
-                trace = PolyTrackerTrace.parse(json_file, input_file=input_file)
+            for json_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
+                with open(json_file, "rb") as jf:
+                    with open(input_file, "rb") as inputf:
+                        trace = PolyTrackerTrace.parse(jf, input_file=inputf)
                 if not trace.is_cfg_connected():
                     roots = list(trace.cfg_roots())
                     if len(roots) == 0:
@@ -692,8 +700,9 @@ class ExtractGrammarCommand(Command):
                         root_names = "".join(f"\t{r!s}\n" for r in roots)
                         log.error(f"Basic block trace of {json_file} has multiple roots:\n{root_names}")
                     exit(1)
-                traces.append(trace)
+                self.traces.append(trace)
         except ValueError as e:
             log.error(f"{e!s}\n\n")
             exit(1)
-        print(str(extract(traces, simplify=args.simplify)))
+        self.grammar = extract(self.traces, simplify=args.simplify)
+        print(str(self.grammar))
