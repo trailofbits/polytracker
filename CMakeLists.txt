@@ -16,5 +16,4 @@ set(POLYTRACK_TESTS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/tests")
 set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/pass")
 set(POLYTRACK_CXX_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker")
 
-add_subdirectory(third_party/fmt)
 add_subdirectory(polytracker)
