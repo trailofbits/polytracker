@@ -86,6 +86,7 @@ class PolyBuilder:
         compile_command = []
         source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
         rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
+        poly_dir = os.path.join(self.meta.compiler_dir, "lib", "libPolytracker.a")
         if self.meta.is_cxx:
             compile_command.append("clang++")
         else:
@@ -97,7 +98,7 @@ class PolyBuilder:
         # -lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
         compile_command += ["-g", "-o", output_path, bitcode_path]
         compile_command.append("-lpthread")
-        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir]
+        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
         compile_command += ["-ldl", "-lrt"]
         compile_command.append("-lstdc++")
         for lib in libs:

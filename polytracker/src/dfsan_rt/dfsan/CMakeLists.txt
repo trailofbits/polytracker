@@ -5,14 +5,12 @@ set(DFSAN_RTL_SOURCES
 	dfsan.cpp
 	dfsan_custom.cpp
 	dfsan_interceptors.cpp
-	dfsan_log_mgmt.cpp
-	polytracker_tracing.cpp)
+	)
 
 set(DFSAN_RTL_HEADERS
 	dfsan.h
 	dfsan_flags.inc
-	dfsan_platform.h
-	dfsan_log_mgmt.h)
+	dfsan_platform.h)
 
 list(APPEND ${SANITIZER_COMMON_CFLAGS} "-g" "-pie" "-fPIC" "-fno-asynchronous-unwind-tables")
 #include_directories("../dfsan_private_headers/include/c++/v1")
