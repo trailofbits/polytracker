@@ -1,4 +1,3 @@
-#include "dfsan/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/taint.h"
@@ -14,10 +13,8 @@
 #include <optional>
 #include <functional>
 #include <sqlite3.h>
-#include <fmt/format.h>
 #include <sstream>
 
-using json = nlohmann::json;
 using namespace polytracker;
 
 /*
@@ -26,7 +23,6 @@ information to disk. Currently, this is in the form of a JSON file and a binary
 object. Information about the two files can be found in the polytracker/doc
 directory
  */
-
 extern bool polytracker_trace;
 
 // Could there be a race condition here?
