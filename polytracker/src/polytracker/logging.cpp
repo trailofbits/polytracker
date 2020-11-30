@@ -108,17 +108,21 @@ void logCompare(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  auto curr_node = getTaintNode(some_label);
-  std::vector<uint32_t> &func_stack = getFuncStack();
-  getTaintFuncOps()[func_stack.back()].insert(some_label);
-  // TODO Confirm that we only call logCmp once instead of logOp along with it.
-  getTaintFuncCmps()[func_stack.back()].insert(some_label);
-  polytracker::Trace &trace = getPolytrackerTrace();
-  if (auto bb = trace.currentBB()) {
-    // we are recording a full trace, and we know the current basic block
-    if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
-      // this is a canonical label
-      trace.setLastUsage(some_label, bb);
+  if (!polytracker_trace) {
+    std::vector<uint32_t> &func_stack = getFuncStack();
+    getTaintFuncOps()[func_stack.back()].insert(some_label);
+    // TODO Confirm that we only call logCmp once instead of logOp along with it.
+    getTaintFuncCmps()[func_stack.back()].insert(some_label);
+  }
+  else {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    if (auto bb = trace.currentBB()) {
+        auto curr_node = getTaintNode(some_label);
+      // we are recording a full trace, and we know the current basic block
+      if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
+        // this is a canonical label
+        trace.setLastUsage(some_label, bb);
+      }
     }
   }
 }
@@ -127,19 +131,26 @@ void logOperation(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  std::vector<uint32_t> &func_stack = getFuncStack();
-  getTaintFuncOps()[func_stack.back()].insert(some_label);
-  polytracker::Trace &trace = getPolytrackerTrace();
-  if (auto bb = trace.currentBB()) {
-    taint_node_t *new_node = getTaintNode(some_label);
-    // we are recording a full trace, and we know the current basic block
-    if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
-      // this is a canonical label
-      trace.setLastUsage(some_label, bb);
+  if (!polytracker_trace) {
+    std::vector<uint32_t> &func_stack = getFuncStack();
+    getTaintFuncOps()[func_stack.back()].insert(some_label);
+  }
+  else {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    if (auto bb = trace.currentBB()) {
+      taint_node_t *new_node = getTaintNode(some_label);
+      // we are recording a full trace, and we know the current basic block
+      if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
+       // this is a canonical label
+       trace.setLastUsage(some_label, bb);
+     }
     }
   }
 }
 
+//NOTE The return value is the index into the call stack 
+//This is how we handle setjmp/longjmp, unfortunately this means 
+//right now we need to maintain a call stack during polytrace, but its not a big deal 
 int logFunctionEntry(const char *fname, uint32_t index) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
@@ -151,24 +162,27 @@ int logFunctionEntry(const char *fname, uint32_t index) {
     is_init = true;
     polytracker_start();
   }
-  // Lots of object creations etc.
-  std::vector<uint32_t> &func_stack = getFuncStack();
+  if (!polytracker_trace) {
+    std::vector<uint32_t> &func_stack = getFuncStack();
   if (func_stack.size() > 0) {
     getRuntimeCfg()[index].insert(func_stack.back());
   } else {
     getRuntimeCfg()[index].insert(0);
   }
-  func_stack.push_back(index);
-  //Add index map
-  getIndexMap()[fname] = index;
-  if (polytracker_trace) {
+    func_stack.push_back(index);
+    getIndexMap()[fname] = index;
+    return func_stack.size() - 1;
+  }
+  else {
+    std::vector<uint32_t> &func_stack = getFuncStack();
+      func_stack.push_back(index);
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
     auto call = stack.emplace<FunctionCall>(fname);
     // Create a new stack frame:
     stack.newFrame(call);
+    return func_stack.size() - 1;
   }
-  return func_stack.size() - 1;
 }
 
 void logFunctionExit() {
