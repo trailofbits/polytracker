@@ -122,24 +122,6 @@ ${CC}/{CXX} --instrument-bitcode target.bc -o target_track --libs <any libs go h
 If you aren't sure about what libraries you might need to link for a complex target, the enviornment variable `WLLVM_ARTIFACT_STORE` sets a directory that contains a mainfest that logs all build commands and artifacts used. You should be able to rebuild the target completely using information in the mantifest and the artifacts. 
 
 
-## Environment Variables 
-
-PolyTracker accepts configuration paramters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
-
-```
-POLYPATH: The path to the file to mark as tainted 
-
-POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
-
-POLYSTART: Start offset to track 
-
-POLYEND: End offset to track
-
-POLYOUTPUT: Provides a a path/prefix to output polytracker information too
-
-WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
-```
-
 ## Running an Instrumented Program
 
 The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in a future release.)
