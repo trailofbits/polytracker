@@ -20,8 +20,6 @@
 #include <stdint.h>
 #include <unordered_map>
 #include <unordered_set>
-// nlohmann-json lib
-#include "json.hpp"
 
 using __sanitizer::u16;
 using __sanitizer::u32;
