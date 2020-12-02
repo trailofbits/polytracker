@@ -134,7 +134,16 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
 
     def __init_subclass__(cls, **kwargs):
         if not isabstract(cls):
-            if cls.parent_command_type.extension_types is None:
+            if cls.parent_type is None:
+                raise TypeError(
+                    f"CommandExtension {cls.__name__} must define the type of the command it is extending in " "`parent_type`"
+                )
+            elif not issubclass(cls.parent_type, AbstractCommand):
+                raise TypeError(
+                    f"CommandExtension {cls.__name__} has a `parent_type` of {cls.parent_type.__name__} that does not "
+                    "extend off of polytracker.plugins.Command"
+                )
+            elif cls.parent_command_type.extension_types is None:
                 cls.parent_command_type.extension_types = []
             if cls in cls.parent_command_type.extension_types:
                 raise TypeError(
@@ -153,7 +162,14 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
 class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMeta[C]):  # type: ignore
     def __init_subclass__(cls, **kwargs):
         if not isabstract(cls):
-            if cls.parent_command_type.subcommand_types is None:
+            if cls.parent_type is None:
+                raise TypeError(f"Subcommand {cls.__name__} must define its parent command's type in `parent_type`")
+            elif not issubclass(cls.parent_type, AbstractCommand):
+                raise TypeError(
+                    f"Subcommand {cls.__name__} has a `parent_type` of {cls.parent_type.__name__} that does not extend "
+                    "off of polytracker.plugins.Command"
+                )
+            elif cls.parent_command_type.subcommand_types is None:
                 cls.parent_command_type.subcommand_types = []
             if cls in cls.parent_command_type.subcommand_types:
                 raise TypeError(
