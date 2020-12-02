@@ -1,8 +1,8 @@
 from argparse import ArgumentParser, Namespace
-from typing import List, BinaryIO, Dict, Union
+from typing import List, Dict, Union
 
 from .grammars import ExtractGrammarCommand, Terminal, PolyTrackerTrace, trace_to_grammar
-from .polytracker import CommandExtension
+from .plugins import CommandExtension
 
 import re
 

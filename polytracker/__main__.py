@@ -1,9 +1,10 @@
 import argparse
 import logging
 
+from .plugins import add_command_subparsers
+
 # the following line imports modules so their commands can register themselves
-from . import datalog, grammars
-from .polytracker import add_command_subparsers
+from . import datalog, grammars, polytracker
 
 logger = logging.getLogger("polytracker")
 

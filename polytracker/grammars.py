@@ -1,6 +1,6 @@
 import heapq
 import itertools
-from argparse import ArgumentParser, FileType, Namespace
+from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from logging import getLogger
 from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
@@ -9,7 +9,7 @@ import networkx as nx
 from tqdm import tqdm
 
 from .cfg import DiGraph
-from .polytracker import Command
+from .plugins import Command
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
 
 
