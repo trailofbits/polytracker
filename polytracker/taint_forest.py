@@ -6,6 +6,7 @@ from typing_extensions import Final
 from tqdm import tqdm, trange
 
 from .cache import LRUCache
+from .cfg import DAG
 
 """
 This "Final" type means this is just a const
@@ -15,11 +16,25 @@ TAINT_NODE_SIZE: Final[int] = 8
 
 
 class TaintForest:
-    def __init__(self, path: str, canonical_mapping: Dict[int, int]):
+    def __init__(self, path: str, canonical_mapping: Optional[Dict[int, int]] = None):
         self.path: str = path
+        if canonical_mapping is None:
+            canonical_mapping = {}
         self.canonical_mapping: Dict[int, int] = canonical_mapping
         self.num_nodes: int = 0  # this is set in self.validate()
         self.validate()
+
+    def to_graph(self) -> DAG[int]:
+        dag = DAG()
+        with open(self.path, "rb") as forest:
+            for label in trange(self.num_nodes, desc="Traversing the taint forest", leave=False, unit=" labels"):
+                dag.add_node(label)
+                parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
+                if parent1 != 0:
+                    dag.add_edge(parent1, label)
+                if parent2 != 0:
+                    dag.add_edge(parent2, label)
+        return dag
 
     def access_sequence(self, max_cache_size: Optional[int] = None) -> Iterator[FrozenSet[int]]:
         cache: LRUCache[int, FrozenSet[int]] = LRUCache(max_cache_size)

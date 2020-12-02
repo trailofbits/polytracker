@@ -219,7 +219,7 @@ class DatalogGrammar:
 
 class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
     name = "datalog"
-    parent_command = ExtractGrammarCommand
+    parent_type = ExtractGrammarCommand
     datalog_grammar: DatalogGrammar
     datalog_fact_decls: List[DatalogFactDecl]
     datalog_facts: List[DatalogFact]
