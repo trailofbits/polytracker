@@ -1,13 +1,11 @@
-import pytest
 import os
-from polytracker.polyprocess import PolyProcess
-from .test_polyprocess import test_polyprocess_taint_sets
+import pytest
+import shutil
 import subprocess
 
-TEST_DIR = os.path.realpath(os.path.dirname(__file__))
-BIN_DIR = os.path.join(TEST_DIR, "bin")
-TEST_RESULTS_DIR = os.path.join(BIN_DIR, "test_results")
-BITCODE_DIR = os.path.join(TEST_DIR, "bitcode")
+from .data import *
+from .test_polyprocess import test_polyprocess_taint_sets
+
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -19,18 +17,19 @@ This runs before any test is executed
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
     # Check if bin dir exists
-    if os.path.exists(BIN_DIR):
-        subprocess.call(["rm", "-r", BIN_DIR])
-    subprocess.call(["mkdir", "-p", BIN_DIR])
-    if os.path.exists(TEST_RESULTS_DIR):
-        subprocess.call(["rm", "-r", TEST_RESULTS_DIR])
-    subprocess.call(["mkdir", "-p", TEST_RESULTS_DIR])
-    if os.path.exists(BITCODE_DIR):
-        subprocess.call(["rm", "-r", BITCODE_DIR])
-    subprocess.call(["mkdir", BITCODE_DIR])
-    target_files = [f for f in os.listdir(TEST_DIR) if f.endswith(".c") or f.endswith(".cpp")]
-    for file in target_files:
-        assert polyclang_compile_target(file) == 0
+    if BIN_DIR.exists():
+        shutil.rmtree(BIN_DIR)
+    BIN_DIR.mkdir()
+    if TEST_RESULTS_DIR.exists():
+        shutil.rmtree(TEST_RESULTS_DIR)
+    TEST_RESULTS_DIR.mkdir()
+    if BITCODE_DIR.exists():
+        shutil.rmtree(BITCODE_DIR)
+    BITCODE_DIR.mkdir()
+    if IS_LINUX:
+        target_files = [f for f in os.listdir(TEST_DATA_DIR) if f.endswith(".c") or f.endswith(".cpp")]
+        for file in target_files:
+            assert polyclang_compile_target(file) == 0
 
 
 def polyclang_compile_target(target_name: str) -> int:
@@ -47,8 +46,8 @@ def polyclang_compile_target(target_name: str) -> int:
             "--instrument-target",
             "-g",
             "-o",
-            os.path.join(BIN_DIR, target_name) + ".bin",
-            os.path.join(TEST_DIR, target_name),
+            BIN_DIR / f"{target_name}.bin",
+            TEST_DATA_DIR / target_name,
         ]
         ret_val = subprocess.call(compile_command)
     else:
@@ -61,8 +60,8 @@ def polyclang_compile_target(target_name: str) -> int:
             "--instrument-target",
             "-g",
             "-o",
-            os.path.join(BIN_DIR, target_name) + ".bin",
-            os.path.join(TEST_DIR, target_name),
+            BIN_DIR / f"{target_name}.bin",
+            TEST_DATA_DIR / target_name,
         ]
         ret_val = subprocess.call(compile_command)
     return ret_val
@@ -70,42 +69,43 @@ def polyclang_compile_target(target_name: str) -> int:
 
 # Returns the Polyprocess object
 def validate_execute_target(target_name):
-    target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
-    assert os.path.exists(target_bin_path) is True
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    os.environ["POLYPATH"] = test_filename
-    os.environ["POLYOUTPUT"] = os.path.join(TEST_RESULTS_DIR, target_name)
-    ret_val = subprocess.call([target_bin_path, test_filename])
+    target_bin_path = BIN_DIR / f"{target_name}.bin"
+    assert target_bin_path.exists()
+    os.environ["POLYPATH"] = str(TEST_DATA_PATH)
+    os.environ["POLYOUTPUT"] = str(TEST_RESULTS_DIR / target_name)
+    ret_val = subprocess.call([target_bin_path, TEST_DATA_PATH])
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
+    forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
     # Add the 0 here for thread counting.
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
-    assert os.path.exists(forest_path) is True
-    assert os.path.exists(json_path) is True
+    json_path = TEST_RESULTS_DIR / f"{target_name}0_process_set.json"
+    assert forest_path.exists()
+    assert json_path.exists()
     pp = PolyProcess(json_path, forest_path)
     pp.process_taint_sets()
     return pp
 
 
+@only_linux
 def test_source_mmap():
     target_name = "test_mmap.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
     # Find and run test
     pp = validate_execute_target(target_name)
     mmap_processed_sets = pp.processed_taint_sets
     # Confirm that main touched tainted byte 0
-    assert 0 in mmap_processed_sets["main"]["input_bytes"][test_filename]
+    assert 0 in mmap_processed_sets["main"]["input_bytes"][TEST_DATA_PATH]
 
 
+@only_linux
 def test_source_open():
     target_name = "test_open.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
     pp = validate_execute_target(target_name)
     open_processed_sets = pp.processed_taint_sets
-    assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
+    assert 0 in open_processed_sets["main"]["input_bytes"][TEST_DATA_PATH]
 
 
+@only_linux
 def test_source_open_full_validate_schema():
     target_name = "test_open.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -117,6 +117,7 @@ def test_source_open_full_validate_schema():
     test_polyprocess_taint_sets(json_path, forest_path)
 
 
+@only_linux
 def test_memcpy_propagate():
     target_name = "test_memcpy.c"
     pp = validate_execute_target(target_name)
@@ -124,6 +125,7 @@ def test_memcpy_propagate():
     assert 1 in raw_taint_sets["dfs$touch_copied_byte"]["input_bytes"]
 
 
+@only_linux
 def test_taint_log():
     target_name = "test_taint_log.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -138,6 +140,7 @@ def test_taint_log():
 # When reading an entire file in a single block
 # Basically make sure the start/end match to prevent off-by-one errors
 # TODO
+@only_linux
 def test_block_target_values():
     target_name = "test_memcpy.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -149,7 +152,7 @@ def test_block_target_values():
 # TODO
 # test last byte in file touch.
 
-
+@only_linux
 def test_source_fopen():
     target_name = "test_fopen.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -158,6 +161,7 @@ def test_source_fopen():
     assert 0 in fopen_processed_sets["main"]["input_bytes"][test_filename]
 
 
+@only_linux
 def test_source_ifstream():
     target_name = "test_ifstream.cpp"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
@@ -166,6 +170,7 @@ def test_source_ifstream():
     assert 0 in ifstream_processed_sets["main"]["input_bytes"][test_filename]
 
 
+@only_linux
 def test_cxx_object_propagation():
     target_name = "test_object_propagation.cpp"
     pp = validate_execute_target(target_name)
@@ -175,6 +180,7 @@ def test_cxx_object_propagation():
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
+@only_linux
 def test_cxx_vector():
     target_name = "test_vector.cpp"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
