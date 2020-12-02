@@ -161,6 +161,7 @@ def test_config_files():
         assert i not in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
     os.remove("./polytracker_config.json")
 
+
 def test_source_fopen():
     target_name = "test_fopen.c"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
