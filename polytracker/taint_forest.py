@@ -25,7 +25,7 @@ class TaintForest:
         self.validate()
 
     def to_graph(self) -> DAG[int]:
-        dag = DAG()
+        dag: DAG[int] = DAG()
         with open(self.path, "rb") as forest:
             for label in trange(self.num_nodes, desc="Traversing the taint forest", leave=False, unit=" labels"):
                 dag.add_node(label)

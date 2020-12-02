@@ -712,6 +712,9 @@ COMMANDS: Dict[str, Type["Command"]] = {}
 
 
 class PluginMeta(ABCMeta):
+    parent_type: Optional[Type["Plugin"]] = None
+    parent: Optional["Plugin"]
+
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if not isabstract(cls) and name not in ("Plugin", "Command"):
@@ -731,8 +734,6 @@ class PluginMeta(ABCMeta):
 
 class Plugin(ABC, metaclass=PluginMeta):
     name: str
-    parent_type: Optional[Type["Plugin"]] = None
-    parent: Optional["Plugin"]
 
     def __init__(self, parent: Optional["Plugin"] = None):
         self.parent = parent
@@ -756,12 +757,6 @@ class AbstractCommand(Plugin):
     def __init__(self, argument_parser: ArgumentParser, parent: Optional[Plugin] = None):
         super().__init__(parent)
         self.subcommands: List[Subcommand] = []
-        if self.subcommand_types:
-            self.subparser = argument_parser.add_subparsers(
-                title="subcommand",
-                description=f"subcommands for {self.name}",
-                help=f"run `polytracker {self.full_name} subcommand --help` for help on a specific subcommand",
-            )
         if self.extension_types is not None:
             self.extensions: List[CommandExtension] = [et(parent=self) for et in self.extension_types]
         else:
@@ -769,6 +764,11 @@ class AbstractCommand(Plugin):
         if self.parent is None:
             self.__init_arguments__(argument_parser)
         if self.subcommand_types is not None:
+            self.subparser = argument_parser.add_subparsers(
+                title="subcommand",
+                description=f"subcommands for {self.name}",
+                help=f"run `polytracker {self.full_name} subcommand --help` for help on a specific subcommand",
+            )
             for st in self.subcommand_types:
                 p = self.subparser.add_parser(st.name, parents=st.parent_parsers, help=st.help)
                 s = st(argument_parser=p, parent=self)
@@ -832,7 +832,7 @@ class CommandExtensionMeta(PluginMeta, Generic[C]):
         return cast(C, self.parent)
 
 
-class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C]):
+class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C]):  # type: ignore
     parent_parsers: Tuple[ArgumentParser, ...] = ()
 
     def __init_subclass__(cls, **kwargs):
@@ -853,7 +853,7 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
         raise NotImplementedError()
 
 
-class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMeta[C]):
+class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMeta[C]):  # type: ignore
     def __init_subclass__(cls, **kwargs):
         if not isabstract(cls):
             if cls.parent_command_type.subcommand_types is None:
