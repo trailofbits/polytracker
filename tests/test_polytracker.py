@@ -1,6 +1,7 @@
 import pytest
 import os
 from polytracker.polyprocess import PolyProcess
+from .test_polyprocess import test_polyprocess_taint_sets
 import subprocess
 from shutil import copyfile
 
@@ -107,6 +108,17 @@ def test_source_open():
     assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
 
 
+def test_source_open_full_validate_schema():
+    target_name = "test_open.c"
+    test_filename = "/polytracker/tests/test_data/test_data.txt"
+    pp = validate_execute_target(target_name)
+    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
+    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
+    open_processed_sets = pp.processed_taint_sets
+    assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
+    test_polyprocess_taint_sets(json_path, forest_path)
+
+
 def test_memcpy_propagate():
     target_name = "test_memcpy.c"
     pp = validate_execute_target(target_name)
@@ -148,7 +160,6 @@ def test_config_files():
     for i in range(4, 10):
         assert i not in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
     os.remove("./polytracker_config.json")
-
 
 def test_source_fopen():
     target_name = "test_fopen.c"
