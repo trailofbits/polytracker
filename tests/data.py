@@ -14,9 +14,11 @@ def only_linux(func):
     if IS_LINUX:
         return func
     else:
+
         @wraps(func)
         def noop(*args, **kwargs):
             sys.stderr.write(f"skipping {func!r} because it only works on Linux")
+
         return noop
 
 
@@ -52,8 +54,9 @@ def process_set() -> Dict[str, Any]:
 def canonical_mapping() -> Dict[int, int]:
     pset: Dict[str, Any] = process_set()
     if "canonical_mapping" not in pset:
-        raise ValueError(f"Expected to find a \"canonical_mapping\" key in {PROCESS_SET_PATH!s}. "
-                         "Perhaps it is using a newer JSON schema?")
+        raise ValueError(
+            f'Expected to find a "canonical_mapping" key in {PROCESS_SET_PATH!s}. ' "Perhaps it is using a newer JSON schema?"
+        )
     elif len(pset["canonical_mapping"]) != 1:
         raise ValueError(f"{PROCESS_SET_PATH!s} was expected to have only one source, but found {pset.keys()!r}")
     return dict(next(iter(pset["canonical_mapping"].values())))
