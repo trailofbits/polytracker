@@ -135,10 +135,34 @@ POLYSTART: Start offset to track
 
 POLYEND: End offset to track
 
-POLYOUTPUT: Provides a a path/prefix to output polytracker information too
+POLYOUTPUT: Provides a path/prefix to output polytracker information too
+
+POLYCONFIG: Provides a path to a JSON file specifying setings
 
 WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
 ```
+
+## Configuration Files 
+
+Rather than setting environment variables on every run, you can make a configuration file.
+
+Example:
+```
+{
+    "POLYSTART": 1,
+    "POLYEND": 3,
+    "POLYTTL": 16
+}
+``` 
+
+Polytracker will search for config files in the following way: 
+1. If POLYCONFIG is specified, it will grab it from there
+2. Checks current directory there is a polytracker_config.json
+3. Checks the .config directory under the users home ("~/.config/polytracker/polytracker_config.json")
+
+If a configuration isn't specified or if certain settings aren't tweaked, defaults are set if possible. Some settings
+like POLYPATH do not have defaults, so if POLYPATH isn't specified via environment variable or config, an error will
+be thrown.
 
 ## Running an Instrumented Program
 
