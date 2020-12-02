@@ -7,39 +7,39 @@ from .. import grammars, tracing
 from .polyprocess import PolyProcess
 from .. import datalog
 
-logger = logging.getLogger("polyprocess")
+logger = logging.getLogger("polytracker")
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="""
-    A utility to process the JSON and raw output of 'polytracker' with a
-    polytracker.json and a polytracker_forest.bin
+    A utility to process the output of 'polytracker' with a
+    sqlite3 database and a dump of the taint forest
     """
     )
 
     commands = parser.add_mutually_exclusive_group()
 
-    commands.add_argument("--json", "-j", type=str, help="path to polytracker json file")
+    commands.add_argument("--database", "-d", type=str, help="path to polytracker sqlite3 file")
     parser.add_argument("--forest", "-f", type=str, default=None, help="path to the polytracker forest bin")
     parser.add_argument("--draw-forest", action="store_true", help="produces a taint forest dot file")
     commands.add_argument(
         "--extract-grammar",
         nargs=2,
         action="append",
-        metavar=("polytracker_json", "input_file"),
+        metavar=("polytracker_database", "input_file"),
         type=argparse.FileType("rb"),
-        help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
-        "was sent to the instrumented parser to generate polytracker_json",
+        help="extract a grammar from the provided the database as well as the associated input_file that "
+        "was sent to the instrumented parser to generate polytracker_database",
     )
     commands.add_argument(
         "--extract-datalog",
         nargs=2,
         action="append",
-        metavar=("polytracker_json", "input_file"),
+        metavar=("polytracker_database", "input_file"),
         type=argparse.FileType("rb"),
-        help="extract a datalog parser from the provided pairs of JSON trace files as well as the associated input file"
-        "that was sent to the instrumented parser to generate polytracker_json",
+        help="extract a datalog parser from the provided the database as well as the associated input file"
+        "that was sent to the instrumented parser to generate polytracker_database",
     )
     parser.add_argument("--outfile", type=str, default=None, help="specify outfile JSON path/name")
     parser.add_argument("--debug", "-d", action="store_true", help="enables debug logging")
@@ -89,36 +89,8 @@ def main():
             exit(1)
         print(str(grammars.extract(traces)))
 
+    #FIXME Removed datalog code for now.
     # TODO Copypasta'd from above for now.
-    elif args.extract_datalog:
-        traces = []
-        input_files: List[str] = []
-        try:
-            for json_file, input_file in args.extract_datalog:
-                input_files.append(input_file)
-                trace = tracing.PolyTrackerTrace.parse(json_file, input_file=input_file)
-                if not trace.is_cfg_connected():
-                    roots = list(trace.cfg_roots())
-                    if len(roots) == 0:
-                        sys.stderr.write(f"Error: Basic block trace of {json_file} has no roots!\n\n")
-                    else:
-                        sys.stderr.write(f"Error: Basic block trace of {json_file} has multiple roots:\n")
-                        for r in roots:
-                            sys.stderr.write(f"\t{str(r)}\n")
-                        sys.stderr.write("\n")
-                    exit(1)
-                traces.append(trace)
-        except ValueError as e:
-            sys.stderr.write(str(e))
-            sys.stderr.write("\n\n")
-            exit(1)
-        if args.outfile:
-            with open(args.outfile, "w") as out_file:
-                datalog_code = datalog.DatalogParser(input_file, traces[0])
-                out_file.write(datalog_code.val)
-        else:
-            sys.stderr.write(f"Error: No output file selected, use --outfile")
-            exit(1)
 
 
 if __name__ == "__main__":
