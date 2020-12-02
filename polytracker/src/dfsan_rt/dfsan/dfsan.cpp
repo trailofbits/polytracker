@@ -134,8 +134,9 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
 }
 
 // This shouldn't be called right now
-// Some issues with it are that when dealing with floating points, casting them to int
-// causes error in LLVM. Might need to support floats/doubles as operands in the trace
+// Some issues with it are that when dealing with floating points, casting them
+// to int causes error in LLVM. Might need to support floats/doubles as operands
+// in the trace
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_trace_inst_fn(
     uint32_t op_code, int val_a, int val_b, dfsan_label labela,
     dfsan_label labelb) {

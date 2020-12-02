@@ -227,8 +227,9 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
     true_facts: List[DatalogTrueFact]
 
     def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument("--extract-datalog", "-d", type=str, default=None,
-                            help="path to which to optionally save a datalog grammar")
+        parser.add_argument(
+            "--extract-datalog", "-d", type=str, default=None, help="path to which to optionally save a datalog grammar"
+        )
 
     def run(self, command: ExtractGrammarCommand, args: Namespace):
         if len(command.traces) > 1:

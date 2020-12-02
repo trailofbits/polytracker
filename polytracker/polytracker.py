@@ -760,7 +760,7 @@ class AbstractCommand(Plugin):
             self.subparser = argument_parser.add_subparsers(
                 title="subcommand",
                 description=f"subcommands for {self.name}",
-                help=f"run `polytracker {self.full_name} subcommand --help` for help on a specific subcommand"
+                help=f"run `polytracker {self.full_name} subcommand --help` for help on a specific subcommand",
             )
         if self.extension_types is not None:
             self.extensions: List[CommandExtension] = [et(parent=self) for et in self.extension_types]
@@ -802,7 +802,7 @@ class Command(AbstractCommand, ABC):
         super().__init__(argument_parser)
 
 
-C = TypeVar('C', bound=AbstractCommand)
+C = TypeVar("C", bound=AbstractCommand)
 
 
 class CommandExtensionMeta(PluginMeta, Generic[C]):
@@ -813,11 +813,15 @@ class CommandExtensionMeta(PluginMeta, Generic[C]):
             if "parent_type" not in clsdict or clsdict["parent_type"] is None:
                 raise TypeError(f"{basename} {name} does not define its `parent_type`")
             elif isabstract(clsdict["parent_type"]):
-                raise TypeError(f"{basename} {cls.__name__} extends off of abstract command "
-                                f"{cls.parent_type.__name__}; {basename}s must extend non-abstract Commands.")
+                raise TypeError(
+                    f"{basename} {cls.__name__} extends off of abstract command "
+                    f"{cls.parent_type.__name__}; {basename}s must extend non-abstract Commands."
+                )
             elif not issubclass(cls.parent_type, AbstractCommand):
-                raise TypeError(f"{basename} {cls.__name__}'s `parent_type` of {clsdict['parent_type']!r} does not "
-                                "extend off of Command")
+                raise TypeError(
+                    f"{basename} {cls.__name__}'s `parent_type` of {clsdict['parent_type']!r} does not "
+                    "extend off of Command"
+                )
 
     @property
     def parent_command_type(self) -> Type[C]:
@@ -836,8 +840,9 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
             if cls.parent_command_type.extension_types is None:
                 cls.parent_command_type.extension_types = []
             if cls in cls.parent_command_type.extension_types:
-                raise TypeError(f"CommandExtension {cls.__name__} is already registered to Command "
-                                f"{cls.parent_command_type.__name__}")
+                raise TypeError(
+                    f"CommandExtension {cls.__name__} is already registered to Command " f"{cls.parent_command_type.__name__}"
+                )
             cls.parent_command_type.extension_types.append(cls)
 
     def __init_arguments__(self, parser: ArgumentParser):
@@ -854,8 +859,9 @@ class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMet
             if cls.parent_command_type.subcommand_types is None:
                 cls.parent_command_type.subcommand_types = []
             if cls in cls.parent_command_type.subcommand_types:
-                raise TypeError(f"Subcommand {cls.__name__} is already registered to Command "
-                                f"{cls.parent_command_type.__name__}")
+                raise TypeError(
+                    f"Subcommand {cls.__name__} is already registered to Command " f"{cls.parent_command_type.__name__}"
+                )
             cls.parent_command_type.subcommand_types.append(cls)
 
 
