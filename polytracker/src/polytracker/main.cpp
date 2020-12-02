@@ -77,11 +77,9 @@ void polytracker_parse_config(std::ifstream &config_file) {
   }
   if (config_json.contains("POLYSTART")) {
     byte_start = config_json["POLYSTART"].get<int>();
-    std::cout << "Set polystart to " << byte_start << std::endl;
   }
   if (config_json.contains("POLYEND")) {
     byte_end = config_json["POLYEND"].get<int>();
-    std::cout << "set polyend to " << byte_end << std::endl;
   }
   if (config_json.contains("POLYOUTPUT")) {
     polytracker_output_filename = config_json["POLYOUTPUT"].get<std::string>();
@@ -157,12 +155,9 @@ polytrackers settings
 void polytracker_get_settings() {
   std::ifstream config;
   if (polytracker_detect_config(config)) {
-    std::cout << "Config detected!" << std::endl;
     polytracker_parse_config(config);
   }
-  std::cout << "Parsing env!" << std::endl;
   polytracker_parse_env();
-
   setRemainingToDefault();
 
   std::string poly_str(target_file);
