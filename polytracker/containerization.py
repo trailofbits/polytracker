@@ -6,11 +6,12 @@ from abc import ABC
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional, Tuple, Union
 
 import docker
 from docker.errors import NotFound as ImageNotFound
 from docker.models.images import Image
+from docker.types import Mount
 
 from .plugins import Command, Subcommand
 from .polytracker import version as polytracker_version
@@ -74,6 +75,48 @@ class DockerContainer:
             self.tag = tag
         self._client: Optional[docker.DockerClient] = None
         self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
+
+    def run(self, *args: str, build_if_necessary: bool = True, remove: bool = True, interactive: bool = True,
+            mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None):
+        if not self.exists():
+            if build_if_necessary:
+                if self.dockerfile.exists():
+                    self.rebuild()
+                else:
+                    self.pull()
+                if not self.exists():
+                    raise ValueError(f"{self.name} does not exist!")
+            else:
+                raise ValueError(f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically "
+                                 "build it.")
+
+        if mounts is None:
+            mounts = ((Path.cwd(), "/workdir"),)
+
+        # Call out to the actual Docker command instead of the Python API because it has better support for interactive
+        # TTYs
+
+        cmd_args = ["docker", "run", "-w=/workdir"]
+
+        if interactive:
+            cmd_args.append("-it")
+
+        if remove:
+            cmd_args.append("--rm")
+
+        for source, target in mounts:
+            cmd_args.append("-v")
+            cmd_args.append(f"{source!s}:{target!s}:cached")
+
+        cmd_args.append(self.name)
+
+        cmd_args.extend(args)
+
+        return subprocess.call(cmd_args)
+
+        # self.client.containers.run(self.name, args, remove=remove, mounts=[
+        #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
+        # ])
 
     @property
     def name(self) -> str:
@@ -251,3 +294,14 @@ or download the latest prebuilt Docker image for your preexisting PolyTracker in
 """)
             return 1
         self.container.rebuild(nocache=args.no_cache)
+
+
+class DockerRun(DockerSubcommand):
+    name = "run"
+    help = "runs the Docker container"
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("ARGS", nargs="*", help="command to run in the container (by default it will open a shell)")
+
+    def run(self, args):
+        self.container.run(*args.ARGS)
