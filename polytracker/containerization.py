@@ -78,7 +78,7 @@ class DockerContainer:
 
     def run(self, *args: str, build_if_necessary: bool = True, remove: bool = True, interactive: bool = True,
             mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None,
-            stdin=None, stdout=None, stderr=None):
+            env: Optional[Dict[str, str]] = None, stdin=None, stdout=None, stderr=None, cwd=None):
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
@@ -91,8 +91,11 @@ class DockerContainer:
                 raise ValueError(f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically "
                                  "build it.")
 
+        if cwd is None:
+            cwd = str(Path.cwd())
+
         if mounts is None:
-            mounts = ((Path.cwd(), "/workdir"),)
+            mounts = ((cwd, "/workdir"),)
 
         # Call out to the actual Docker command instead of the Python API because it has better support for interactive
         # TTYs
@@ -100,7 +103,7 @@ class DockerContainer:
         if interactive and (stdin is not None or stdout is not None or stderr is not None):
             raise ValueError("if `interactive == True`, all of `stdin`, `stdout`, and `stderr` must be `None`")
 
-        cmd_args = ["docker", "run", "-w=/workdir"]
+        cmd_args = ["/usr/bin/env", "docker", "run", "-w=/workdir"]
 
         if interactive:
             cmd_args.append("-it")
@@ -112,14 +115,20 @@ class DockerContainer:
             cmd_args.append("-v")
             cmd_args.append(f"{source!s}:{target!s}:cached")
 
+        if env is not None:
+            for k, v in env.items():
+                cmd_args.append("-e")
+                escaped_value = v.replace('"', '\\"')
+                cmd_args.append(f"{k}=\"{escaped_value}\"")
+
         cmd_args.append(self.name)
 
         cmd_args.extend(args)
 
         if interactive:
-            return subprocess.call(cmd_args)
+            return subprocess.call(cmd_args, cwd=cwd)
         else:
-            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr)
+            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd)
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts

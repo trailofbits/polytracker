@@ -2,7 +2,6 @@ import json
 import platform
 import subprocess
 import sys
-from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -17,22 +16,22 @@ IS_NATIVE: bool = IS_LINUX and subprocess.call(["/usr/bin/env", "sh", "which", "
 _DOCKER: Optional[DockerContainer] = None
 
 
-def requires_native(func):
-    global IS_NATIVE
+def to_native_path(host_path: Path) -> str:
     if IS_NATIVE:
-        return func
+        return str(host_path)
+    return str(Path("/workdir") / host_path.relative_to(Path(__file__).parent.parent))
+
+
+def run_natively(*args, **kwargs) -> int:
+    if IS_NATIVE:
+        return subprocess.call(*args, **kwargs)
     else:
-
-        @wraps(func)
-        def run_in_docker(*args, **kwargs):
-            sys.stderr.write(f"Running {func!r} in Docker because it requires a native install of PolyTracker...\n")
-            global _DOCKER
-            if _DOCKER is None:
-                _DOCKER = DockerContainer()
-            assert _DOCKER.run("/usr/bin/env", "pytest", "-k", func.__name__, interactive=False,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode == 0
-
-        return run_in_docker
+        sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
+        global _DOCKER
+        if _DOCKER is None:
+            _DOCKER = DockerContainer()
+        return _DOCKER.run(*args, **kwargs, interactive=False, stdout=sys.stdout, stderr=sys.stderr,
+                           cwd=str(Path(__file__).parent.parent)).returncode
 
 
 def generate_bad_path() -> Path:
@@ -42,7 +41,8 @@ def generate_bad_path() -> Path:
     return path
 
 
-TEST_DATA_DIR: Path = Path(__file__).parent / "test_data"
+TESTS_DIR: Path = Path(__file__).parent
+TEST_DATA_DIR: Path = TESTS_DIR / "test_data"
 BAD_PATH: Path = generate_bad_path()
 BAD_FOREST_PATH: Path = TEST_DATA_DIR / "bad_forest.bin"
 GOOD_FOREST_PATH: Path = TEST_DATA_DIR / "polytracker_forest.bin"

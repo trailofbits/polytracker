@@ -1,7 +1,6 @@
 import os
 import pytest
 import shutil
-import subprocess
 
 from polytracker import parse, ProgramTrace
 
@@ -27,10 +26,9 @@ def setup_targets():
     if BITCODE_DIR.exists():
         shutil.rmtree(BITCODE_DIR)
     BITCODE_DIR.mkdir()
-    if IS_LINUX:
-        target_files = [f for f in os.listdir(TEST_DATA_DIR) if f.endswith(".c") or f.endswith(".cpp")]
-        for file in target_files:
-            assert polyclang_compile_target(file) == 0
+    target_files = [f for f in os.listdir(TESTS_DIR) if f.endswith(".c") or f.endswith(".cpp")]
+    for file in target_files:
+        assert polyclang_compile_target(file) == 0
 
 
 def polyclang_compile_target(target_name: str) -> int:
@@ -38,43 +36,38 @@ def polyclang_compile_target(target_name: str) -> int:
     if target_name.endswith(".cpp"):
         is_cxx = True
     if is_cxx:
-        cxx = os.getenv("CXX")
-        if cxx is None:
-            print("Error! Could not find CXX")
-            return -1
         compile_command = [
-            cxx,
+            "/usr/bin/env",
+            "polybuild++",
             "--instrument-target",
             "-g",
             "-o",
-            str(BIN_DIR / f"{target_name}.bin"),
-            str(TEST_DATA_DIR / target_name),
+            to_native_path(BIN_DIR / f"{target_name}.bin"),
+            to_native_path(TESTS_DIR / target_name),
         ]
-        ret_val = subprocess.call(compile_command)
+        ret_val = run_natively(*compile_command)
     else:
-        cc = os.getenv("CC")
-        if cc is None:
-            print("Error! Could not find CC")
-            return -1
         compile_command = [
-            cc,
+            "/usr/bin/env",
+            "polybuild",
             "--instrument-target",
             "-g",
             "-o",
-            str(BIN_DIR / f"{target_name}.bin"),
-            str(TEST_DATA_DIR / target_name),
+            to_native_path(BIN_DIR / f"{target_name}.bin"),
+            to_native_path(TESTS_DIR / target_name),
         ]
-        ret_val = subprocess.call(compile_command)
+        ret_val = run_natively(*compile_command)
     return ret_val
 
 
 # Returns the Polyprocess object
 def validate_execute_target(target_name: str) -> ProgramTrace:
     target_bin_path = BIN_DIR / f"{target_name}.bin"
-    assert target_bin_path.exists()
-    ret_val = subprocess.call(
-        [target_bin_path, TEST_DATA_PATH],
-        env={"POLYPATH": str(TEST_DATA_PATH), "POLYOUTPUT": str(TEST_RESULTS_DIR / target_name)},
+    if IS_NATIVE:
+        assert target_bin_path.exists()
+    ret_val = run_natively(
+        *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],
+        env={"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)},
     )
     assert ret_val == 0
     # Assert that the appropriate files were created
@@ -88,7 +81,6 @@ def validate_execute_target(target_name: str) -> ProgramTrace:
     return parse(json_obj, str(forest_path))
 
 
-@requires_native
 def test_source_mmap():
     target_name = "test_mmap.c"
     # Find and run test
@@ -96,7 +88,6 @@ def test_source_mmap():
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@requires_native
 def test_source_open():
     target_name = "test_open.c"
     pp = validate_execute_target(target_name)
@@ -130,7 +121,6 @@ def test_source_open():
 #         assert "tainted_input_blocks" in polytracker_json
 
 
-@requires_native
 def test_source_open_full_validate_schema():
     target_name = "test_open.c"
     pp = validate_execute_target(target_name)
@@ -141,14 +131,12 @@ def test_source_open_full_validate_schema():
     # test_polyprocess_taint_sets(json_path, forest_path)
 
 
-@requires_native
 def test_memcpy_propagate():
     target_name = "test_memcpy.c"
     pp = validate_execute_target(target_name)
     assert 1 in pp.functions["dfs$touch_copied_byte"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@requires_native
 def test_taint_log():
     target_name = "test_taint_log.c"
     pp = validate_execute_target(target_name)
@@ -162,7 +150,6 @@ def test_taint_log():
 # When reading an entire file in a single block
 # Basically make sure the start/end match to prevent off-by-one errors
 # TODO
-@requires_native
 def test_block_target_values():
     target_name = "test_memcpy.c"
     _ = validate_execute_target(target_name)
@@ -172,32 +159,28 @@ def test_block_target_values():
 # test last byte in file touch.
 
 
-@requires_native
 def test_source_fopen():
     target_name = "test_fopen.c"
     pp = validate_execute_target(target_name)
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@requires_native
 def test_source_ifstream():
     target_name = "test_ifstream.cpp"
     pp = validate_execute_target(target_name)
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@requires_native
 def test_cxx_object_propagation():
     target_name = "test_object_propagation.cpp"
     pp = validate_execute_target(target_name)
-    object_processed_sets = pp.processed_taint_sets
+    # object_processed_sets = pp.processed_taint_sets
     # TODO: Update "tainted_string" in the ProgramTrace class
     # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
     # assert len(fnames) > 0
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
-@requires_native
 def test_cxx_vector():
     target_name = "test_vector.cpp"
     test_filename = "/polytracker/tests/test_data/test_data.txt"
