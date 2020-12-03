@@ -77,7 +77,8 @@ class DockerContainer:
         self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
 
     def run(self, *args: str, build_if_necessary: bool = True, remove: bool = True, interactive: bool = True,
-            mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None):
+            mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None,
+            stdin=None, stdout=None, stderr=None):
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
@@ -96,6 +97,9 @@ class DockerContainer:
         # Call out to the actual Docker command instead of the Python API because it has better support for interactive
         # TTYs
 
+        if interactive and (stdin is not None or stdout is not None or stderr is not None):
+            raise ValueError("if `interactive == True`, all of `stdin`, `stdout`, and `stderr` must be `None`")
+
         cmd_args = ["docker", "run", "-w=/workdir"]
 
         if interactive:
@@ -112,7 +116,10 @@ class DockerContainer:
 
         cmd_args.extend(args)
 
-        return subprocess.call(cmd_args)
+        if stdin is not None or stdout is not None or stderr is not None:
+            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr)
+        else:
+            return subprocess.call(cmd_args)
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
