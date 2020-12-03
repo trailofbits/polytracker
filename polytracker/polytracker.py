@@ -4,6 +4,7 @@ import os
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from io import StringIO
+import pkg_resources
 from typing import (
     Any,
     Callable,
@@ -31,6 +32,10 @@ from .visualizations import file_diff, Image, temporal_animation
 log = logging.getLogger("PolyTracker")
 
 VersionElement = Union[int, str]
+
+
+def version() -> str:
+    return pkg_resources.require("polytracker")[0].version
 
 
 class ProgramTrace:

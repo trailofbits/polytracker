@@ -23,15 +23,23 @@ def main():
 
     if args.version:
         print(polytracker.version())
-        exit(0)
+        return 0
 
     if not hasattr(args, "func"):
         # TODO: Once we implement a REPL, instead of printing help, enter the REPL here
         parser.print_help()
-        exit(1)
+        return 1
 
-    return args.func(args)
+    retval = args.func(args)
+    if retval is None:
+        retval = 0
+    elif not isinstance(retval, int):
+        if retval:
+            retval = 0
+        else:
+            retval = 1
+    return retval
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())

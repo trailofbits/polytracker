@@ -61,6 +61,7 @@ setup(
     python_requires='>=3.7',
     install_requires=[
         'cxxfilt==0.2.2',
+        'docker==4.4.0',
         'graphviz==0.14.1',
         'intervaltree==3.0.2',
         'matplotlib==3.3.0',
