@@ -10,7 +10,6 @@ COMMANDS: Dict[str, Type["Command"]] = {}
 
 class PluginMeta(ABCMeta):
     parent_type: Optional[Type["Plugin"]] = None
-    parent: Optional["Plugin"]
 
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
@@ -31,6 +30,7 @@ class PluginMeta(ABCMeta):
 
 class Plugin(ABC, metaclass=PluginMeta):
     name: str
+    parent: Optional["Plugin"]
 
     def __init__(self, parent: Optional["Plugin"] = None):
         self.parent = parent
@@ -124,10 +124,6 @@ class CommandExtensionMeta(PluginMeta, Generic[C]):
     def parent_command_type(self) -> Type[C]:
         return cast(Type[C], self.parent_type)
 
-    @property
-    def parent_command(self) -> C:
-        return cast(C, self.parent)
-
 
 class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C]):  # type: ignore
     parent_parsers: Tuple[ArgumentParser, ...] = ()
@@ -154,6 +150,10 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
     def __init_arguments__(self, parser: ArgumentParser):
         pass
 
+    @property
+    def parent_command(self) -> C:
+        return cast(C, self.parent)
+
     @abstractmethod
     def run(self, command: C, args: Namespace):
         raise NotImplementedError()
@@ -177,6 +177,10 @@ class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMet
                 )
             cls.parent_command_type.subcommand_types.append(cls)
 
+    @property
+    def parent_command(self) -> C:
+        return cast(C, self.parent)
+
 
 def add_command_subparsers(parser: ArgumentParser):
     subparsers = parser.add_subparsers(
@@ -187,3 +191,4 @@ def add_command_subparsers(parser: ArgumentParser):
     for name, command_type in COMMANDS.items():
         p = subparsers.add_parser(name, parents=command_type.parent_parsers, help=command_type.help)
         p.set_defaults(func=command_type(p).run)
+    return subparsers
