@@ -1,25 +1,38 @@
 import json
 import platform
+import subprocess
 import sys
 from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 
+from polytracker.containerization import DockerContainer
+
+
 IS_LINUX: bool = platform.system() == "Linux"
+IS_NATIVE: bool = IS_LINUX and subprocess.call(["/usr/bin/env", "sh", "which", "polybuild"]) == 0
 
 
-def only_linux(func):
-    global IS_LINUX
-    if IS_LINUX:
+_DOCKER: Optional[DockerContainer] = None
+
+
+def requires_native(func):
+    global IS_NATIVE
+    if IS_NATIVE:
         return func
     else:
 
         @wraps(func)
-        def noop(*args, **kwargs):
-            sys.stderr.write(f"skipping {func!r} because it only works on Linux")
+        def run_in_docker(*args, **kwargs):
+            sys.stderr.write(f"Running {func!r} in Docker because it requires a native install of PolyTracker...\n")
+            global _DOCKER
+            if _DOCKER is None:
+                _DOCKER = DockerContainer()
+            assert _DOCKER.run("/usr/bin/env", "pytest", "-k", func.__name__, interactive=False,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode == 0
 
-        return noop
+        return run_in_docker
 
 
 def generate_bad_path() -> Path:

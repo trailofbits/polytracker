@@ -116,10 +116,10 @@ class DockerContainer:
 
         cmd_args.extend(args)
 
-        if stdin is not None or stdout is not None or stderr is not None:
-            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr)
-        else:
+        if interactive:
             return subprocess.call(cmd_args)
+        else:
+            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr)
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
@@ -309,6 +309,7 @@ class DockerRun(DockerSubcommand):
 
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument("ARGS", nargs="*", help="command to run in the container (by default it will open a shell)")
+        parser.add_argument("--notty", action="store_true", help="do not run the Docker container in interactive mode")
 
     def run(self, args):
-        self.container.run(*args.ARGS)
+        self.container.run(*args.ARGS, interactive=not args.notty)

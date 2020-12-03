@@ -88,7 +88,7 @@ def validate_execute_target(target_name: str) -> ProgramTrace:
     return parse(json_obj, str(forest_path))
 
 
-@only_linux
+@requires_native
 def test_source_mmap():
     target_name = "test_mmap.c"
     # Find and run test
@@ -96,7 +96,7 @@ def test_source_mmap():
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@only_linux
+@requires_native
 def test_source_open():
     target_name = "test_open.c"
     pp = validate_execute_target(target_name)
@@ -130,7 +130,7 @@ def test_source_open():
 #         assert "tainted_input_blocks" in polytracker_json
 
 
-@only_linux
+@requires_native
 def test_source_open_full_validate_schema():
     target_name = "test_open.c"
     pp = validate_execute_target(target_name)
@@ -141,14 +141,14 @@ def test_source_open_full_validate_schema():
     # test_polyprocess_taint_sets(json_path, forest_path)
 
 
-@only_linux
+@requires_native
 def test_memcpy_propagate():
     target_name = "test_memcpy.c"
     pp = validate_execute_target(target_name)
     assert 1 in pp.functions["dfs$touch_copied_byte"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@only_linux
+@requires_native
 def test_taint_log():
     target_name = "test_taint_log.c"
     pp = validate_execute_target(target_name)
@@ -162,7 +162,7 @@ def test_taint_log():
 # When reading an entire file in a single block
 # Basically make sure the start/end match to prevent off-by-one errors
 # TODO
-@only_linux
+@requires_native
 def test_block_target_values():
     target_name = "test_memcpy.c"
     _ = validate_execute_target(target_name)
@@ -172,21 +172,21 @@ def test_block_target_values():
 # test last byte in file touch.
 
 
-@only_linux
+@requires_native
 def test_source_fopen():
     target_name = "test_fopen.c"
     pp = validate_execute_target(target_name)
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@only_linux
+@requires_native
 def test_source_ifstream():
     target_name = "test_ifstream.cpp"
     pp = validate_execute_target(target_name)
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
 
 
-@only_linux
+@requires_native
 def test_cxx_object_propagation():
     target_name = "test_object_propagation.cpp"
     pp = validate_execute_target(target_name)
@@ -197,7 +197,7 @@ def test_cxx_object_propagation():
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
-@only_linux
+@requires_native
 def test_cxx_vector():
     target_name = "test_vector.cpp"
     test_filename = "/polytracker/tests/test_data/test_data.txt"

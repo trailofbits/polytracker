@@ -21,11 +21,11 @@ def main():
 
     args = parser.parse_args()
 
-    if args.version:
-        print(polytracker.version())
-        return 0
-
     if not hasattr(args, "func"):
+        if args.version:
+            print(polytracker.version())
+            return 0
+
         # TODO: Once we implement a REPL, instead of printing help, enter the REPL here
         parser.print_help()
         return 1
