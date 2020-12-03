@@ -1,7 +1,7 @@
 from abc import ABC, ABCMeta, abstractmethod
 from argparse import ArgumentParser, Namespace
 from inspect import isabstract
-from typing import Any, cast, Dict, Generic, List, Optional, Tuple, Type, TypeVar
+from typing import Any, cast, Dict, Generic, Iterable, List, Optional, Tuple, Type, TypeVar
 
 
 PLUGINS: Dict[str, Type["Plugin"]] = {}
@@ -102,14 +102,31 @@ class Command(AbstractCommand, ABC):
         super().__init__(argument_parser)
 
 
+def _lookup_class_property(name: str, bases: Iterable[Type], clsdict: Dict[str, Any]) -> Any:
+    if name in clsdict:
+        return clsdict[name]
+    for base in bases:
+        try:
+            return _lookup_class_property(name, (), base.__dict__)
+        except KeyError:
+            pass
+    raise KeyError(name)
+
+
 class CommandExtensionMeta(PluginMeta, Generic[C]):
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if not isabstract(cls) and name not in ("Plugin", "Command", "Subcommand", "CommandExtension"):
             basename = "".join(c.__name__ for c in bases)
-            if "parent_type" not in clsdict or clsdict["parent_type"] is None:
+            try:
+                parent_type = _lookup_class_property("parent_type", bases, clsdict)
+                has_parent_type = parent_type is not None
+            except KeyError:
+                parent_type = None
+                has_parent_type = False
+            if not has_parent_type:
                 raise TypeError(f"{basename} {name} does not define its `parent_type`")
-            elif isabstract(clsdict["parent_type"]):
+            elif isabstract(parent_type):
                 raise TypeError(
                     f"{basename} {cls.__name__} extends off of abstract command "
                     f"{cls.parent_type.__name__}; {basename}s must extend non-abstract Commands."
