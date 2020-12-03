@@ -40,7 +40,7 @@ class Dockerfile:
                     chunk = f.read(1)
                     if len(chunk) == 0:
                         break
-                    elif chunk == b'\n':
+                    elif chunk == b"\n":
                         self._len += 1
                         self._line_offsets[self._len] = offset + 1
                     offset += 1
@@ -76,9 +76,19 @@ class DockerContainer:
         self._client: Optional[docker.DockerClient] = None
         self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
 
-    def run(self, *args: str, build_if_necessary: bool = True, remove: bool = True, interactive: bool = True,
-            mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None,
-            env: Optional[Dict[str, str]] = None, stdin=None, stdout=None, stderr=None, cwd=None):
+    def run(
+        self,
+        *args: str,
+        build_if_necessary: bool = True,
+        remove: bool = True,
+        interactive: bool = True,
+        mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None,
+        env: Optional[Dict[str, str]] = None,
+        stdin=None,
+        stdout=None,
+        stderr=None,
+        cwd=None,
+    ):
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
@@ -88,8 +98,9 @@ class DockerContainer:
                 if not self.exists():
                     raise ValueError(f"{self.name} does not exist!")
             else:
-                raise ValueError(f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically "
-                                 "build it.")
+                raise ValueError(
+                    f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically " "build it."
+                )
 
         if cwd is None:
             cwd = str(Path.cwd())
@@ -119,7 +130,7 @@ class DockerContainer:
             for k, v in env.items():
                 cmd_args.append("-e")
                 escaped_value = v.replace('"', '\\"')
-                cmd_args.append(f"{k}=\"{escaped_value}\"")
+                cmd_args.append(f'{k}="{escaped_value}"')
 
         cmd_args.append(self.name)
 
@@ -166,8 +177,10 @@ class DockerContainer:
 
     def rebuild(self, nocache: bool = False):
         if not self.dockerfile.exists():
-            raise ValueError("Could not find the Dockerfile. This likely means PolyTracker was installed from PyPI "
-                             "rather than from a source install from GitHub.")
+            raise ValueError(
+                "Could not find the Dockerfile. This likely means PolyTracker was installed from PyPI "
+                "rather than from a source install from GitHub."
+            )
         # use the low-level APIClient so we can get streaming build status
         cli = docker.APIClient()
         with tqdm(desc=f"Archiving the build directory", unit=" steps", leave=False) as t:
@@ -255,21 +268,26 @@ class DockerPull(DockerSubcommand):
             return 0
         except ImageNotFound:
             if self.container.exists():
-                sys.stderr.write(f"The docker image {self.container.name} was not found on DockerHub, "
-                                 "but it does already exist locally.")
+                sys.stderr.write(
+                    f"The docker image {self.container.name} was not found on DockerHub, " "but it does already exist locally."
+                )
                 return 1
             pass
-        sys.stderr.write(f"""The docker image {self.container.name} was not found on DockerHub!
+        sys.stderr.write(
+            f"""The docker image {self.container.name} was not found on DockerHub!
 This might happen if you are running a newer version of PolyTracker than the latest release
 (e.g., if you installed PolyTracker from GitHub master rather than from PyPI,
 or if you are doing local development on PolyTracker.)
 If you are running PolyTracker from source, try using the `polytracker docker rebuild` command instead
 of `polytracker docker pull` and it will rebuild from the local Dockerfile.
 
-""")
+"""
+        )
         while True:
-            sys.stderr.write("Would you like to pull the latest version from DockerHub and tag it as version "
-                             f"{self.container.tag}? [yN] ")
+            sys.stderr.write(
+                "Would you like to pull the latest version from DockerHub and tag it as version "
+                f"{self.container.tag}? [yN] "
+            )
             sys.stderr.flush()
             try:
                 result = input()
@@ -296,7 +314,8 @@ class DockerRebuild(DockerSubcommand):
 
     def run(self, args):
         if not self.container.dockerfile.exists():
-            sys.stderr.write("""It looks like PolyTracker was installed from PyPI rather than from source.
+            sys.stderr.write(
+                """It looks like PolyTracker was installed from PyPI rather than from source.
 Either reinstall PolyTracker from source like this:
 
     $ git clone https://github.com/trailofbits/polytracker
@@ -307,7 +326,8 @@ or download the latest prebuilt Docker image for your preexisting PolyTracker in
 
     $ polytracker docker pull
  
-""")
+"""
+            )
             return 1
         self.container.rebuild(nocache=args.no_cache)
 

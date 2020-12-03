@@ -183,6 +183,5 @@ def test_cxx_object_propagation():
 # TODO Compute DFG and query if we touch vector in libcxx from object
 def test_cxx_vector():
     target_name = "test_vector.cpp"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
     pp = validate_execute_target(target_name)
     assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]

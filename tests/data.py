@@ -30,8 +30,9 @@ def run_natively(*args, **kwargs) -> int:
         global _DOCKER
         if _DOCKER is None:
             _DOCKER = DockerContainer()
-        return _DOCKER.run(*args, **kwargs, interactive=False, stdout=sys.stdout, stderr=sys.stderr,
-                           cwd=str(Path(__file__).parent.parent)).returncode
+        return _DOCKER.run(
+            *args, **kwargs, interactive=False, stdout=sys.stdout, stderr=sys.stderr, cwd=str(Path(__file__).parent.parent)
+        ).returncode  # type: ignore
 
 
 def generate_bad_path() -> Path:
