@@ -64,7 +64,7 @@ def polyclang_compile_target(target_name: str) -> int:
 # Returns the Polyprocess object
 def validate_execute_target(target_name: str) -> ProgramTrace:
     target_bin_path = BIN_DIR / f"{target_name}.bin"
-    if IS_NATIVE:
+    if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
     ret_val = run_natively(
         *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],

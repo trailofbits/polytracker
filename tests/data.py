@@ -1,4 +1,5 @@
 import json
+import os
 import platform
 import subprocess
 import sys
@@ -10,20 +11,21 @@ from polytracker.containerization import DockerContainer
 
 
 IS_LINUX: bool = platform.system() == "Linux"
-IS_NATIVE: bool = IS_LINUX and subprocess.call(["/usr/bin/env", "sh", "which", "polybuild"]) == 0
+CAN_RUN_NATIVELY: bool = IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and \
+                         os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
 
 
 _DOCKER: Optional[DockerContainer] = None
 
 
 def to_native_path(host_path: Path) -> str:
-    if IS_NATIVE:
+    if CAN_RUN_NATIVELY:
         return str(host_path)
     return str(Path("/workdir") / host_path.relative_to(Path(__file__).parent.parent))
 
 
 def run_natively(*args, **kwargs) -> int:
-    if IS_NATIVE:
+    if CAN_RUN_NATIVELY:
         return subprocess.call(*args, **kwargs)
     else:
         sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
