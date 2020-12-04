@@ -73,7 +73,7 @@ setup(
         'typing_extensions==3.7.4.2'
     ],
     extras_require={
-        "dev": ["black", "mypy", "pytest"]
+        "dev": ["black>=20.8b1", "mypy", "pytest"]
     },
     entry_points={
         'console_scripts': [
