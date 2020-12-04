@@ -15,17 +15,10 @@ This runs before any test is executed
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
-    # Check if bin dir exists
-    # if BIN_DIR.exists():
-    #    shutil.rmtree(BIN_DIR)
     if not BIN_DIR.exists():
         BIN_DIR.mkdir()
-    # if TEST_RESULTS_DIR.exists():
-    #     shutil.rmtree(TEST_RESULTS_DIR)
     if not TEST_RESULTS_DIR.exists():
         TEST_RESULTS_DIR.mkdir()
-    # if BITCODE_DIR.exists():
-    #     shutil.rmtree(BITCODE_DIR)
     if not BITCODE_DIR.exists():
         BITCODE_DIR.mkdir()
 
