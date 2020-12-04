@@ -11,7 +11,6 @@ from typing import Dict, Iterable, Optional, Tuple, Union
 import docker
 from docker.errors import NotFound as ImageNotFound
 from docker.models.images import Image
-from docker.types import Mount
 
 from .plugins import Command, Subcommand
 from .polytracker import version as polytracker_version
@@ -75,6 +74,23 @@ class DockerContainer:
             self.tag = tag
         self._client: Optional[docker.DockerClient] = None
         self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
+
+    def last_build_time(self) -> Optional[int]:
+        """Returns the last time this image was rebuilt as the number of seconds since the UNIX epoch,
+        or None if the container has not yet been built"""
+
+        image: Optional[Image] = self.exists()
+        if image is None:
+            return None
+
+        time: Optional[int] = None
+
+        for line in image.history():
+            if "Created" in line:
+                ctime: int = line["Created"]  # type: ignore
+                if time is None or ctime > time:
+                    time = ctime
+        return time
 
     def run(
         self,

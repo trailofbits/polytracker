@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-from polytracker.containerization import DockerContainer
+from polytracker.containerization import DockerContainer, Image
 
 
 IS_LINUX: bool = platform.system() == "Linux"
@@ -25,15 +25,19 @@ def to_native_path(host_path: Path) -> str:
     return str(Path("/workdir") / host_path.relative_to(Path(__file__).parent.parent))
 
 
+def docker_container() -> DockerContainer():
+    global _DOCKER
+    if _DOCKER is None:
+        _DOCKER = DockerContainer()
+    return _DOCKER
+
+
 def run_natively(*args, **kwargs) -> int:
     if CAN_RUN_NATIVELY:
         return subprocess.call(*args, **kwargs)
     else:
         sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
-        global _DOCKER
-        if _DOCKER is None:
-            _DOCKER = DockerContainer()
-        return _DOCKER.run(  # type: ignore
+        return docker_container().run(  # type: ignore
             *args, **kwargs, interactive=False, stdout=sys.stdout, stderr=sys.stderr, cwd=str(Path(__file__).parent.parent)
         ).returncode
 

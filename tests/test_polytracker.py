@@ -16,21 +16,47 @@ This runs before any test is executed
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
     # Check if bin dir exists
-    if BIN_DIR.exists():
-        shutil.rmtree(BIN_DIR)
-    BIN_DIR.mkdir()
-    if TEST_RESULTS_DIR.exists():
-        shutil.rmtree(TEST_RESULTS_DIR)
-    TEST_RESULTS_DIR.mkdir()
-    if BITCODE_DIR.exists():
-        shutil.rmtree(BITCODE_DIR)
-    BITCODE_DIR.mkdir()
+    # if BIN_DIR.exists():
+    #    shutil.rmtree(BIN_DIR)
+    if not BIN_DIR.exists():
+        BIN_DIR.mkdir()
+    # if TEST_RESULTS_DIR.exists():
+    #     shutil.rmtree(TEST_RESULTS_DIR)
+    if not TEST_RESULTS_DIR.exists():
+        TEST_RESULTS_DIR.mkdir()
+    # if BITCODE_DIR.exists():
+    #     shutil.rmtree(BITCODE_DIR)
+    if not BITCODE_DIR.exists():
+        BITCODE_DIR.mkdir()
+
+
+def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
+    if not path.exists():
+        return True
+    elif CAN_RUN_NATIVELY:
+        return True  # For now, always rebuild binaries if we can run PolyTracker natively
+    # We need to run PolyTracker in a Docker container.
+    last_build_time = docker_container().last_build_time()
+    if last_build_time is None:
+        # The Docker container hasn't been built yet!
+        return True
+    last_path_modification = path.stat().st_mtime
+    if last_build_time >= last_path_modification:
+        # The Docker container was rebuilt since the last time `path` was modified
+        return True
+    for also_compare in also_compare_to:
+        other_time = also_compare.stat().st_mtime
+        if other_time >= last_path_modification:
+            # this dependency was modified after `path` was modified
+            return True
+    return False
 
 
 def polyclang_compile_target(target_name: str) -> int:
+    source_path = TESTS_DIR / target_name
     bin_path = BIN_DIR / f"{target_name}.bin"
-    if bin_path.exists():
-        # we already compiled this target during this test session
+    if not is_out_of_date(bin_path, source_path):
+        # the bin is newer than both our last build of PolyTracker and its source code, so we are good
         return 0
     if target_name.endswith(".cpp"):
         build_cmd: str = "polybuild++"
@@ -43,7 +69,7 @@ def polyclang_compile_target(target_name: str) -> int:
         "-g",
         "-o",
         to_native_path(bin_path),
-        to_native_path(TESTS_DIR / target_name),
+        to_native_path(source_path),
     ]
     return run_natively(*compile_command)
 
