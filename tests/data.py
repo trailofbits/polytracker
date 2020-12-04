@@ -34,7 +34,7 @@ def docker_container() -> DockerContainer:
 
 def run_natively(*args, **kwargs) -> int:
     if CAN_RUN_NATIVELY:
-        return subprocess.call(*args, **kwargs)
+        return subprocess.call(args, **kwargs)
     else:
         sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
         return (
