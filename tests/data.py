@@ -11,8 +11,9 @@ from polytracker.containerization import DockerContainer
 
 
 IS_LINUX: bool = platform.system() == "Linux"
-CAN_RUN_NATIVELY: bool = IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and \
-                         os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
+CAN_RUN_NATIVELY: bool = IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and os.getenv(
+    "POLYTRACKER_CAN_RUN_NATIVELY", ""
+) != ""
 
 
 _DOCKER: Optional[DockerContainer] = None

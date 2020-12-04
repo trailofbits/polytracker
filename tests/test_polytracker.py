@@ -1,9 +1,7 @@
-import os
 import pytest
 import shutil
-from functools import wraps
 
-from polytracker import parse, ProgramTrace
+from polytracker import parse, ProgramTrace, TaintForestFunctionInfo
 
 from .data import *
 
@@ -27,38 +25,27 @@ def setup_targets():
     if BITCODE_DIR.exists():
         shutil.rmtree(BITCODE_DIR)
     BITCODE_DIR.mkdir()
-    target_files = [f for f in os.listdir(TESTS_DIR) if f.endswith(".c") or f.endswith(".cpp")]
-    # for file in target_files:
-    #     assert polyclang_compile_target(file) == 0
 
 
 def polyclang_compile_target(target_name: str) -> int:
-    is_cxx: bool = False
+    bin_path = BIN_DIR / f"{target_name}.bin"
+    if bin_path.exists():
+        # we already compiled this target during this test session
+        return 0
     if target_name.endswith(".cpp"):
-        is_cxx = True
-    if is_cxx:
-        compile_command = [
-            "/usr/bin/env",
-            "polybuild++",
-            "--instrument-target",
-            "-g",
-            "-o",
-            to_native_path(BIN_DIR / f"{target_name}.bin"),
-            to_native_path(TESTS_DIR / target_name),
-        ]
-        ret_val = run_natively(*compile_command)
+        build_cmd: str = "polybuild++"
     else:
-        compile_command = [
-            "/usr/bin/env",
-            "polybuild",
-            "--instrument-target",
-            "-g",
-            "-o",
-            to_native_path(BIN_DIR / f"{target_name}.bin"),
-            to_native_path(TESTS_DIR / target_name),
-        ]
-        ret_val = run_natively(*compile_command)
-    return ret_val
+        build_cmd = "polybuild"
+    compile_command = [
+        "/usr/bin/env",
+        build_cmd,
+        "--instrument-target",
+        "-g",
+        "-o",
+        to_native_path(bin_path),
+        to_native_path(TESTS_DIR / target_name),
+    ]
+    return run_natively(*compile_command)
 
 
 # Returns the Polyprocess object
@@ -86,13 +73,15 @@ def validate_execute_target(target_name: str) -> ProgramTrace:
 def program_trace(request):
     marker = request.node.get_closest_marker("program_trace")
     if marker is None:
-        raise ValueError("""The program_trace fixture must be called with a target file name to compile. For example:
+        raise ValueError(
+            """The program_trace fixture must be called with a target file name to compile. For example:
 
     @pytest.mark.program_trace("foo.c")
     def test_foo(program_trace: ProgramTrace):
         \"\"\"foo.c will be compiled, instrumented, and run, and program_trace will be the resulting ProgramTrace\"\"\"
         ...
-""")
+"""
+        )
 
     target_name = marker.args[0]
 
@@ -106,10 +95,9 @@ def test_source_mmap(program_trace: ProgramTrace):
     assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_source_open():
-    target_name = "test_open.c"
-    pp = validate_execute_target(target_name)
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_open.c")
+def test_source_open(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
 # TODO: Update this test
@@ -139,26 +127,25 @@ def test_source_open():
 #         assert "tainted_input_blocks" in polytracker_json
 
 
-def test_source_open_full_validate_schema():
-    target_name = "test_open.c"
-    pp = validate_execute_target(target_name)
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_open.c")
+def test_source_open_full_validate_schema(program_trace: ProgramTrace):
+    forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
+    json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
     # TODO: Uncomment once we update this function
     # test_polyprocess_taint_sets(json_path, forest_path)
 
 
-def test_memcpy_propagate():
-    target_name = "test_memcpy.c"
-    pp = validate_execute_target(target_name)
-    assert 1 in pp.functions["dfs$touch_copied_byte"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_memcpy.c")
+def test_memcpy_propagate(program_trace: ProgramTrace):
+    info = program_trace.functions["dfs$touch_copied_byte"]
+    assert isinstance(info, TaintForestFunctionInfo)
+    assert 1 in info.input_byte_labels[to_native_path(TEST_DATA_PATH)]
 
 
-def test_taint_log():
-    target_name = "test_taint_log.c"
-    pp = validate_execute_target(target_name)
-    input_bytes = pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_taint_log.c")
+def test_taint_log(program_trace: ProgramTrace):
+    input_bytes = program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
     for i in range(0, 10):
         assert i in input_bytes
 
@@ -168,38 +155,35 @@ def test_taint_log():
 # When reading an entire file in a single block
 # Basically make sure the start/end match to prevent off-by-one errors
 # TODO
-def test_block_target_values():
-    target_name = "test_memcpy.c"
-    _ = validate_execute_target(target_name)
+@pytest.mark.program_trace("test_memcpy.c")
+def test_block_target_values(program_trace: ProgramTrace):
+    pass
 
 
 # TODO
 # test last byte in file touch.
 
 
-def test_source_fopen():
-    target_name = "test_fopen.c"
-    pp = validate_execute_target(target_name)
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_fopen.c")
+def test_source_fopen(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_source_ifstream():
-    target_name = "test_ifstream.cpp"
-    pp = validate_execute_target(target_name)
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_ifstream.cpp")
+def test_source_ifstream(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_cxx_object_propagation():
-    target_name = "test_object_propagation.cpp"
-    pp = validate_execute_target(target_name)
+@pytest.mark.program_trace("test_object_propagation.cpp")
+def test_cxx_object_propagation(program_trace: ProgramTrace):
     # object_processed_sets = pp.processed_taint_sets
     # TODO: Update "tainted_string" in the ProgramTrace class
     # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
     # assert len(fnames) > 0
+    pass
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
-def test_cxx_vector():
-    target_name = "test_vector.cpp"
-    pp = validate_execute_target(target_name)
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.mark.program_trace("test_vector.cpp")
+def test_cxx_vector(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
