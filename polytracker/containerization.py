@@ -130,7 +130,7 @@ class DockerContainer:
             for k, v in env.items():
                 cmd_args.append("-e")
                 escaped_value = v.replace('"', '\\"')
-                cmd_args.append(f'{k}="{escaped_value}"')
+                cmd_args.append(f'{k}={escaped_value}')
 
         cmd_args.append(self.name)
 

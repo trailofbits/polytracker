@@ -1,6 +1,7 @@
 import os
 import pytest
 import shutil
+from functools import wraps
 
 from polytracker import parse, ProgramTrace
 
@@ -27,8 +28,8 @@ def setup_targets():
         shutil.rmtree(BITCODE_DIR)
     BITCODE_DIR.mkdir()
     target_files = [f for f in os.listdir(TESTS_DIR) if f.endswith(".c") or f.endswith(".cpp")]
-    for file in target_files:
-        assert polyclang_compile_target(file) == 0
+    # for file in target_files:
+    #     assert polyclang_compile_target(file) == 0
 
 
 def polyclang_compile_target(target_name: str) -> int:
@@ -81,11 +82,28 @@ def validate_execute_target(target_name: str) -> ProgramTrace:
     return parse(json_obj, str(forest_path))
 
 
-def test_source_mmap():
-    target_name = "test_mmap.c"
-    # Find and run test
-    pp = validate_execute_target(target_name)
-    assert 0 in pp.functions["main"].input_bytes[str(TEST_DATA_PATH)]
+@pytest.fixture
+def program_trace(request):
+    marker = request.node.get_closest_marker("program_trace")
+    if marker is None:
+        raise ValueError("""The program_trace fixture must be called with a target file name to compile. For example:
+
+    @pytest.mark.program_trace("foo.c")
+    def test_foo(program_trace: ProgramTrace):
+        \"\"\"foo.c will be compiled, instrumented, and run, and program_trace will be the resulting ProgramTrace\"\"\"
+        ...
+""")
+
+    target_name = marker.args[0]
+
+    assert polyclang_compile_target(target_name) == 0
+
+    return validate_execute_target(target_name)
+
+
+@pytest.mark.program_trace("test_mmap.c")
+def test_source_mmap(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
 def test_source_open():
