@@ -71,21 +71,12 @@ def validate_execute_target(target_name: str, config_path: Optional[Union[str, P
     target_bin_path = BIN_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
-    env = {
-        "POLYPATH": to_native_path(TEST_DATA_PATH),
-        "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)
-    }
+    env = {"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)}
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
-        copyfile(
-            str(CONFIG_DIR / "new_range.json"),
-            str(tmp_config)
-        )
+        copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
     try:
-        ret_val = run_natively(
-            *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],
-            env=env
-        )
+        ret_val = run_natively(*[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env)
     finally:
         tmp_config.unlink(missing_ok=True)
     assert ret_val == 0

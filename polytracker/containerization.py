@@ -6,7 +6,7 @@ from abc import ABC
 from argparse import ArgumentParser
 from pathlib import Path
 from tqdm import tqdm
-from typing import Dict, Iterable, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import docker
 from docker.errors import NotFound as ImageNotFound
@@ -65,6 +65,14 @@ class Dockerfile:
             return None
 
 
+class DockerOutOfDateError(RuntimeError):
+    """An error when the docker image is older than the PolyTracker source code"""
+
+    def __init__(self, message: str, container: "DockerContainer"):
+        super().__init__(message)
+        self.container: DockerContainer = container
+
+
 class DockerContainer:
     def __init__(self, image_name: str = "trailofbits/polytracker", tag: Optional[str] = None):
         self.image_name: str = image_name
@@ -74,6 +82,28 @@ class DockerContainer:
             self.tag = tag
         self._client: Optional[docker.DockerClient] = None
         self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
+        self._out_of_date_sources: Optional[List[Path]] = None
+
+    def out_of_date_sources(self) -> List[Path]:
+        """Returns the PolyTracker source files that were modified after this container was built"""
+        if self._out_of_date_sources is None:
+            container_build_time = self.last_build_time()
+            self._out_of_date_sources = []
+            if container_build_time is None:
+                # this container was never built!
+                return self._out_of_date_sources
+            root_dir = Path(__file__).parent.parent
+            source_files: List[Path] = [root_dir / "Dockerfile", root_dir / "setup.py"]
+            for f in source_files:
+                if not f.exists():
+                    # PolyTracker was not installed from source
+                    return self._out_of_date_sources
+            source_files.extend(root_dir.glob("src/**/*"))
+            for path in source_files:
+                mtime = path.stat().st_mtime
+                if mtime > container_build_time:
+                    self._out_of_date_sources.append(path)
+        return self._out_of_date_sources
 
     def last_build_time(self) -> Optional[int]:
         """Returns the last time this image was rebuilt as the number of seconds since the UNIX epoch,
@@ -96,6 +126,7 @@ class DockerContainer:
         self,
         *args: str,
         build_if_necessary: bool = True,
+        check_if_docker_out_of_date: bool = True,
         remove: bool = True,
         interactive: bool = True,
         mounts: Optional[Iterable[Tuple[Union[str, Path], Union[str, Path]]]] = None,
@@ -117,7 +148,13 @@ class DockerContainer:
                 raise ValueError(
                     f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically " "build it."
                 )
-
+        elif check_if_docker_out_of_date and len(self.out_of_date_sources()) > 0:
+            raise DockerOutOfDateError(
+                f"Docker container {self.name} relies on the following source files "
+                "that were modified after the container was last built: "
+                f"{self.out_of_date_sources()!r}",
+                self,
+            )
         if cwd is None:
             cwd = str(Path.cwd())
 
