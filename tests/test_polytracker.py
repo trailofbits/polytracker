@@ -78,7 +78,8 @@ def validate_execute_target(target_name: str, config_path: Optional[Union[str, P
     try:
         ret_val = run_natively(*[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env)
     finally:
-        tmp_config.unlink(missing_ok=True)
+        if tmp_config.exists():
+            tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
     assert ret_val == 0
     # Assert that the appropriate files were created
     forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
