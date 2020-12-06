@@ -66,7 +66,7 @@ setup(
         'intervaltree==3.0.2',
         'matplotlib==3.3.0',
         'networkx==2.4',
-        'Pillow==7.2.0',
+        'Pillow>=7.2.0',
         'pygraphviz==1.5',
         'pydot==1.4.1',
         'tqdm==4.48.0',

@@ -1,10 +1,10 @@
 import pytest
-import shutil
+from shutil import copyfile
+from typing import Union
 
 from polytracker import parse, ProgramTrace, TaintForestFunctionInfo
 
 from .data import *
-
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -68,14 +68,29 @@ def polyclang_compile_target(target_name: str) -> int:
 
 
 # Returns the Polyprocess object
-def validate_execute_target(target_name: str) -> ProgramTrace:
+def validate_execute_target(target_name: str, config_path: Optional[Union[str, Path]]) -> ProgramTrace:
     target_bin_path = BIN_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
-    ret_val = run_natively(
-        *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],
-        env={"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)},
-    )
+    env = {
+        "POLYPATH": to_native_path(TEST_DATA_PATH),
+        "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)
+    }
+    tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
+    if config_path is not None:
+        copyfile(
+            str(CONFIG_DIR / "new_range.json"),
+            str(tmp_config)
+        )
+    else:
+        tmp_config = None
+    try:
+        ret_val = run_natively(
+            *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],
+            env=env
+        )
+    finally:
+        tmp_config.unlink(missing_ok=True)
     assert ret_val == 0
     # Assert that the appropriate files were created
     forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
@@ -103,10 +118,14 @@ def program_trace(request):
         )
 
     target_name = marker.args[0]
+    if "config_path" in marker.kwargs:
+        config_path = marker.kwargs["config_path"]
+    else:
+        config_path = None
 
     assert polyclang_compile_target(target_name) == 0
 
-    return validate_execute_target(target_name)
+    return validate_execute_target(target_name, config_path=config_path)
 
 
 @pytest.mark.program_trace("test_mmap.c")
@@ -169,18 +188,14 @@ def test_taint_log(program_trace: ProgramTrace):
         assert i in input_bytes
 
 
-# This is a bad name for this test
-# This test compares the taint sources info with the tainted block info
-# When reading an entire file in a single block
-# Basically make sure the start/end match to prevent off-by-one errors
-# TODO
-@pytest.mark.program_trace("test_memcpy.c")
-def test_block_target_values(program_trace: ProgramTrace):
-    pass
-
-
-# TODO
-# test last byte in file touch.
+@pytest.mark.program_trace("test_taint_log.c", config_path=CONFIG_DIR / "new_range.json")
+def test_config_files(program_trace: ProgramTrace):
+    # the new_range.json config changes the polystart/polyend to
+    # POLYSTART: 1, POLYEND: 3
+    for i in range(1, 4):
+        assert i in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    for i in range(4, 10):
+        assert i not in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
 @pytest.mark.program_trace("test_fopen.c")

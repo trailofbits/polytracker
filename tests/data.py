@@ -4,10 +4,10 @@ import platform
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 
-from polytracker.containerization import DockerContainer, Image
+from polytracker.containerization import DockerContainer
 
 
 IS_LINUX: bool = platform.system() == "Linux"
@@ -19,9 +19,11 @@ CAN_RUN_NATIVELY: bool = (
 _DOCKER: Optional[DockerContainer] = None
 
 
-def to_native_path(host_path: Path) -> str:
+def to_native_path(host_path: Union[str, Path]) -> str:
     if CAN_RUN_NATIVELY:
         return str(host_path)
+    if not isinstance(host_path, Path):
+        host_path = Path(host_path)
     return str(Path("/workdir") / host_path.relative_to(Path(__file__).parent.parent))
 
 
@@ -57,6 +59,7 @@ TESTS_DIR: Path = Path(__file__).parent
 TEST_DATA_DIR: Path = TESTS_DIR / "test_data"
 BAD_PATH: Path = generate_bad_path()
 BAD_FOREST_PATH: Path = TEST_DATA_DIR / "bad_forest.bin"
+CONFIG_DIR: Path = TESTS_DIR / "configs"
 GOOD_FOREST_PATH: Path = TEST_DATA_DIR / "polytracker_forest.bin"
 PROCESS_SET_PATH: Path = TEST_DATA_DIR / "polytracker_process_set.json"
 TEST_DATA_PATH: Path = TEST_DATA_DIR / "test_data.txt"
