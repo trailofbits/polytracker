@@ -1,6 +1,5 @@
 import pytest
 from shutil import copyfile
-from typing import Union
 
 from polytracker import parse, ProgramTrace, TaintForestFunctionInfo
 
