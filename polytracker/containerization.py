@@ -98,7 +98,9 @@ class DockerContainer:
                 if not f.exists():
                     # PolyTracker was not installed from source
                     return self._out_of_date_sources
-            source_files.extend(root_dir.glob("src/**/*"))
+            source_files.extend(
+                p for p in (root_dir / "polytracker").glob("**/*") if "__pycache__" not in str(p) and not p.suffix == ".py"
+            )
             for path in source_files:
                 mtime = path.stat().st_mtime
                 if mtime > container_build_time:
@@ -149,10 +151,11 @@ class DockerContainer:
                     f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically " "build it."
                 )
         elif check_if_docker_out_of_date and len(self.out_of_date_sources()) > 0:
+            oods = [str(s.relative_to(self.dockerfile.path.parent)) for s in self.out_of_date_sources()]
             raise DockerOutOfDateError(
                 f"Docker container {self.name} relies on the following source files "
                 "that were modified after the container was last built: "
-                f"{self.out_of_date_sources()!r}",
+                f"{', '.join(oods)}",
                 self,
             )
         if cwd is None:
@@ -394,4 +397,21 @@ class DockerRun(DockerSubcommand):
         parser.add_argument("--notty", action="store_true", help="do not run the Docker container in interactive mode")
 
     def run(self, args):
-        self.container.run(*args.ARGS, interactive=not args.notty)
+        try:
+            self.container.run(*args.ARGS, interactive=not args.notty, check_if_docker_out_of_date=True)
+            return
+        except DockerOutOfDateError as e:
+            out_of_date_error = e
+        if not sys.stdin.isatty() or not sys.stdout.isatty():
+            raise out_of_date_error
+        sys.stderr.write(str(out_of_date_error))
+        while True:
+            sys.stderr.write("\nWould you like to rebuild the Docker image before running? [Yn] ")
+            sys.stderr.flush()
+            option = input()
+            if option.lower() == "n":
+                break
+            elif option.lower() == "y":
+                self.container.rebuild()
+                break
+        self.container.run(*args.ARGS, interactive=not args.notty, check_if_docker_out_of_date=False)
