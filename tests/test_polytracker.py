@@ -81,8 +81,6 @@ def validate_execute_target(target_name: str, config_path: Optional[Union[str, P
             str(CONFIG_DIR / "new_range.json"),
             str(tmp_config)
         )
-    else:
-        tmp_config = None
     try:
         ret_val = run_natively(
             *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)],
