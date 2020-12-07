@@ -1,15 +1,9 @@
 import pytest
-import os
-from polytracker.polyprocess import PolyProcess
-from .test_polyprocess import test_polyprocess_taint_sets
-import subprocess
 from shutil import copyfile
 
-TEST_DIR = os.path.realpath(os.path.dirname(__file__))
-BIN_DIR = os.path.join(TEST_DIR, "bin")
-TEST_RESULTS_DIR = os.path.join(BIN_DIR, "test_results")
-BITCODE_DIR = os.path.join(TEST_DIR, "bitcode")
-CONFIG_DIR = os.path.join(TEST_DIR, "configs")
+from polytracker import parse, ProgramTrace, TaintForestFunctionInfo
+
+from .data import *
 
 """
 Pytest fixture to init testing env (building tests) 
@@ -20,176 +14,199 @@ This runs before any test is executed
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
-    # Check if bin dir exists
-    if os.path.exists(BIN_DIR):
-        subprocess.call(["rm", "-r", BIN_DIR])
-    subprocess.call(["mkdir", "-p", BIN_DIR])
-    if os.path.exists(TEST_RESULTS_DIR):
-        subprocess.call(["rm", "-r", TEST_RESULTS_DIR])
-    subprocess.call(["mkdir", "-p", TEST_RESULTS_DIR])
-    if os.path.exists(BITCODE_DIR):
-        subprocess.call(["rm", "-r", BITCODE_DIR])
-    subprocess.call(["mkdir", BITCODE_DIR])
-    target_files = [f for f in os.listdir(TEST_DIR) if f.endswith(".c") or f.endswith(".cpp")]
-    for file in target_files:
-        assert polyclang_compile_target(file) == 0
+    if not BIN_DIR.exists():
+        BIN_DIR.mkdir()
+    if not TEST_RESULTS_DIR.exists():
+        TEST_RESULTS_DIR.mkdir()
+    if not BITCODE_DIR.exists():
+        BITCODE_DIR.mkdir()
+
+
+def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
+    if not path.exists():
+        return True
+    elif CAN_RUN_NATIVELY:
+        return True  # For now, always rebuild binaries if we can run PolyTracker natively
+    # We need to run PolyTracker in a Docker container.
+    last_build_time = docker_container().last_build_time()
+    if last_build_time is None:
+        # The Docker container hasn't been built yet!
+        return True
+    last_path_modification = path.stat().st_mtime
+    if last_build_time >= last_path_modification:
+        # The Docker container was rebuilt since the last time `path` was modified
+        return True
+    for also_compare in also_compare_to:
+        other_time = also_compare.stat().st_mtime
+        if other_time >= last_path_modification:
+            # this dependency was modified after `path` was modified
+            return True
+    return False
 
 
 def polyclang_compile_target(target_name: str) -> int:
-    is_cxx: bool = False
+    source_path = TESTS_DIR / target_name
+    bin_path = BIN_DIR / f"{target_name}.bin"
+    if not is_out_of_date(bin_path, source_path):
+        # the bin is newer than both our last build of PolyTracker and its source code, so we are good
+        return 0
     if target_name.endswith(".cpp"):
-        is_cxx = True
-    if is_cxx:
-        cxx = os.getenv("CXX")
-        if cxx is None:
-            print("Error! Could not find CXX")
-            return -1
-        compile_command = [
-            cxx,
-            "--instrument-target",
-            "-g",
-            "-o",
-            os.path.join(BIN_DIR, target_name) + ".bin",
-            os.path.join(TEST_DIR, target_name),
-        ]
-        ret_val = subprocess.call(compile_command)
+        build_cmd: str = "polybuild++"
     else:
-        cc = os.getenv("CC")
-        if cc is None:
-            print("Error! Could not find CC")
-            return -1
-        compile_command = [
-            cc,
-            "--instrument-target",
-            "-g",
-            "-o",
-            os.path.join(BIN_DIR, target_name) + ".bin",
-            os.path.join(TEST_DIR, target_name),
-        ]
-        ret_val = subprocess.call(compile_command)
-    return ret_val
+        build_cmd = "polybuild"
+    compile_command = [
+        "/usr/bin/env",
+        build_cmd,
+        "--instrument-target",
+        "-g",
+        "-o",
+        to_native_path(bin_path),
+        to_native_path(source_path),
+    ]
+    return run_natively(*compile_command)
 
 
 # Returns the Polyprocess object
-def validate_execute_target(target_name):
-    target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
-    assert os.path.exists(target_bin_path) is True
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    os.environ["POLYPATH"] = test_filename
-    os.environ["POLYOUTPUT"] = os.path.join(TEST_RESULTS_DIR, target_name)
-    ret_val = subprocess.call([target_bin_path, test_filename])
+def validate_execute_target(target_name: str, config_path: Optional[Union[str, Path]]) -> ProgramTrace:
+    target_bin_path = BIN_DIR / f"{target_name}.bin"
+    if CAN_RUN_NATIVELY:
+        assert target_bin_path.exists()
+    env = {"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)}
+    tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
+    if config_path is not None:
+        copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
+    try:
+        ret_val = run_natively(*[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env)
+    finally:
+        if tmp_config.exists():
+            tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
+    forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
     # Add the 0 here for thread counting.
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
-    assert os.path.exists(forest_path) is True
-    assert os.path.exists(json_path) is True
-    pp = PolyProcess(json_path, forest_path)
-    pp.process_taint_sets()
-    return pp
+    json_path = TEST_RESULTS_DIR / f"{target_name}0_process_set.json"
+    assert forest_path.exists()
+    assert json_path.exists()
+    with open(json_path, "r") as f:
+        json_obj = json.load(f)
+    return parse(json_obj, str(forest_path))
 
 
-def test_source_mmap():
-    target_name = "test_mmap.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    # Find and run test
-    pp = validate_execute_target(target_name)
-    mmap_processed_sets = pp.processed_taint_sets
-    # Confirm that main touched tainted byte 0
-    assert 0 in mmap_processed_sets["main"]["input_bytes"][test_filename]
+@pytest.fixture
+def program_trace(request):
+    marker = request.node.get_closest_marker("program_trace")
+    if marker is None:
+        raise ValueError(
+            """The program_trace fixture must be called with a target file name to compile. For example:
+
+    @pytest.mark.program_trace("foo.c")
+    def test_foo(program_trace: ProgramTrace):
+        \"\"\"foo.c will be compiled, instrumented, and run, and program_trace will be the resulting ProgramTrace\"\"\"
+        ...
+"""
+        )
+
+    target_name = marker.args[0]
+    if "config_path" in marker.kwargs:
+        config_path = marker.kwargs["config_path"]
+    else:
+        config_path = None
+
+    assert polyclang_compile_target(target_name) == 0
+
+    return validate_execute_target(target_name, config_path=config_path)
 
 
-def test_source_open():
-    target_name = "test_open.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    open_processed_sets = pp.processed_taint_sets
-    assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
+@pytest.mark.program_trace("test_mmap.c")
+def test_source_mmap(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_source_open_full_validate_schema():
-    target_name = "test_open.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
-    open_processed_sets = pp.processed_taint_sets
-    assert 0 in open_processed_sets["main"]["input_bytes"][test_filename]
-    test_polyprocess_taint_sets(json_path, forest_path)
+@pytest.mark.program_trace("test_open.c")
+def test_source_open(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_memcpy_propagate():
-    target_name = "test_memcpy.c"
-    pp = validate_execute_target(target_name)
-    raw_taint_sets = pp.taint_sets
-    assert 1 in raw_taint_sets["dfs$touch_copied_byte"]["input_bytes"]
+# TODO: Update this test
+# def test_polyprocess_taint_sets(json_path, forest_path):
+#     logger.info("Testing taint set processing")
+#     poly_proc = PolyProcess(json_path, forest_path)
+#     poly_proc.process_taint_sets()
+#     poly_proc.set_output_filepath("/tmp/polytracker.json")
+#     poly_proc.output_processed_json()
+#     assert os.path.exists("/tmp/polytracker.json") is True
+#     with open("/tmp/polytracker.json", "r") as poly_json:
+#         json_size = os.path.getsize("/tmp/polytracker.json")
+#         polytracker_json = json.loads(poly_json.read(json_size))
+#         if "tainted_functions" in poly_proc.polytracker_json:
+#             assert "tainted_functions" in polytracker_json
+#             for func in poly_proc.polytracker_json["tainted_functions"]:
+#                 if "cmp_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
+#                     assert "cmp_bytes" in polytracker_json["tainted_functions"][func]
+#                 if "input_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
+#                     assert "input_bytes" in polytracker_json["tainted_functions"][func]
+#         assert "version" in polytracker_json
+#         assert polytracker_json["version"] == poly_proc.polytracker_json["version"]
+#         assert "runtime_cfg" in polytracker_json
+#         assert len(polytracker_json["runtime_cfg"]["main"]) == 1
+#         assert "taint_sources" in polytracker_json
+#         assert "canonical_mapping" not in polytracker_json
+#         assert "tainted_input_blocks" in polytracker_json
 
 
-def test_taint_log():
-    target_name = "test_taint_log.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    log_processed_sets = pp.processed_taint_sets
+@pytest.mark.program_trace("test_open.c")
+def test_source_open_full_validate_schema(program_trace: ProgramTrace):
+    forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
+    json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    # TODO: Uncomment once we update this function
+    # test_polyprocess_taint_sets(json_path, forest_path)
+
+
+@pytest.mark.program_trace("test_memcpy.c")
+def test_memcpy_propagate(program_trace: ProgramTrace):
+    info = program_trace.functions["dfs$touch_copied_byte"]
+    assert isinstance(info, TaintForestFunctionInfo)
+    assert 1 in info.input_byte_labels[to_native_path(TEST_DATA_PATH)]
+
+
+@pytest.mark.program_trace("test_taint_log.c")
+def test_taint_log(program_trace: ProgramTrace):
+    input_bytes = program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
     for i in range(0, 10):
-        assert i in log_processed_sets["main"]["input_bytes"][test_filename]
+        assert i in input_bytes
 
 
-def test_config_files():
-    target_name = "test_taint_log.c"
-    target_bin_path = os.path.join(BIN_DIR, target_name + ".bin")
-    assert os.path.exists(target_bin_path) is True
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    os.environ["POLYPATH"] = test_filename
-    os.environ["POLYOUTPUT"] = os.path.join(TEST_RESULTS_DIR, target_name)
-    # Test config, this changes the polystart/polyend
+@pytest.mark.program_trace("test_taint_log.c", config_path=CONFIG_DIR / "new_range.json")
+def test_config_files(program_trace: ProgramTrace):
+    # the new_range.json config changes the polystart/polyend to
     # POLYSTART: 1, POLYEND: 3
-    copyfile(os.path.join(CONFIG_DIR, "new_range.json"), "./polytracker_config.json")
-    ret_val = subprocess.call([target_bin_path, test_filename])
-    assert ret_val == 0
-    # Assert that the appropriate files were created
-    forest_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_forest.bin")
-    # Add the 0 here for thread counting.
-    json_path = os.path.join(TEST_RESULTS_DIR, target_name + "0_process_set.json")
-    assert os.path.exists(forest_path) is True
-    assert os.path.exists(json_path) is True
-    pp = PolyProcess(json_path, forest_path)
-    pp.process_taint_sets()
     for i in range(1, 4):
-        assert i in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
+        assert i in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
     for i in range(4, 10):
-        assert i not in pp.processed_taint_sets["main"]["input_bytes"][test_filename]
-    os.remove("./polytracker_config.json")
+        assert i not in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_source_fopen():
-    target_name = "test_fopen.c"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    fopen_processed_sets = pp.processed_taint_sets
-    assert 0 in fopen_processed_sets["main"]["input_bytes"][test_filename]
+@pytest.mark.program_trace("test_fopen.c")
+def test_source_fopen(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_source_ifstream():
-    target_name = "test_ifstream.cpp"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    ifstream_processed_sets = pp.processed_taint_sets
-    assert 0 in ifstream_processed_sets["main"]["input_bytes"][test_filename]
+@pytest.mark.program_trace("test_ifstream.cpp")
+def test_source_ifstream(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 
-def test_cxx_object_propagation():
-    target_name = "test_object_propagation.cpp"
-    pp = validate_execute_target(target_name)
-    object_processed_sets = pp.processed_taint_sets
-    fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
-    assert len(fnames) > 0
+@pytest.mark.program_trace("test_object_propagation.cpp")
+def test_cxx_object_propagation(program_trace: ProgramTrace):
+    # object_processed_sets = pp.processed_taint_sets
+    # TODO: Update "tainted_string" in the ProgramTrace class
+    # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
+    # assert len(fnames) > 0
+    pass
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
-def test_cxx_vector():
-    target_name = "test_vector.cpp"
-    test_filename = "/polytracker/tests/test_data/test_data.txt"
-    pp = validate_execute_target(target_name)
-    vector_processed_sets = pp.processed_taint_sets
-    assert 0 in vector_processed_sets["main"]["input_bytes"][test_filename]
+@pytest.mark.program_trace("test_vector.cpp")
+def test_cxx_vector(program_trace: ProgramTrace):
+    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]

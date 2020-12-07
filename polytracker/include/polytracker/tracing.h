@@ -7,6 +7,7 @@
 #ifndef POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 #define POLYTRACKER_INCLUDE_POLYTRACKER_TRACING_H_
 
+#include <atomic>
 #include <functional>
 #include <list>
 #include <stack>
@@ -16,7 +17,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <atomic>
 
 #include "dfsan/dfsan_types.h"
 #include "polytracker/basic_block_types.h"
