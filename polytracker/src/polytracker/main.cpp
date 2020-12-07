@@ -107,7 +107,7 @@ void polytracker_parse_config(std::ifstream &config_file) {
 // Returns false if no config found.
 bool polytracker_detect_config(std::ifstream &config) {
   char cwd[PATH_MAX];
-  if (!getcwd(cwd, sizeof(cwd)) != NULL) {
+  if (getcwd(cwd, sizeof(cwd)) == NULL) {
     perror("getcwd() error");
     return false;
   }
