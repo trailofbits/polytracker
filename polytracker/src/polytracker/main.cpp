@@ -15,6 +15,10 @@
 #include <iostream>
 #include <string>
 
+#include <limits.h>
+#include <stdio.h>
+#include <unistd.h>
+
 using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
@@ -100,10 +104,16 @@ void polytracker_parse_config(std::ifstream &config_file) {
 }
 
 // Determines if a polytracker config is in use or not.
-// Returns NULL if no config found.
+// Returns false if no config found.
 bool polytracker_detect_config(std::ifstream &config) {
+  char cwd[PATH_MAX];
+  if (!getcwd(cwd, sizeof(cwd)) != NULL) {
+    perror("getcwd() error");
+    return false;
+  }
+
   // Check current dir.
-  config.open("./polytracker_config.json");
+  config.open(std::string(cwd) + std::string("/.polytracker_config.json"));
   if (config.good()) {
     return true;
   }
