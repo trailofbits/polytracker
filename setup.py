@@ -60,20 +60,24 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=[
+        'cxxfilt==0.2.2',
+        'docker==4.4.0',
         'graphviz==0.14.1',
+        'intervaltree==3.0.2',
         'matplotlib==3.3.0',
         'networkx==2.4',
+        'Pillow>=7.2.0',
         'pygraphviz==1.5',
         'pydot==1.4.1',
         'tqdm==4.48.0',
         'typing_extensions==3.7.4.2'
     ],
     extras_require={
-        "dev": ["black", "mypy", "pytest"]
+        "dev": ["black>=20.8b1", "mypy", "pytest"]
     },
     entry_points={
         'console_scripts': [
-            'polyprocess = polytracker.polyprocess.__main__:main'
+            'polytracker = polytracker.__main__:main'
         ]
     },
     classifiers=[

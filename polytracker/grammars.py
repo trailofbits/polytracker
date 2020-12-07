@@ -1,15 +1,19 @@
 import heapq
 import itertools
+from argparse import ArgumentParser, Namespace
 from collections import defaultdict
-from subprocess import check_call
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union, BinaryIO, Callable
+from logging import getLogger
+from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import networkx as nx
-from networkx.drawing.nx_pydot import write_dot
 from tqdm import tqdm
 
 from .cfg import DiGraph
+from .plugins import Command
 from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
+
+
+log = getLogger("grammars")
 
 
 class Terminal:
@@ -646,13 +650,59 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     return grammar
 
 
-def extract(traces: Iterable[PolyTrackerTrace]) -> Grammar:
+def extract(traces: Iterable[PolyTrackerTrace], simplify: bool = False) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
         # grammar.match(trace.inputstr)
         trace_iter.set_description("simplifying the grammar")
-        grammar.simplify()
+        if simplify:
+            grammar.simplify()
         return grammar
     return Grammar()
+
+
+class ExtractGrammarCommand(Command):
+    name = "grammar"
+    help = "extract a grammar from one or more program traces"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.traces: List[PolyTrackerTrace] = []
+        self.grammar: Optional[Grammar] = None
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument(
+            "TRACES",
+            nargs="+",
+            action="append",
+            type=str,
+            help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
+            "was sent to the instrumented parser to generate polytracker_json",
+        )
+        parser.add_argument("--simplify", "-s", action="store_true", help="simplify the grammar")
+
+    def run(self, args: Namespace):
+        if len(args.TRACES[0]) % 2 != 0:
+            raise ValueError("The number of files provided in the TRACES argument must be a multiple of two!")
+        self.traces = []
+        try:
+            for json_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
+                with open(json_file, "rb") as jf:
+                    with open(input_file, "rb") as inputf:
+                        trace = PolyTrackerTrace.parse(jf, input_file=inputf)
+                if not trace.is_cfg_connected():
+                    roots = list(trace.cfg_roots())
+                    if len(roots) == 0:
+                        log.error(f"Basic block trace of {json_file} has no roots!\n\n")
+                    else:
+                        root_names = "".join(f"\t{r!s}\n" for r in roots)
+                        log.error(f"Basic block trace of {json_file} has multiple roots:\n{root_names}")
+                    exit(1)
+                self.traces.append(trace)
+        except ValueError as e:
+            log.error(f"{e!s}\n\n")
+            exit(1)
+        self.grammar = extract(self.traces, simplify=args.simplify)
+        print(str(self.grammar))

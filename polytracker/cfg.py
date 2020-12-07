@@ -9,6 +9,7 @@ from typing import (
     Generic,
     ItemsView,
     Iterable,
+    Iterator,
     KeysView,
     List,
     Optional,
@@ -18,8 +19,13 @@ from typing import (
     Union,
 )
 
+import cxxfilt
 import graphviz
 import networkx as nx
+import os
+
+from .cache import OrderedSet
+
 
 N = TypeVar("N")
 D = TypeVar("D", bound="DiGraph")
@@ -55,8 +61,12 @@ class DiGraph(nx.DiGraph, Generic[N]):
     def depth(self, node: N) -> Union[int, float]:
         return min(self.path_length(root, node) for root in self.roots)
 
-    def ancestors(self, node: N) -> Set[N]:
-        return nx.ancestors(self, node)
+    def ancestors(self, node: N) -> OrderedSet[N]:
+        if not self.has_node(node):
+            raise nx.NetworkXError(f"Node {node} is not in the graph")
+        return OrderedSet(
+            *(x for _, x in sorted((d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node))
+        )
 
     def has_one_predecessor(self, node: N) -> bool:
         """Returns whether the given node has exactly one predecessor"""
@@ -169,20 +179,74 @@ class FunctionInfo:
         self,
         name: str,
         cmp_bytes: Dict[str, List[int]],
-        input_bytes: Dict[str, List[int]] = None,
+        input_bytes: Optional[Dict[str, List[int]]] = None,
         called_from: Iterable[str] = (),
     ):
         self.name: str = name
         self.called_from: FrozenSet[str] = frozenset(called_from)
-        self.cmp_bytes: Dict[str, List[int]] = cmp_bytes
+        self._cmp_bytes: Dict[str, List[int]] = cmp_bytes
         if input_bytes is None:
-            self.input_bytes: Dict[str, List[int]] = cmp_bytes
+            self._input_bytes: Dict[str, List[int]] = cmp_bytes
         else:
-            self.input_bytes = input_bytes
+            self._input_bytes = input_bytes
+        self._demangled_name: Optional[str] = None
+
+    @property
+    def demangled_name(self) -> str:
+        if self._demangled_name is None:
+            self._demangled_name = self.name
+            if self._demangled_name.startswith("dfs$"):
+                self._demangled_name = self._demangled_name[4:]
+            self._demangled_name = cxxfilt.demangle(self._demangled_name)
+        return self._demangled_name  # type: ignore
+
+    def source_size(self, source: str) -> int:
+        if source not in self.taint_sources:
+            raise KeyError(source)
+        elif os.path.exists(source):
+            return os.stat(source).st_size
+        else:
+            # find the largest byte this trace touched
+            return max(self.input_bytes.get(source, default=[]))
+
+    def taint_source_sizes(self) -> Dict[str, int]:
+        return {source: self.source_size(source) for source in self.taint_sources}
+
+    @property
+    def input_bytes(self) -> Dict[str, List[int]]:
+        return self._input_bytes
+
+    @property
+    def cmp_bytes(self) -> Dict[str, List[int]]:
+        return self._cmp_bytes
 
     @property
     def taint_sources(self) -> KeysView[str]:
         return self.input_bytes.keys()
+
+    @staticmethod
+    def tainted_chunks(byte_offsets: Iterable[int]) -> Iterator[Tuple[int, int]]:
+        start_offset: Optional[int] = None
+        last_offset: Optional[int] = None
+        for offset in sorted(byte_offsets):
+            if last_offset is None:
+                start_offset = offset
+            elif offset != last_offset and offset != last_offset + 1:
+                yield start_offset, last_offset + 1  # type: ignore
+                start_offset = offset
+            last_offset = offset
+        if last_offset is not None:
+            yield start_offset, last_offset + 1  # type: ignore
+
+    def input_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.input_bytes.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
+
+    def cmp_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+        for source, byte_offsets in self.cmp_bytes.items():
+            for start, end in FunctionInfo.tainted_chunks(byte_offsets):
+                yield source, (start, end)
 
     def __getitem__(self, input_source_name: str) -> List[int]:
         return self.input_bytes[input_source_name]
@@ -196,8 +260,11 @@ class FunctionInfo:
     def __hash__(self):
         return hash(self.name)
 
+    def __eq__(self, other):
+        return isinstance(other, FunctionInfo) and other.name == self.name
+
     def __str__(self):
-        return self.name
+        return self.demangled_name
 
     def __repr__(self):
         return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"

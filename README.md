@@ -9,10 +9,59 @@ PolyTracker is a tool for the _Automated Lexical Annotation and Navigation of Pa
 
 PolyTracker can be used in conjunction with [PolyFile](https://github.com/trailofbits/polyfile) to automatically determine the semantic purpose of the functions in a parser.
 
-## Quickstart: Docker
+## Quickstart
 
-The easiest way to run PolyTracker is via Docker. To build the Docker
-container, simply run the following from the root of this repository:
+PolyTracker is controlled via a Python script called `polytracker`. You can install it by running
+```
+pip3 install polytracker
+```
+PolyTracker requires a very particular system environment to run, so almost all users are likely to run it
+in a virtualized environment. Luckily, `polytracker` makes this easy. All you need to do is have `docker` installed,
+then run:
+```
+polytracker docker pull
+```
+and
+```
+polytracker docker run
+```
+The latter command will mount the current working directory into the PolyTracker Docker container,
+and allow you to build and run instrumented programs.
+
+The `polytracker` control script—which you can run from either your host system or from inside the
+Docker container—has a variety of commands, both for instrumenting programs as well as analyzing the
+resulting artifacts. For example, you can explore the dataflows in the execution, reconstruct the
+instrumented program's control flow graph, and even extract a context free grammar matching the
+inputs accepted by the program. You can explore these commands by running
+```
+polytracker --help
+```
+
+## Instrumenting a simple C/C++ program 
+
+The following assumes you are working inside of the Docker container.
+
+If you have a C target, you can instrument it by invoking the C compiler and passing the `--instrument-target` before your cflags 
+```
+${CC} --instrument-target -g -o my_target my_target.c 
+```
+
+Repeat the same steps above for a cxx file by invoking `${CXX}` instead of `${CC}`
+
+## Dependencies and Prerequisites
+
+PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
+
+PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets. 
+
+PolyTracker depends on python3.7+ 
+
+The following tools and libraries are required to run PolyTracker:
+* LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
+
+## Manually building the examples
+
+Check out this Git repository. From the root, build the base PolyTracker Docker image:
 ```
 docker build -t trailofbits/polytracker . 
 ```
@@ -38,36 +87,6 @@ All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84
 cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf
 ```
-
-## Quickstart: Instrumenting a simple C/C++ program 
-
-First build the base docker image 
-```
-docker build -t trailofbits/polytracker .
-``` 
-
-Next, enter the docker image and mount your target as a volume 
-```
-docker run --rm -it -v /path/to/your/target:/workdir trailofbits/polytracker:latest /bin/bash
-```
-
-If you have a C target, you can instrument it by invoking the C compiler and passing the `--instrument-target` before your cflags 
-```
-${CC} --instrument-target -g -o my_target my_target.c 
-```
-
-Repeat the same steps above for a cxx file by invoking `${CXX}` instead of `${CC}`
-
-## Dependencies and Prerequisites
-
-PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
-
-PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets. 
-
-PolyTracker depends on python3.7+ 
-
-The following tools and libraries are required to run PolyTracker:
-* LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
 ## Building PolyTracker from Source 
 
@@ -122,6 +141,48 @@ ${CC}/{CXX} --instrument-bitcode target.bc -o target_track --libs <any libs go h
 If you aren't sure about what libraries you might need to link for a complex target, the enviornment variable `WLLVM_ARTIFACT_STORE` sets a directory that contains a mainfest that logs all build commands and artifacts used. You should be able to rebuild the target completely using information in the mantifest and the artifacts. 
 
 
+## Environment Variables 
+
+PolyTracker accepts configuration paramters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
+
+```
+POLYPATH: The path to the file to mark as tainted 
+
+POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
+
+POLYSTART: Start offset to track 
+
+POLYEND: End offset to track
+
+POLYOUTPUT: Provides a path/prefix to output polytracker information too
+
+POLYCONFIG: Provides a path to a JSON file specifying setings
+
+WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
+```
+
+## Configuration Files 
+
+Rather than setting environment variables on every run, you can make a configuration file.
+
+Example:
+```
+{
+    "POLYSTART": 1,
+    "POLYEND": 3,
+    "POLYTTL": 16
+}
+``` 
+
+Polytracker will search for config files in the following way: 
+1. If POLYCONFIG is specified, it will grab it from there
+2. Checks current directory there is a polytracker_config.json
+3. Checks the .config directory under the users home ("~/.config/polytracker/polytracker_config.json")
+
+If a configuration isn't specified or if certain settings aren't tweaked, defaults are set if possible. Some settings
+like POLYPATH do not have defaults, so if POLYPATH isn't specified via environment variable or config, an error will
+be thrown.
+
 ## Running an Instrumented Program
 
 The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in a future release.)
@@ -134,19 +195,12 @@ For example, with our instrumented version of MuPDF, run
 POLYPATH=input.pdf POLYTTL=32 ./mutool_track info input.pdf
 ```
 On program exit, those artifacts will be created in the current directory.
-These are intended to be consumed by PolyProcess to produce a final `polytracker.json` file,
-but can be consumed by other tools. The artifacts are documented [here.](docs/ARTIFACTS.md)
+These artifacts can be inspected and manipulated by the `polytracker` tool on the host system.
+The artifacts are documented [here.](docs/ARTIFACTS.md)
 
 The optional `POLYTRACE` enviornment variable can be set to `POLYTRACE=1` to produce a basic-block
 level trace of the program. This trace data will be included in the output JSON file under the
 "`trace`" key.
-
-To create the final JSON, run `polyprocess` 
-```
-polyprocess --json path/to/polytracker_process_set.json --forest path/to/polytracker_forest.bin
-```
-
-By default this produces a polytracker.json file, which can then be given to PolyFile. 
 
 ## Creating custom ignore lists from pre-built libraries 
 
