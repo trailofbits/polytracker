@@ -1,12 +1,26 @@
 import argparse
 import logging
+from argparse import Namespace
+from pathlib import Path
 
-from .plugins import add_command_subparsers
+from .plugins import add_command_subparsers, Command
 
 # the following line imports modules so their commands can register themselves
 from . import containerization, datalog, grammars, polytracker
 
 logger = logging.getLogger("polytracker")
+
+TEST_DIR = Path(__file__).parent.parent / "tests"
+
+if (TEST_DIR / "test_polytracker.py").exists():
+    import pytest
+
+    class TestCommand(Command):
+        name = "test"
+        help = "run the PolyTracker tests"
+
+        def run(self, args: Namespace):
+            return pytest.main([str(TEST_DIR)])
 
 
 def main():
