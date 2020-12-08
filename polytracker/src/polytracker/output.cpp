@@ -218,6 +218,18 @@ static constexpr const char * createCFGTable() {
  			") WITHOUT ROWID;";
 }
 
+static constexpr const char * createTaintForestTable() {
+	return "CREATE TABLE IF NOT EXISTS taint_forest"
+		"parent_one INTEGER,"
+		"parent_two INTEGER,"
+		"label INTEGER,"
+		"input_id INTEGER,"
+		"PRIMARY KEY(input_id, label),"
+		"FOREIGN KEY(input_id) REFERENCES input(id),"
+		"FOREIGN KEY(label) REFERENCES accessed_label (label)"
+		") WITHOUT ROWID;";
+}
+
 static void createDBTables(sqlite3 * output_db) {
 	std::string table_gen =
 			std::string(createInputTable()) + 
@@ -230,7 +242,8 @@ static void createDBTables(sqlite3 * output_db) {
 			std::string(createPolytrackerTable()) +
 			std::string(createCanonicalTable()) +
 			std::string(createChunksTable()) +
-			std::string(createCFGTable());
+			std::string(createCFGTable()) + 
+			std::string(createTaintForestTable());
 
 	sql_exec(output_db, table_gen.c_str());
 }
@@ -520,13 +533,13 @@ static void storeRuntimeTrace(const RuntimeInfo *runtime_info, sqlite3 * output_
 	std::cerr << "Done emitting the trace events." << std::endl << std::flush;
 }
 
-static void storeTaintForest(const std::string &outfile,
+//When POLYFOREST is set we dump to disk instead of the database. This saves space if needed but its not as convenient
+static void storeTaintForestDisk(const std::string &outfile,
                               const RuntimeInfo *runtime_info) {
 //TODO You know, this would be nice to know before the taint run is over...
-  std::string forest_fname = std::string(outfile) + "_forest.bin";
-  FILE *forest_file = fopen(forest_fname.c_str(), "w");
+  FILE *forest_file = fopen(outfile.c_str(), "w");
   if (forest_file == NULL) {
-    std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
+    std::cout << "Failed to dump forest to file: " << outfile << std::endl;
     exit(1);
   }
   const dfsan_label &num_labels = next_label;
@@ -539,6 +552,26 @@ static void storeTaintForest(const std::string &outfile,
   }
   fclose(forest_file);
 }
+static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id) {
+	const char * insert = "INSERT INTO taint_forest (parent_one, parent_two, label, input_id) VALUES (?, ?, ?, ?);";
+	sqlite3_stmt * stmt;
+	sql_prep(output_db, insert, -1, &stmt, NULL);
+	const dfsan_label &num_labels = next_label;
+	
+	for (int i = 0; i < num_labels; i++) {
+		taint_node_t *curr = getTaintNode(i);
+    	dfsan_label node_p1 = getTaintLabel(curr->p1);
+    	dfsan_label node_p2 = getTaintLabel(curr->p2);
+		sqlite3_bind_int(stmt, 1, getTaintLabel(curr->p1));
+		sqlite3_bind_int(stmt, 2, getTaintLabel(curr->p2));
+		sqlite3_bind_int(stmt, 3, i);
+		sqlite3_bind_int(stmt, 4, input_id);
+		sql_step(output_db, stmt);
+		sqlite3_reset(stmt);
+	}	
+	sqlite3_finalize(stmt);
+}
+
 void storeVersion(sqlite3 * output_db) {
 	sqlite3_stmt * stmt;
 	const char * insert = "INSERT OR IGNORE INTO polytracker(store_key, value)"
@@ -554,7 +587,7 @@ static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest
 	createDBTables(output_db);
 	const input_id_t input_id = storeNewInput(output_db);
 	if (input_id) {
-		storeTaintForest(forest_out_path, runtime_info);
+		storeTaintForestDisk(forest_out_path, runtime_info);
 	    storeVersion(output_db);
 		storeFunctionMap(runtime_info, output_db);
 		storeTaintedChunks(output_db, input_id);
@@ -573,10 +606,33 @@ static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest
 	}
 }
 
-void output(const char *forest_path, const char * db_path, const RuntimeInfo *runtime_info, const size_t& current_thread) {
+static void outputDB(const RuntimeInfo * runtime_info, sqlite3 * output_db, const size_t& current_thread) {
+	createDBTables(output_db);
+	const input_id_t input_id = storeNewInput(output_db);
+	if (input_id) {
+		storeTaintForest(runtime_info, output_db, input_id);
+	    storeVersion(output_db);
+		storeFunctionMap(runtime_info, output_db);
+		storeTaintedChunks(output_db, input_id);
+		storeCanonicalMapping(output_db, input_id);
+		//Note, try and store the trace first if it exists 
+		//The trace has more fine grained information than taint func access 
+		//This means that if we encounter some bytes already seen in the trace,
+		//We will ignore them
+		if (polytracker_trace) {
+			storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
+		}
+		else {
+			storeTaintFuncAccess(runtime_info, output_db, input_id);
+			storeFuncCFG(runtime_info, output_db, input_id, current_thread);
+		}
+	}
+}
+
+void output(const std::string& forest_path, const std::string& db_path, const RuntimeInfo *runtime_info, const size_t& current_thread) {
 	const std::lock_guard<std::mutex> guard(thread_id_lock);
-	const std::string forest_path_str = std::string(forest_path);	
-	const std::string db_name = std::string(db_path) + ".db";
+	const std::string db_name = db_path + ".db";
+	const std::string forest_fname = forest_path + "_forest.bin";
 	sqlite3 * output_db;
 	if(sqlite3_open(db_name.c_str(), &output_db)) {
 		std::cout << "Error! Could not open output db " << db_path << std::endl;
@@ -588,7 +644,28 @@ void output(const char *forest_path, const char * db_path, const RuntimeInfo *ru
     sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL, &errorMessage);
 	sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
-	outputDB(runtime_info, forest_path_str, output_db, current_thread);
+	outputDB(runtime_info, forest_fname, output_db, current_thread);
 	sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 	sqlite3_close(output_db);
 }
+
+void output(const std::string& db_path, const RuntimeInfo *runtime_info, const size_t& current_thread) {
+	const std::lock_guard<std::mutex> guard(thread_id_lock);
+	const std::string db_name = db_path + ".db";
+	sqlite3 * output_db;
+	if(sqlite3_open(db_name.c_str(), &output_db)) {
+		std::cout << "Error! Could not open output db " << db_path << std::endl;
+		exit(1);
+	}
+	char * errorMessage;
+	sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);
+    sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL, &errorMessage);
+	sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
+	outputDB(runtime_info, output_db, current_thread);
+	sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
+	sqlite3_close(output_db);
+}
+
+
