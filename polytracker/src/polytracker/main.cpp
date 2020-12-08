@@ -1,6 +1,5 @@
 #include "dfsan/dfsan.h"
 #include "dfsan/dfsan_types.h"
-#include "dfsan/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
@@ -10,28 +9,22 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#include "llvm/Support/JSON.h"
 #include <errno.h>
 #include <fstream>
 #include <iostream>
 #include <string>
-
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
 
-using json = nlohmann::json;
-
 #define DEFAULT_TTL 32
 
 extern int errno;
-<<<<<<< HEAD
-const char *polytracker_forest_name;
-const char *polytracker_db_name;
-=======
-std::string polytracker_output_filename = "";
+std::string polytracker_forest_name = "";
+std::string polytracker_db_name = "";
 int byte_start = -1;
 int byte_end = -1;
->>>>>>> master
 bool polytracker_trace = false;
 decay_val taint_node_ttl = -1;
 std::string target_file = "";
@@ -67,8 +60,8 @@ void setRemainingToDefault() {
   if (taint_node_ttl == -1) {
     taint_node_ttl = DEFAULT_TTL;
   }
-  if (polytracker_output_filename.empty()) {
-    polytracker_output_filename = "polytracker";
+  if (polytracker_db_name.empty()) {
+    polytracker_db_name = "polytracker";
   }
 }
 
@@ -80,21 +73,23 @@ void polytracker_parse_config(std::ifstream &config_file) {
   while (getline(config_file, line)) {
     json_str += line;
   }
-  auto config_json = json::parse(json_str);
-  if (config_json.contains("POLYPATH")) {
-    target_file = config_json["POLYPATH"].get<std::string>();
+  auto config_json = llvm::json::parse(json_str);
+  if (!config_json) {
+    std::cerr << "Error parsing JSON config, aborting!" << std::endl;
+    abort();
   }
-  if (config_json.contains("POLYSTART")) {
-    byte_start = config_json["POLYSTART"].get<int>();
+  auto json_obj = (*config_json).getAsObject();
+  if (auto ppath = json_obj->get("POLYPATH")) {
+    target_file = *(ppath->getAsString());
   }
-  if (config_json.contains("POLYEND")) {
-    byte_end = config_json["POLYEND"].get<int>();
+  if (auto pstart = json_obj->get("POLYSTART")) {
+    byte_start = *(pstart->getAsInteger());
   }
-  if (config_json.contains("POLYOUTPUT")) {
-    polytracker_output_filename = config_json["POLYOUTPUT"].get<std::string>();
+  if (auto pend = json_obj->get("POLYEND")) {
+    byte_end = *(pend->getAsInteger());
   }
-  if (config_json.contains("POLYTRACE")) {
-    std::string trace_str = config_json["POLYTRACE"].get<std::string>();
+  if (auto ptrace = json_obj->get("POLYTRACE")) {
+    std::string trace_str = *(ptrace->getAsString());
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
     if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
@@ -103,27 +98,16 @@ void polytracker_parse_config(std::ifstream &config_file) {
       polytracker_trace = true;
     }
   }
-  if (config_json.contains("POLYTTL")) {
-    taint_node_ttl = config_json["POLYTTL"].get<int>();
+  if (auto pttl = json_obj->get("POLYTTL")) {
+    taint_node_ttl = *(pttl->getAsInteger());
+  }
+  if (auto polydb = json_obj->get("POLYDB")) {
+    polytracker_db_name = *(polydb->getAsString());
+  }
+  if (auto pforest = json_obj->get("POLYFOREST")) {
+    polytracker_forest_name = *(pforest->getAsString());
   }
 }
-
-static inline void polytracker_parse_forest() {
-  const char *poly_output = polytracker_getenv("POLYFOREST");
-  if (poly_output != NULL) {
-    polytracker_forest_name = poly_output;
-  } else {
-    polytracker_forest_name = "polytracker";
-  }
-}
-
-static inline void polytracker_parse_db() {
-  const char * poly_db = polytracker_getenv("POLYDB");
-  if (poly_db != NULL) {
-    polytracker_db_name = poly_db;
-  }
-  else {
-    polytracker_db_name = "polytracker";
 
 // Determines if a polytracker config is in use or not.
 // Returns false if no config found.
@@ -149,20 +133,23 @@ bool polytracker_detect_config(std::ifstream &config) {
 
 // Parses the env looking to override current settings
 void polytracker_parse_env() {
-  if (getenv("POLYPATH")) {
-    target_file = getenv("POLYPATH");
+  if (auto ppath = getenv("POLYPATH")) {
+    target_file = ppath;
   }
-  if (getenv("POLYSTART")) {
-    byte_start = atoi(getenv("POLYSTART"));
+  if (auto pstart = getenv("POLYSTART")) {
+    byte_start = atoi(pstart);
   }
-  if (getenv("POLYEND")) {
-    byte_end = atoi(getenv("POLYEND"));
+  if (auto pend = getenv("POLYEND")) {
+    byte_end = atoi(pend);
   }
-  if (getenv("POLYOUTPUT")) {
-    polytracker_output_filename = getenv("POLYOUTPUT");
+  if (auto pdb = getenv("POLYDB")) {
+    polytracker_db_name = pdb;
   }
-  if (getenv("POLYTRACE")) {
-    std::string trace_str = getenv("POLYTRACE");
+  if (auto pforest = getenv("POLYFOREST")) {
+    polytracker_forest_name = pforest;
+  }
+  if (auto ptrace = getenv("POLYTRACE")) {
+    std::string trace_str = ptrace;
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
     if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
@@ -186,6 +173,7 @@ polytrackers settings
 */
 void polytracker_get_settings() {
   std::ifstream config;
+
   if (polytracker_detect_config(config)) {
     polytracker_parse_config(config);
   }
@@ -194,18 +182,7 @@ void polytracker_get_settings() {
 
   std::string poly_str(target_file);
   // Add named source for polytracker
-<<<<<<< HEAD
-  addInitialTaintSource(poly_str, byte_start, byte_end - 1, poly_str);
-  // Parse env vars
-  polytracker_parse_forest();
-  polytracker_parse_db();
-  polytracker_parse_polytrace();
-  polytracker_parse_ttl();
-=======
   addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
-  // Add source for standard input
-  addInitialTaintSource(fileno(stdin), 0, MAX_LABELS, stdin_string);
->>>>>>> master
 }
 
 static void polytracker_end() {
@@ -213,11 +190,7 @@ static void polytracker_end() {
 	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
   for (const auto thread_info : thread_runtime_info) {
-<<<<<<< HEAD
     output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id);
-=======
-    output(polytracker_output_filename.c_str(), thread_info);
->>>>>>> master
   }
 }
 
