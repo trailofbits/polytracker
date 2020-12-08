@@ -190,7 +190,12 @@ static void polytracker_end() {
 	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
   for (const auto thread_info : thread_runtime_info) {
-    output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id);
+    if (polytracker_forest_name.empty()) {
+      output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id); 
+    }
+    else {
+      output(polytracker_db_name, thread_info, thread_id);
+    }
   }
 }
 
