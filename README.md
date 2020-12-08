@@ -54,7 +54,7 @@ PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanit
 
 PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets. 
 
-PolyTracker depends on python3.7+ 
+PolyTracker depends on python3.7+ and includes [nlohmann::json](https://github.com/nlohmann/json) in tree. 
 
 The following tools and libraries are required to run PolyTracker:
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
