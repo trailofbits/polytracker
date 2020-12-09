@@ -515,7 +515,7 @@ def polytracker_sql_version(*version):
         return func
     return wrapper
 
-def parse_sql(conn: sqlite3.Connection) -> ProgramTrace:
+def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
     version_query = "SELECT value FROM polytracker WHERE key='version';"
     cursor = conn.execute(version_query)
     print(cursor)
@@ -534,11 +534,11 @@ def parse_sql(conn: sqlite3.Connection) -> ProgramTrace:
                     f"({'.'.join(known_version)})"
                 )
         if version == known_version:
-            return parser(conn)  # type: ignore
+            return parser(conn, input_id)  # type: ignore
         raise ValueError(f"Unsupported PolyTracker version {version!r}")
 
 @polytracker_sql_version(3, 1, 0, "")
-def parse_db_v1(conn: sqlite3.Connection) -> ProgramTrace:
+def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
     #version = polytracker_json_obj["version"].split(".")
     version_query = "SELECT value FROM polytracker WHERE key='version';"
     cursor = conn.execute(version_query)
@@ -546,7 +546,21 @@ def parse_db_v1(conn: sqlite3.Connection) -> ProgramTrace:
     version = cursor[0][0].split(".")
     function_data = []
     tainted_functions = set()
-    
+
+    # To get tainted functions, this is the query I want to do, we can maybe use joins to optimize this query later
+    # 1. Get the block_gid of every accessed label (taint label that was touched)
+    # 2. The high 32 bits of the block_gid correspond to the function index, so I suppose we apply the mask to each GID
+    # 3. add each element to the set tainted functions.
+    # FIXME we need some document name
+    block_gid_query = "SELECT block_gid FROM accessed_label WHERE input_id=?;"
+    # Execute the query here
+    # FIXME Update the C++ side to respect access type again (input/cmp)
+
+    # Build up the runtime CFG, can build up a set/memoized dict the same way with tainted functions
+    # 1. Query the func_cfg based on input_id and get all the runtime func calls
+    # 2. Add function names to the runtime_cfg set.
+
+    # Once all that is done, everything should work!
     for function_name, data in polytracker_json_obj["tainted_functions"].items():
         if "input_bytes" not in data:
             if "cmp_bytes" in data:
@@ -779,7 +793,9 @@ class TraceDiffCommand(Command):
 
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument("polytracker_db1", type=str, help="the sqlite3 db file for the reference trace")
-        parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
+        #parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
+        parser.add_argument("input_id1", type=int, help="input id of reference trace instance")
+        parser.add_argument("input_id2", type=int, help="input id of different trace instance")
         #parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
         #parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
        # parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
@@ -793,10 +809,11 @@ class TraceDiffCommand(Command):
             print(f"Error! Database file {args.polytracker_db2} not found!")
         with sqlite3.connect(args.polytracker_db1) as f:
             #trace1 = parse(json.load(f), args.taint_forest_bin1)
-            trace1 = parse_sql(f)
-        with sqlite3.connect(args.polytracker_db2) as f:
+            trace1 = parse_sql(f, args.input_id1)
+            trace2 = parse_sql(f, args.input_id2)
+        #with sqlite3.connect(args.polytracker_db2) as f:
             #trace2 = parse(json.load(f), args.taint_forest_bin2)
-            trace2 = parse_sql(f)
+            #trace2 = parse_sql(f)
         diff = trace1.diff(trace2)
         print(str(diff))
         if args.image is not None:
