@@ -219,7 +219,7 @@ static constexpr const char * createCFGTable() {
 }
 
 static constexpr const char * createTaintForestTable() {
-	return "CREATE TABLE IF NOT EXISTS taint_forest"
+	return "CREATE TABLE IF NOT EXISTS taint_forest ("
 		"parent_one INTEGER,"
 		"parent_two INTEGER,"
 		"label INTEGER,"
@@ -557,11 +557,8 @@ static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_
 	sqlite3_stmt * stmt;
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	const dfsan_label &num_labels = next_label;
-	
 	for (int i = 0; i < num_labels; i++) {
 		taint_node_t *curr = getTaintNode(i);
-    	dfsan_label node_p1 = getTaintLabel(curr->p1);
-    	dfsan_label node_p2 = getTaintLabel(curr->p2);
 		sqlite3_bind_int(stmt, 1, getTaintLabel(curr->p1));
 		sqlite3_bind_int(stmt, 2, getTaintLabel(curr->p2));
 		sqlite3_bind_int(stmt, 3, i);
