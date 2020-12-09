@@ -99,7 +99,8 @@ static constexpr const char * createInputTable() {
            "  path TEXT,"
            "  track_start BIGINT,"
            "  track_end BIGINT,"
-           "  size BIGINT"
+           "  size BIGINT,"
+		   "  trace_level TINYINT"
            ");";
 }
 
@@ -278,8 +279,8 @@ static const input_id_t storeNewInput(sqlite3 * output_db) {
 		exit(1);
 	}
 	sqlite3_stmt * stmt;
-	const char * insert = "INSERT INTO input(path, track_start, track_end, size)"
-	"VALUES(?, ?, ?, ?);";
+	const char * insert = "INSERT INTO input(path, track_start, track_end, size, trace_level)"
+	"VALUES(?, ?, ?, ?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	for (const auto pair : name_target_map) {
 		sqlite3_bind_text(stmt, 1, pair.first.c_str(), pair.first.length(), SQLITE_STATIC);
@@ -289,6 +290,7 @@ static const input_id_t storeNewInput(sqlite3 * output_db) {
 			std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
 			return file.tellg();
 		}(pair.first));
+		sqlite3_bind_int(stmt, 5, polytracker_trace);
 		sql_step(output_db, stmt);
 		sqlite3_reset(stmt);
 	}
