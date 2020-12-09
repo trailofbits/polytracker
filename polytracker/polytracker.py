@@ -23,6 +23,7 @@ from typing import (
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
+import sqlite3
 
 from .cfg import CFG, FunctionInfo
 from .plugins import Command, Subcommand
@@ -490,7 +491,7 @@ class TraceDiff:
 
 
 POLYTRACKER_JSON_FORMATS: List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
-
+POLYTRACKER_SQL_FORMATS : List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
 
 def normalize_version(*version: Iterable[VersionElement]) -> Tuple[Any, ...]:
     version = tuple(str(v) for v in version)
@@ -507,6 +508,71 @@ def polytracker_version(*version):
 
     return wrapper
 
+def polytracker_sql_version(*version):
+    def wrapper(func):
+        POLYTRACKER_SQL_FORMATS.append((normalize_version(*version), func))
+        POLYTRACKER_SQL_FORMATS.sort(reverse=True)
+        return func
+    return wrapper
+
+def parse_sql(conn: sqlite3.Connection) -> ProgramTrace:
+    version_query = "SELECT value FROM polytracker WHERE key='version';"
+    cursor = conn.execute(version_query)
+    print(cursor)
+    # There should only be one row,
+    version_str: str = cursor[0][0] # TODO can delete once we figure out datatype
+    print(version_str)
+    version = normalize_version(version_str.split("."))
+    if len(version) > 4:
+        log.warning(f"Unexpectedly long PolyTracker version: {version!r}")
+    for i, (known_version, parser) in enumerate(POLYTRACKER_SQL_FORMATS):
+        if version >= known_version:
+            if i == 0 and version > known_version:
+                log.warning(
+                    f"PolyTracker version {version!r} "
+                    "is newer than the latest supported by the polytracker Python module "
+                    f"({'.'.join(known_version)})"
+                )
+        if version == known_version:
+            return parser(conn)  # type: ignore
+        raise ValueError(f"Unsupported PolyTracker version {version!r}")
+
+@polytracker_sql_version(3, 1, 0, "")
+def parse_db_v1(conn: sqlite3.Connection) -> ProgramTrace:
+    #version = polytracker_json_obj["version"].split(".")
+    version_query = "SELECT value FROM polytracker WHERE key='version';"
+    cursor = conn.execute(version_query)
+    print(cursor)
+    version = cursor[0][0].split(".")
+    function_data = []
+    tainted_functions = set()
+    
+    for function_name, data in polytracker_json_obj["tainted_functions"].items():
+        if "input_bytes" not in data:
+            if "cmp_bytes" in data:
+                input_bytes = data["cmp_bytes"]
+            else:
+                input_bytes = {}
+        else:
+            input_bytes = data["input_bytes"]
+        if "cmp_bytes" in data:
+            cmp_bytes = data["cmp_bytes"]
+        else:
+            cmp_bytes = input_bytes
+        if function_name in polytracker_json_obj["runtime_cfg"]:
+            called_from = frozenset(polytracker_json_obj["runtime_cfg"][function_name])
+        else:
+            called_from = frozenset()
+        function_data.append(
+            FunctionInfo(name=function_name, cmp_bytes=cmp_bytes, input_bytes=input_bytes, called_from=called_from)
+        )
+        tainted_functions.add(function_name)
+    # Add any additional functions from the CFG that didn't operate on tainted bytes
+    for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
+        function_data.append(
+            FunctionInfo(name=function_name, cmp_bytes={}, called_from=polytracker_json_obj["runtime_cfg"][function_name])
+        )
+    return ProgramTrace(version=version, function_data=function_data)
 
 def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = None) -> ProgramTrace:
     if "version" in polytracker_json_obj:
@@ -712,17 +778,25 @@ class TraceDiffCommand(Command):
     help = "compute a diff of two program traces"
 
     def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
-        parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
-        parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
-        parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
+        parser.add_argument("polytracker_db1", type=str, help="the sqlite3 db file for the reference trace")
+        parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
+        #parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
+        #parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
+       # parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
+        #parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
         parser.add_argument("--image", type=str, default=None, help="path to optionally output a visualization of the" "diff")
 
     def run(self, args: Namespace):
-        with open(args.polytracker_json1) as f:
-            trace1 = parse(json.load(f), args.taint_forest_bin1)
-        with open(args.polytracker_json2) as f:
-            trace2 = parse(json.load(f), args.taint_forest_bin2)
+        if not os.path.exists(args.polytracker_db1):
+            print(f"Error! Database file {args.polytracker_db1} not found!")
+        if not os.path.exists(args.polytracker_db2):
+            print(f"Error! Database file {args.polytracker_db2} not found!")
+        with sqlite3.connect(args.polytracker_db1) as f:
+            #trace1 = parse(json.load(f), args.taint_forest_bin1)
+            trace1 = parse_sql(f)
+        with sqlite3.connect(args.polytracker_db2) as f:
+            #trace2 = parse(json.load(f), args.taint_forest_bin2)
+            trace2 = parse_sql(f)
         diff = trace1.diff(trace2)
         print(str(diff))
         if args.image is not None:
