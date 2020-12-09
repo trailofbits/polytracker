@@ -54,7 +54,8 @@ class ProgramTrace:
 
     def source_size(self, source: str) -> int:
         first_function = next(iter(self.functions.values()))
-        if os.path.exists(source) or (len(self.taint_sources) == 1 and isinstance(first_function, TaintForestFunctionInfo)):
+        if os.path.exists(source) or (
+                len(self.taint_sources) == 1 and isinstance(first_function, TaintForestFunctionInfo)):
             return first_function.source_size(source)
         else:
             return max(func.source_size(source) for func in self.functions.values())
@@ -95,7 +96,8 @@ class ProgramTrace:
 
 
 def print_file_context(
-    output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, max_highlight_bytes=32, indent: str = ""
+        output: TextIO, path: str, offset: int, length: int, num_bytes_context: int = 32, max_highlight_bytes=32,
+        indent: str = ""
 ):
     if length > max_highlight_bytes:
         extra_bytes = length - max_highlight_bytes
@@ -324,12 +326,12 @@ class TraceDiff:
                 # shared sources
                 self._bytes_only_in_first[source] = self._first_intervals[source].copy()
                 for interval in tqdm(
-                    self._second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False
+                        self._second_intervals[source], desc="Removing Trace 1 Overlap", unit=" intervals", leave=False
                 ):
                     self._bytes_only_in_first[source].remove_overlap(interval.begin, interval.end)
                 self._bytes_only_in_second[source] = self._second_intervals[source].copy()
                 for interval in tqdm(
-                    self._first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False
+                        self._first_intervals[source], desc="Removing Trace 2 Overlap", unit=" intervals", leave=False
                 ):
                     self._bytes_only_in_second[source].remove_overlap(interval.begin, interval.end)
                 assert len(self._bytes_only_in_first[source] & self._bytes_only_in_second[source]) == 0
@@ -375,8 +377,10 @@ class TraceDiff:
             num_bytes = max(self.trace1.source_size(source), self.trace2.source_size(source))
             return file_diff(
                 num_bytes,
-                lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),  # type: ignore
-                lambda offset: source in self._second_intervals and self._second_intervals[source].overlaps(offset),  # type: ignore
+                lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),
+                # type: ignore
+                lambda offset: source in self._second_intervals and self._second_intervals[source].overlaps(offset),
+                # type: ignore
             )
 
     def __bool__(self):
@@ -401,7 +405,8 @@ class TraceDiff:
             for src, (st, en) in self.input_chunks_only_in_first:
                 print_chunk_info(((src, (st, en)),))
                 for func in self.trace1.functions.values():
-                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st, en):
+                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st,
+                                                                                                                  en):
                         # find the control flows that could have caused the diff
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
@@ -435,7 +440,8 @@ class TraceDiff:
             for src, (st, en) in self.input_chunks_only_in_second:
                 print_chunk_info(((src, (st, en)),))
                 for func in self.trace2.functions.values():
-                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st, en):
+                    if IntervalTree.from_tuples((s, e) for r, (s, e) in func.input_chunks() if r == src).overlaps(st,
+                                                                                                                  en):
                         # find the control flows that could have caused the diff
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
@@ -491,7 +497,8 @@ class TraceDiff:
 
 
 POLYTRACKER_JSON_FORMATS: List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
-POLYTRACKER_SQL_FORMATS : List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
+POLYTRACKER_SQL_FORMATS: List[Tuple[Tuple[str, ...], Callable[[dict], ProgramTrace]]] = []
+
 
 def normalize_version(*version: Iterable[VersionElement]) -> Tuple[Any, ...]:
     version = tuple(str(v) for v in version)
@@ -508,19 +515,22 @@ def polytracker_version(*version):
 
     return wrapper
 
+
 def polytracker_sql_version(*version):
     def wrapper(func):
         POLYTRACKER_SQL_FORMATS.append((normalize_version(*version), func))
         POLYTRACKER_SQL_FORMATS.sort(reverse=True)
         return func
+
     return wrapper
+
 
 def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
     version_query = "SELECT value FROM polytracker WHERE key='version';"
     cursor = conn.execute(version_query)
     print(cursor)
     # There should only be one row,
-    version_str: str = cursor[0][0] # TODO can delete once we figure out datatype
+    version_str: str = cursor[0][0]  # TODO can delete once we figure out datatype
     print(version_str)
     version = normalize_version(version_str.split("."))
     if len(version) > 4:
@@ -537,9 +547,10 @@ def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
             return parser(conn, input_id)  # type: ignore
         raise ValueError(f"Unsupported PolyTracker version {version!r}")
 
+
 @polytracker_sql_version(3, 1, 0, "")
 def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
-    #version = polytracker_json_obj["version"].split(".")
+    # version = polytracker_json_obj["version"].split(".")
     version_query = "SELECT value FROM polytracker WHERE key='version';"
     cursor = conn.execute(version_query)
     print(cursor)
@@ -584,9 +595,11 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
     # Add any additional functions from the CFG that didn't operate on tainted bytes
     for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
         function_data.append(
-            FunctionInfo(name=function_name, cmp_bytes={}, called_from=polytracker_json_obj["runtime_cfg"][function_name])
+            FunctionInfo(name=function_name, cmp_bytes={},
+                         called_from=polytracker_json_obj["runtime_cfg"][function_name])
         )
     return ProgramTrace(version=version, function_data=function_data)
+
 
 def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = None) -> ProgramTrace:
     if "version" in polytracker_json_obj:
@@ -625,7 +638,8 @@ def parse_format_v1(polytracker_json_obj: dict) -> ProgramTrace:
     return ProgramTrace(
         version=(0, 0, 1),
         function_data=[
-            FunctionInfo(function_name, {"": taint_bytes}) for function_name, taint_bytes in polytracker_json_obj.items()
+            FunctionInfo(function_name, {"": taint_bytes}) for function_name, taint_bytes in
+            polytracker_json_obj.items()
         ],
     )
 
@@ -685,19 +699,20 @@ def parse_format_v3(polytracker_json_obj: dict) -> ProgramTrace:
     # Add any additional functions from the CFG that didn't operate on tainted bytes
     for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
         function_data.append(
-            FunctionInfo(name=function_name, cmp_bytes={}, called_from=polytracker_json_obj["runtime_cfg"][function_name])
+            FunctionInfo(name=function_name, cmp_bytes={},
+                         called_from=polytracker_json_obj["runtime_cfg"][function_name])
         )
     return ProgramTrace(version=version, function_data=function_data)
 
 
 class TaintForestFunctionInfo(FunctionInfo):
     def __init__(
-        self,
-        name: str,
-        forest: TaintForest,
-        cmp_byte_labels: Dict[str, List[int]],
-        input_byte_labels: Optional[Dict[str, List[int]]] = None,
-        called_from: Iterable[str] = (),
+            self,
+            name: str,
+            forest: TaintForest,
+            cmp_byte_labels: Dict[str, List[int]],
+            input_byte_labels: Optional[Dict[str, List[int]]] = None,
+            called_from: Iterable[str] = (),
     ):
         super().__init__(name=name, cmp_bytes={}, called_from=called_from)
         self.forest: TaintForest = forest
@@ -782,7 +797,8 @@ def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) ->
     # Add any additional functions from the CFG that didn't operate on tainted bytes
     for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
         function_data.append(
-            FunctionInfo(name=function_name, cmp_bytes={}, called_from=polytracker_json_obj["runtime_cfg"][function_name])
+            FunctionInfo(name=function_name, cmp_bytes={},
+                         called_from=polytracker_json_obj["runtime_cfg"][function_name])
         )
     return ProgramTrace(version=version, function_data=function_data)
 
@@ -793,14 +809,15 @@ class TraceDiffCommand(Command):
 
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument("polytracker_db1", type=str, help="the sqlite3 db file for the reference trace")
-        #parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
+        # parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
         parser.add_argument("input_id1", type=int, help="input id of reference trace instance")
         parser.add_argument("input_id2", type=int, help="input id of different trace instance")
-        #parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
-        #parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
-       # parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
-        #parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
-        parser.add_argument("--image", type=str, default=None, help="path to optionally output a visualization of the" "diff")
+        # parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
+        # parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
+        # parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
+        # parser.add_argument("taint_forest_bin2", type=str, help="the taint forest file for the different trace")
+        parser.add_argument("--image", type=str, default=None,
+                            help="path to optionally output a visualization of the" "diff")
 
     def run(self, args: Namespace):
         if not os.path.exists(args.polytracker_db1):
@@ -808,12 +825,12 @@ class TraceDiffCommand(Command):
         if not os.path.exists(args.polytracker_db2):
             print(f"Error! Database file {args.polytracker_db2} not found!")
         with sqlite3.connect(args.polytracker_db1) as f:
-            #trace1 = parse(json.load(f), args.taint_forest_bin1)
+            # trace1 = parse(json.load(f), args.taint_forest_bin1)
             trace1 = parse_sql(f, args.input_id1)
             trace2 = parse_sql(f, args.input_id2)
-        #with sqlite3.connect(args.polytracker_db2) as f:
-            #trace2 = parse(json.load(f), args.taint_forest_bin2)
-            #trace2 = parse_sql(f)
+        # with sqlite3.connect(args.polytracker_db2) as f:
+        # trace2 = parse(json.load(f), args.taint_forest_bin2)
+        # trace2 = parse_sql(f)
         diff = trace1.diff(trace2)
         print(str(diff))
         if args.image is not None:
@@ -841,14 +858,28 @@ class TemporalVisualization(Command):
         forest = TaintForest(args.taint_forest_bin, canonical_mapping=canonical_mapping)
         temporal_animation(args.OUTPUT_GIF_PATH, forest)
 
-class InputList(Command):
+
+class ListCommand(Command):
     name = "list"
-    help = "list previously run input files and their corresponding input ids"
+    help = "list features from the database"
+    parser: ArgumentParser
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        self.parser = parser
+
+    def run(self, args: Namespace) -> None:
+        self.parser.print_help()
+
+
+class InputListCommand(Subcommand[ListCommand]):
+    name = "input"
+    help = "list all inputs that were run and their ID's"
+    parent_type = ListCommand
 
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument("polydb", type=str, help="Path to the parser's database file")
 
-    def run(self, args: Namespace) -> None:
+    def run(self, args: Namespace):
         if not os.path.exists(args.polydb):
             print(f"Error! Could not find {args.polydb}")
             exit(1)
@@ -856,6 +887,25 @@ class InputList(Command):
             cursor = conn.execute("select * from input;")
             for row in cursor:
                 print(f"ID: {row[0]}, Input: {row[1]}")
+
+
+class TraceListCommand(Subcommand[ListCommand]):
+    name = "trace"
+    help = "list all inputs that were run with POLYTRACE > 0 and their ID's"
+    parent_type = ListCommand
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("polydb", type=str, help="Path to the parser's database file")
+
+    def run(self, args: Namespace):
+        if not os.path.exists(args.polydb):
+            print(f"Error! Could not find {args.polydb}")
+            exit(1)
+        with sqlite3.connect(args.polydb) as conn:
+            cursor = conn.execute("select id, path, trace_level from input where trace_level=1;")
+            for row in cursor:
+                print(f"ID: {row[0]}, Input: {row[1]}")
+
 
 class TaintForestCommand(Command):
     name = "forest"
