@@ -824,7 +824,7 @@ class TemporalVisualization(Command):
     name = "temporal"
     help = "generate an animation of the file accesses in a runtime trace"
 
-    def __init_arguments__(self, parser):
+    def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument("polytracker_json", type=str, help="the JSON file for the trace")
         parser.add_argument("taint_forest_bin", type=str, help="the taint forest file for the trace")
         parser.add_argument("OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation")
@@ -841,6 +841,21 @@ class TemporalVisualization(Command):
         forest = TaintForest(args.taint_forest_bin, canonical_mapping=canonical_mapping)
         temporal_animation(args.OUTPUT_GIF_PATH, forest)
 
+class InputList(Command):
+    name = "list"
+    help = "list previously run input files and their corresponding input ids"
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("polydb", type=str, help="Path to the parser's database file")
+
+    def run(self, args: Namespace) -> None:
+        if not os.path.exists(args.polydb):
+            print(f"Error! Could not find {args.polydb}")
+            exit(1)
+        with sqlite3.connect(args.polydb) as conn:
+            cursor = conn.execute("select * from input;")
+            for row in cursor:
+                print(f"ID: {row[0]}, Input: {row[1]}")
 
 class TaintForestCommand(Command):
     name = "forest"
