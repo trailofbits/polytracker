@@ -3,13 +3,13 @@
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
+#include "polytracker/json.hpp"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "llvm/Support/JSON.h"
 #include <errno.h>
 #include <fstream>
 #include <iostream>
@@ -19,6 +19,8 @@
 #include <unistd.h>
 
 #define DEFAULT_TTL 32
+
+using json = nlohmann::json;
 
 extern int errno;
 std::string polytracker_forest_name = "";
@@ -73,23 +75,24 @@ void polytracker_parse_config(std::ifstream &config_file) {
   while (getline(config_file, line)) {
     json_str += line;
   }
-  auto config_json = llvm::json::parse(json_str);
-  if (!config_json) {
-    std::cerr << "Error parsing JSON config, aborting!" << std::endl;
-    abort();
+  auto config_json = json::parse(json_str);
+  if (config_json.contains("POLYPATH")) {
+    target_file = config_json["POLYPATH"].get<std::string>();
   }
-  auto json_obj = (*config_json).getAsObject();
-  if (auto ppath = json_obj->get("POLYPATH")) {
-    target_file = *(ppath->getAsString());
+  if (config_json.contains("POLYSTART")) {
+    byte_start = config_json["POLYSTART"].get<int>();
   }
-  if (auto pstart = json_obj->get("POLYSTART")) {
-    byte_start = *(pstart->getAsInteger());
+  if (config_json.contains("POLYEND")) {
+    byte_end = config_json["POLYEND"].get<int>();
   }
-  if (auto pend = json_obj->get("POLYEND")) {
-    byte_end = *(pend->getAsInteger());
+  if (config_json.contains("POLYDB")) {
+    polytracker_db_name = config_json["POLYDB"].get<std::string>();
   }
-  if (auto ptrace = json_obj->get("POLYTRACE")) {
-    std::string trace_str = *(ptrace->getAsString());
+  if (config_json.contains("POLYFOREST")) {
+    polytracker_forest_name = config_json["POLYFOREST"].get<std::string>();
+  }
+  if (config_json.contains("POLYTRACE")) {
+    std::string trace_str = config_json["POLYTRACE"].get<std::string>();
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
     if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
@@ -98,14 +101,8 @@ void polytracker_parse_config(std::ifstream &config_file) {
       polytracker_trace = true;
     }
   }
-  if (auto pttl = json_obj->get("POLYTTL")) {
-    taint_node_ttl = *(pttl->getAsInteger());
-  }
-  if (auto polydb = json_obj->get("POLYDB")) {
-    polytracker_db_name = *(polydb->getAsString());
-  }
-  if (auto pforest = json_obj->get("POLYFOREST")) {
-    polytracker_forest_name = *(pforest->getAsString());
+  if (config_json.contains("POLYTTL")) {
+    taint_node_ttl = config_json["POLYTTL"].get<int>();
   }
 }
 
