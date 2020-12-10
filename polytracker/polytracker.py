@@ -884,9 +884,10 @@ class InputListCommand(Subcommand[ListCommand]):
             print(f"Error! Could not find {args.polydb}")
             exit(1)
         with sqlite3.connect(args.polydb) as conn:
-            cursor = conn.execute("select * from input;")
-            for row in cursor:
-                print(f"ID: {row[0]}, Input: {row[1]}")
+            cursor = conn.execute("select id, path from input;")
+            results = [["ID", "PATH"]] + [row for row in cursor]
+            for row in results:
+                print("{: <20} {: <20}".format(*row))
 
 
 class TraceListCommand(Subcommand[ListCommand]):
@@ -902,9 +903,10 @@ class TraceListCommand(Subcommand[ListCommand]):
             print(f"Error! Could not find {args.polydb}")
             exit(1)
         with sqlite3.connect(args.polydb) as conn:
-            cursor = conn.execute("select id, path, trace_level from input where trace_level=1;")
-            for row in cursor:
-                print(f"ID: {row[0]}, Input: {row[1]}")
+            cursor = conn.execute("select id, trace_level, path from input where trace_level=1;")
+            result = [["ID", "TRACE_LEVEL", "PATH"]] + [row for row in cursor]
+            for row in result:
+                print("{: <20} {: <20} {: <20}".format(*row))
 
 
 class TaintForestCommand(Command):
