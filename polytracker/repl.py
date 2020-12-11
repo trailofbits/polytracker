@@ -192,6 +192,8 @@ class PolyTrackerREPL:
                                 retval = args.func(args)
                                 if retval is not None and retval != 0:
                                     next_prompt = error_prompt
+                            except KeyboardInterrupt:
+                                next_prompt = error_prompt
                             except SystemExit:
                                 next_prompt = error_prompt
                             except:
