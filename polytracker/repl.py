@@ -1,7 +1,9 @@
 import argparse
 import ast
 import traceback
+from datetime import datetime
 from io import StringIO
+from typing import Iterable, Set
 
 from prompt_toolkit import HTML, print_formatted_text, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -14,43 +16,50 @@ from pygments import lex
 from pygments.lexers.python import PythonLexer, PythonTracebackLexer
 
 from .polytracker import version
-from .plugins import add_command_subparsers, Command, COMMANDS
-
-
-class REPLCommand:
-    def __init__(self, command: Command):
-        self.command: Command = command
-
-    def __dir__(self):
-        return ()
-
-    def _ipython_key_completions_(self):
-        return ["foo", "bar"]
-
-    # def __repr__(self):
-    #    self.command.run()
-    def _ipython_display_(self):
-        print("FOO")
+from .plugins import add_command_subparsers, COMMANDS
 
 
 class PolyTrackerCompleter(Completer):
-    def __init__(self, is_multi_line: bool = False):
-        self.is_multi_line: bool = is_multi_line
+    def __init__(self, repl: "PolyTrackerREPL"):
+        self.repl: PolyTrackerREPL = repl
+
+    @staticmethod
+    def _get_completions(partial: str, options: Iterable[str], already_completed: Set[str], style: str = ""):
+        for var in options:
+            if var not in already_completed and var.startswith(partial) and var != partial:
+                yield Completion(var, start_position=-len(partial), style=style)
+                already_completed.add(var)
 
     def get_completions(self, document, complete_event):
-        if self.is_multi_line and document.text == "":
+        if self.repl.multi_line and document.text == "":
             # we are in a multi-line statement, and the user pressed TAB in order to indent
             return
         partial = document.text_before_cursor
-        for cmd_name in COMMANDS:
-            if cmd_name.startswith(partial) and cmd_name != partial:
-                yield Completion(cmd_name, start_position=-len(partial))
+        already_yielded = set()
+        yield from PolyTrackerCompleter._get_completions(partial, COMMANDS, already_yielded, "fg:ansiblue")
+        yield from PolyTrackerCompleter._get_completions(
+            partial, (var for var in self.repl.state if var not in self.repl.builtins), already_yielded
+        )
+        yield from PolyTrackerCompleter._get_completions(partial, self.repl.builtins, already_yielded, "fg:ansigreen")
+        if "__builtins__" in self.repl.state:
+            builtins = self.repl.state["__builtins__"]
+        else:
+            builtins = __builtins__
+        yield from PolyTrackerCompleter._get_completions(partial, builtins, already_yielded, "fg:ansigreen")
 
 
 class PolyTrackerREPL:
     def __init__(self):
         self.session = PromptSession(lexer=PygmentsLexer(PythonLexer))
-        self.state = {}
+        self.state = {
+            "copyright": f"Copyright (c) 2019-{datetime.today().year} Trail of Bits.\nAll Rights Reserved.",
+            "credits": """    PolyTracker was developed by Carson Harmon, Evan Sultanik, and Brad Larsen at Trail of Bits.
+    Thanks to Sergey Bratus of DARPA and Galois, Inc. for partially funding this work.
+    Also thanks to the LLVM dfsan project for providing a framework off of which to build,
+    as well as the Angora project for inspiration.
+""",
+        }
+        self.builtins = set(self.state.keys())
         self.multi_line: bool = False
 
     def print_exc(self):
@@ -118,7 +127,7 @@ class PolyTrackerREPL:
                         continued_prompt,
                         complete_while_typing=True,
                         auto_suggest=AutoSuggestFromHistory(),
-                        completer=PolyTrackerCompleter(is_multi_line=True),
+                        completer=PolyTrackerCompleter(self),
                         key_bindings=bindings,
                     )
                     if len(next_line) == 0:
@@ -138,6 +147,12 @@ class PolyTrackerREPL:
         add_command_subparsers(argparser)
 
         print_formatted_text(HTML(f"<b>PolyTracker</b> ({version()})"))
+        print_formatted_text(HTML('<u fg="ansigray">https://github.com/trailofbits/polytracker</u>'))
+        print_formatted_text(
+            HTML(
+                'Type "<span fg="ansigreen" bg="ansigray">help</span>" or "<span fg="ansiblue" bg="ansigray">commands</span>"'
+            )
+        )
         prompt = HTML("<b>&gt;&gt;&gt; </b>")
         error_prompt = HTML('<span fg="ansired" bg="ansiwhite">!</span><b>&gt;&gt; </b>')
         next_prompt = prompt
@@ -147,7 +162,7 @@ class PolyTrackerREPL:
                     next_prompt,
                     complete_while_typing=True,
                     auto_suggest=AutoSuggestFromHistory(),
-                    completer=PolyTrackerCompleter(),
+                    completer=PolyTrackerCompleter(self),
                 )
                 next_prompt = prompt
             except KeyboardInterrupt:
