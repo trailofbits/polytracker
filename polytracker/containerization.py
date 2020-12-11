@@ -411,7 +411,7 @@ class DockerRun(DockerSubcommand):
             option = input()
             if option.lower() == "n":
                 break
-            elif option.lower() == "y":
+            elif option.lower() == "y" or option == "":
                 self.container.rebuild()
                 break
         self.container.run(*args.ARGS, interactive=not args.notty, check_if_docker_out_of_date=False)
