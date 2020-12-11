@@ -1,14 +1,17 @@
 import argparse
 import ast
 import traceback
+from io import StringIO
 
 from prompt_toolkit import HTML, print_formatted_text, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.filters import Condition
+from prompt_toolkit.formatted_text import PygmentsTokens
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.lexers import PygmentsLexer
-from pygments.lexers.python import PythonLexer
+from pygments import lex
+from pygments.lexers.python import PythonLexer, PythonTracebackLexer
 
 from .polytracker import version
 from .plugins import add_command_subparsers, Command, COMMANDS
@@ -49,6 +52,12 @@ class PolyTrackerREPL:
         self.session = PromptSession(lexer=PygmentsLexer(PythonLexer))
         self.state = {}
         self.multi_line: bool = False
+
+    def print_exc(self):
+        buffer = StringIO()
+        traceback.print_exc(file=buffer)
+        tokens = lex(buffer.getvalue(), lexer=PythonTracebackLexer())
+        print_formatted_text(PygmentsTokens(tokens))
 
     def run_python(self, command):
         continued_prompt = HTML("<b>... </b>")
@@ -160,12 +169,12 @@ class PolyTrackerREPL:
                             except SystemExit:
                                 next_prompt = error_prompt
                             except:
-                                traceback.print_exc()
+                                self.print_exc()
                                 next_prompt = error_prompt
                     except SystemExit:
                         next_prompt = error_prompt
                 except:
-                    traceback.print_exc()
+                    self.print_exc()
                     next_prompt = error_prompt
             else:
                 # assume it is a Python command
@@ -177,6 +186,6 @@ class PolyTrackerREPL:
                 except SystemExit:
                     break
                 except:
-                    traceback.print_exc()
+                    self.print_exc()
                     next_prompt = error_prompt
         return 0
