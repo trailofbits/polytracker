@@ -47,7 +47,9 @@ class PolyTrackerCompleter(Completer):
             return
         partial = document.text_before_cursor
         already_yielded = set()
-        yield from PolyTrackerCompleter._get_completions(partial, COMMANDS, already_yielded, "fg:ansiblue")
+        if partial == document.text:
+            # we are at the start of the line, so complete for commands:
+            yield from PolyTrackerCompleter._get_completions(partial, COMMANDS, already_yielded, "fg:ansiblue")
         yield from PolyTrackerCompleter._get_completions(
             partial, (var for var in self.repl.state if var not in self.repl.builtins), already_yielded
         )
@@ -57,6 +59,15 @@ class PolyTrackerCompleter(Completer):
         else:
             builtins = __builtins__
         yield from PolyTrackerCompleter._get_completions(partial, builtins, already_yielded, "fg:ansigreen")
+        if "." in partial:
+            portions = partial.split(".")
+            varname = portions[-2]
+            to_complete = portions[-1]
+            if varname in self.repl.state:
+                attr = self.repl.state[varname]
+                yield from PolyTrackerCompleter._get_completions(
+                    to_complete, (a for a in dir(attr) if not a.startswith("_")), already_yielded
+                )
 
 
 class PolyTrackerREPL:
