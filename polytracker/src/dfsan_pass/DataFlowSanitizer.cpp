@@ -361,11 +361,9 @@ class DataFlowSanitizer : public ModulePass {
   FunctionType *DFSanEntryFnTy;
   FunctionType *DFSanExitFnTy;
   FunctionType *DFSanEntryBBFnTy;
-  FunctionType *DFSanResetFrameFnTy;
   Constant *DFSanEntryFn;
   Constant *DFSanEntryBBFn;
   Constant *DFSanExitFn;
-  Constant *DFSanResetFrameFn;
 
   Constant *DFSanUnionFn;
   Constant *DFSanCheckedUnionFn;
@@ -379,6 +377,8 @@ class DataFlowSanitizer : public ModulePass {
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttrBuilder ReadOnlyNoneAttrs;
   bool DFSanRuntimeShadowMask = false;
+
+  std::unordered_map<std::string, uint32_t> name_index_map;
 
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
   bool isInstrumented(const Function *F);
@@ -619,15 +619,14 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   DFSanTraceInstFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanTraceInstArgs, false);
 
-  DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), {}, false);
+  Type *DFSanExitArgs[1] = {IntegerType::getInt32Ty(*Ctx)};
+
+  DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanExitArgs, false);
   Type *DFSanEntryBBArgs[4] = {
       Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx),
       IntegerType::getInt32Ty(*Ctx), IntegerType::getInt8Ty(*Ctx)};
   DFSanEntryBBFnTy =
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryBBArgs, false);
-  Type *DFSanResetFrameArgs[1] = {IntegerType::getInt64PtrTy(*Ctx)};
-  DFSanResetFrameFnTy =
-      FunctionType::get(Type::getVoidTy(*Ctx), DFSanResetFrameArgs, false);
 
   Type *DFSanSetLabelArgs[3] = {ShadowTy, Type::getInt8PtrTy(*Ctx), IntptrTy};
   DFSanSetLabelFnTy = FunctionType::get(Type::getVoidTy(*Ctx),
@@ -830,8 +829,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
   DFSanExitFn = Mod->getOrInsertFunction("__dfsan_func_exit", DFSanExitFnTy);
   DFSanEntryBBFn =
       Mod->getOrInsertFunction("__dfsan_bb_entry", DFSanEntryBBFnTy);
-  DFSanResetFrameFn =
-      Mod->getOrInsertFunction("__dfsan_reset_frame", DFSanResetFrameFnTy);
   DFSanTraceInstFn =
       Mod->getOrInsertFunction("__dfsan_trace_inst_fn", DFSanTraceInstFnTy);
   std::vector<Function *> FnsToInstrument;
@@ -843,7 +840,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanSetLabelFn && &i != DFSanNonzeroLabelFn &&
         &i != DFSanVarargWrapperFn && &i != DFSanLogTaintFn &&
         &i != DFSanLogCmpFn && &i != DFSanEntryFn && &i != DFSanExitFn &&
-        &i != DFSanEntryBBFn && &i != DFSanResetFrameFn &&
+        &i != DFSanEntryBBFn &&
         &i != DFSanTraceInstFn)
       FnsToInstrument.push_back(&i);
   }
@@ -940,22 +937,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
           F.hasLocalLinkage() ? F.getLinkage()
                               : GlobalValue::LinkOnceODRLinkage;
 
-#ifdef DEBUG_INFO
-      // Looking for open and reads we might not have hooked
-      std::string test_fname = F.getName();
-      size_t found_place = test_fname.find("open");
-      if (found_place != std::string::npos) {
-        std::cout << "Getting OPEN fname " << test_fname << std::endl;
-        bool is_custom = getWrapperKind(&F) == WK_Custom;
-        std::cout << "Is custom func: " << is_custom << std::endl;
-      }
-      found_place = test_fname.find("read");
-      if (found_place != std::string::npos) {
-        std::cout << "Getting READ fname " << test_fname << std::endl;
-        bool is_custom = getWrapperKind(&F) == WK_Custom;
-        std::cout << "Is custom func: " << is_custom << std::endl;
-      }
-#endif
       Function *NewF = buildWrapperFunction(
           &F, std::string("dfsw$") + std::string(F.getName()), wrapperLinkage,
           NewFT);
@@ -999,6 +980,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     if (!i || i->isDeclaration()) {
       continue;
     }
+    name_index_map[i->getName()] = functionIndex;
     Value *FuncIndex =
         ConstantInt::get(IntegerType::getInt32Ty(*Ctx), functionIndex++, false);
 
@@ -1009,20 +991,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     // calls in the instrumented code will be followed by an unconditional
     // branch.
     auto splitBBs = bbSplitter.analyzeFunction(*i);
-
-    std::string curr_fname = i->getName();
-    if (!(getWrapperKind(i) == WK_Custom || isInstrumented(i))) {
-      if (curr_fname != "main") {
-#ifdef DEBUG_INFO
-        std::cout << "SKIPPING: " << curr_fname << std::endl;
-#endif
-        continue;
-      } else {
-#ifdef DEBUG_INFO
-        std::cout << "ADDING ENTRY: " << curr_fname << std::endl;
-#endif
-      }
-    }
     uint32_t bbIndex = 0;
 
     // Instrument function entry here
@@ -1031,16 +999,8 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     IRBuilder<> IRB(InsertPoint);
     Value *FuncName = IRB.CreateGlobalStringPtr(i->getName());
     Value *FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
-    //TODO FIXME
     auto store_inst =
         IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, {FuncName, FuncIndex}), FrameIndex);
-
-#ifdef DEBUG_INFO
-    llvm::errs() << "INSTRUMENTING " + i->getName() + " FUNCTION ENTRY!\n";
-    if (i->getName().find("is_equal") != std::string::npos) {
-      std::cout << "RIGHT HERE" << std::endl;
-    }
-#endif
     DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
@@ -1064,9 +1024,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         Inst = Next;
       }
     }
-    // Add instrumentation for handling setjmp/longjmp here
-    // This adds a function that resets the shadow call stack
-    // When a longjmp is called.
+
     for (BasicBlock *curr_bb : BBList) {
       Instruction *Inst = &curr_bb->front();
 
@@ -1103,23 +1061,6 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         }
         IRBuilder<> IRB(InsertBefore);
         IRB.CreateCall(DFSanEntryBBFn, {FuncName, FuncIndex, BBIndex, BBType});
-      }
-      while (true) {
-        Instruction *Next = Inst->getNextNode();
-        bool IsTerminator = isa<TerminatorInst>(Inst);
-        if (CallInst *call = dyn_cast<CallInst>(Inst)) {
-          if (Function *F = call->getCalledFunction()) {
-            if (F->getName() == "setjmp" || F->getName() == "sigsetjump" ||
-                F->getName() == "_setjmp") {
-              // Insert before the next inst.
-              IRBuilder<> IRB(Next);
-              IRB.CreateCall(DFSanResetFrameFn, FrameIndex);
-            }
-          }
-        }
-        if (IsTerminator)
-          break;
-        Inst = Next;
       }
     }
 
@@ -1705,8 +1646,6 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
     }
     }
   }
-  IRBuilder<> IRB(&RI);
-  CallInst *ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {});
 }
 
 void DFSanVisitor::visitCallSite(CallSite CS) {
@@ -1934,6 +1873,13 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     }
 
     CS.getInstruction()->eraseFromParent();
+    std::string func_name = NewCS.getInstruction()->getFunction()->getName();
+    IRBuilder<> IRB(NewCS.getInstruction());
+    //FIXME Carson Work
+    uint32_t index = DFSF.DFS.name_index_map[func_name];
+    Value *FuncIndex =
+        ConstantInt::get(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx)), DFSF.DFS.name_index_map[func_name], false);
+    CallInst *ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {FuncIndex});
   }
 }
 
