@@ -130,7 +130,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
     const char *fname, uint32_t index) {
-  return logFunctionEntry(fname, index);
+  logFunctionEntry(fname, BBIndex(index, 0));
 }
 
 // This shouldn't be called right now
@@ -164,8 +164,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_log_taint(
   logOperation(some_label);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit() {
-  logFunctionExit();
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_func_exit(uint32_t func_index) {
+  logFunctionExit(BBIndex(func_index));
 }
 
 // Resolves the union of two unequal labels.  Nonequality is a precondition for
