@@ -170,7 +170,7 @@ static constexpr const char * createTaintTable() {
            "  label INTEGER,"
            "  input_id INTEGER,"
 	       "  access_type TINYINT,"
-           "  PRIMARY KEY (block_gid, event_id, label, input_id),"
+           "  PRIMARY KEY (block_gid, event_id, label, input_id, access_type),"
            "  FOREIGN KEY (input_id) REFERENCES input(id),"
 		   "  FOREIGN KEY (block_gid) REFERENCES block_instance(block_gid),"
 		   "  UNIQUE (block_gid, label, input_id)"
@@ -348,14 +348,15 @@ static void storeTaintAccess(sqlite3* output_db, const std::list<dfsan_label>& l
 		const size_t& event_id, const size_t& block_gid, const input_id_t& input_id) {
 	if (!labels.empty()) {
 		sqlite3_stmt * stmt;
-		const char * insert = "INSERT INTO accessed_label(block_gid, event_id, label, input_id)" 
-		"VALUES (?, ?, ?, ?);";
+		const char * insert = "INSERT INTO accessed_label(block_gid, event_id, label, input_id, access_type)" 
+		"VALUES (?, ?, ?, ?, ?);";
 		sql_prep(output_db, insert, -1, &stmt, NULL);
 		for (const auto& label : labels) {
 			sqlite3_bind_int64(stmt, 1, block_gid);
 			sqlite3_bind_int64(stmt, 2, event_id);
 			sqlite3_bind_int64(stmt, 3, label);
 			sqlite3_bind_int(stmt, 4, input_id);
+			sqlite3_bind_int(stmt, 5, INPUT_ACCESS_TYPE);
 			sql_step(output_db, stmt);
 			sqlite3_reset(stmt);
 		}
@@ -370,25 +371,49 @@ static void storeTaintFuncAccess(const RuntimeInfo * runtime_info, sqlite3 * out
 	*/
 	if (!runtime_info->tainted_funcs_all_ops.empty()) {
 		sqlite3_stmt * stmt;
-		const char * insert = "INSERT OR IGNORE INTO accessed_label(block_gid, label, input_id)"
-		"VALUES(?, ?, ?);";
+		const char * insert = "INSERT OR IGNORE INTO accessed_label(block_gid, label, input_id, access_type)"
+					"VALUES(?, ?, ?, ?);";
 		sql_prep(output_db, insert, -1, &stmt, NULL);
+		auto& cmp_ops = runtime_info->tainted_funcs_cmp;
 		for (const auto &it : runtime_info->tainted_funcs_all_ops) {
 			auto &label_set = it.second;
 			auto &func_index = it.first;
 			for (const auto &label : label_set) {
 				sqlite3_bind_int64(stmt, 1, func_index);
-				sqlite3_bind_int64(stmt, 2, label);
-				sqlite3_bind_int64(stmt, 3, input_id);
+				sqlite3_bind_int(stmt, 2, label);
+				sqlite3_bind_int(stmt, 3, input_id);
+				sqlite3_bind_int(stmt, 4, INPUT_ACCESS_TYPE);
 				sql_step(output_db, stmt);
 				sqlite3_reset(stmt);
 			}
+			if (cmp_ops.find(it.first) != cmp_ops.end()) {
+      			auto cmp_label_set = it.second;
+				sqlite3_stmt * cmp_stmt;
+				const char * cmp_insert = "INSERT OR IGNORE INTO accessed_label(block_gid, label, input_id, access_type)"
+				"VALUES(?, ?, ?, ?);";
+				//const char * cmp_insert = "INSERT INTO accessed_label(block_gid, event_id, label, input_id, access_type)"
+				//"VALUES (?, ?, ?, ?, ?) ON CONFLICT(block_gid, label, input_id) DO UPDATE SET access_type=?;";
+
+				sql_prep(output_db, cmp_insert, -1, &cmp_stmt, NULL);
+      			for (const auto& cmp_label : cmp_label_set) {
+					sqlite3_bind_int64(cmp_stmt, 1, func_index);
+					sqlite3_bind_int(cmp_stmt, 2, cmp_label);
+					sqlite3_bind_int(cmp_stmt, 3, input_id);
+					sqlite3_bind_int(cmp_stmt, 4, CMP_ACCESS_TYPE);
+					sql_step(output_db, cmp_stmt);
+					sqlite3_reset(cmp_stmt);
+        			//cmp_label_set.insert(*it);
+      			}
+				sqlite3_finalize(cmp_stmt);
+      			//json cmp_byte_set(cmp_label_set);
+      			//output_json["tainted_functions"][it.first]["cmp_bytes"] = cmp_byte_set;
+    		}
 		}
 		sqlite3_finalize(stmt);
 	}
 }
 
-static void storeBlockEvent(sqlite3 * output_db, const RuntimeInfo* runtime_info, const BasicBlockEntry * event, 
+static void storeTaintBlockAccess(sqlite3 * output_db, const RuntimeInfo* runtime_info, const BasicBlockEntry * event, 
 	const input_id_t& input_id, const size_t& thread_id) {
 	uint32_t bb_types = 0;
 	if (hasType(event->type, BasicBlockType::STANDARD)) {
@@ -508,7 +533,7 @@ static void storeRuntimeTrace(const RuntimeInfo *runtime_info, sqlite3 * output_
 			if (const auto call = dynamic_cast<const FunctionCall *>(event)) {
 				storeCallEvent(output_db, runtime_info, call, input_id, thread_id);
 			} else if (const auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
-				storeBlockEvent(output_db, runtime_info, bb, input_id, thread_id);
+				storeTaintBlockAccess(output_db, runtime_info, bb, input_id, thread_id);
 			} else if (const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
 				storeRetEvent(output_db, ret, input_id, thread_id);
 			} else {
@@ -555,10 +580,12 @@ static void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id) {
+	std::cout << "Storing taint forest?" << std::endl;
 	const char * insert = "INSERT INTO taint_forest (parent_one, parent_two, label, input_id) VALUES (?, ?, ?, ?);";
 	sqlite3_stmt * stmt;
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	const dfsan_label &num_labels = next_label;
+	std::cout << "Num labels " << num_labels << std::endl;
 	for (int i = 0; i < num_labels; i++) {
 		taint_node_t *curr = getTaintNode(i);
 		sqlite3_bind_int(stmt, 1, getTaintLabel(curr->p1));
@@ -566,9 +593,11 @@ static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_
 		sqlite3_bind_int(stmt, 3, i);
 		sqlite3_bind_int(stmt, 4, input_id);
 		sql_step(output_db, stmt);
+		std::cout << "Storing " << i << std::endl;
 		sqlite3_reset(stmt);
 	}	
 	sqlite3_finalize(stmt);
+	std::cout << "Done storing labels?" << std::endl;
 }
 
 void storeVersion(sqlite3 * output_db) {
@@ -582,26 +611,34 @@ void storeVersion(sqlite3 * output_db) {
 	sqlite3_finalize(stmt);
 }
 
+static void storeTaintAccess(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t current_thread) {
+	//NOTE This ordering is INTENTIONAL and clever 
+	//If the polytracker trace exists, first store all the blocks that touched taint. The block_gid's contain function info 
+	//Then, store function level taints. If a block already has that block_gid, label, and input id. Then dont add a new entry :) 
+	//Also, if a special operation occured (like a cmp, or anything else being tracked)
+	//A new entry will be added with that information and a > 0 access type. 
+	if (polytracker_trace) {
+		storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
+	}
+	storeTaintFuncAccess(runtime_info, output_db, input_id);
+}
+
+//FIXME better name
+static void storeArtifacts(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& current_thread) {
+	storeVersion(output_db);
+	storeFunctionMap(runtime_info, output_db);
+	storeTaintedChunks(output_db, input_id);
+	storeCanonicalMapping(output_db, input_id);
+	storeTaintAccess(runtime_info, output_db, input_id, current_thread);
+	storeFuncCFG(runtime_info, output_db, input_id, current_thread);
+}
+
 static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest_out_path, sqlite3 * output_db, const size_t& current_thread) {
 	createDBTables(output_db);
 	const input_id_t input_id = storeNewInput(output_db);
 	if (input_id) {
 		storeTaintForestDisk(forest_out_path, runtime_info);
-	    storeVersion(output_db);
-		storeFunctionMap(runtime_info, output_db);
-		storeTaintedChunks(output_db, input_id);
-		storeCanonicalMapping(output_db, input_id);
-		//Note, try and store the trace first if it exists 
-		//The trace has more fine grained information than taint func access 
-		//This means that if we encounter some bytes already seen in the trace,
-		//We will ignore them
-		if (polytracker_trace) {
-			storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
-		}
-		else {
-			storeTaintFuncAccess(runtime_info, output_db, input_id);
-			storeFuncCFG(runtime_info, output_db, input_id, current_thread);
-		}
+	    storeArtifacts(runtime_info, output_db, input_id, current_thread);
 	}
 }
 
@@ -610,21 +647,7 @@ static void outputDB(const RuntimeInfo * runtime_info, sqlite3 * output_db, cons
 	const input_id_t input_id = storeNewInput(output_db);
 	if (input_id) {
 		storeTaintForest(runtime_info, output_db, input_id);
-	    storeVersion(output_db);
-		storeFunctionMap(runtime_info, output_db);
-		storeTaintedChunks(output_db, input_id);
-		storeCanonicalMapping(output_db, input_id);
-		//Note, try and store the trace first if it exists 
-		//The trace has more fine grained information than taint func access 
-		//This means that if we encounter some bytes already seen in the trace,
-		//We will ignore them
-		if (polytracker_trace) {
-			storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
-		}
-		else {
-			storeTaintFuncAccess(runtime_info, output_db, input_id);
-			storeFuncCFG(runtime_info, output_db, input_id, current_thread);
-		}
+	    storeArtifacts(runtime_info, output_db, input_id, current_thread);
 	}
 }
 
