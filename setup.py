@@ -67,8 +67,10 @@ setup(
         'matplotlib==3.3.0',
         'networkx==2.4',
         'Pillow>=7.2.0',
-        'pygraphviz==1.5',
+        'prompt_toolkit==3.0.8',
+        'pygments==2.7.3',
         'pydot==1.4.1',
+        'pygraphviz==1.5',
         'tqdm==4.48.0',
         'typing_extensions==3.7.4.2'
     ],

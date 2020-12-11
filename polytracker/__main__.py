@@ -1,9 +1,11 @@
 import argparse
 import logging
+import sys
 from argparse import Namespace
 from pathlib import Path
 
 from .plugins import add_command_subparsers, Command
+from .repl import PolyTrackerREPL
 
 # the following line imports modules so their commands can register themselves
 from . import containerization, datalog, grammars, polytracker
@@ -40,9 +42,11 @@ def main():
             print(polytracker.version())
             return 0
 
-        # TODO: Once we implement a REPL, instead of printing help, enter the REPL here
-        parser.print_help()
-        return 1
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            return PolyTrackerREPL().run()
+        else:
+            parser.print_help()
+            return 1
 
     retval = args.func(args)
     if retval is None:
