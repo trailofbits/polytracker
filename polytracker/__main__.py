@@ -5,7 +5,6 @@ from argparse import Namespace
 from pathlib import Path
 
 from .plugins import add_command_subparsers, Command
-from .repl import PolyTrackerREPL
 
 # the following line imports modules so their commands can register themselves
 from . import containerization, datalog, grammars, polytracker
@@ -43,6 +42,8 @@ def main():
             return 0
 
         if sys.stdin.isatty() and sys.stdout.isatty():
+            from .repl import PolyTrackerREPL
+
             return PolyTrackerREPL().run()
         else:
             parser.print_help()

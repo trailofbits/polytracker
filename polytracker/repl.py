@@ -16,7 +16,18 @@ from pygments import lex
 from pygments.lexers.python import PythonLexer, PythonTracebackLexer
 
 from .polytracker import version
-from .plugins import add_command_subparsers, COMMANDS
+from .plugins import add_command_subparsers, Command, COMMANDS
+
+
+class Commands(Command):
+    name = "commands"
+    help = "print the PolyTracker commands"
+
+    def run(self, args):
+        longest_command = max(len(cmd_name) for cmd_name in COMMANDS)
+        for command in COMMANDS.values():
+            dots = "." * (longest_command - len(command.name) + 1)
+            print_formatted_text(HTML(f'<b fg="ansiblue">{command.name}</b>{dots}<i> {command.help} </i>'))
 
 
 class PolyTrackerCompleter(Completer):
