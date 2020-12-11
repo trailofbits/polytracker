@@ -127,12 +127,6 @@ class PolyTrackerREPL:
     def run(self):
         argparser = argparse.ArgumentParser()
         add_command_subparsers(argparser)
-        # vars = {cmd.name: REPLCommand(cmd(argparser)) for cmd in COMMANDS.values()}
-        # if has_ipython:
-        #     IPython.start_ipython(argv=[], user_ns=vars)
-        # else:
-        #     InteractiveConsole(locals=vars).interact("", "")
-        # return 0
 
         print_formatted_text(HTML(f"<b>PolyTracker</b> ({version()})"))
         prompt = HTML("<b>&gt;&gt;&gt; </b>")
