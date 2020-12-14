@@ -43,38 +43,7 @@ static void initThreadInfo() {
   std::lock_guard<std::mutex> locker(thread_runtime_info_lock);
   thread_runtime_info.push_back(runtime_info);
 }
-/*
-[[nodiscard]] static inline std::vector<func_index_t> &getFuncStack(void) {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tFuncStack;
-}
 
-[[nodiscard]] static inline auto getTaintFuncOps(void)
-    -> std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tainted_funcs_all_ops;
-}
-
-[[nodiscard]] static inline auto getTaintFuncCmps(void)
-    -> std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tainted_funcs_cmp;
-}
-
-[[nodiscard]] static inline auto getRuntimeCfg(void)
-    -> std::unordered_map<func_index_t, std::unordered_set<func_index_t>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->runtime_cfg;
-}
-*/
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label) {
   return (taint_node_t *)(forest_mem + (label * sizeof(taint_node_t)));
 }
