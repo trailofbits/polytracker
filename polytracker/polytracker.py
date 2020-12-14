@@ -530,7 +530,8 @@ def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
     cursor = conn.execute(version_query)
     print(cursor)
     # There should only be one row,
-    version_str: str = cursor[0][0]  # TODO can delete once we figure out datatype
+    items = [row for row in cursor]
+    version_str: str = items[0][0]
     print(version_str)
     version = normalize_version(version_str.split("."))
     if len(version) > 4:
@@ -554,18 +555,67 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
     version_query = "SELECT value FROM polytracker WHERE key='version';"
     cursor = conn.execute(version_query)
     print(cursor)
-    version = cursor[0][0].split(".")
+    version = [row for row in cursor]
+    version_str = version[0][0]
+    print(version_str)
     function_data = []
     tainted_functions = set()
-
     # To get tainted functions, this is the query I want to do, we can maybe use joins to optimize this query later
     # 1. Get the block_gid of every accessed label (taint label that was touched)
+    # Distinct means no duplicates
+    # block_gid_query = "SELECT DISTINCT block_gid FROM accessed_label WHERE input_id=?;"
+    # results = conn.execute(block_gid_query, input_id)
     # 2. The high 32 bits of the block_gid correspond to the function index, so I suppose we apply the mask to each GID
+    # This should just be integers, and im masking the higher bits.
+    # function_ids = [row[0] & 0xFFFF0000 for row in results]
+
+    # 3. Get the function names
+    # results = conn.executemany("SELECT name FROM func WHERE id=?", function_ids)
+    # tainted_functions = set(row[0] for row in results)
     # 3. add each element to the set tainted functions.
     # FIXME we need some document name
-    block_gid_query = "SELECT block_gid FROM accessed_label WHERE input_id=?;"
     # Execute the query here
     # FIXME Update the C++ side to respect access type again (input/cmp)
+    # Get input bytes for all functions
+    input_bytes_dict: Dict[int: Set[int]] = defaultdict(set)
+    cmp_bytes_dict: Dict[int: Set[int]] = defaultdict(set)
+    function_names: Dict[int: str] = {}
+    called_from_dict: Dict[int: Set[int]] = defaultdict(set)
+
+    func_name_results = conn.execute("SELECT name, id FROM func;")
+    for row in func_name_results:
+        # Each function should have a unique ID from instrumentation
+        # Error out if thats not the case
+        assert row[1] not in function_names
+        function_names[row[1]] = row[0]
+
+    runtime_cfg_results = conn.execute("SELECT callee, caller from func_cfg WHERE input_id=?", input_id)
+    for row in runtime_cfg_results:
+        called_from_dict[row[0]].add(row[1])
+
+    input_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=0",
+                                       input_id)
+
+    # Input bytes should be a superset of cmp bytes
+    for row in input_bytes_results:
+        input_bytes_dict[row[0] & 0xFFFF0000].add(row[1])
+    cmp_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=1",
+                                     input_id)
+    for row in cmp_bytes_results:
+        cmp_byte_dicts[row[0] & 0xFFFF0000].add(row[1])
+
+    # input_byte_pairs = [(row[0] & 0xFFFF0000, row[1]) for row in input_bytes_results]
+    # cmp_byte_pairs = [(row[0] & 0xFFFF0000, row[1]) for row in cmp_bytes_results]
+    # tainted_function_ids = set(row[0] & 0xFFFF0000 for row in input_bytes_results).union(
+    #    cmp_row[0] & 0xFFFF0000 for cmp_row in cmp_bytes_results)
+
+    # For every function that touched taint
+    for tainted_func in input_bytes_dict:
+        input_bytes = input_bytes_dict[tainted_func]
+        if tainted_func in cmp_bytes_dict:
+            cmp_bytes = cmp_bytes_dict[tainted_func]
+        else:
+            cmp_bytes = {}
 
     # Build up the runtime CFG, can build up a set/memoized dict the same way with tainted functions
     # 1. Query the func_cfg based on input_id and get all the runtime func calls
@@ -573,6 +623,7 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
 
     # Once all that is done, everything should work!
     for function_name, data in polytracker_json_obj["tainted_functions"].items():
+        # This should be false??? im not sure lol. actually i like that this is true
         if "input_bytes" not in data:
             if "cmp_bytes" in data:
                 input_bytes = data["cmp_bytes"]
@@ -588,6 +639,7 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
             called_from = frozenset(polytracker_json_obj["runtime_cfg"][function_name])
         else:
             called_from = frozenset()
+        # Have this take a name, a list, a list, and a list.
         function_data.append(
             FunctionInfo(name=function_name, cmp_bytes=cmp_bytes, input_bytes=input_bytes, called_from=called_from)
         )
@@ -933,3 +985,42 @@ class DrawTaintForestCommand(Subcommand[TaintForestCommand]):
     def run(self, args: Namespace):
         forest = TaintForest(args.taint_forest_bin)
         forest.to_graph().to_dot().save(args.output_dot_path)
+
+
+class ConfigBuildCommand(Command):
+    name = "config"
+    help = "generate polytracker configuration files"
+    parser: ArgumentParser
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("--bb_trace", type=bool, help="trace basic blocks")
+        parser.add_argument("--func_trace", type=bool, help="trace at function granularity")
+        parser.add_argument("--db", type=str, help="path to store the output database")
+        parser.add_argument("--track_start", type=int, help="offset to start tracking from")
+        parser.add_argument("--track_end", type=int, help="offset to stop tracking at")
+        parser.add_argument("--taint_ttl", type=int, help="sets the value of taint decay")
+        parser.add_argument("--forest_output", type=str, help="optional output the forest to disk instead of database")
+        parser.add_argument("--output", type=str, help="output for generated config file")
+        self.parser = parser
+
+    def run(self, args: Namespace):
+        output_json = {}
+        if not args.output:
+            print("Error! No output specified")
+            self.parser.print_help()
+        if args.bb_trace:
+            output_json["POLYTRACE"] = args.bb_trace
+        if args.func_trace:
+            output_json["POLYFUNC"] = args.func_trace
+        if args.db:
+            output_json["POLYDB"] = args.db
+        if args.track_start:
+            output_json["POLYSTART"] = args.track_start
+        if args.track_end:
+            output_json["POLYEND"] = args.track_end
+        if args.taint_ttl:
+            output_json["POLYTTL"] = args.taint_ttl
+        if args.forest_output:
+            output_json["POLYFOREST"] = args.forest_output
+        with open(args.output, "w") as f:
+            json.dump(output_json, f)
