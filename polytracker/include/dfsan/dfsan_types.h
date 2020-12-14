@@ -78,7 +78,6 @@ public:
   constexpr bool operator<(const BBIndex other) const noexcept {
     return value < other.value;
   }
-  constexpr uint64_t rawValue() const noexcept { return value; }
 };
 
 namespace std {
