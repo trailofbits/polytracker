@@ -149,6 +149,26 @@ struct FunctionReturn : public TraceEvent {
   }
 };
 
+//Powers of 2 with 0 being unknown
+enum ByteAccessType {
+  UNKNOWN_ACCESS = 0,
+  INPUT_ACCESS = 1,
+  CMP_ACCESS = 2
+};
+
+//Bitfield where each bit represents some ByteAccessType
+typedef uint8_t byte_access;
+
+struct FunctionEvent : public TraceEvent {
+  std::unordered_map<dfsan_label, byte_access> func_taint_labels;
+  BBIndex index;
+  FunctionEvent(BBIndex& index) : index(index){}
+  void addTaintLabel(const dfsan_label& accessed_label, ByteAccessType access_type) {
+    func_taint_labels[accessed_label] |= access_type;
+  }
+  const std::unordered_map<dfsan_label, byte_access>& getTaintLabels();
+};
+
 class TraceEventStack;
 
 class TraceEventStackFrame {
@@ -254,7 +274,7 @@ class Trace {
 
 public:
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
-
+  
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
   }
@@ -323,6 +343,18 @@ public:
     } else {
       return ret->second;
     }
+  }
+};
+
+class FunctionTrace {
+  std::vector<TraceEvent> events;
+  const FunctionEvent * currentFunc() {
+    for (int i = events.size() - 1; i >= 0; i--) {
+      if (FunctionEvent* func_event = dynamic_cast<FunctionEvent*>(&(events[i]))) {
+        return func_event;
+      }
+    }
+    return nullptr;
   }
 };
 
