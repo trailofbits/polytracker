@@ -28,6 +28,7 @@ std::string polytracker_db_name = "";
 int byte_start = -1;
 int byte_end = -1;
 bool polytracker_trace = false;
+bool polytracker_trace_func = false;
 decay_val taint_node_ttl = -1;
 std::string target_file = "";
 char *forest_mem;
@@ -101,6 +102,16 @@ void polytracker_parse_config(std::ifstream &config_file) {
       polytracker_trace = true;
     }
   }
+    if (config_json.contains("POLYFUNC")) {
+    std::string trace_str = config_json["POLYFUNC"].get<std::string>();
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace_func = false;
+    } else {
+      polytracker_trace_func = true;
+    }
+  }
   if (config_json.contains("POLYTTL")) {
     taint_node_ttl = config_json["POLYTTL"].get<int>();
   }
@@ -155,6 +166,16 @@ void polytracker_parse_env() {
       polytracker_trace = true;
     }
   }
+    if (auto ptrace = getenv("POLYFUNC")) {
+    std::string trace_str = ptrace;
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace_func = false;
+    } else {
+      polytracker_trace_func = true;
+    }
+  }
   if (getenv("POLYTTL")) {
     taint_node_ttl = atoi(getenv("POLYTTL"));
   }
@@ -186,13 +207,16 @@ static void polytracker_end() {
 	static size_t thread_id = 0;
 	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
-  for (const auto thread_info : thread_runtime_info) {
+  for (const auto& thread_info : thread_runtime_info) {
     if (polytracker_forest_name.empty()) {
       output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id); 
     }
     else {
       output(polytracker_db_name, thread_info, thread_id);
     }
+  }
+  for (auto& i : thread_runtime_info) {
+    delete i;
   }
 }
 
