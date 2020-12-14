@@ -124,12 +124,8 @@ static uptr UnusedAddr() {
          (sizeof(taint_node_t) * MAX_LABELS);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_reset_frame(int *index) {
-  resetFrame(index);
-}
-
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __dfsan_func_entry(
-    const char *fname, uint32_t index) {
+  const char *fname, uint32_t index) {
   logFunctionEntry(fname, BBIndex(index, 0));
 }
 
