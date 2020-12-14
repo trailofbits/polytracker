@@ -3,6 +3,11 @@
 #include "dfsan/dfsan_types.h"
 #include "polytracker/tracing.h"
 
+//TODO change to enum
+#define UNKNOWN_EVENT_ID -1
+#define INPUT_ACCESS_TYPE 0
+#define CMP_ACCESS_TYPE 1
+
 using namespace polytracker;
 
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label);
@@ -10,10 +15,10 @@ using namespace polytracker;
 void logOperation(dfsan_label some_label);
 void logCompare(dfsan_label some_label);
 void resetFrame(int* index);
-int logFunctionEntry(const char* fname, uint32_t index);
-void logFunctionExit();
+void logFunctionEntry(const char* fname, BBIndex index);
+void logFunctionExit(BBIndex index);
 void logBBEntry(const char* fname, BBIndex bbIndex, BasicBlockType bbType);
-[[nodiscard]] bool getFuncIndex(const std::string& func_name, uint32_t& index);
+[[nodiscard]] bool getFuncIndex(const std::string& func_name, BBIndex & index);
 
 /*
 Each thread has a threadlocal variable which represents its runtime state.
@@ -25,11 +30,11 @@ do basic block summarization the runtime cfg is the flow sensitive runtime
 control flow graph
 */
 struct RuntimeInfo {
-  std::vector<uint32_t> tFuncStack;
-  std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
-  std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
-  std::unordered_map<uint32_t, std::unordered_set<uint32_t>> runtime_cfg;
-  std::unordered_map<std::string, uint32_t> func_name_to_index;
+  //std::vector<func_index_t> tFuncStack;
+  //std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> tainted_funcs_all_ops;
+  //std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> tainted_funcs_cmp;
+  //std::unordered_map<func_index_t, std::unordered_set<func_index_t>> runtime_cfg;
+  std::unordered_map<std::string, BBIndex> func_name_to_index;
   polytracker::Trace trace;
 };
 #endif
