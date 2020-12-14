@@ -42,8 +42,8 @@ static void initThreadInfo() {
   std::lock_guard<std::mutex> locker(thread_runtime_info_lock);
   thread_runtime_info.push_back(runtime_info);
 }
-
-[[nodiscard]] static inline std::vector<uint32_t> &getFuncStack(void) {
+/*
+[[nodiscard]] static inline std::vector<func_index_t> &getFuncStack(void) {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -51,7 +51,7 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getTaintFuncOps(void)
-    -> std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> & {
+    -> std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -59,7 +59,7 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getTaintFuncCmps(void)
-    -> std::unordered_map<uint32_t, std::unordered_set<dfsan_label>> & {
+    -> std::unordered_map<func_index_t, std::unordered_set<dfsan_label>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
@@ -67,13 +67,13 @@ static void initThreadInfo() {
 }
 
 [[nodiscard]] static inline auto getRuntimeCfg(void)
-    -> std::unordered_map<uint32_t, std::unordered_set<uint32_t>> & {
+    -> std::unordered_map<func_index_t, std::unordered_set<func_index_t>> & {
   if (UNLIKELY(!runtime_info)) {
     initThreadInfo();
   }
   return runtime_info->runtime_cfg;
 }
-
+*/
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label) {
   return (taint_node_t *)(forest_mem + (label * sizeof(taint_node_t)));
 }
@@ -89,14 +89,14 @@ static void initThreadInfo() {
   }
   return runtime_info->trace;
 }
-[[nodiscard]] auto getIndexMap(void) -> std::unordered_map<std::string, uint32_t>& {
+[[nodiscard]] auto getIndexMap(void) -> std::unordered_map<std::string, BBIndex>& {
 	if (UNLIKELY(!runtime_info)) {
 	    initThreadInfo();
 	}
 	return runtime_info->func_name_to_index;
 }
 
-[[nodiscard]] bool getFuncIndex(const std::string& func_name, uint32_t& index) {
+[[nodiscard]] bool getFuncIndex(const std::string& func_name, BBIndex& index) {
 	if (runtime_info->func_name_to_index.find(func_name) != runtime_info->func_name_to_index.end()) {
 		index = runtime_info->func_name_to_index[func_name];
 		return true;
@@ -108,13 +108,13 @@ void logCompare(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  if (!polytracker_trace) {
-    std::vector<uint32_t> &func_stack = getFuncStack();
-    getTaintFuncOps()[func_stack.back()].insert(some_label);
-    // TODO Confirm that we only call logCmp once instead of logOp along with it.
-    getTaintFuncCmps()[func_stack.back()].insert(some_label);
-  }
-  else {
+  //polytracker::Trace &trace = getPolytrackerTrace();
+
+  //std::vector<func_index_t> &func_stack = getFuncStack();
+  //getTaintFuncOps()[func_stack.back()].insert(some_label);
+  //getTaintFuncCmps()[func_stack.back()].insert(some_label);
+  //Define some function level events. 
+  if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     if (auto bb = trace.currentBB()) {
         auto curr_node = getTaintNode(some_label);
@@ -131,11 +131,11 @@ void logOperation(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  if (!polytracker_trace) {
-    std::vector<uint32_t> &func_stack = getFuncStack();
-    getTaintFuncOps()[func_stack.back()].insert(some_label);
-  }
-  else {
+  
+  //std::vector<func_index_t> &func_stack = getFuncStack();
+  //getTaintFuncOps()[func_stack.back()].insert(some_label);
+  
+  if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     if (auto bb = trace.currentBB()) {
       taint_node_t *new_node = getTaintNode(some_label);
@@ -151,46 +151,40 @@ void logOperation(dfsan_label some_label) {
 //NOTE The return value is the index into the call stack 
 //This is how we handle setjmp/longjmp, unfortunately this means 
 //right now we need to maintain a call stack during polytrace, but its not a big deal 
-int logFunctionEntry(const char *fname, uint32_t index) {
+void logFunctionEntry(const char *fname, BBIndex index) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
   if (UNLIKELY(!is_init)) {
     if (strcmp(fname, "main") != 0) {
-      return 0;
+      return;
     }
     is_init = true;
     polytracker_start();
   }
-  if (!polytracker_trace) {
-    std::vector<uint32_t> &func_stack = getFuncStack();
-  if (func_stack.size() > 0) {
-    getRuntimeCfg()[index].insert(func_stack.back());
-  } else {
-    getRuntimeCfg()[index].insert(0);
-  }
-    func_stack.push_back(index);
-    getIndexMap()[fname] = index;
-    return func_stack.size() - 1;
-  }
-  else {
-    std::vector<uint32_t> &func_stack = getFuncStack();
-      func_stack.push_back(index);
+  //std::vector<uint32_t> &func_stack = getFuncStack();
+  //if (func_stack.size() > 0) {
+    //getRuntimeCfg()[index].insert(func_stack.back());
+  //} else {
+    // FIXME does this make sense?
+    // -1 Can be the special entry point. 
+   // getRuntimeCfg()[index].insert(-1);
+  //}
+  //func_stack.push_back(index);
+  //getIndexMap()[fname] = index;
+    //std::vector<uint32_t> &func_stack = getFuncStack();
+     // func_stack.push_back(index);
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
     auto call = stack.emplace<FunctionCall>(fname);
     // Create a new stack frame:
     stack.newFrame(call);
-    return func_stack.size() - 1;
-  }
 }
 
-void logFunctionExit() {
+void logFunctionExit(BBIndex index) {
   if (UNLIKELY(!is_init)) {
     return;
   }
-  getFuncStack().pop_back();
-  if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
     if (!stack.pop()) {
@@ -216,7 +210,6 @@ void logFunctionExit() {
         // std::cerr << std::endl;
       }
     }
-  }
 }
 
 /**
@@ -240,6 +233,7 @@ void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType) {
   }
 }
 
+/*
 void resetFrame(int *index) {
   if (index == nullptr) {
     std::cout
@@ -247,9 +241,10 @@ void resetFrame(int *index) {
         << std::endl;
     abort();
   }
-  std::vector<uint32_t> &func_stack = getFuncStack();
-  uint32_t caller_func = getFuncStack().back();
+  std::vector<func_index_t> &func_stack = getFuncStack();
+  func_index_t caller_func = getFuncStack().back();
   // Reset the frame
   func_stack.resize(*index + 1);
   getRuntimeCfg()[func_stack.back()].insert(caller_func);
 }
+*/
