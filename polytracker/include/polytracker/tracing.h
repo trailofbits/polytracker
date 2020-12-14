@@ -273,8 +273,20 @@ class Trace {
   static const std::list<dfsan_label> EMPTY_LIST;
 
 public:
+  //For function events, we can store runtime control flow and function events as a vector
+  //To prevent creationg objects for functions that already exist, we re use func events 
+  std::vector<TraceEvent*> functionEvents;
+  //Maps BBIndex.functionIndex() --> TraceEvent*
+  std::unordered_map<uint32_t, TraceEvent*> existingFuncEvents;
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
   
+  //On delete, we clear out the vector of functionEvent* 
+  ~Trace() {
+    for (auto i : functionEvents) {
+      delete i;
+    }
+  }
+
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
   }
@@ -344,17 +356,20 @@ public:
       return ret->second;
     }
   }
-};
-
-class FunctionTrace {
-  std::vector<TraceEvent> events;
-  const FunctionEvent * currentFunc() {
-    for (int i = events.size() - 1; i >= 0; i--) {
-      if (FunctionEvent* func_event = dynamic_cast<FunctionEvent*>(&(events[i]))) {
+   FunctionEvent * currentFunc() {
+    for (int i = functionEvents.size() - 1; i >= 0; i--) {
+      if (auto func_event = dynamic_cast<FunctionEvent*>(functionEvents[i])) {
         return func_event;
       }
     }
     return nullptr;
+   }
+  bool funcAddTaintLabel(const dfsan_label& some_label, ByteAccessType access) {
+    if (auto func_event = currentFunc()) {
+      func_event->addTaintLabel(some_label, access);
+      return true;
+    }
+    return false;
   }
 };
 
