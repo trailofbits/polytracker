@@ -21,6 +21,7 @@ using namespace __dfsan;
 
 extern char *forest_mem;
 extern bool polytracker_trace;
+extern bool polytracker_trace_func;
 
 thread_local RuntimeInfo *runtime_info = nullptr;
 
@@ -108,12 +109,11 @@ void logCompare(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  //polytracker::Trace &trace = getPolytrackerTrace();
-
-  //std::vector<func_index_t> &func_stack = getFuncStack();
-  //getTaintFuncOps()[func_stack.back()].insert(some_label);
-  //getTaintFuncCmps()[func_stack.back()].insert(some_label);
-  //Define some function level events. 
+  if (polytracker_trace_func) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+  }
+  
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     if (auto bb = trace.currentBB()) {
@@ -131,9 +131,10 @@ void logOperation(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  
-  //std::vector<func_index_t> &func_stack = getFuncStack();
-  //getTaintFuncOps()[func_stack.back()].insert(some_label);
+  if (polytracker_trace_func) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+  }
   
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
@@ -148,6 +149,18 @@ void logOperation(dfsan_label some_label) {
   }
 }
 
+void traceFunctionEntry(BBIndex index) {
+      polytracker::Trace &trace = getPolytrackerTrace();
+    if (trace.existingFuncEvents.find(index.functionIndex()) != trace.existingFuncEvents.end()) {
+      trace.functionEvents.push_back(trace.existingFuncEvents[index.functionIndex()]);
+    }
+    else {
+      //Owned/deleted by the Trace deconstructor
+      auto new_function_event = new FunctionEvent(index);
+      trace.existingFuncEvents[index.functionIndex()] = new_function_event;
+      trace.functionEvents.push_back(new_function_event);
+    }
+}
 //NOTE The return value is the index into the call stack 
 //This is how we handle setjmp/longjmp, unfortunately this means 
 //right now we need to maintain a call stack during polytrace, but its not a big deal 
@@ -162,29 +175,27 @@ void logFunctionEntry(const char *fname, BBIndex index) {
     is_init = true;
     polytracker_start();
   }
-  //std::vector<uint32_t> &func_stack = getFuncStack();
-  //if (func_stack.size() > 0) {
-    //getRuntimeCfg()[index].insert(func_stack.back());
-  //} else {
-    // FIXME does this make sense?
-    // -1 Can be the special entry point. 
-   // getRuntimeCfg()[index].insert(-1);
-  //}
-  //func_stack.push_back(index);
-  //getIndexMap()[fname] = index;
-    //std::vector<uint32_t> &func_stack = getFuncStack();
-     // func_stack.push_back(index);
-    polytracker::Trace &trace = getPolytrackerTrace();
-    auto &stack = trace.getStack(std::this_thread::get_id());
-    auto call = stack.emplace<FunctionCall>(fname);
-    // Create a new stack frame:
-    stack.newFrame(call);
+  if (polytracker_trace_func) {
+    traceFunctionEntry(index);
+  }
+
+    if (polytracker_trace) {
+      polytracker::Trace &trace = getPolytrackerTrace();
+      auto &stack = trace.getStack(std::this_thread::get_id());
+      auto call = stack.emplace<FunctionCall>(fname);
+      // Create a new stack frame:
+      stack.newFrame(call);
+    }
 }
 
 void logFunctionExit(BBIndex index) {
   if (UNLIKELY(!is_init)) {
     return;
   }
+  if (polytracker_trace_func) {
+    traceFunctionEntry(index);
+  }
+  if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
     if (!stack.pop()) {
@@ -210,6 +221,7 @@ void logFunctionExit(BBIndex index) {
         // std::cerr << std::endl;
       }
     }
+  }
 }
 
 /**
@@ -232,19 +244,3 @@ void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType) {
     ret->returningTo = newBB;
   }
 }
-
-/*
-void resetFrame(int *index) {
-  if (index == nullptr) {
-    std::cout
-        << "Pointer to array index is null! Instrumentation error, aborting!"
-        << std::endl;
-    abort();
-  }
-  std::vector<func_index_t> &func_stack = getFuncStack();
-  func_index_t caller_func = getFuncStack().back();
-  // Reset the frame
-  func_stack.resize(*index + 1);
-  getRuntimeCfg()[func_stack.back()].insert(caller_func);
-}
-*/
