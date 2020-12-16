@@ -102,7 +102,14 @@ void logOperation(dfsan_label some_label) {
   }
   if (polytracker_trace_func) {
     polytracker::Trace &trace = getPolytrackerTrace();
+    #ifdef DEBUG_INFO    
+    bool res = trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+    if (res == false) {
+      std::cerr << "Failed to add taint label!" << std::endl;
+    }
+    #else 
     trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+    #endif
   }
   
   if (polytracker_trace) {
@@ -118,18 +125,20 @@ void logOperation(dfsan_label some_label) {
   }
 }
 
+thread_local bool ret_or_longjmp = false;
 void traceFunctionEntry(BBIndex index) {
-      polytracker::Trace &trace = getPolytrackerTrace();
-    if (trace.existingFuncEvents.find(index.functionIndex()) != trace.existingFuncEvents.end()) {
-      trace.functionEvents.push_back(trace.existingFuncEvents[index.functionIndex()]);
-    }
-    else {
-      //Owned/deleted by the Trace deconstructor
-      auto new_function_event = new FunctionEvent(index);
-      trace.existingFuncEvents[index.functionIndex()] = new_function_event;
-      trace.functionEvents.push_back(new_function_event);
-    }
+  polytracker::Trace &trace = getPolytrackerTrace();
+  //If there were returns, first push a cont object.
+  if (ret_or_longjmp) {
+    trace.functionEvents.emplace_back(trace.currentFunc()->index, true);
+    ret_or_longjmp = false;
+  }
+  trace.functionEvents.emplace_back(index, false);
 }
+void traceAddContinuation(BBIndex index) {
+  ret_or_longjmp = true;
+}
+
 //NOTE The return value is the index into the call stack 
 //This is how we handle setjmp/longjmp, unfortunately this means 
 //right now we need to maintain a call stack during polytrace, but its not a big deal 
@@ -144,6 +153,9 @@ void logFunctionEntry(const char *fname, BBIndex index) {
     is_init = true;
     polytracker_start();
   }
+  auto& func_index_map = getIndexMap();
+  func_index_map[fname] = index;
+
   if (polytracker_trace_func) {
     traceFunctionEntry(index);
   }
@@ -162,7 +174,7 @@ void logFunctionExit(BBIndex index) {
     return;
   }
   if (polytracker_trace_func) {
-    traceFunctionEntry(index);
+    traceAddContinuation(index);
   }
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();

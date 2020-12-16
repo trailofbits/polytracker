@@ -160,13 +160,10 @@ enum ByteAccessType {
 typedef uint8_t byte_access;
 
 struct FunctionEvent : public TraceEvent {
-  std::unordered_map<dfsan_label, byte_access> func_taint_labels;
   BBIndex index;
-  FunctionEvent(BBIndex& index) : index(index){}
-  void addTaintLabel(const dfsan_label& accessed_label, ByteAccessType access_type) {
-    func_taint_labels[accessed_label] |= access_type;
-  }
-  const std::unordered_map<dfsan_label, byte_access>& getTaintLabels();
+  //Continuation
+  bool is_cont;
+  FunctionEvent(BBIndex& index, bool cont) : index(index), is_cont(cont){}
 };
 
 class TraceEventStack;
@@ -275,18 +272,12 @@ class Trace {
 public:
   //For function events, we can store runtime control flow and function events as a vector
   //To prevent creationg objects for functions that already exist, we re use func events 
-  std::vector<TraceEvent*> functionEvents;
-  //Maps BBIndex.functionIndex() --> TraceEvent*
-  std::unordered_map<uint32_t, TraceEvent*> existingFuncEvents;
+  std::vector<FunctionEvent> functionEvents;
+  //Maps index --> Labels --> access types. 
+  std::unordered_map<uint32_t, std::unordered_map<dfsan_label, byte_access>> func_taint_labels;
+  //BB Tracing
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
   
-  //On delete, we clear out the vector of functionEvent* 
-  ~Trace() {
-    for (auto i : functionEvents) {
-      delete i;
-    }
-  }
-
   TraceEventStack &getStack(std::thread::id thread) {
     return eventStacks[std::this_thread::get_id()];
   }
@@ -358,7 +349,7 @@ public:
   }
    FunctionEvent * currentFunc() {
     for (int i = functionEvents.size() - 1; i >= 0; i--) {
-      if (auto func_event = dynamic_cast<FunctionEvent*>(functionEvents[i])) {
+      if (auto func_event = dynamic_cast<FunctionEvent*>(&functionEvents[i])) {
         return func_event;
       }
     }
@@ -366,11 +357,24 @@ public:
    }
   bool funcAddTaintLabel(const dfsan_label& some_label, ByteAccessType access) {
     if (auto func_event = currentFunc()) {
-      func_event->addTaintLabel(some_label, access);
+      auto& label_map = func_taint_labels[func_event->index.functionIndex()];
+      label_map[some_label] |= access;
       return true;
     }
     return false;
   }
+  bool getCallerFunc(int pos, BBIndex& index) {
+    if (pos == 0) {
+      return false;
+    }
+    if (FunctionEvent* func_event = dynamic_cast<FunctionEvent*>(&functionEvents[pos - 1])) {
+      index = func_event->index;
+      return true;
+    }
+    //Edge case for entrypoint.
+    return false;
+  }
+
 };
 
 } /* namespace polytracker */
