@@ -253,36 +253,47 @@ static void createDBTables(sqlite3 * output_db) {
 	sql_exec(output_db, table_gen.c_str());
 }
 
-static void storeFuncCFG(const RuntimeInfo *runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& curr_thread_id) {
+static void storeFuncCFG(RuntimeInfo *runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& curr_thread_id) {
 	sqlite3_stmt * stmt;
 	const char * insert = "INSERT INTO func_cfg (callee, caller, event_id, thread_id, input_id)"
-	"VALUES (?, ?, ?, ?);";
+	"VALUES (?, ?, ?, ?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	if (polytracker_trace_func) {
 		auto& events = runtime_info->trace.functionEvents;
 		if (events.size() == 0) {
 			return;
 		}
-		//size is >= 1
-		for (int i = 1; i <= events.size(); i++) {
-			const auto caller = dynamic_cast<FunctionEvent*>(events[i]);
-			if (caller == nullptr) {
-				std::cerr << "Error down casting caller TraceEvent to FunctionEvent!" << std::endl;
+		std::cout << "Size is " << events.size();
+		//size is > 0
+		for (int i = 0; i < events.size(); i++) {
+			auto& curr_func = events[i];
+			if (curr_func.is_cont) {
+				continue;
 			}
-			const auto callee = dynamic_cast<FunctionEvent*>(events[i]);
-			if (callee == nullptr) {
-				std::cerr << "Error down casting callee TraceEvent to FunctionEvent!" << std::endl;
+			BBIndex caller;
+			bool res = runtime_info->trace.getCallerFunc(i, caller);
+			//Edge case for entrypoint caller
+			if (!res) {
+				sqlite3_bind_int(stmt, 1, curr_func.index.functionIndex());
+				sqlite3_bind_int(stmt, 2, -1);
+				sqlite3_bind_int64(stmt, 3, curr_func.eventIndex);
+				sqlite3_bind_int(stmt, 4, curr_thread_id);
+				sqlite3_bind_int64(stmt, 5, input_id);
+				sql_step(output_db, stmt);
+				sqlite3_reset(stmt);
+			} 
+			else {
+				sqlite3_bind_int(stmt, 1, curr_func.index.functionIndex());
+				sqlite3_bind_int(stmt, 2, caller.functionIndex());
+				//Bind the callee, because the function entry is essentially the edge between 
+				//caller --> callee, this gives us some ordering between contexts/functions during function
+				//level tracing 
+				sqlite3_bind_int64(stmt, 3, curr_func.eventIndex);
+				sqlite3_bind_int(stmt, 4, curr_thread_id);
+				sqlite3_bind_int64(stmt, 5, input_id);
+				sql_step(output_db, stmt);
+				sqlite3_reset(stmt);
 			}
-			sqlite3_bind_int(stmt, 1, callee->index.functionIndex());
-			sqlite3_bind_int(stmt, 2, caller->index.functionIndex());
-			//Bind the callee, because the function entry is essentially the edge between 
-			//caller --> callee, this gives us some ordering between contexts/functions during function
-			//level tracing 
-			sqlite3_bind_int64(stmt, 3, callee->eventIndex);
-			sqlite3_bind_int(stmt, 4, curr_thread_id);
-			sqlite3_bind_int64(stmt, 5, input_id);
-			sql_step(output_db, stmt);
-			sqlite3_reset(stmt);
 		}
 	}
 	sqlite3_finalize(stmt);
@@ -356,7 +367,7 @@ static void storeFunctionMap(const RuntimeInfo* runtime_info, sqlite3 * output_d
 	const char * insert = "INSERT OR IGNORE INTO func (id, name) VALUES (?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	for (const auto it : runtime_info->func_name_to_index) {
-		sqlite3_bind_int64(stmt, 1, it.second.uid());
+		sqlite3_bind_int(stmt, 1, it.second.functionIndex());
 		sqlite3_bind_text(stmt, 2, it.first.c_str(), it.first.length(), SQLITE_STATIC);
 		sql_step(output_db, stmt);
 		sqlite3_reset(stmt);
@@ -384,34 +395,35 @@ static void storeTaintAccess(sqlite3* output_db, const std::list<dfsan_label>& l
 	}
 }
 
-static void storeTaintFuncAccess(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id) {
+static void storeTaintFuncAccess(RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id) {
 	/*
 	This stores function level taints, IGNORE means that if the POLYTRACE inserted a block that corresponds to a function
 	we don't double store it. 
 	*/
 	auto& events = runtime_info->trace.functionEvents;
-	if (events.size() == 0) {
-		return;
-	}
 	sqlite3_stmt * stmt;
 	const char * insert = "INSERT OR IGNORE INTO accessed_label(block_gid, label, input_id, access_type)"
 					"VALUES(?, ?, ?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
-	std::unordered_map<TraceEvent*, bool> memoized_events;
+	std::unordered_map<uint32_t, bool> memoized_events;
 	for (int i = 0; i < events.size(); i++) {
-		if (memoized_events.find(events[i]) != memoized_events.end()) {
-			continue;
-		}
-		if (auto func_event = dynamic_cast<FunctionEvent*>(events[i])) {
-			auto& label_map = func_event->func_taint_labels;
-			auto func_index = func_event->index.uid();
+		std::cout << i << std::endl;
+		auto func_event = events[i];
+		if (func_event.is_cont) {
+				continue;
+			}
+		if (memoized_events.find(func_event.index.functionIndex()) != memoized_events.end()) {
+				continue;
+			}
+			auto& label_map = runtime_info->trace.func_taint_labels[func_event.index.functionIndex()];
+			auto func_index = func_event.index.uid();
 			for (const auto& label_pair : label_map) {
 				sqlite3_bind_int64(stmt, 1, func_index);
 				sqlite3_bind_int(stmt, 2, label_pair.first);
 				sqlite3_bind_int(stmt, 3, input_id);
 				sqlite3_bind_int(stmt, 4, label_pair.second);
 			}
-		}
+			memoized_events[func_event.index.functionIndex()] = true;
 	}
 	sqlite3_finalize(stmt);
 }
@@ -583,12 +595,10 @@ static void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id) {
-	std::cout << "Storing taint forest?" << std::endl;
 	const char * insert = "INSERT INTO taint_forest (parent_one, parent_two, label, input_id) VALUES (?, ?, ?, ?);";
 	sqlite3_stmt * stmt;
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	const dfsan_label &num_labels = next_label;
-	std::cout << "Num labels " << num_labels << std::endl;
 	for (int i = 0; i < num_labels; i++) {
 		taint_node_t *curr = getTaintNode(i);
 		sqlite3_bind_int(stmt, 1, getTaintLabel(curr->p1));
@@ -596,11 +606,9 @@ static void storeTaintForest(const RuntimeInfo * runtime_info, sqlite3 * output_
 		sqlite3_bind_int(stmt, 3, i);
 		sqlite3_bind_int(stmt, 4, input_id);
 		sql_step(output_db, stmt);
-		std::cout << "Storing " << i << std::endl;
 		sqlite3_reset(stmt);
 	}	
 	sqlite3_finalize(stmt);
-	std::cout << "Done storing labels?" << std::endl;
 }
 
 void storeVersion(sqlite3 * output_db) {
@@ -614,19 +622,21 @@ void storeVersion(sqlite3 * output_db) {
 	sqlite3_finalize(stmt);
 }
 
-static void storeTaintAccess(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t current_thread) {
+static void storeTaintAccess(RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t current_thread) {
 	//If the polytracker trace exists, first store all the blocks that touched taint. The block_gid's contain function info 
 	//Then, store function level taints. If a block already has that block_gid, label, and input id. Then dont add a new entry :) 
 	//Also, if a special operation occured (like a cmp, or anything else being tracked)
 	//A new entry will be added with that information and a > 0 access type. 
-	if (polytracker_trace) {
+	//if (polytracker_trace) {
 		storeRuntimeTrace(runtime_info, output_db, input_id, current_thread);
-	}
-	storeTaintFuncAccess(runtime_info, output_db, input_id);
+	//}
+	//if (polytracker_trace_func) {
+		storeTaintFuncAccess(runtime_info, output_db, input_id);
+	//}
 }
 
 //FIXME better name
-static void storeArtifacts(const RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& current_thread) {
+static void storeArtifacts(RuntimeInfo * runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& current_thread) {
 	storeVersion(output_db);
 	storeFunctionMap(runtime_info, output_db);
 	storeTaintedChunks(output_db, input_id);
@@ -635,7 +645,7 @@ static void storeArtifacts(const RuntimeInfo * runtime_info, sqlite3 * output_db
 	storeFuncCFG(runtime_info, output_db, input_id, current_thread);
 }
 
-static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest_out_path, sqlite3 * output_db, const size_t& current_thread) {
+static void outputDB(RuntimeInfo * runtime_info, const std::string& forest_out_path, sqlite3 * output_db, const size_t& current_thread) {
 	createDBTables(output_db);
 	const input_id_t input_id = storeNewInput(output_db);
 	if (input_id) {
@@ -644,7 +654,7 @@ static void outputDB(const RuntimeInfo * runtime_info, const std::string& forest
 	}
 }
 
-static void outputDB(const RuntimeInfo * runtime_info, sqlite3 * output_db, const size_t& current_thread) {
+static void outputDB(RuntimeInfo * runtime_info, sqlite3 * output_db, const size_t& current_thread) {
 	createDBTables(output_db);
 	const input_id_t input_id = storeNewInput(output_db);
 	if (input_id) {
@@ -653,7 +663,7 @@ static void outputDB(const RuntimeInfo * runtime_info, sqlite3 * output_db, cons
 	}
 }
 
-void output(const std::string& forest_path, const std::string& db_path, const RuntimeInfo *runtime_info, const size_t& current_thread) {
+void output(const std::string& forest_path, const std::string& db_path, RuntimeInfo *runtime_info, const size_t& current_thread) {
 	const std::lock_guard<std::mutex> guard(thread_id_lock);
 	const std::string db_name = db_path + ".db";
 	const std::string forest_fname = forest_path + "_forest.bin";
@@ -673,7 +683,7 @@ void output(const std::string& forest_path, const std::string& db_path, const Ru
 	sqlite3_close(output_db);
 }
 
-void output(const std::string& db_path, const RuntimeInfo *runtime_info, const size_t& current_thread) {
+void output(const std::string& db_path, RuntimeInfo *runtime_info, const size_t& current_thread) {
 	const std::lock_guard<std::mutex> guard(thread_id_lock);
 	const std::string db_name = db_path + ".db";
 	sqlite3 * output_db;
