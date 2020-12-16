@@ -610,7 +610,7 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
 
   Type *DFSanEntryArgs[2] = {Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx)};
   DFSanEntryFnTy =
-      FunctionType::get(IntegerType::getInt64Ty(*Ctx), DFSanEntryArgs, false);
+      FunctionType::get(Type::getVoidTy(*Ctx), DFSanEntryArgs, false);
 
   Type *DFSanTraceInstArgs[5] = {
       IntegerType::getInt32Ty(*Ctx), IntegerType::getInt64PtrTy(*Ctx),
@@ -622,6 +622,7 @@ bool DataFlowSanitizer::doInitialization(Module &M) {
   Type *DFSanExitArgs[1] = {IntegerType::getInt32Ty(*Ctx)};
 
   DFSanExitFnTy = FunctionType::get(Type::getVoidTy(*Ctx), DFSanExitArgs, false);
+  
   Type *DFSanEntryBBArgs[4] = {
       Type::getInt8PtrTy(*Ctx), IntegerType::getInt32Ty(*Ctx),
       IntegerType::getInt32Ty(*Ctx), IntegerType::getInt8Ty(*Ctx)};
@@ -998,9 +999,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     Instruction *InsertPoint = &(*(BB->getFirstInsertionPt()));
     IRBuilder<> IRB(InsertPoint);
     Value *FuncName = IRB.CreateGlobalStringPtr(i->getName());
-    Value *FrameIndex = IRB.CreateAlloca(IntegerType::getInt64Ty(*Ctx));
-    auto store_inst =
-        IRB.CreateStore(IRB.CreateCall(DFSanEntryFn, {FuncName, FuncIndex}), FrameIndex);
+    auto call_inst = IRB.CreateCall(DFSanEntryFn, {FuncName, FuncIndex});
     DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
@@ -1049,7 +1048,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         if (curr_bb == BB) {
           // this is the entrypoint basic block in a function, so make sure the
           // BB instrumentation happens after the function call instrumentation
-          InsertBefore = store_inst->getNextNode();
+          InsertBefore = call_inst->getNextNode();
         } else {
           InsertBefore = Inst;
         }
@@ -1876,10 +1875,10 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     std::string func_name = NewCS.getInstruction()->getFunction()->getName();
     IRBuilder<> IRB(NewCS.getInstruction());
     //FIXME Carson Work
-    uint32_t index = DFSF.DFS.name_index_map[func_name];
-    Value *FuncIndex =
-        ConstantInt::get(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx)), DFSF.DFS.name_index_map[func_name], false);
-    CallInst *ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {FuncIndex});
+    //uint32_t index = DFSF.DFS.name_index_map[func_name];
+    //Value *FuncIndex =
+        //ConstantInt::get(IntegerType::getInt32Ty(*(DFSF.DFS.Ctx)), DFSF.DFS.name_index_map[func_name], false);
+    //CallInst *ExitCall = IRB.CreateCall(DFSF.DFS.DFSanExitFn, {FuncIndex});
   }
 }
 
