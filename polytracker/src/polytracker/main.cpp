@@ -205,10 +205,9 @@ void polytracker_get_settings() {
 
 static void polytracker_end() {
 	static size_t thread_id = 0;
-	std::cout << "Tracking end! Printing!" << std::endl;
   // Go over the array of thread info, and call output on everything.
   for (const auto& thread_info : thread_runtime_info) {
-    if (polytracker_forest_name.empty()) {
+    if (!polytracker_forest_name.empty()) {
       output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id); 
     }
     else {
