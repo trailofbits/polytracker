@@ -24,6 +24,9 @@ add_compiler_rt_object_libraries(RTInterception
     SOURCES ${INTERCEPTION_SOURCES}
     CFLAGS ${INTERCEPTION_CFLAGS})
 
+add_library(intercept STATIC ${INTERCEPTION_SOURCES})
+install(TARGETS intercept DESTINATION ${POLYTRACK_LIB_DIR})
+
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
 endif()
