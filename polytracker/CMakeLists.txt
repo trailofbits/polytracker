@@ -1,20 +1,14 @@
 project(polytracker LANGUAGES C CXX ASM)
 
 include_directories(include)
-
-set(POLYTRACK_CXX_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/cxx_libs/poly_build/include/c++/v1")
-set(POLYTRACK_CXX_LIB "${CMAKE_CURRENT_SOURCE_DIR}/cxx_libs/poly_build/lib")
 set(POLYTRACK_BIN_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/bin")
 set(POLYTRACK_LIB_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/lib")
 set(POLYTRACK_TRACK_LIB_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/track")
 set(POLYTRACK_RULE_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/abi_lists")
 set(POLYTRACK_TESTS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/tests")
 set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/pass")
-set(POLYTRACK_CXX_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/")
 
 add_subdirectory(src)
-#add_subdirectory(custom_abi)
-install(DIRECTORY "./cxx_libs" DESTINATION ${POLYTRACK_CXX_DIR})
 install(DIRECTORY "./abi_lists" DESTINATION ${POLYTRACK_CXX_DIR})
 
 install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR} RENAME "polybuild")

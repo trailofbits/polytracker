@@ -26,16 +26,17 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       python3.7-dev                                   \
       golang                                          \
       libgraphviz-dev                                 \
-      graphviz                                        \
-      clang-9
+      graphviz                                        \                                        
+      clang-10
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
 RUN python3 -m pip install pip
 RUN go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH="$PATH:/root/go/bin"
 RUN python3.7 -m pip install pytest
-RUN ln -s /usr/bin/clang-9 /usr/bin/clang
-RUN ln -s /usr/bin/clang++-9 /usr/bin/clang++
+RUN ln -s /usr/bin/clang-10 /usr/bin/clang
+RUN ln -s /usr/bin/clang++-10 /usr/bin/clang++
+
 FROM builder AS cxx_builder
 RUN git clone https://github.com/llvm/llvm-project.git
 #Install latest cmake 
@@ -43,9 +44,6 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.19.2/cmake-3.19.2
 RUN mkdir -p /usr/bin/cmake-3.19
 RUN chmod +x cmake-3.19.2-Linux-x86_64.sh && ./cmake-3.19.2-Linux-x86_64.sh --skip-license --prefix=/usr/bin/cmake-3.19
 ENV PATH="/usr/bin/cmake-3.19/bin:${PATH}"
-RUN cmake --version
-RUN which cmake
-# Clone the LLVM project, and or we could have it as a submodule later
 
 #Build the CXX libs for polytracker, and another for targets
 ENV CXX_DIR=/cxx_libs
@@ -61,8 +59,6 @@ RUN mkdir -p $CXX_DIR
 WORKDIR $CXX_DIR
 RUN mkdir -p $CLEAN_CXX_DIR 
 WORKDIR $CLEAN_CXX_DIR
-
-RUN gclang -v
 
 RUN cmake -GNinja ${LLVM_CXX_DIR} \
   -DLLVM_ENABLE_LIBCXX=ON \
@@ -88,10 +84,10 @@ FROM cxx_builder as dev
 WORKDIR /
 COPY . /polytracker
 WORKDIR /polytracker
-COPY --from=cxx_builder /cxx_libs .
+COPY --from=cxx_builder /cxx_libs /
+RUN mv /cxx_libs /polytracker/
 RUN pip3 install pytest .
 RUN rm -rf build && mkdir -p build
-
 WORKDIR /polytracker/build
 ENV PATH="/usr/lib/llvm-7/bin:${PATH}"
 RUN cmake -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE .. && ninja install

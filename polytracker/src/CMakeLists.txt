@@ -1,7 +1,4 @@
-#add_subdirectory(dfsan_rt)
 add_subdirectory(dfsan_pass)
-#add_subdirectory(dfsan_sources)
-#add_subdirectory(polytracker)
 
 set(POLY_DIR "polytracker")
 set(TAINT_DIR "dfsan_sources")
@@ -9,10 +6,10 @@ set(DFSAN_DIR "dfsan_rt/dfsan")
 set(INTERCEPT_DIR "dfsan_rt/interception")
 set(SAN_DIR "dfsan_rt/sanitizer_common")
 
-#set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE}")
-#set(CMAKE_EXE_LINKER_FLAGS)
+set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -L${POLYTRACK_CXX_LIB} -Wl,--start-group,-lc++abi")
 
 set(POLY_SOURCES
 ${POLY_DIR}/main.cpp 
