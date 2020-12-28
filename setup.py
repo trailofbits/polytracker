@@ -58,7 +58,7 @@ setup(
     author='Trail of Bits',
     version=polytracker_version_string(),
     packages=find_packages(),
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[
         'cxxfilt==0.2.2',
         'docker==4.4.0',
