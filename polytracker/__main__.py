@@ -6,8 +6,7 @@ from pathlib import Path
 
 from .plugins import add_command_subparsers, Command
 
-# the following line imports modules so their commands can register themselves
-from . import containerization, datalog, grammars, polytracker
+from . import polytracker
 
 logger = logging.getLogger("polytracker")
 
