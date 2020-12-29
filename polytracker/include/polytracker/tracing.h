@@ -225,7 +225,7 @@ public:
             typename std::enable_if<std::is_base_of<TraceEvent, T>::value>::type
                 * = nullptr,
             typename... Ts>
-  T *emplace(Ts &&... args) {
+  T *emplace(Ts &&...args) {
     auto t = new T(std::forward<Ts>(args)...);
     push(t);
     return t;
