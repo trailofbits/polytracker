@@ -4,6 +4,23 @@ import sys
 from setuptools import setup, find_packages
 from typing import Optional, Tuple
 
+
+PYTHON_REQUIRES = ">=3.7"
+if sys.platform == "darwin":
+    import platform
+    try:
+        macos_major_version = int(platform.release().split(".")[0])
+        if macos_major_version >= 20:
+            # We are running macOS Big Sur or later.
+            # The new shared cache on Big Sur breaks `ctypes.util.find_library`,
+            # which is used by the `cxxfilt` dependency.
+            # https://stackoverflow.com/questions/62587131/macos-big-sur-python-ctypes-find-library-does-not-find-libraries-ssl-corefou/63609524#63609524
+            # https://github.com/python/cpython/pull/22855
+            # This wasn't patched in CPython until version 3.9.1, so require that:
+            PYTHON_REQUIRES = ">=3.9.1"
+    except ValueError:
+        pass
+
 SETUP_DIR = os.path.dirname(os.path.realpath(__file__))
 POLYTRACKER_HEADER = os.path.join(SETUP_DIR, 'polytracker', 'include', 'polytracker', 'polytracker.h')
 
@@ -58,7 +75,7 @@ setup(
     author='Trail of Bits',
     version=polytracker_version_string(),
     packages=find_packages(),
-    python_requires='>=3.7',
+    python_requires=PYTHON_REQUIRES,
     install_requires=[
         'cxxfilt==0.2.2',
         'docker==4.4.0',
