@@ -377,8 +377,16 @@ static void storeFunctionMap(const RuntimeInfo* runtime_info, sqlite3 * output_d
 
 static void storeTaintAccess(sqlite3* output_db, const std::list<dfsan_label>& labels,
 		const size_t& event_id, const size_t& block_gid, const input_id_t& input_id) {
+			std::cout << "Storing block level taint?" << std::endl;
 	if (!labels.empty()) {
 		sqlite3_stmt * stmt;
+		/*
+		block_gid BIGINT,"
+           "  event_id BIGINT,"
+           "  label INTEGER,"
+           "  input_id INTEGER,"
+	       "  access_type TINYINT,
+		   */
 		const char * insert = "INSERT INTO accessed_label(block_gid, event_id, label, input_id, access_type)" 
 		"VALUES (?, ?, ?, ?, ?);";
 		sql_prep(output_db, insert, -1, &stmt, NULL);
@@ -402,13 +410,12 @@ static void storeTaintFuncAccess(RuntimeInfo * runtime_info, sqlite3 * output_db
 	*/
 	auto& events = runtime_info->trace.functionEvents;
 	sqlite3_stmt * stmt;
-	const char * insert = "INSERT OR IGNORE INTO accessed_label(block_gid, label, input_id, access_type)"
-					"VALUES(?, ?, ?, ?);";
+	const char * insert = "INSERT OR IGNORE INTO accessed_label(block_gid, event_id, label, input_id, access_type)"
+					"VALUES(?, ?, ?, ?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	std::unordered_map<uint32_t, bool> memoized_events;
 	for (int i = 0; i < events.size(); i++) {
-		std::cout << i << std::endl;
-		auto func_event = events[i];
+		auto& func_event = events[i];
 		if (func_event.is_cont) {
 				continue;
 			}
@@ -419,9 +426,13 @@ static void storeTaintFuncAccess(RuntimeInfo * runtime_info, sqlite3 * output_db
 			auto func_index = func_event.index.uid();
 			for (const auto& label_pair : label_map) {
 				sqlite3_bind_int64(stmt, 1, func_index);
-				sqlite3_bind_int(stmt, 2, label_pair.first);
-				sqlite3_bind_int(stmt, 3, input_id);
-				sqlite3_bind_int(stmt, 4, label_pair.second);
+				sqlite3_bind_int64(stmt, 2, func_event.eventIndex);
+				sqlite3_bind_int(stmt, 3, label_pair.first);
+				std::cout << "VSCODE " << input_id << std::endl;
+				sqlite3_bind_int(stmt, 4, input_id);
+				sqlite3_bind_int(stmt, 5, label_pair.second);
+				sql_step(output_db, stmt);
+				sqlite3_reset(stmt);
 			}
 			memoized_events[func_event.index.functionIndex()] = true;
 	}

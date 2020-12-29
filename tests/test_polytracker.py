@@ -1,7 +1,7 @@
 import pytest
 from shutil import copyfile
-
-from polytracker import parse, ProgramTrace, TaintForestFunctionInfo
+import sqlite3
+from polytracker import parse_sql, ProgramTrace, TaintForestFunctionInfo
 
 from .data import *
 
@@ -71,7 +71,7 @@ def validate_execute_target(target_name: str, config_path: Optional[Union[str, P
     target_bin_path = BIN_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
-    env = {"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)}
+    env = {"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYDB": to_native_path(TEST_RESULTS_DIR / target_name), "POLYFUNC": "on"}
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
@@ -82,14 +82,28 @@ def validate_execute_target(target_name: str, config_path: Optional[Union[str, P
             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
     assert ret_val == 0
     # Assert that the appropriate files were created
-    forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
+    #forest_path = TEST_RESULTS_DIR / f"{target_name}0_forest.bin"
     # Add the 0 here for thread counting.
-    json_path = TEST_RESULTS_DIR / f"{target_name}0_process_set.json"
-    assert forest_path.exists()
-    assert json_path.exists()
-    with open(json_path, "r") as f:
-        json_obj = json.load(f)
-    return parse(json_obj, str(forest_path))
+    #json_path = TEST_RESULTS_DIR / f"{target_name}0_process_set.json"
+    db_path = TEST_RESULTS_DIR / f"{target_name}.db"
+    assert db_path.exists()
+    print(db_path)
+    os.system(f"cp {db_path} ./")
+    #assert forest_path.exists()
+    #assert json_path.exists()
+    conn = sqlite3.connect(db_path)
+    # TODO get actual input_id
+    # TODO Get last input_id
+    # id fetch query
+    id_fetch_query = "SELECT id FROM input ORDER BY id DESC LIMIT 1;"
+    res = conn.execute(id_fetch_query).fetchall()
+    print(f"Input id {int(res[0][0])}")
+    ret = parse_sql(conn, int(res[0][0]))
+    conn.close()
+    return ret
+    #with open(json_path, "r") as f:
+    #    json_obj = json.load(f)
+    #return parse(json_obj, str(forest_path))
 
 
 @pytest.fixture
@@ -119,6 +133,7 @@ def program_trace(request):
 
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
+    print(f"MMAP PROGRAM FUNCTIONS {program_trace.functions}")
     assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
 
 

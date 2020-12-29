@@ -43,6 +43,7 @@ class ProgramTrace:
     def __init__(self, version: Tuple[VersionElement, ...], function_data: Iterable[FunctionInfo]):
         self.polytracker_version: Tuple[VersionElement, ...] = version
         self.functions: Dict[str, FunctionInfo] = {f.name: f for f in function_data}
+        print(self.functions)
         self._cfg: Optional[CFG] = None
         self._taint_sources: Optional[FrozenSet[str]] = None
 
@@ -526,17 +527,20 @@ def polytracker_sql_version(*version):
 
 
 def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
-    version_query = "SELECT value FROM polytracker WHERE key='version';"
+    version_query = "SELECT value FROM polytracker WHERE store_key='version';"
     cursor = conn.execute(version_query)
     print(cursor)
     # There should only be one row,
     items = [row for row in cursor]
     version_str: str = items[0][0]
     print(version_str)
-    version = normalize_version(version_str.split("."))
+    version_list = version_str.split(".") + [""]
+    version = tuple(x for x in version_list)
     if len(version) > 4:
         log.warning(f"Unexpectedly long PolyTracker version: {version!r}")
     for i, (known_version, parser) in enumerate(POLYTRACKER_SQL_FORMATS):
+        print("Known version ", known_version)
+        print("We are looking for: ", version)
         if version >= known_version:
             if i == 0 and version > known_version:
                 log.warning(
@@ -546,41 +550,25 @@ def parse_sql(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
                 )
         if version == known_version:
             return parser(conn, input_id)  # type: ignore
-        raise ValueError(f"Unsupported PolyTracker version {version!r}")
+    raise ValueError(f"Unsupported PolyTracker version {version!r}")
 
 
+def function_index(bb_index: int) -> int:
+    return (bb_index >> 32) & 0xFFFFFFFF
+
+
+# FIXME delete
 @polytracker_sql_version(3, 1, 0, "")
-def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
-    # version = polytracker_json_obj["version"].split(".")
-    version_query = "SELECT value FROM polytracker WHERE key='version';"
-    cursor = conn.execute(version_query)
-    print(cursor)
-    version = [row for row in cursor]
-    version_str = version[0][0]
-    print(version_str)
+def parse_db_v1(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
     function_data = []
     tainted_functions = set()
-    # To get tainted functions, this is the query I want to do, we can maybe use joins to optimize this query later
-    # 1. Get the block_gid of every accessed label (taint label that was touched)
-    # Distinct means no duplicates
-    # block_gid_query = "SELECT DISTINCT block_gid FROM accessed_label WHERE input_id=?;"
-    # results = conn.execute(block_gid_query, input_id)
-    # 2. The high 32 bits of the block_gid correspond to the function index, so I suppose we apply the mask to each GID
-    # This should just be integers, and im masking the higher bits.
-    # function_ids = [row[0] & 0xFFFF0000 for row in results]
-
-    # 3. Get the function names
-    # results = conn.executemany("SELECT name FROM func WHERE id=?", function_ids)
-    # tainted_functions = set(row[0] for row in results)
-    # 3. add each element to the set tainted functions.
-    # FIXME we need some document name
-    # Execute the query here
-    # FIXME Update the C++ side to respect access type again (input/cmp)
-    # Get input bytes for all functions
-    input_bytes_dict: Dict[int: Set[int]] = defaultdict(set)
-    cmp_bytes_dict: Dict[int: Set[int]] = defaultdict(set)
+    input_bytes_dict: Dict[str: Set[int]] = defaultdict(set)
+    cmp_bytes_dict: Dict[str: Set[int]] = defaultdict(set)
     function_names: Dict[int: str] = {}
-    called_from_dict: Dict[int: Set[int]] = defaultdict(set)
+    runtime_cfg: Dict[str: Set[str]] = defaultdict(set)
+    input_map: Dict[int, str]
+    # label --> offset
+    canonical_map: [int, int]
 
     func_name_results = conn.execute("SELECT name, id FROM func;")
     for row in func_name_results:
@@ -589,25 +577,19 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
         assert row[1] not in function_names
         function_names[row[1]] = row[0]
 
-    runtime_cfg_results = conn.execute("SELECT callee, caller from func_cfg WHERE input_id=?", input_id)
+    runtime_cfg_results = conn.execute("SELECT callee, caller from func_cfg WHERE input_id=?", [input_id])
     for row in runtime_cfg_results:
-        called_from_dict[row[0]].add(row[1])
+        runtime_cfg[function_names[row[0]]].add(function_names[row[1]])
 
-    input_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=0",
-                                       input_id)
-
-    # Input bytes should be a superset of cmp bytes
+    input_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=?",
+                                       [input_id])
     for row in input_bytes_results:
-        input_bytes_dict[row[0] & 0xFFFF0000].add(row[1])
-    cmp_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=1",
-                                     input_id)
-    for row in cmp_bytes_results:
-        cmp_byte_dicts[row[0] & 0xFFFF0000].add(row[1])
+        input_bytes_dict[function_index(row[0])].add(row[1])
 
-    # input_byte_pairs = [(row[0] & 0xFFFF0000, row[1]) for row in input_bytes_results]
-    # cmp_byte_pairs = [(row[0] & 0xFFFF0000, row[1]) for row in cmp_bytes_results]
-    # tainted_function_ids = set(row[0] & 0xFFFF0000 for row in input_bytes_results).union(
-    #    cmp_row[0] & 0xFFFF0000 for cmp_row in cmp_bytes_results)
+    cmp_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=3",
+                                     [input_id])
+    for row in cmp_bytes_results:
+        cmp_bytes_dict[function_index(row[0])].add(row[1])
 
     # For every function that touched taint
     for tainted_func in input_bytes_dict:
@@ -616,41 +598,109 @@ def parse_db_v1(conn: sqlite3.Connection, input_id) -> ProgramTrace:
             cmp_bytes = cmp_bytes_dict[tainted_func]
         else:
             cmp_bytes = {}
-
-    # Build up the runtime CFG, can build up a set/memoized dict the same way with tainted functions
-    # 1. Query the func_cfg based on input_id and get all the runtime func calls
-    # 2. Add function names to the runtime_cfg set.
-
-    # Once all that is done, everything should work!
-    for function_name, data in polytracker_json_obj["tainted_functions"].items():
-        # This should be false??? im not sure lol. actually i like that this is true
-        if "input_bytes" not in data:
-            if "cmp_bytes" in data:
-                input_bytes = data["cmp_bytes"]
-            else:
-                input_bytes = {}
-        else:
-            input_bytes = data["input_bytes"]
-        if "cmp_bytes" in data:
-            cmp_bytes = data["cmp_bytes"]
-        else:
-            cmp_bytes = input_bytes
-        if function_name in polytracker_json_obj["runtime_cfg"]:
-            called_from = frozenset(polytracker_json_obj["runtime_cfg"][function_name])
+        assert tainted_func in function_names
+        name = function_names[tainted_func]
+        if name in runtime_cfg:
+            called_from = frozenset(func for func in runtime_cfg[name])
         else:
             called_from = frozenset()
-        # Have this take a name, a list, a list, and a list.
+        function_data.append(FunctionInfo(name=name, cmp_bytes={str(input_id): cmp_bytes},
+                                          input_bytes={str(input_id): input_bytes}, called_from=called_from))
+        tainted_func.add(name)
+
+    for func_name in runtime_cfg.keys() - tainted_functions:
+        function_data.append(FunctionInfo(name=func_name, cmp_bytes={}, called_from=runtime_cfg[func_name]))
+
+    return ProgramTrace(version=(3, 1, 0), function_data=function_data)
+
+
+@polytracker_sql_version(3, 2, 0, "")
+def parse_db_v2(conn: sqlite3.Connection, input_id: int) -> ProgramTrace:
+    function_data: List[FunctionInfo] = []
+    tainted_functions = set()
+
+    source = conn.execute("SELECT path FROM input WHERE id=?", [input_id]).fetchall()
+    source = source[0][0]
+
+    canonical_list = conn.execute("SELECT taint_label, file_offset FROM canonical_map WHERE input_id=?",
+                                  [input_id]).fetchall()
+    canonical_mapping: Dict[int, int] = {}
+    # map offset to label
+    for pair in canonical_list:
+        canonical_mapping[pair[0]] = pair[1]
+
+    print(canonical_mapping)
+    input_bytes_dict: Dict[str: List[int]] = defaultdict(list)
+    cmp_bytes_dict: Dict[str: List[int]] = defaultdict(list)
+    function_names: Dict[int: str] = {}
+    runtime_cfg: Dict[str: List[str]] = defaultdict(list)
+
+    func_name_results = conn.execute("SELECT name, id FROM func;").fetchall()
+    for row in func_name_results:
+        # Each function should have a unique ID from instrumentation
+        # Error out if thats not the case
+        assert row[1] not in function_names
+        function_names[row[1]] = row[0]
+
+    print(function_names)
+
+    runtime_cfg_results = conn.execute("SELECT callee, caller from func_cfg WHERE input_id=?;", [input_id]).fetchall()
+    for row in runtime_cfg_results:
+        print(f"CFG ROW IS {row}")
+        assert row[0] in function_names
+        # This happens for entrypoint, mains caller id = -1, which becomes ""
+        if row[1] not in function_names:
+            runtime_cfg[function_names[row[0]]].append("")
+        else:
+            runtime_cfg[function_names[row[0]]].append(function_names[row[1]])
+
+    input_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=?;", [input_id]).fetchall()
+                                       #[input_id]).fetchall()
+    print(input_id)
+    print(input_bytes_results)
+    more_results = conn.execute("SELECT * from accessed_label;").fetchall()
+    print(more_results)
+    for row in input_bytes_results:
+        print(f"input_byte_row? {row}, {function_index(row[0])}")
+        assert function_index(row[0]) in function_names
+        input_bytes_dict[function_index(row[0])].append(row[1])
+
+    cmp_bytes_results = conn.execute("SELECT block_gid, label FROM accessed_label WHERE input_id=? AND access_type=3;",
+                                     [input_id]).fetchall()
+    for row in cmp_bytes_results:
+        cmp_bytes_dict[function_index(row[0])].append(row[1])
+
+    forest = TaintForest(path_or_conn=conn, canonical_mapping=canonical_mapping, input_id=input_id)
+    print("Input bytes dict ehh?", input_bytes_dict)
+    for tainted_func in input_bytes_dict:
+        input_bytes = {source : input_bytes_dict[tainted_func]}
+        if tainted_func in cmp_bytes_dict:
+            cmp_bytes = {source : cmp_bytes_dict[tainted_func]}
+        else:
+            cmp_bytes = {}
+        assert tainted_func in function_names
+        name = function_names[tainted_func]
+        if name in runtime_cfg:
+            called_from = frozenset(func for func in runtime_cfg[name])
+        else:
+            called_from = frozenset()
+        print(f"Adding function {name}")
+        print(called_from)
+        print(input_bytes)
         function_data.append(
-            FunctionInfo(name=function_name, cmp_bytes=cmp_bytes, input_bytes=input_bytes, called_from=called_from)
+            TaintForestFunctionInfo(
+                name=name,
+                forest=forest,
+                cmp_byte_labels=cmp_bytes,
+                input_byte_labels=input_bytes,
+                called_from=called_from,
+            )
         )
-        tainted_functions.add(function_name)
+        tainted_functions.add(name)
     # Add any additional functions from the CFG that didn't operate on tainted bytes
-    for function_name in polytracker_json_obj["runtime_cfg"].keys() - tainted_functions:
-        function_data.append(
-            FunctionInfo(name=function_name, cmp_bytes={},
-                         called_from=polytracker_json_obj["runtime_cfg"][function_name])
-        )
-    return ProgramTrace(version=version, function_data=function_data)
+    for func_name in runtime_cfg.keys() - tainted_functions:
+        function_data.append(FunctionInfo(name=func_name, cmp_bytes={}, called_from=runtime_cfg[func_name]))
+    return ProgramTrace(version=(3, 1, 0), function_data=function_data)
 
 
 def parse(polytracker_json_obj: dict, polytracker_forest_path: Optional[str] = None) -> ProgramTrace:
@@ -818,7 +868,7 @@ def parse_format_v4(polytracker_json_obj: dict, polytracker_forest_path: str) ->
         raise ValueError(f"Expected only a single taint source, but found {sources}")
     source = next(iter(sources))
     canonical_mapping: Dict[int, int] = dict(polytracker_json_obj["canonical_mapping"][source])
-    forest = TaintForest(path=polytracker_forest_path, canonical_mapping=canonical_mapping)
+    forest = TaintForest(path_or_conn=polytracker_forest_path, canonical_mapping=canonical_mapping)
     for function_name, data in polytracker_json_obj["tainted_functions"].items():
         if "input_bytes" not in data:
             if "cmp_bytes" in data:
@@ -860,10 +910,10 @@ class TraceDiffCommand(Command):
     help = "compute a diff of two program traces"
 
     def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument("polytracker_db1", type=str, help="the sqlite3 db file for the reference trace")
+        parser.add_argument("--db", type=str, help="the sqlite3 db file for the reference trace")
         # parser.add_argument("polytracker_db2", type=str, help="the sqlite3 db file for the different trace")
-        parser.add_argument("input_id1", type=int, help="input id of reference trace instance")
-        parser.add_argument("input_id2", type=int, help="input id of different trace instance")
+        parser.add_argument("--id1", type=int, help="input id of reference trace instance")
+        parser.add_argument("--id2", type=int, help="input id of different trace instance")
         # parser.add_argument("polytracker_json1", type=str, help="the JSON file for the reference trace")
         # parser.add_argument("taint_forest_bin1", type=str, help="the taint forest file for the reference trace")
         # parser.add_argument("polytracker_json2", type=str, help="the JSON file for the different trace")
@@ -888,6 +938,19 @@ class TraceDiffCommand(Command):
         if args.image is not None:
             diff.to_image().save(args.image)
 
+class DebugParseCommand(Command):
+    name = "debug"
+    help = "compute debug"
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        parser.add_argument("--db", type=str, help="the sqlite3 db file for the reference trace")
+        parser.add_argument("--id", type=int, help="input id of reference trace instance")
+
+    def run(self, args: Namespace):
+        if not os.path.exists(args.db):
+            print(f"Error! Database file {args.id} not found!")
+        with sqlite3.connect(args.db) as f:
+            trace1 = parse_sql(f, args.id)
 
 class TemporalVisualization(Command):
     name = "temporal"
@@ -1024,3 +1087,7 @@ class ConfigBuildCommand(Command):
             output_json["POLYFOREST"] = args.forest_output
         with open(args.output, "w") as f:
             json.dump(output_json, f)
+
+def main():
+    with sqlite3.connect("temp.db") as f:
+        trace1 = parse_sql(f, 1)

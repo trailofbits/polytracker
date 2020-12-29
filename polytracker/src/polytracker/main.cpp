@@ -181,6 +181,16 @@ void polytracker_parse_env() {
   }
 }
 
+void polytracker_print_settings() {
+  std::cout << "POLYPATH: " << target_file << std::endl;
+  std::cout << "POLYDB: " << polytracker_db_name << std::endl;
+  std::cout << "POLYFUNC: " << polytracker_trace_func << std::endl;
+  std::cout << "POLYTRACE: " << polytracker_trace << std::endl;
+  std::cout << "POLYSTART: " << byte_start << std::endl;
+  std::cout << "POLYEND: " << byte_end << std::endl;
+  std::cout << "POLYTTL: " << taint_node_ttl << std::endl;
+}
+
 /*
 This code parses the enviornment variables and sets the globals which work as
 polytrackers settings
@@ -221,6 +231,7 @@ static void polytracker_end() {
 
 void polytracker_start() {
   polytracker_get_settings();
+  polytracker_print_settings();
   // Set up the atexit call
   Atexit(polytracker_end);
 

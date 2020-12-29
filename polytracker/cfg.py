@@ -178,15 +178,15 @@ class FunctionInfo:
     def __init__(
         self,
         name: str,
-        cmp_bytes: Dict[str, List[int]],
-        input_bytes: Optional[Dict[str, List[int]]] = None,
+        cmp_bytes: Dict[str, Set[int]],
+        input_bytes: Optional[Dict[str, Set[int]]] = None,
         called_from: Iterable[str] = (),
     ):
         self.name: str = name
         self.called_from: FrozenSet[str] = frozenset(called_from)
-        self._cmp_bytes: Dict[str, List[int]] = cmp_bytes
+        self._cmp_bytes: Dict[str, Set[int]] = cmp_bytes
         if input_bytes is None:
-            self._input_bytes: Dict[str, List[int]] = cmp_bytes
+            self._input_bytes: Dict[str, Set[int]] = cmp_bytes
         else:
             self._input_bytes = input_bytes
         self._demangled_name: Optional[str] = None
@@ -213,11 +213,11 @@ class FunctionInfo:
         return {source: self.source_size(source) for source in self.taint_sources}
 
     @property
-    def input_bytes(self) -> Dict[str, List[int]]:
+    def input_bytes(self) -> Dict[str, Set[int]]:
         return self._input_bytes
 
     @property
-    def cmp_bytes(self) -> Dict[str, List[int]]:
+    def cmp_bytes(self) -> Dict[str, Set[int]]:
         return self._cmp_bytes
 
     @property
@@ -248,13 +248,13 @@ class FunctionInfo:
             for start, end in FunctionInfo.tainted_chunks(byte_offsets):
                 yield source, (start, end)
 
-    def __getitem__(self, input_source_name: str) -> List[int]:
+    def __getitem__(self, input_source_name: str) -> Set[int]:
         return self.input_bytes[input_source_name]
 
     def __iter__(self) -> Iterable[str]:
         return self.taint_sources
 
-    def items(self) -> ItemsView[str, List[int]]:
+    def items(self) -> ItemsView[str, Set[int]]:
         return self.input_bytes.items()
 
     def __hash__(self):

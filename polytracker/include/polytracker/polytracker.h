@@ -5,7 +5,7 @@
 // parsing code in polytracker.py!
 
 #define POLYTRACKER_VERSION_MAJOR 3
-#define POLYTRACKER_VERSION_MINOR 1
+#define POLYTRACKER_VERSION_MINOR 2
 #define POLYTRACKER_VERSION_REVISION 0
 
 // If there is a suffix, it should always start with a hypen, like "-alpha2.2".

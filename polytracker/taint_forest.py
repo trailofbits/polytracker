@@ -16,7 +16,8 @@ TAINT_NODE_SIZE: Final[int] = 8
 
 
 class TaintForest:
-    def __init__(self, path_or_conn, canonical_mapping: Optional[Dict[int, int]] = None, input_id: Optional[int] = None):
+    def __init__(self, path_or_conn, canonical_mapping: Optional[Dict[int, int]] = None,
+                 input_id: Optional[int] = None):
         self.path_or_conn: Union[str, sqlite3.Connection] = path_or_conn
         if canonical_mapping is None:
             canonical_mapping = {}
@@ -40,8 +41,9 @@ class TaintForest:
                 if label == 0:
                     continue
                 # Should just be size 1
-                query = [item for item in self.path_or_conn.execute("SELECT * FROM taint_forest WHERE label=? AND input_id=?",
-                                                                    [label, self.input_id])]
+                query = self.path_or_conn.execute("SELECT parent_one, parent_two FROM taint_forest WHERE label=? AND input_id=?",
+                                                                    [label, self.input_id]).fetchall()
+                assert len(query) == 1
                 parent1, parent2 = query[0]
                 yield parent1, parent2, label
 
@@ -54,6 +56,7 @@ class TaintForest:
             self.num_nodes = filesize // TAINT_NODE_SIZE
             return self.num_nodes
         else:
+            # TODO Make this lazier, query until results are None
             query = "SELECT * from taint_forest WHERE input_id=?"
             for x in self.path_or_conn.execute(query, [self.input_id]):
                 self.num_nodes += 1
@@ -125,6 +128,7 @@ class TaintForest:
         if filesize % TAINT_NODE_SIZE != 0:
             raise ValueError(f"Taint forest is not a multiple of {TAINT_NODE_SIZE} bytes!")
 
+    #FIXME debugging
     def validate(self, full: bool = False):
         if isinstance(self.path_or_conn, str):
             self.validate_forest_file()
@@ -132,6 +136,7 @@ class TaintForest:
             self.validate_forest_sql()
 
         num_nodes = self.forest_size
+        print(f"Num nodes is: {num_nodes}")
         if full:
             for parent1, parent2, label in tqdm(self.forest, total=num_nodes, desc="Validating taint forest topology",
                                                 leave=False, unit=" labels"):
@@ -144,6 +149,7 @@ class TaintForest:
                         raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
                 elif parent1 == 0 and parent2 == 0:
                     if label not in self.canonical_mapping and label != 0:
+                        print(self.canonical_mapping)
                         raise ValueError(f"Canonical taint label {label} is missing from the canonical mapping")
                 else:
                     raise ValueError(f"Taint label {label} has one non-zero parent and another zero parent")

@@ -81,12 +81,15 @@ class PolyBuilder:
 
     def poly_compile(self, bitcode_path: str, output_path: str, libs: List[str]) -> bool:
         """
-        This function builds the compile command to instrument the whole program bitcode
+        This function builds the compile command which links the runtime monitor to the target
         """
         compile_command = []
         source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
-        rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
+        rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan.a")
         poly_dir = os.path.join(self.meta.compiler_dir, "lib", "libPolytracker.a")
+        intercept = os.path.join(self.meta.compiler_dir, "lib", "libintercept.a")
+        san_com = os.path.join(self.meta.compiler_dir, "lib", "libsanitizer.a")
+
         if self.meta.is_cxx:
             compile_command.append("clang++")
         else:
@@ -98,7 +101,7 @@ class PolyBuilder:
         # -lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
         compile_command += ["-g", "-o", output_path, bitcode_path]
         compile_command.append("-lpthread")
-        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
+        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir, intercept, san_com]
         compile_command += ["-ldl", "-lrt"]
         compile_command.append("-lstdc++")
         compile_command.append("-lsqlite3")
@@ -124,8 +127,8 @@ class PolyBuilder:
         if track_list_files is None:
             print("Error! Failed to add track_lists")
             return False
-        for file in ignore_list_files:
-            opt_command.append("-polytrack-dfsan-abilist=" + file)
+        #for file in ignore_list_files:
+        #    opt_command.append("-polytrack-dfsan-abilist=" + file)
         for file in track_list_files:
             opt_command.append("-polytrack-dfsan-abilist=" + file)
         opt_command += [input_file, "-o", bitcode_file]
@@ -156,7 +159,7 @@ class PolyBuilder:
             compile_command.append("gclang++")
         else:
             compile_command.append("gclang")
-        compile_command += ["-pie", "-fPIC"]
+        compile_command += ["-static", "-fPIC"]
         if self.meta.is_cxx:
             compile_command.append("-stdlib=libc++")
             compile_command.append("-nostdinc++")
@@ -176,6 +179,29 @@ class PolyBuilder:
             return False
         return True
 
+    def clang_inst():
+        """ Use instrumentation from clang """ 
+        compile_command = []
+        if self.meta.is_cxx:
+            compile_command.append("gclang++")
+        else:
+            compile_command.append("gclang")
+        if self.meta.is_cxx:
+            compile_command += ["-stdlib=libc++", "-nostdinc++", "-static", "-fPIC"]
+            compile_command.append("-I" + os.path.join(self.meta.compiler_dir, "cxx_libs", "include", "c++", "v1"))
+            compile_command.append("-L" + os.path.join(self.meta.compiler_dir, "cxx_libs", "lib"))
+        else:
+            compile_command += ["-static", "-fPIC"]
+
+        is_linking = self.poly_is_linking(argv)
+        if is_linking:
+            # If its cxx, link in our c++ libs
+            if self.meta.is_cxx:    
+                compile_command += ["-lc++abi", "-lstdc++", "-lpthread"]
+        res = subprocess.call(compile_command)
+        if res != 0:
+            return False
+        return True
 
 """
 Store a build artifact to the artifact storage via copy
@@ -200,7 +226,7 @@ def store_artifact(file_path, artifact_path) -> bool:
         print(f"Artifact path: {artifact_file_path}")
         return False
     return True
-
+        
 
 def main():
     parser = argparse.ArgumentParser(

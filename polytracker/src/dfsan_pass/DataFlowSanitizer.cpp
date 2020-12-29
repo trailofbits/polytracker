@@ -1653,11 +1653,15 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     visitOperandShadowInst(*CS.getInstruction());
     return;
   }
+  std::cerr << "GETTING NAME" << std::endl;
+   //std::string name = F->getName();
+    //std::cout << "VISITING: " << name << std::endl;
 
   // Calls to this function are synthesized in wrappers, and we shouldn't
   // instrument them.
-  if (F == DFSF.DFS.DFSanVarargWrapperFn)
+  if (F == DFSF.DFS.DFSanVarargWrapperFn) {
     return;
+  }
 
   IRBuilder<> IRB(CS.getInstruction());
 
@@ -1667,20 +1671,28 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
     Function *F = i->second;
     switch (DFSF.DFS.getWrapperKind(F)) {
     case DataFlowSanitizer::WK_Warning:
+       // std::cout << "WARNING: " << name << std::endl;
+
       CS.setCalledFunction(F);
       IRB.CreateCall(DFSF.DFS.DFSanUnimplementedFn,
                      IRB.CreateGlobalStringPtr(F->getName()));
       DFSF.setShadow(CS.getInstruction(), DFSF.DFS.ZeroShadow);
       return;
     case DataFlowSanitizer::WK_Discard:
+         //   std::cout << "DISCARD: " << name << std::endl;
+
       CS.setCalledFunction(F);
       DFSF.setShadow(CS.getInstruction(), DFSF.DFS.ZeroShadow);
       return;
     case DataFlowSanitizer::WK_Functional:
+          //      std::cout << "FUNC: " << name << std::endl;
+
       CS.setCalledFunction(F);
       visitOperandShadowInst(*CS.getInstruction());
       return;
     case DataFlowSanitizer::WK_Custom:
+               //     std::cout << "CUSTOM: " << name << std::endl;
+
       // Don't try to handle invokes of custom functions, it's too complicated.
       // Instead, invoke the dfsw$ wrapper, which will in turn call the __dfsw_
       // wrapper.

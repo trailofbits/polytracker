@@ -185,12 +185,12 @@ __dfsan_union_load(const dfsan_label *ls, uptr n) {
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_unimplemented(
     char *fname) {
-  if (flags().warn_unimplemented) {
-#ifdef DEBUG_INFO
+  //if (flags().warn_unimplemented) {
+//#ifdef DEBUG_INFO
     Report("WARNING: DataFlowSanitizer: call to uninstrumented function %s\n",
            fname);
-#endif
-  }
+//#endif
+  //}
 }
 
 // Use '-mllvm -dfsan-debug-nonzero-labels' and break on this function
