@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import sys
 from setuptools import setup, find_packages
@@ -7,7 +8,6 @@ from typing import Optional, Tuple
 
 PYTHON_REQUIRES = ">=3.7"
 if sys.platform == "darwin":
-    import platform
     try:
         macos_major_version = int(platform.release().split(".")[0])
         if macos_major_version >= 20:
@@ -67,6 +67,18 @@ def polytracker_version_string() -> str:
     else:
         return f"{'.'.join(primary)}{suffix}"
 
+CONSOLE_SCRIPTS = [
+    'polytracker = polytracker.__main__:main'
+]
+
+if (
+        platform.system() != "Linux" or
+        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") == "0" or
+        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") == ""
+):
+    # We are not installing inside the Docker container---in which polybuild can run natively---so
+    # add our special polybuild script to run it from within Docker:
+    CONSOLE_SCRIPTS.append('polybuild = polytracker.build:main')
 
 setup(
     name='polytracker',
@@ -95,9 +107,7 @@ setup(
         "dev": ["black>=20.8b1", "mypy", "pytest"]
     },
     entry_points={
-        'console_scripts': [
-            'polytracker = polytracker.__main__:main'
-        ]
+        'console_scripts': CONSOLE_SCRIPTS
     },
     classifiers=[
         'Development Status :: 4 - Beta',

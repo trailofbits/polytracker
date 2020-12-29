@@ -32,6 +32,7 @@ RUN python3 -m pip install pip
 RUN go get github.com/SRI-CSL/gllvm/cmd/...
 
 ENV PATH="$PATH:/root/go/bin"
+ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 
 RUN python3.7 -m pip install pytest
 
@@ -57,7 +58,5 @@ RUN mkdir -p "/build_artifacts"
 # Set the BC store path to the <install_path>/cxx_libs/bitcode/bitcode_store}
 ENV WLLVM_BC_STORE="/polytracker/build/share/polytracker/cxx_libs/bitcode/bitcode_store"
 ENV WLLVM_ARTIFACT_STORE="/build_artifacts"
-
-ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 
 WORKDIR /polytracker 

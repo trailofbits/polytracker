@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import sys
 from typing import Optional
 
 from .containerization import CAN_RUN_NATIVELY, DockerContainer, DockerRun
@@ -22,3 +23,7 @@ class PolyBuild(Command):
             if self._container is None:
                 self._container = DockerContainer()
             return DockerRun.run_on(self._container, args, interactive=False)
+
+
+def main():
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:]))
