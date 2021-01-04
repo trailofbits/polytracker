@@ -3,7 +3,7 @@ import ast
 import traceback
 from datetime import datetime
 from io import StringIO
-from typing import Iterable, Set
+from typing import Iterable, Optional, Set
 
 from prompt_toolkit import HTML, print_formatted_text, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -33,6 +33,8 @@ class Commands(Command):
 class PolyTrackerCompleter(Completer):
     def __init__(self, repl: "PolyTrackerREPL"):
         self.repl: PolyTrackerREPL = repl
+        self.current_command: Optional[Command] = None
+        self.current_help: Optional[str] = None
 
     @staticmethod
     def _get_completions(partial: str, options: Iterable[str], already_completed: Set[str], style: str = ""):
@@ -40,6 +42,17 @@ class PolyTrackerCompleter(Completer):
             if var not in already_completed and var.startswith(partial) and var != partial:
                 yield Completion(var, start_position=-len(partial), style=style)
                 already_completed.add(var)
+
+    def rprompt(self):
+        return None
+
+    def bottom_toolbar(self):
+        if self.current_help is not None:
+            return self.current_help
+        elif self.current_command is None:
+            return ""
+        else:
+            return self.current_command.help
 
     def get_completions(self, document, complete_event):
         if self.repl.multi_line and document.text == "":
@@ -50,6 +63,18 @@ class PolyTrackerCompleter(Completer):
         if partial == document.text:
             # we are at the start of the line, so complete for commands:
             yield from PolyTrackerCompleter._get_completions(partial, COMMANDS, already_yielded, "fg:ansiblue")
+        args = document.text.split(" ")
+        if args[0] in COMMANDS:
+            # We are completing a command
+            parser = argparse.ArgumentParser()
+            self.current_command = COMMANDS[args[0]](parser)
+            # TODO: Parse options and add their help to self.current_help
+            # parsed = parser.parse_known_args(args[1:])
+            self.current_help = None
+        else:
+            self.current_command = None
+            self.current_help = None
+
         yield from PolyTrackerCompleter._get_completions(
             partial, (var for var in self.repl.state if var not in self.repl.builtins), already_yielded
         )
@@ -150,7 +175,7 @@ class PolyTrackerREPL:
                         complete_while_typing=True,
                         auto_suggest=AutoSuggestFromHistory(),
                         completer=PolyTrackerCompleter(self),
-                        key_bindings=bindings,
+                        key_bindings=bindings
                     )
                     if len(next_line) == 0:
                         is_assignment = True
@@ -180,11 +205,15 @@ class PolyTrackerREPL:
         next_prompt = prompt
         while True:
             try:
+                completer = PolyTrackerCompleter(self)
                 text = self.session.prompt(
                     next_prompt,
                     complete_while_typing=True,
                     auto_suggest=AutoSuggestFromHistory(),
-                    completer=PolyTrackerCompleter(self),
+                    completer=completer,
+                    rprompt=completer.rprompt,
+                    bottom_toolbar=completer.bottom_toolbar,
+                    refresh_interval=0.5
                 )
                 next_prompt = prompt
             except KeyboardInterrupt:
