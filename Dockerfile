@@ -30,7 +30,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       clang-10                                        \
       llvm-10-dev                                     \
       llvm-10-tools                                   \
-      lld-10
+      lld-10                                          
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
 RUN python3 -m pip install pip
