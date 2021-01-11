@@ -1,4 +1,4 @@
-#include "polytracker/basic_block_utils.h"
+#include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
 #include "polytracker/polytracker_pass.h"
 #include "llvm/IR/BasicBlock.h"
@@ -14,6 +14,20 @@
 // That PR is super big anyway
 
 namespace polytracker {
+
+
+//Creates calls to grab taint for both 
+void PolyInstVisitor::logBinaryInst(llvm::Instruction * inst) {
+  llvm::IRBuilder<> IRB(inst);
+  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, inst);
+  CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
+}
+
+void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
+  llvm::IRBuilder<> IRB(&CI);
+  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, &CI);
+  CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+}
 
 // Pass in function, get context, get the entry block. create the DT?
 // Func, func_index, Block, block_index, split_blocks, DT.
@@ -64,8 +78,10 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
     // so we need to add the callback afterward
     InsertBefore = InsertBefore->getNextNode();
   }
-  llvm::IRBuilder<> IRB(InsertBefore);
-  IRB.CreateCall(bb_entry_log, {func_name, func_index, BBIndex, BBType});
+  //FIXME figure out how to reuse the IRB
+  llvm::IRBuilder<> new_IRB(InsertBefore);
+  new_IRB.CreateCall(bb_entry_log, {func_name, func_index, BBIndex, BBType});
+  return true;
 }
 
 /*
@@ -75,7 +91,6 @@ If instructions have __polytracker, or they have __dfsan, ignore!
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
   // Add Function entry
-  bb_index_t bb_index = 0;
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
 
@@ -100,20 +115,26 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   // Collect basic blocks, don't confuse the iterator
   bb_index_t bb_index = 0;
   std::vector<llvm::BasicBlock *> blocks;
+  std::vector<llvm::Instruction*> insts;
   for (auto &bb : *f) {
     blocks.push_back(&bb);
+    for (auto& inst: bb) {
+      insts.push_back(&inst);
+    }
   }
   llvm::Value* FuncIndex = llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(context), func_index, false);
+  
   for (auto bb: blocks) {
     analyzeBlock(f, FuncIndex, bb, bb_index, splitBBs, dominator_tree);
   }
-  // Collect all blocks first
-  std::vector<llvm::Instruction *> instructions;
-  for (auto &bb : *f) {
-    for (auto &inst : bb) {
-      instructions.push_back(&inst);
-    }
+  PolyInstVisitor visitor;
+  visitor.dfsan_get_label = dfsan_get_label;
+  visitor.taint_cmp_log = taint_cmp_log;
+  visitor.taint_op_log = taint_op_log;
+  for (auto& inst: insts) {
+    visitor.visit(inst);
   }
+
   return true;
 }
 
@@ -149,6 +170,12 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
                                              bb_func_args, false);
   bb_entry_log =
       mod.getOrInsertFunction("__polytracker_log_bb_entry", entry_bb_ty);
+    
+  //This function is how Polytracker works with DFsan
+  //dfsan_get_label is a special function that gets instrumented by dfsan and changes its ABI. The return type is a dfsan_label
+  //as defined by dfsan
+  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32Ty(context)}, false);
+  dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
 }
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
