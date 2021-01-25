@@ -84,8 +84,8 @@ class PolyBuilder:
         This function builds the compile command to instrument the whole program bitcode
         """
         compile_command = []
-        source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
-        rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
+        #source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
+        #rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
         poly_dir = os.path.join(self.meta.compiler_dir, "lib", "libPolytracker.a")
         if self.meta.is_cxx:
             compile_command.append("clang++")
@@ -98,9 +98,10 @@ class PolyBuilder:
         # -lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
         compile_command += ["-g", "-o", output_path, bitcode_path]
         compile_command.append("-lpthread")
-        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
+        #compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
+
         compile_command += ["-ldl", "-lrt"]
-        compile_command.append("-lstdc++")
+        #compile_command.append("-lstdc++")
         for lib in libs:
             if ".a" not in lib and ".o" not in lib:
                 compile_command.append("-l" + lib)
@@ -113,6 +114,7 @@ class PolyBuilder:
         return True
 
     def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
+        # Was DFSAN.
         opt_command = ["opt", "-O0",
                        "-load", os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
         ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
@@ -136,6 +138,24 @@ class PolyBuilder:
             print("Error! Bitcode file does not exist!")
             return False
         return True
+
+    def run_polytracker_pass(self, input_bc: str, output_bc: str):
+        opt_cmd = ["opt", "-O0", "-load", os.path.join(self.meta.compiler_dir, "pass", "libPolytrackerpass.so"),
+                   input_bc, "-o", output_bc]
+        ret_code = subprocess.call(opt_cmd)
+        if ret_code != 0:
+            print(f"Error! opt command failed with {ret_code} {' '.join(opt_cmd)}")
+            return False
+        return True
+
+
+    def poly_inst_test(self, input_bc, output_file, bitcode_file, libs) -> bool:
+        res = self.run_polytracker_pass(input_bc, bitcode_file)
+        if not res:
+            return False
+        res = self.poly_compile(bitcode_file, output_file, libs)
+        return res
+
 
     def poly_instrument(self, input_file, output_file, bitcode_file, libs) -> bool:
         res = self.poly_opt(input_file, bitcode_file)
