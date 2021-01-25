@@ -24,8 +24,16 @@ void PolyInstVisitor::logBinaryInst(llvm::Instruction * inst) {
 }
 
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
-  llvm::IRBuilder<> IRB(&CI);
-  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, &CI);
+  std::cout << "Visiting compare!" << std::endl;
+  //Should never fail
+  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);  
+  //Insert after inst.
+  llvm::IRBuilder<> IRB(inst->getNextNode());
+  llvm::LLVMContext& context = mod->getContext();
+  llvm::Value* extension = IRB.CreateZExtOrBitCast(inst,llvm::Type::getInt32Ty(context));
+  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, extension);
+  //Sign extension magic?
+  //get_taint->addParamAttr(0, llvm::Attribute::SExt);
   CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
 }
 
@@ -37,7 +45,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
                                    llvm::DominatorTree &DT) {
-
+  std::cout << "Visiting function!" << std::endl;
   // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is always valid here 
   // Is the address returned by reference always the same? Then yes it is 
   BasicBlock* entry_block = &func->getEntryBlock();
@@ -90,6 +98,7 @@ If instructions have __polytracker, or they have __dfsan, ignore!
 */
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
+  std::cout << "Visitng func" << std::endl;
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
@@ -127,7 +136,9 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   for (auto bb: blocks) {
     analyzeBlock(f, FuncIndex, bb, bb_index, splitBBs, dominator_tree);
   }
+  // FIXME I don't like this
   PolyInstVisitor visitor;
+  visitor.mod = mod;
   visitor.dfsan_get_label = dfsan_get_label;
   visitor.taint_cmp_log = taint_cmp_log;
   visitor.taint_op_log = taint_op_log;
@@ -139,6 +150,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 }
 
 void PolytrackerPass::initializeTypes(llvm::Module &mod) {
+  this->mod = &mod;
   llvm::LLVMContext &context = mod.getContext();
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
 
@@ -176,9 +188,11 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   //as defined by dfsan
   auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32Ty(context)}, false);
   dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
+  
 }
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
+  std::cout << "Running on module" << std::endl;
   initializeTypes(mod);
   bool ret = false;
   func_index_t function_index = 0;

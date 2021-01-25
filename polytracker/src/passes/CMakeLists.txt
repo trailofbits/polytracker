@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.5.1)
 
 list(APPEND CMAKE_PREFIX_PATH ${LLVM_7_PATH})
-find_package(LLVM 7.1 CONFIG)
-#find_package(LLVM 10 CONFIG)
+#find_package(LLVM 7.1 CONFIG)
+find_package(LLVM 10 CONFIG)
 
 if (LLVM_FOUND)
   message(STATUS "LLVM_VERSION_MAJOR: ${LLVM_VERSION_MAJOR}")
@@ -20,8 +20,8 @@ else()
 endif()
 
 # was 7
-if (NOT (LLVM_VERSION_MAJOR EQUAL 7))
-    message(FATAL_ERROR "You need LLVM 7 to build this (found LLVM ${LLVM_VERSION_MAJOR}). "
+if (NOT (LLVM_VERSION_MAJOR EQUAL 10))
+    message(FATAL_ERROR "You need LLVM 10 to build this (found LLVM ${LLVM_VERSION_MAJOR}). "
                         "If this is not what you expect, perhaps you need to set the LLVM_7_PATH CMake variable. "
                         "Alternatively, adjust your PATH so that LLVM 7 binaries appear first.")
 endif()
@@ -62,8 +62,8 @@ if(APPLE)
 endif(APPLE)
 
 #add_llvm_library(LLVMShit DataFlowSanitizer.cpp BBSplittingPass.cpp)
-add_library(DataFlowSanitizerPass SHARED DataFlowSanitizer.cpp BBSplittingPass.cpp)
-target_link_libraries(DataFlowSanitizerPass LLVMPassConfig)
-install (TARGETS DataFlowSanitizerPass DESTINATION ${POLYTRACK_PASS_DIR})
+add_library(PolytrackerPass SHARED PolytrackerPass.cpp BBSplittingPass.cpp)
+target_link_libraries(PolytrackerPass LLVMPassConfig)
+install (TARGETS PolytrackerPass DESTINATION ${POLYTRACK_PASS_DIR})
 #target_link_libraries(LLVMtest LLVMPassConfig)
 #install (TARGETS LLVMtest DESTINATION ${POLYTRACK_PASS_DIR})
