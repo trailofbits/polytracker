@@ -1,3 +1,4 @@
+add_subdirectory(passes)
 add_subdirectory(dfsan_pass)
 
 set(POLY_DIR "polytracker")
@@ -17,6 +18,7 @@ ${POLY_DIR}/logging.cpp
 ${POLY_DIR}/taint.cpp
 ${POLY_DIR}/output.cpp 
 ${POLY_DIR}/tracing.cpp 
+${POLY_DIR}/polytracker.cpp
 )
 
 set (TAINT_SOURCES 
