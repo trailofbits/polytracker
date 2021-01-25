@@ -23,7 +23,6 @@ extern "C" void __polytracker_log_bb_entry(char* name, uint32_t findex, uint32_t
 
 
 
-#define DEBUG_PASS
 #ifdef DEBUG_PASS
 dfsan_label dfsan_get_label(long data) {
     return 1337;
