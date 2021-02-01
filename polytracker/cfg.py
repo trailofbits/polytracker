@@ -129,7 +129,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         return self._dominator_forest
 
     def to_dot(
-        self, comment: Optional[str] = None, labeler: Optional[Callable[[N], str]] = None, node_filter=None
+            self, comment: Optional[str] = None, labeler: Optional[Callable[[N], str]] = None, node_filter=None
     ) -> graphviz.Digraph:
         if comment is not None:
             dot = graphviz.Digraph(comment=comment)
@@ -145,6 +145,8 @@ class DiGraph(nx.DiGraph, Generic[N]):
             if node_filter is None or (node_filter(caller) and node_filter(callee)):
                 dot.edge(f"func{node_ids[caller]}", f"func{node_ids[callee]}")
         return dot
+
+
 
 
 class DAG(DiGraph[N], Generic[N]):
