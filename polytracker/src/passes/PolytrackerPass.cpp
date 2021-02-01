@@ -24,7 +24,7 @@ void PolyInstVisitor::logBinaryInst(llvm::Instruction * inst) {
 }
 
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
-  std::cout << "Visiting compare!" << std::endl;
+  //std::cout << "Visiting compare!" << std::endl;
   //Should never fail
   llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);  
   //Insert after inst.
@@ -45,7 +45,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
                                    llvm::DominatorTree &DT) {
-  std::cout << "Visiting function!" << std::endl;
+  //std::cout << "Visiting function!" << std::endl;
   // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is always valid here 
   // Is the address returned by reference always the same? Then yes it is 
   BasicBlock* entry_block = &func->getEntryBlock();
@@ -98,7 +98,7 @@ If instructions have __polytracker, or they have __dfsan, ignore!
 */
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
-  std::cout << "Visitng func" << std::endl;
+  //std::cout << "Visitng func" << std::endl;
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
