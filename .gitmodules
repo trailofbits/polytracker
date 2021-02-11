@@ -1,3 +1,6 @@
 [submodule "third_party/run-clang-format"]
 	path = third_party/run-clang-format
 	url = https://github.com/Sarcasm/run-clang-format.git
+[submodule "third_party/polytracker-llvm"]
+	path = third_party/polytracker-llvm
+	url = git@github.com:trailofbits/polytracker-llvm.git
