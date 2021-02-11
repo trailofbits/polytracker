@@ -1,6 +1,6 @@
 #ifndef POLYTRACKER_TAINT
 #define POLYTRACKER_TAINT
-#include "dfsan/dfsan_types.h"
+#include "dfsan_types.h"
 #include <mutex>
 #include <thread>
 #include <unordered_map>

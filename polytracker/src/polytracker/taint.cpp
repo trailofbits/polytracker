@@ -1,9 +1,10 @@
 
 #include "polytracker/taint.h"
-#include "dfsan/dfsan.h"
-#include "dfsan/dfsan_types.h"
+//#include "dfsan/dfsan.h"
+#include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
-#include "sanitizer_common/sanitizer_common.h"
+//#include "sanitizer_common/sanitizer_common.h"
+#include <sanitizer/dfsan_interface.h>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -203,9 +204,12 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   return ret_label;
 }
 
+// TODO REMOVE
+// FIXME Do we lose decay funtionality?
+// No, we just need to look at parent nodes, which we can do ez
 [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // If sanitizer debug is on, this checks that l1 != l2
-  DCHECK_NE(l1, l2);
+  //DCHECK_NE(l1, l2);
   if (l1 == 0) {
     return l2;
   }
@@ -213,7 +217,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
     return l1;
   }
   if (l1 > l2) {
-    Swap(l1, l2);
+    //Swap(l1, l2);
   }
   const std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check

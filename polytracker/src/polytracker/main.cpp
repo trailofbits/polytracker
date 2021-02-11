@@ -1,20 +1,24 @@
-#include "dfsan/dfsan.h"
-#include "dfsan/dfsan_types.h"
-#include "dfsan/json.hpp"
+#include "polytracker/dfsan_types.h"
+//#include "dfsan/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
-#include "sanitizer_common/sanitizer_atomic.h"
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_file.h"
-#include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_flags.h"
-#include "sanitizer_common/sanitizer_libc.h"
+//#include "sanitizer_common/sanitizer_atomic.h"
+//#include "sanitizer_common/sanitizer_common.h"
+//#include "sanitizer_common/sanitizer_file.h"
+//#include "sanitizer_common/sanitizer_flag_parser.h"
+//#include "sanitizer_common/sanitizer_flags.h"
+//#include "sanitizer_common/sanitizer_libc.h"
 #include <errno.h>
 #include <fstream>
 #include <iostream>
 #include <string>
-
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>           
+#include <stdio.h>
+#include <stdlib.h>
+#include "polytracker/json.hpp"
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -184,13 +188,26 @@ static void polytracker_end() {
     output(polytracker_output_filename.c_str(), thread_info);
   }
 }
+char* mmap_taint_forest(unsigned long size) {
+  unsigned flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANON;
 
+  unsigned long page_size = getpagesize();
+  void* p = mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0);
+  if (p == nullptr) {
+    fprintf(stderr, "ERROR: PolyTracker failed to "
+           "allocate 0x%zx (%zd) bytes\n",
+           size, size);
+    abort();
+  }
+  return (char*)p;
+}
 void polytracker_start() {
   polytracker_get_settings();
-  // Set up the atexit call
-  Atexit(polytracker_end);
 
-  // Pre_init_array should have already gone, meaning DFsan should have set up
-  // memory.
-  forest_mem = (char *)ForestAddr();
+  // Set up the atexit call
+  atexit(polytracker_end);
+
+  // Reserve memory for polytracker taintforest. 
+  // Reserve enough for all possible labels
+  forest_mem = (char *)mmap_taint_forest(MAX_LABELS * sizeof(dfsan_label));
 }

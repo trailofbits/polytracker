@@ -18,7 +18,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "dfsan/dfsan_types.h"
+#include "dfsan_types.h"
 #include "polytracker/basic_block_types.h"
 
 namespace polytracker {
