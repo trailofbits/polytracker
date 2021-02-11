@@ -46,7 +46,8 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
         if (function->hasName()) {
           fname = function->getName().data();
         }
-      } else if (auto v = call->getCalledValue()->stripPointerCasts()) {
+        //Note (Carson): Changed getCalledValue() --> Operand() https://reviews.llvm.org/D78882
+      } else if (auto v = call->getCalledOperand()->stripPointerCasts()) {
         if (v->hasName()) {
           fname = v->getName().data();
         }

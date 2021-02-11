@@ -1,33 +1,17 @@
 cmake_minimum_required(VERSION 3.5.1)
 
-list(APPEND CMAKE_PREFIX_PATH ${LLVM_7_PATH})
+#list(APPEND CMAKE_PREFIX_PATH ${LLVM_7_PATH})
 #find_package(LLVM 7.1 CONFIG)
-find_package(LLVM 10 CONFIG)
+find_package(LLVM 13 CONFIG)
 
 if (LLVM_FOUND)
   message(STATUS "LLVM_VERSION_MAJOR: ${LLVM_VERSION_MAJOR}")
   message(STATUS "LLVM_VERSION_MINOR: ${LLVM_VERSION_MINOR}")
   message(STATUS "LLVM_VERSION_PATCH: ${LLVM_VERSION_PATCH}")
 else()
-	find_package(LLVM 7.0 CONFIG)
-	if (LLVM_FOUND) 
-  	message(STATUS "LLVM_VERSION_MAJOR: ${LLVM_VERSION_MAJOR}")
-  	message(STATUS "LLVM_VERSION_MINOR: ${LLVM_VERSION_MINOR}")
-  	message(STATUS "LLVM_VERSION_PATCH: ${LLVM_VERSION_PATCH}")
-	else()
-		message(FATAL_ERROR "LLVM not found")
-	endif()
+  message(FATAL_ERROR "You need LLVM >=10 to build this (found LLVM ${LLVM_VERSION_MAJOR}).")
 endif()
 
-# was 7
-if (NOT (LLVM_VERSION_MAJOR EQUAL 10))
-    message(FATAL_ERROR "You need LLVM 10 to build this (found LLVM ${LLVM_VERSION_MAJOR}). "
-                        "If this is not what you expect, perhaps you need to set the LLVM_7_PATH CMake variable. "
-                        "Alternatively, adjust your PATH so that LLVM 7 binaries appear first.")
-endif()
-
-#add_definitions(${LLVM_DEFINITIONS})
-#include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 #if (NOT TARGET LLVMPassConfig)

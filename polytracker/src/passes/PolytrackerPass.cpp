@@ -26,12 +26,26 @@ void PolyInstVisitor::logBinaryInst(llvm::Instruction * inst) {
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
   //std::cout << "Visiting compare!" << std::endl;
   //Should never fail
-  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);  
+  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);
   //Insert after inst.
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext& context = mod->getContext();
-  llvm::Value* extension = IRB.CreateZExtOrBitCast(inst,llvm::Type::getInt32Ty(context));
-  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, extension);
+  llvm::Value * inst_val = inst;
+  CallInst * get_taint;
+  if (inst_val->getType()->isVectorTy()) {
+    return;
+    //Cast vectory type to its vector element type? 
+    //llvm::Value* bit_cast = IRB.CreateBitOrPointerCast(inst_val, inst_val->getType()->getScalarType());
+    // Extend that type to an int32 type
+    //llvm::Value* extension = IRB.CreateZExtOrBitCast(bit_cast,llvm::Type::getInt32Ty(context));
+    //llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
+    //get_taint = IRB.CreateCall(dfsan_get_label, hail);
+  }
+  else {
+    //llvm::Value* extension = IRB.CreateZExtOrBitCast(inst,llvm::Type::getInt32Ty(context));
+    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
+    get_taint = IRB.CreateCall(dfsan_get_label, hail);
+  }
   //Sign extension magic?
   //get_taint->addParamAttr(0, llvm::Attribute::SExt);
   CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
@@ -186,7 +200,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   //This function is how Polytracker works with DFsan
   //dfsan_get_label is a special function that gets instrumented by dfsan and changes its ABI. The return type is a dfsan_label
   //as defined by dfsan
-  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32Ty(context)}, false);
+  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32PtrTy(context)}, false);
   dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
   
 }
