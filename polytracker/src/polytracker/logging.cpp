@@ -17,7 +17,6 @@ using polytracker::FunctionCall;
 using polytracker::FunctionReturn;
 using polytracker::hasType;
 using polytracker::TraceEvent;
-using namespace __dfsan;
 
 extern char *forest_mem;
 extern bool polytracker_trace;

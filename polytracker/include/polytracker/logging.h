@@ -1,6 +1,6 @@
 #ifndef POLYTRACKER_LOGGING
 #define POLYTRACKER_LOGGING
-#include "dfsan/dfsan_types.h"
+#include "dfsan_types.h"
 #include "polytracker/tracing.h"
 
 using namespace polytracker;
@@ -13,16 +13,8 @@ void resetFrame(int *index);
 int logFunctionEntry(const char *fname);
 void logFunctionExit();
 void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType);
-/*
-[[nodiscard]] static inline auto getTaintFuncOps(void) ->
-std::unordered_map<const char *, std::unordered_set<dfsan_label>>&;
-[[nodiscard]] static inline auto getTaintFuncCmps(void) ->
-std::unordered_map<const char *, std::unordered_set<dfsan_label>>&;
-[[nodiscard]] static inline auto getRuntimeCfg(void) -> std::unordered_map<const
-char*, std::unordered_set<const char *>>&;
-[[nodiscard]] static inline auto getPolytrackerTrace(void) ->
-polytracker::Trace&;
-*/
+#define LIKELY(x)      __builtin_expect(!!(x), 1)
+#define UNLIKELY(x)    __builtin_expect(!!(x), 0)
 /*
 Each thread has a threadlocal variable which represents its runtime state.
 tFuncStack is the current call stack which records calls/returns to create the
