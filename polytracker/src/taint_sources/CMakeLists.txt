@@ -1,0 +1,8 @@
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -fPIC")
+set(CMAKE_CXX_STANDARD 17)
+add_library(TaintSources STATIC taint_sources.cpp)
+target_link_libraries(TaintSources)
+install (TARGETS TaintSources DESTINATION ${POLYTRACK_LIB_DIR}) 
+#install (FILES "./libc++.a" DESTINATION ${POLYTRACK_LIB_DIR})
+#install (FILES "./libc++abi.a" DESTINATION ${POLYTRACK_LIB_DIR})
