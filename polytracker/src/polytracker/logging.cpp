@@ -20,6 +20,7 @@ using polytracker::TraceEvent;
 
 extern char *forest_mem;
 extern bool polytracker_trace;
+extern bool polytracker_trace_func;
 
 thread_local RuntimeInfo *runtime_info = nullptr;
 
@@ -42,37 +43,6 @@ static void initThreadInfo() {
   thread_runtime_info.push_back(runtime_info);
 }
 
-[[nodiscard]] static inline std::vector<std::string> &getFuncStack(void) {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tFuncStack;
-}
-
-[[nodiscard]] static inline auto getTaintFuncOps(void)
-    -> std::unordered_map<std::string, std::unordered_set<dfsan_label>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tainted_funcs_all_ops;
-}
-
-[[nodiscard]] static inline auto getTaintFuncCmps(void)
-    -> std::unordered_map<std::string, std::unordered_set<dfsan_label>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->tainted_funcs_cmp;
-}
-
-[[nodiscard]] static inline auto getRuntimeCfg(void)
-    -> std::unordered_map<std::string, std::unordered_set<std::string>> & {
-  if (UNLIKELY(!runtime_info)) {
-    initThreadInfo();
-  }
-  return runtime_info->runtime_cfg;
-}
-
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label) {
   return (taint_node_t *)(forest_mem + (label * sizeof(taint_node_t)));
 }
@@ -89,76 +59,119 @@ static void initThreadInfo() {
   return runtime_info->trace;
 }
 
+[[nodiscard]] auto getIndexMap(void) -> std::unordered_map<std::string, BBIndex>& {
+	if (UNLIKELY(!runtime_info)) {
+	    initThreadInfo();
+	}
+	return runtime_info->func_name_to_index;
+}
+
+[[nodiscard]] bool getFuncIndex(const std::string& func_name, BBIndex& index) {
+	if (runtime_info->func_name_to_index.find(func_name) != runtime_info->func_name_to_index.end()) {
+		index = runtime_info->func_name_to_index[func_name];
+		return true;
+	}
+	return false;
+}
+
 void logCompare(dfsan_label some_label) {
   if (some_label == 0) {
     return;
   }
-  auto curr_node = getTaintNode(some_label);
-  std::vector<std::string> &func_stack = getFuncStack();
-  getTaintFuncOps()[func_stack.back()].insert(some_label);
-  // TODO Confirm that we only call logCmp once instead of logOp along with it.
-  getTaintFuncCmps()[func_stack.back()].insert(some_label);
-  polytracker::Trace &trace = getPolytrackerTrace();
-  if (auto bb = trace.currentBB()) {
-    // we are recording a full trace, and we know the current basic block
-    if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
-      // this is a canonical label
-      trace.setLastUsage(some_label, bb);
+  if (polytracker_trace_func) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+  }
+  
+  if (polytracker_trace) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    if (auto bb = trace.currentBB()) {
+        auto curr_node = getTaintNode(some_label);
+      // we are recording a full trace, and we know the current basic block
+      if (curr_node->p1 == nullptr && curr_node->p2 == nullptr) {
+        // this is a canonical label
+        trace.setLastUsage(some_label, bb);
+      }
     }
   }
 }
+
 
 void logOperation(dfsan_label some_label) {
-  if (some_label == 0) {
-    return;
+  if (polytracker_trace_func) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    #ifdef DEBUG_INFO    
+    bool res = trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+    if (res == false) {
+      std::cerr << "Failed to add taint label!" << std::endl;
+    }
+    #else 
+    trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+    #endif
   }
-  std::vector<std::string> &func_stack = getFuncStack();
-  getTaintFuncOps()[func_stack.back()].insert(some_label);
-  polytracker::Trace &trace = getPolytrackerTrace();
-  if (auto bb = trace.currentBB()) {
-    taint_node_t *new_node = getTaintNode(some_label);
-    // we are recording a full trace, and we know the current basic block
-    if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
-      // this is a canonical label
-      trace.setLastUsage(some_label, bb);
+  
+  if (polytracker_trace) {
+    polytracker::Trace &trace = getPolytrackerTrace();
+    if (auto bb = trace.currentBB()) {
+      taint_node_t *new_node = getTaintNode(some_label);
+      // we are recording a full trace, and we know the current basic block
+      if (new_node->p1 == nullptr && new_node->p2 == nullptr) {
+       // this is a canonical label
+       trace.setLastUsage(some_label, bb);
+     }
     }
   }
 }
 
-int logFunctionEntry(const char *fname) {
+
+thread_local bool ret_or_longjmp = false;
+void traceFunctionEntry(BBIndex index) {
+  polytracker::Trace &trace = getPolytrackerTrace();
+  //If there were returns, first push a cont object.
+  if (ret_or_longjmp) {
+    trace.functionEvents.emplace_back(trace.currentFunc()->index, true);
+    ret_or_longjmp = false;
+  }
+  trace.functionEvents.emplace_back(index, false);
+}
+void traceAddContinuation(BBIndex index) {
+  ret_or_longjmp = true;
+}
+
+
+void logFunctionEntry(const char *fname, BBIndex index) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
   if (UNLIKELY(!is_init)) {
     if (strcmp(fname, "main") != 0) {
-      return 0;
+      return;
     }
     is_init = true;
     polytracker_start();
   }
-  // Lots of object creations etc.
-  std::vector<std::string> &func_stack = getFuncStack();
-  if (func_stack.size() > 0) {
-    getRuntimeCfg()[fname].insert(func_stack.back());
-  } else {
-    getRuntimeCfg()[fname].insert("");
+  auto& func_index_map = getIndexMap();
+  func_index_map[fname] = index;
+
+  if (polytracker_trace_func) {
+    traceFunctionEntry(index);
   }
-  func_stack.push_back(fname);
-  if (polytracker_trace) {
-    polytracker::Trace &trace = getPolytrackerTrace();
-    auto &stack = trace.getStack(std::this_thread::get_id());
-    auto call = stack.emplace<FunctionCall>(fname);
-    // Create a new stack frame:
-    stack.newFrame(call);
-  }
-  return func_stack.size() - 1;
+    if (polytracker_trace) {
+      polytracker::Trace &trace = getPolytrackerTrace();
+      auto &stack = trace.getStack(std::this_thread::get_id());
+      auto call = stack.emplace<FunctionCall>(fname);
+      // Create a new stack frame:
+      stack.newFrame(call);
+    }
 }
 
-void logFunctionExit() {
+void logFunctionExit(BBIndex index) {
   if (UNLIKELY(!is_init)) {
     return;
   }
-  getFuncStack().pop_back();
+  if (polytracker_trace_func) {
+    traceAddContinuation(index);
+  }
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
@@ -207,18 +220,4 @@ void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType) {
   if (auto ret = dynamic_cast<FunctionReturn *>(newBB->previous)) {
     ret->returningTo = newBB;
   }
-}
-
-void resetFrame(int *index) {
-  if (index == nullptr) {
-    std::cout
-        << "Pointer to array index is null! Instrumentation error, aborting!"
-        << std::endl;
-    abort();
-  }
-  std::vector<std::string> &func_stack = getFuncStack();
-  std::string &caller_func = getFuncStack().back();
-  // Reset the frame
-  func_stack.resize(*index + 1);
-  getRuntimeCfg()[func_stack.back()].insert(caller_func);
 }

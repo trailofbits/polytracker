@@ -15,8 +15,6 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
-// This is the current taint label, 0 is the null label, start at 1.
-std::atomic<dfsan_label> next_label{1};
 // These structures do book keeping for shared execution state, like reading
 // input chunks, the canonical mapping, and union table.
 std::unordered_map<std::string, std::vector<std::pair<int, int>>>
@@ -121,7 +119,7 @@ auto getSourceName(const int &fd) -> std::string & {
 
 [[nodiscard]] static inline dfsan_label
 createCanonicalLabel(const int file_byte_offset, std::string &name) {
-  dfsan_label new_label = next_label.fetch_add(1);
+  dfsan_label new_label = dfsan_create_label(nullptr, nullptr);
   checkMaxLabel(new_label);
   taint_node_t *new_node = getTaintNode(new_label);
   new_node->p1 = NULL;
@@ -195,7 +193,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
 [[nodiscard]] static inline dfsan_label
 unionLabels(const dfsan_label &l1, const dfsan_label &l2,
             const decay_val &init_decay) {
-  dfsan_label ret_label = next_label.fetch_add(1);
+  dfsan_label ret_label = dfsan_create_label(nullptr, nullptr);
   checkMaxLabel(ret_label);
   taint_node_t *new_node = getTaintNode(ret_label);
   new_node->p1 = getTaintNode(l1);
@@ -217,14 +215,24 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
     return l1;
   }
   if (l1 > l2) {
-    //Swap(l1, l2);
+    auto temp = l2;
+    l1 = l2;
+    l2 = temp;
   }
+
   const std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check
   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
     auto val = union_table[l1].find(l2);
     return val->second;
   }
+
+  //Check if l2 has l1 as a parent. 
+  auto l2_node = getTaintNode(l2);
+  if (getTaintLabel(l2_node->p1) == l1 || getTaintLabel(l2_node->p2) == l1) {
+    return l2;
+  }
+
   // This calculates the average of the two decays, and then decreases it by a
   // factor of 2.
   const decay_val max_decay =
@@ -232,6 +240,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   if (max_decay == 0) {
     return 0;
   }
+
   dfsan_label label = unionLabels(l1, l2, max_decay);
   (union_table[l1])[l2] = label;
   return label;

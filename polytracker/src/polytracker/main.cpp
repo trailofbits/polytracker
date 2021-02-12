@@ -1,14 +1,7 @@
 #include "polytracker/dfsan_types.h"
-//#include "dfsan/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
-//#include "sanitizer_common/sanitizer_atomic.h"
-//#include "sanitizer_common/sanitizer_common.h"
-//#include "sanitizer_common/sanitizer_file.h"
-//#include "sanitizer_common/sanitizer_flag_parser.h"
-//#include "sanitizer_common/sanitizer_flags.h"
-//#include "sanitizer_common/sanitizer_libc.h"
 #include <errno.h>
 #include <fstream>
 #include <iostream>
@@ -28,10 +21,12 @@ using json = nlohmann::json;
 #define DEFAULT_TTL 32
 
 extern int errno;
-std::string polytracker_output_filename = "";
+std::string polytracker_forest_name = "";
+std::string polytracker_db_name = "";
 int byte_start = -1;
 int byte_end = -1;
 bool polytracker_trace = false;
+bool polytracker_trace_func = false;
 decay_val taint_node_ttl = -1;
 std::string target_file = "";
 char *forest_mem;
@@ -66,8 +61,8 @@ void setRemainingToDefault() {
   if (taint_node_ttl == -1) {
     taint_node_ttl = DEFAULT_TTL;
   }
-  if (polytracker_output_filename.empty()) {
-    polytracker_output_filename = "polytracker";
+  if (polytracker_db_name.empty()) {
+    polytracker_db_name = "polytracker";
   }
 }
 
@@ -89,8 +84,11 @@ void polytracker_parse_config(std::ifstream &config_file) {
   if (config_json.contains("POLYEND")) {
     byte_end = config_json["POLYEND"].get<int>();
   }
-  if (config_json.contains("POLYOUTPUT")) {
-    polytracker_output_filename = config_json["POLYOUTPUT"].get<std::string>();
+  if (config_json.contains("POLYDB")) {
+    polytracker_db_name = config_json["POLYDB"].get<std::string>();
+  }
+  if (config_json.contains("POLYFOREST")) {
+    polytracker_forest_name = config_json["POLYFOREST"].get<std::string>();
   }
   if (config_json.contains("POLYTRACE")) {
     std::string trace_str = config_json["POLYTRACE"].get<std::string>();
@@ -104,6 +102,16 @@ void polytracker_parse_config(std::ifstream &config_file) {
   }
   if (config_json.contains("POLYTTL")) {
     taint_node_ttl = config_json["POLYTTL"].get<int>();
+  }
+  if (config_json.contains("POLYFUNC")) {
+    std::string trace_str = config_json["POLYFUNC"].get<std::string>();
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace_func = false;
+    } else {
+      polytracker_trace_func = true;
+    }
   }
 }
 
@@ -140,8 +148,11 @@ void polytracker_parse_env() {
   if (getenv("POLYEND")) {
     byte_end = atoi(getenv("POLYEND"));
   }
-  if (getenv("POLYOUTPUT")) {
-    polytracker_output_filename = getenv("POLYOUTPUT");
+  if (auto pdb = getenv("POLYDB")) {
+    polytracker_db_name = pdb;
+  }
+  if (auto pforest = getenv("POLYFOREST")) {
+    polytracker_forest_name = pforest;
   }
   if (getenv("POLYTRACE")) {
     std::string trace_str = getenv("POLYTRACE");
@@ -153,10 +164,22 @@ void polytracker_parse_env() {
       polytracker_trace = true;
     }
   }
+   if (auto ptrace = getenv("POLYFUNC")) {
+    std::string trace_str = ptrace;
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+      polytracker_trace_func = false;
+    } else {
+      polytracker_trace_func = true;
+    }
+  }
   if (getenv("POLYTTL")) {
     taint_node_ttl = atoi(getenv("POLYTTL"));
   }
 }
+
+
 
 /*
 This code parses the enviornment variables and sets the globals which work as
@@ -168,6 +191,7 @@ polytrackers settings
 */
 void polytracker_get_settings() {
   std::ifstream config;
+
   if (polytracker_detect_config(config)) {
     polytracker_parse_config(config);
   }
@@ -175,23 +199,30 @@ void polytracker_get_settings() {
   setRemainingToDefault();
 
   std::string poly_str(target_file);
-  std::string stdin_string("stdin");
   // Add named source for polytracker
   addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
-  // Add source for standard input
-  addInitialTaintSource(fileno(stdin), 0, MAX_LABELS, stdin_string);
 }
 
-static void polytracker_end() {
+void polytracker_end(const dfsan_label last_label) {
+	static size_t thread_id = 0;
   // Go over the array of thread info, and call output on everything.
-  for (const auto thread_info : thread_runtime_info) {
-    output(polytracker_output_filename.c_str(), thread_info);
+  for (const auto& thread_info : thread_runtime_info) {
+    if (!polytracker_forest_name.empty()) {
+      output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id, last_label); 
+    }
+    else {
+      output(polytracker_db_name, thread_info, thread_id, last_label);
+    }
+  }
+  for (auto& i : thread_runtime_info) {
+    delete i;
   }
 }
+
 char* mmap_taint_forest(unsigned long size) {
   unsigned flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANON;
 
-  unsigned long page_size = getpagesize();
+  //unsigned long page_size = getpagesize();
   void* p = mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0);
   if (p == nullptr) {
     fprintf(stderr, "ERROR: PolyTracker failed to "
@@ -201,11 +232,12 @@ char* mmap_taint_forest(unsigned long size) {
   }
   return (char*)p;
 }
+
 void polytracker_start() {
   polytracker_get_settings();
 
   // Set up the atexit call
-  atexit(polytracker_end);
+  //atexit(polytracker_end);
 
   // Reserve memory for polytracker taintforest. 
   // Reserve enough for all possible labels
