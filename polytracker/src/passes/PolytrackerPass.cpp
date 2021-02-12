@@ -9,46 +9,48 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <iostream>
+#include <assert.h>     /* assert */
+#include <unordered_map>
 
 // TODO (Carson) porting over some changes made in the sqlite branch to here
 // That PR is super big anyway
 
 namespace polytracker {
 
-
-//Creates calls to grab taint for both 
-void PolyInstVisitor::logBinaryInst(llvm::Instruction * inst) {
-  llvm::IRBuilder<> IRB(inst);
-  CallInst * get_taint = IRB.CreateCall(dfsan_get_label, inst);
-  CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
-}
-
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
-  //std::cout << "Visiting compare!" << std::endl;
   //Should never fail
   llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);
-  //Insert after inst.
+  if (!inst->getType()->isVectorTy()) {
+    //Insert after inst.
+    llvm::IRBuilder<> IRB(inst->getNextNode());
+    llvm::LLVMContext& context = mod->getContext();
+    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
+    CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+    CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+  }
+}
+
+void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
+  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&i);
+  if (!inst->getType()->isVectorTy()) {
+    llvm::LLVMContext& context = mod->getContext();
+    llvm::IRBuilder<> IRB(inst->getNextNode());
+    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
+    CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+    CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
+  }
+}
+
+void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
+  llvm::Instruction * inst = llvm::dyn_cast<llvm::Instruction>(&ci);
+  llvm::Function* caller = inst->getParent()->getParent();
+  assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
+  func_index_t index = func_index_map[caller->getName().str()];
+  // Insert after 
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext& context = mod->getContext();
-  llvm::Value * inst_val = inst;
-  CallInst * get_taint;
-  if (inst_val->getType()->isVectorTy()) {
-    return;
-    //Cast vectory type to its vector element type? 
-    //llvm::Value* bit_cast = IRB.CreateBitOrPointerCast(inst_val, inst_val->getType()->getScalarType());
-    // Extend that type to an int32 type
-    //llvm::Value* extension = IRB.CreateZExtOrBitCast(bit_cast,llvm::Type::getInt32Ty(context));
-    //llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
-    //get_taint = IRB.CreateCall(dfsan_get_label, hail);
-  }
-  else {
-    //llvm::Value* extension = IRB.CreateZExtOrBitCast(inst,llvm::Type::getInt32Ty(context));
-    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
-    get_taint = IRB.CreateCall(dfsan_get_label, hail);
-  }
-  //Sign extension magic?
-  //get_taint->addParamAttr(0, llvm::Attribute::SExt);
-  CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(context), index, false);
+  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -89,7 +91,6 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   if (curr_bb == entry_block) {
     // this is the entrypoint basic block in a function, so make sure the
     // BB instrumentation happens after the function call instrumentation
-    // TODO (Carson) I think this should get us the next location.
     InsertBefore = entry_block->getFirstInsertionPt()->getNextNode();
   } else {
     InsertBefore = Inst;
@@ -150,12 +151,15 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   for (auto bb: blocks) {
     analyzeBlock(f, FuncIndex, bb, bb_index, splitBBs, dominator_tree);
   }
+
   // FIXME I don't like this
   PolyInstVisitor visitor;
   visitor.mod = mod;
   visitor.dfsan_get_label = dfsan_get_label;
   visitor.taint_cmp_log = taint_cmp_log;
   visitor.taint_op_log = taint_op_log;
+  visitor.func_exit_log = func_exit_log;
+  visitor.func_index_map = func_index_map;
   for (auto& inst: insts) {
     visitor.visit(inst);
   }
@@ -192,6 +196,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   llvm::Type *bb_func_args[4] = {llvm::Type::getInt8PtrTy(context), shadow_type,
                                  shadow_type,
                                  llvm::IntegerType::getInt8Ty(context)};
+
   auto entry_bb_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
                                              bb_func_args, false);
   bb_entry_log =
@@ -214,12 +219,13 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
     functions.push_back(&func);
+    func_index_map[func.getName().str()] = function_index++;
   }
   for (auto func : functions) {
     if (!func || func->isDeclaration()) {
       continue;
     }
-    ret = analyzeFunction(func, function_index) || ret;
+    ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
   return ret;
 }
