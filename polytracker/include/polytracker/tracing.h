@@ -149,6 +149,24 @@ struct FunctionReturn : public TraceEvent {
   }
 };
 
+//Powers of 2 with 0 being unknown
+enum ByteAccessType {
+  UNKNOWN_ACCESS = 0,
+  INPUT_ACCESS = 1,
+  CMP_ACCESS = 2
+};
+
+//Bitfield where each bit represents some ByteAccessType
+typedef uint8_t byte_access;
+
+struct FunctionEvent : public TraceEvent {
+  // TODO Could reduce this to a uint32_t
+  BBIndex index;
+  //Continuation
+  bool is_cont;
+  FunctionEvent(BBIndex& index, bool cont) : index(index), is_cont(cont){}
+};
+
 class TraceEventStack;
 
 class TraceEventStackFrame {
@@ -253,6 +271,11 @@ class Trace {
   static const std::list<dfsan_label> EMPTY_LIST;
 
 public:
+  //For function events, we can store runtime control flow and function events as a vector
+  std::vector<FunctionEvent> functionEvents;
+  //Maps index --> Labels --> access types. 
+  std::unordered_map<uint32_t, std::unordered_map<dfsan_label, byte_access>> func_taint_labels;
+  //BB Tracing
   std::unordered_map<std::thread::id, TraceEventStack> eventStacks;
 
   TraceEventStack &getStack(std::thread::id thread) {
@@ -323,6 +346,33 @@ public:
     } else {
       return ret->second;
     }
+  }
+   FunctionEvent * currentFunc() {
+    for (int i = functionEvents.size() - 1; i >= 0; i--) {
+      if (auto func_event = dynamic_cast<FunctionEvent*>(&functionEvents[i])) {
+        return func_event;
+      }
+    }
+    return nullptr;
+   }
+  bool funcAddTaintLabel(const dfsan_label& some_label, ByteAccessType access) {
+    if (auto func_event = currentFunc()) {
+      auto& label_map = func_taint_labels[func_event->index.functionIndex()];
+      label_map[some_label] |= access;
+      return true;
+    }
+    return false;
+  }
+  bool getCallerFunc(int pos, BBIndex& index) {
+    if (pos == 0) {
+      return false;
+    }
+    if (FunctionEvent* func_event = dynamic_cast<FunctionEvent*>(&functionEvents[pos - 1])) {
+      index = func_event->index;
+      return true;
+    }
+    //Edge case for entrypoint.
+    return false;
   }
 };
 

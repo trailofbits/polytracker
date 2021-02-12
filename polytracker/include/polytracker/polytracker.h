@@ -23,3 +23,5 @@
       POLYTRACKER_VERSION_REVISION) POLYTRACKER_VERSION_SUFFIX
 
 #endif
+
+void polytracker_end(const dfsan_label& end);

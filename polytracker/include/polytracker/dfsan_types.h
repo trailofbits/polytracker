@@ -35,6 +35,7 @@ typedef uint32_t decay_val;
 #undef PPCAT
 
 typedef struct taint_node {
+  // FIXME (Carson) make these just labels
   // Pointers for parent nodes
   struct taint_node *p1;
   struct taint_node *p2;
