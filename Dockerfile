@@ -42,6 +42,7 @@ RUN ninja install
 WORKDIR /
 RUN mkdir /build_artifacts
 ENV DFSAN_LIB_PATH=/polytracker_clang/lib/clang/13.0.0/lib/linux/libclang_rt.dfsan-x86_64.a
+ENV CXX_LIB_PATH=/cxx_libs
 ENV WLLVM_BC_STORE=/cxx_clean_bitcode
 ENV WLLVM_ARTIFACT_STORE=/build_artifacts
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
