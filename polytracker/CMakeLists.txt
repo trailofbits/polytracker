@@ -10,6 +10,7 @@ set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/pass")
 
 add_subdirectory(src)
 install(DIRECTORY "./abi_lists" DESTINATION ${POLYTRACK_CXX_DIR})
+add_subdirectory(custom_abi)
 
 install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR} RENAME "polybuild")
 install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR} RENAME "polybuild++")
