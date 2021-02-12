@@ -7,11 +7,12 @@ using namespace polytracker;
 
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label);
 [[nodiscard]] dfsan_label getTaintLabel(taint_node_t *node);
+[[nodiscard]] bool getFuncIndex(const std::string& func_name, BBIndex & index);
+
 void logOperation(dfsan_label some_label);
 void logCompare(dfsan_label some_label);
-void resetFrame(int *index);
-int logFunctionEntry(const char *fname);
-void logFunctionExit();
+void logFunctionEntry(const char *fname, BBIndex index);
+void logFunctionExit(BBIndex index);
 void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType);
 #define LIKELY(x)      __builtin_expect(!!(x), 1)
 #define UNLIKELY(x)    __builtin_expect(!!(x), 0)
@@ -25,12 +26,7 @@ do basic block summarization the runtime cfg is the flow sensitive runtime
 control flow graph
 */
 struct RuntimeInfo {
-  std::vector<std::string> tFuncStack;
-  std::unordered_map<std::string, std::unordered_set<dfsan_label>>
-      tainted_funcs_all_ops;
-  std::unordered_map<std::string, std::unordered_set<dfsan_label>>
-      tainted_funcs_cmp;
-  std::unordered_map<std::string, std::unordered_set<std::string>> runtime_cfg;
+  std::unordered_map<std::string, BBIndex> func_name_to_index;
   polytracker::Trace trace;
 };
 #endif
