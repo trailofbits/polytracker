@@ -10,6 +10,7 @@ endif()
 if (NOT DEFINED CXX_LIB_PATH)
     message(FATAL_ERROR "Can't find Polytrackers libcxx, please set -DCXX_LIB_PATH")
 endif()
+
 set(POLYTRACK_CXX_INCLUDE "${CXX_LIB_PATH}/poly_build/include/c++/v1")
 set(POLYTRACK_CXX_LIB "${CXX_LIB_PATH}/poly_build/lib")
 
