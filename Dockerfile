@@ -46,3 +46,6 @@ ENV CXX_LIB_PATH=/cxx_libs
 ENV WLLVM_BC_STORE=/cxx_clean_bitcode
 ENV WLLVM_ARTIFACT_STORE=/build_artifacts
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
+ENV CC=/polytracker/build/bin/polybuild
+ENV CXX=/polytracker/build/bin/polybuild++
+

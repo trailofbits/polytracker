@@ -46,7 +46,7 @@ if not os.path.isdir(COMPILER_DIR):
     sys.stderr.write(f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
     sys.exit(1)
 
-POLY_PASS_PATH: str = os.path.join(COMPILER_DIR, "pass", "libDataFlowSanitizerPass.so")
+POLY_PASS_PATH: str = os.path.join(COMPILER_DIR, "pass", "libPolytrackerPass.so")
 assert os.path.exists(POLY_PASS_PATH)
 
 POLY_LIB_PATH: str = os.path.join(COMPILER_DIR, "lib", "libPolytracker.a")
@@ -73,7 +73,7 @@ assert os.path.exists(ARTIFACT_STORE_PATH)
 CXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "clean_build/include/c++/v1")
 CXX_LIB_PATH = os.path.join(CXX_DIR_PATH, "clean_build/lib")
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
-POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "lib/libc++.a"), os.path.join(CXX_DIR_PATH, "lib/libc++abi.a")]
+POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++.a"), os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++abi.a")]
 # TODO (Carson), double check, also maybe need -ldl?
 LINK_LIBS = [os.path.join(CXX_LIB_PATH, "libc++.a"), os.path.join(CXX_LIB_PATH, "libc++abi.a"), "-lpthread"]
 
