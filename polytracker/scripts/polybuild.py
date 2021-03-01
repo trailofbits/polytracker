@@ -55,6 +55,7 @@ assert os.path.exists(POLY_LIB_PATH)
 ABI_LIST_PATH: str = os.path.join(COMPILER_DIR, "abi_lists", "polytracker_abilist.txt")
 assert os.path.exists(ABI_LIST_PATH)
 
+
 is_cxx: bool = "++" in sys.argv[0]
 
 # FIXME (Carson) Ask Evan about his path stuff again? He has a pythonic way without os path joins
@@ -73,9 +74,12 @@ assert os.path.exists(ARTIFACT_STORE_PATH)
 CXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "clean_build/include/c++/v1")
 CXX_LIB_PATH = os.path.join(CXX_DIR_PATH, "clean_build/lib")
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
-POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++.a"), os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++abi.a")]
+POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++.a"),
+                os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++abi.a"),
+                POLY_LIB_PATH, "-lsqlite3", "-lm"]
 # TODO (Carson), double check, also maybe need -ldl?
-LINK_LIBS = [os.path.join(CXX_LIB_PATH, "libc++.a"), os.path.join(CXX_LIB_PATH, "libc++abi.a"), "-lpthread"]
+LINK_LIBS = [os.path.join(CXX_LIB_PATH, "libc++.a"),
+             os.path.join(CXX_LIB_PATH, "libc++abi.a"), "-lpthread"]
 
 
 # Helper function, check to see if non linking options are present.
@@ -85,6 +89,14 @@ def is_linking(argv) -> bool:
         if option in nonlinking_options:
             return False
     return True
+
+
+def is_building(argv) -> bool:
+    build_options = ["-c", "-o"]
+    for option in argv:
+        if option in build_options:
+            return True
+    return False
 
 
 # (2)
@@ -100,15 +112,15 @@ def instrument_bitcode(bitcode_file: str, output_bc: str):
     opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}", output_bc, "-o", output_bc]
     ret = subprocess.call(opt_command)
     assert ret == 0
-    opt_command = ["opt", "-O3", output_bc, "-o", output_bc]
-    ret = subprocess.call(opt_command)
+    # opt_command = ["opt", "-O2", output_bc, "-o", output_bc]
+    # ret = subprocess.call(opt_command)
     assert ret == 0
     assert os.path.exists(output_bc)
 
 
 # (3)
 # TODO Carson (decide if we need -static)
-def build_object(argv: List[str]):
+def modify_exec_args(argv: List[str]):
     """
     Replaces clang with gclang, uses our libcxx, and links our libraries if needed
     """
@@ -118,11 +130,17 @@ def build_object(argv: List[str]):
     else:
         compile_command.append("gclang")
 
+    building: bool = is_building(argv)
     linking: bool = is_linking(argv)
-    if linking:
-        compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
-    else:
-        compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}"])
+    if building:
+        if linking and is_cxx:
+            compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
+        elif is_cxx:
+            compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}"])
+
+    if not building and linking and is_cxx:
+        compile_command.extend(["-stdlib=libc++", "-static", f"-L{CXX_LIB_PATH}"])
+
     for arg in argv[1:]:
         if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
             continue
@@ -155,9 +173,14 @@ def store_artifact(file_path):
 # This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
 # First, figure out whats being built by looking for -o or -c
 # Returns the output file for convience
-def handle_build(argv: List[str]) -> str:
+def handle_cmd(argv: List[str]) -> Optional[str]:
     # Build the object
-    build_object(argv)
+    modify_exec_args(argv)
+
+    building: bool = is_building(argv)
+    if not building:
+        return None
+
     # Store artifacts.
     output_file: Optional[str] = None
     # TODO (Carson) handle -c, not really important rn though
@@ -194,20 +217,29 @@ def do_everything(argv: List[str]):
     Instruments bitcode
     Recompiles executable.
     """
-    output_file = handle_build(argv)
+    output_file = handle_cmd(argv)
     get_bc = ["get-bc", "-b", output_file]
     ret = subprocess.call(get_bc)
     assert ret == 0
     bc_file = output_file + ".bc"
     assert os.path.exists(bc_file)
-    instrument_bitcode(bc_file, "output.bc")
-    assert os.path.exists("output.bc")
-    # Recompile bitcode.
+    temp_bc = output_file + "_temp.bc"
+    instrument_bitcode(bc_file, temp_bc)
+    assert os.path.exists(temp_bc)
+
+    # Lower bitcode. Creates a .o
+    if is_cxx:
+        assert subprocess.call(["gclang++", "-fPIC", "-c", temp_bc]) == 0
+    else:
+        assert subprocess.call(["gclang", "-fPIC", "-c", temp_bc]) == 0
+    obj_file = output_file + "_temp.o"
+
+    # Compile into executable
     if is_cxx:
         re_comp = ["gclang++"]
     else:
         re_comp = ["gclang"]
-    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, bc_file, "-Wl,--allow-multiple-definition",
+    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
                     "-Wl,--start-group", "-lc++abi"])
     re_comp.extend(POLYCXX_LIBS)
     re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
@@ -215,7 +247,7 @@ def do_everything(argv: List[str]):
     assert ret == 0
 
 
-# (5)
+# (5) TODO (Carson) I don't think this works yet, needs polylibs.
 def lower_bitcode(input_bitcode: str, output: str, libs: Optional[List[str]]):
     # Just use gclang++ to be safe.
     re_comp = ["gclang++", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}", input_bitcode, "-o", output]
@@ -288,10 +320,10 @@ def main():
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
         lower_bitcode(args.input_file, args.output_file, args.libs)
-        
+
     # Do gllvm build
     else:
-        handle_build(sys.argv)
+        handle_cmd(sys.argv)
 
 
 if __name__ == "__main__":
