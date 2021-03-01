@@ -106,7 +106,7 @@ def instrument_bitcode(bitcode_file: str, output_bc: str):
     Instruments that with dfsan instrumentation
     Optimizes it all, asserts the output file exists.
     """
-    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", bitcode_file, "-o", output_bc]
+    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}", bitcode_file, "-o", output_bc]
     ret = subprocess.call(opt_command)
     assert ret == 0
     opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}", output_bc, "-o", output_bc]
