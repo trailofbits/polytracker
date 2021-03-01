@@ -49,6 +49,10 @@ for func in cxx_undef:
     if func not in abi_funcs:
         all_undef.append(func)
 
+all_undef += abi_funcs
+
+# all_undef contains all functions in/not in libcxxabi and functions not defined in libcxx 
+
 # Here are all the functions not in libcxx that are not defined in libcxxabi
 # This is what our ignore list should be.
 functions = list(set(all_undef))
