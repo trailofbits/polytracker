@@ -19,13 +19,14 @@ struct PolytrackerPass : public llvm::ModulePass {
   PolytrackerPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &function) override;
   bool analyzeFunction(llvm::Function *f, const func_index_t& index);
-bool analyzeBlock(llvm::Function *func,
-                                    llvm::Value* func_index,
-                                   llvm::BasicBlock* curr_bb,
-                                   const bb_index_t &bb_index,
-                                   std::vector<llvm::BasicBlock *> &split_bbs,
-                                   llvm::DominatorTree &DT);
+  bool analyzeBlock(llvm::Function *func,
+                                  llvm::Value* func_index,
+                                  llvm::BasicBlock* curr_bb,
+                                  const bb_index_t &bb_index,
+                                  std::vector<llvm::BasicBlock *> &split_bbs,
+                                  llvm::DominatorTree &DT);
   void initializeTypes(llvm::Module &mod);
+  void readIgnoreFile(const std::string& ignore_file);
   llvm::Module* mod;
   llvm::FunctionCallee func_entry_log;
   llvm::FunctionType* func_entry_type;
@@ -38,6 +39,7 @@ bool analyzeBlock(llvm::Function *func,
   std::unordered_map<std::string, func_index_t> func_index_map;
   const int shadow_width = 32;
   llvm::IntegerType *shadow_type;
+  std::unordered_map<std::string, bool> ignore_funcs;
 };
 
 struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
