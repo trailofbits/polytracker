@@ -46,7 +46,7 @@ if(APPLE)
 endif(APPLE)
 
 #add_llvm_library(LLVMShit DataFlowSanitizer.cpp BBSplittingPass.cpp)
-add_library(PolytrackerPass SHARED PolytrackerPass.cpp BBSplittingPass.cpp)
+add_library(PolytrackerPass SHARED polytracker_pass.cpp bb_splitting_pass.cpp)
 target_link_libraries(PolytrackerPass LLVMPassConfig)
 install (TARGETS PolytrackerPass DESTINATION ${POLYTRACK_PASS_DIR})
 #target_link_libraries(LLVMtest LLVMPassConfig)

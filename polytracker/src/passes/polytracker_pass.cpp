@@ -8,12 +8,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Support/CommandLine.h"
 #include <iostream>
 #include <assert.h>     /* assert */
 #include <unordered_map>
+#include <fstream>
 
-// TODO (Carson) porting over some changes made in the sqlite branch to here
-// That PR is super big anyway
+static llvm::cl::opt<std::string> ignore_file_path("ignore-list", llvm::cl::desc("Specify functions to ignore"));
 
 namespace polytracker {
 
@@ -209,15 +210,43 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
   
 }
+void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
+  std::ifstream ignore_file(ignore_file_path);
+  if (!ignore_file.is_open()) {
+    std::cerr << "Error! Could not read: " << ignore_file_path << std::endl;
+    exit(1);
+  }
+  std::string line;
+  while (std::getline(ignore_file, line))
+  {
+    if (line[0] == '#' || line == "\n") {
+      continue;
+    }
+    int start_pos = line.find(':');
+    int end_pos = line.find("=");
+    // :test=und
+    std::string func_name = line.substr(start_pos+1, end_pos-(start_pos+1));
+    ignore_funcs[func_name] = true;
+  }
+}
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
-  std::cout << "Running on module" << std::endl;
+  if (!ignore_file_path.empty()) {
+    readIgnoreFile(ignore_file_path);
+  }
   initializeTypes(mod);
   bool ret = false;
   func_index_t function_index = 0;
   // Collect functions before instrumenting
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
+    // Ignore if its in our ignore list
+    if (func.hasName()) {
+      std::string fname = func.getName().str();
+      if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+        continue;
+      }
+    }
     functions.push_back(&func);
     func_index_map[func.getName().str()] = function_index++;
   }
