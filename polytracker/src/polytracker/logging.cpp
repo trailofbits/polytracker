@@ -38,9 +38,11 @@ This function should only be called once per thread, but it initializes the
 thread local storage And stores the pointer to it in the vector.
 */
 static void initThreadInfo() {
+  std::cout << "Initing thread info!" << std::endl;
   runtime_info = new RuntimeInfo();
   std::lock_guard<std::mutex> locker(thread_runtime_info_lock);
   thread_runtime_info.push_back(runtime_info);
+  std::cout << "Thread info size is: " << thread_runtime_info.size() << std::endl;
 }
 
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label) {
@@ -106,7 +108,7 @@ void logOperation(dfsan_label some_label) {
       std::cerr << "Failed to add taint label!" << std::endl;
     }
     #else 
-    trace.funcAddTaintLabel(some_label, CMP_ACCESS);
+    trace.funcAddTaintLabel(some_label, INPUT_ACCESS);
     #endif
   }
   

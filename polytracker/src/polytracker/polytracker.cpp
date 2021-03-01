@@ -6,28 +6,33 @@
 
 extern bool polytracker_trace_func;
 extern bool polytracker_trace;
+extern std::atomic_bool done;
 
 extern "C" void __polytracker_log_taint_op(dfsan_label label) {
-    if (label != 0) {
+    if (label != 0 && LIKELY(!done)) {
         logOperation(label);
     }
 }
 extern "C" void __polytracker_log_taint_cmp(dfsan_label cmp) {
-    if (cmp != 0) {
+    if (cmp != 0 && LIKELY(!done)) {
         logCompare(cmp);
     }
 }
 
 extern "C" void __polytracker_log_func_entry(char * fname, uint32_t index) {
-    logFunctionEntry(fname, BBIndex(index, 0));
+    if (LIKELY(!done)) {
+        logFunctionEntry(fname, BBIndex(index, 0));
+    }
 }
 
 extern "C" void __polytracker_log_func_exit(uint32_t func_index) {
-  logFunctionExit(BBIndex(func_index));
+  if (LIKELY(!done)) {
+    logFunctionExit(BBIndex(func_index));
+  }
 }
 
 extern "C" void __polytracker_log_bb_entry(char* name, uint32_t findex, uint32_t bindex, uint8_t btype) {
-  if (polytracker_trace) {
+  if (polytracker_trace && LIKELY(!done)) {
     logBBEntry(name, BBIndex(findex, bindex),
                static_cast<polytracker::BasicBlockType>(btype));
   }
@@ -42,7 +47,8 @@ extern "C" dfsan_label __polytracker_union(dfsan_label l1, dfsan_label l2, dfsan
 }
 
 extern "C" void __polytracker_dump(const dfsan_label last_label) {
-    polytracker_end(last_label);
+    std::cout << "Polytracker dump called, last label is: " << last_label << std::endl;
+    // polytracker_end(last_label);
 }
 
 extern "C" int __polytracker_has_label(dfsan_label label, dfsan_label elem) {

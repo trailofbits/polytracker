@@ -702,6 +702,7 @@ void output(const std::string& db_path, RuntimeInfo *runtime_info, const size_t&
 	}
 	char * errorMessage;
 	std::cout << "Tracing done! Storing to disk" << std::endl;
+	std::cout << "DB name is: " << db_name << std::endl;
 	sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);

@@ -15,6 +15,8 @@
 #include <limits.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <atomic>
+#include <sanitizer/dfsan_interface.h>
 
 using json = nlohmann::json;
 
@@ -30,11 +32,11 @@ bool polytracker_trace_func = false;
 decay_val taint_node_ttl = -1;
 std::string target_file = "";
 char *forest_mem;
-
+std::atomic_bool done{false};
 extern std::vector<RuntimeInfo *> thread_runtime_info;
 
 // For settings that have not been initialized, set to default if one exists
-void setRemainingToDefault() {
+void set_defaults() {
   // If a target is set, set the default start/end.
   if (target_file.empty()) {
     fprintf(stderr, "Error! No target file specified, set with POLYPATH\n");
@@ -196,21 +198,29 @@ void polytracker_get_settings() {
     polytracker_parse_config(config);
   }
   polytracker_parse_env();
-  setRemainingToDefault();
+  set_defaults();
 
   std::string poly_str(target_file);
   // Add named source for polytracker
   addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
 }
 
-void polytracker_end(const dfsan_label last_label) {
+void polytracker_end() {
+  done.store(true);
 	static size_t thread_id = 0;
+  const dfsan_label last_label = dfsan_get_label_count();
+  std::cout << "END last label: " << last_label << std::endl;
   // Go over the array of thread info, and call output on everything.
+  std::cout << "(END) Thread info size is: " << thread_runtime_info.size() << std::endl;
+  for (auto& it : thread_runtime_info) {
+    std::cout << "We have some thread info! " << it << std::endl;
+  }
   for (const auto& thread_info : thread_runtime_info) {
     if (!polytracker_forest_name.empty()) {
       output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id, last_label); 
     }
     else {
+      std::cout << "Calling output! " << std::endl;
       output(polytracker_db_name, thread_info, thread_id, last_label);
     }
   }
@@ -232,12 +242,21 @@ char* mmap_taint_forest(unsigned long size) {
   }
   return (char*)p;
 }
+void polytracker_print_settings() {
+  std::cout << "POLYPATH: " << target_file << std::endl;
+  std::cout << "POLYDB: " << polytracker_db_name << std::endl;
+  std::cout << "POLYFUNC: " << polytracker_trace_func << std::endl;
+  std::cout << "POLYTRACE: " << polytracker_trace << std::endl;
+  std::cout << "POLYSTART: " << byte_start << std::endl;
+  std::cout << "POLYEND: " << byte_end << std::endl;
+  std::cout << "POLYTTL: " << taint_node_ttl << std::endl;
+}
 
 void polytracker_start() {
   polytracker_get_settings();
-
+  polytracker_print_settings();
   // Set up the atexit call
-  //atexit(polytracker_end);
+  atexit(polytracker_end);
 
   // Reserve memory for polytracker taintforest. 
   // Reserve enough for all possible labels
