@@ -130,6 +130,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(f->getName());
   llvm::Value *index_val =
       llvm::ConstantInt::get(shadow_type, func_index, false);
+  std::cout << "Logging entry at: " << std::string(f->getName()) << std::endl;
   IRB.CreateCall(func_entry_log, {func_name, index_val});
 
   // Build the dominator tree for this function once blocks are split.
@@ -222,11 +223,13 @@ void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
     if (line[0] == '#' || line == "\n") {
       continue;
     }
-    int start_pos = line.find(':');
-    int end_pos = line.find("=");
-    // :test=und
-    std::string func_name = line.substr(start_pos+1, end_pos-(start_pos+1));
-    ignore_funcs[func_name] = true;
+    if (line.find("discard") && line.find("main") == std::string::npos) {
+      int start_pos = line.find(':');
+      int end_pos = line.find("=");
+      // :test=und
+      std::string func_name = line.substr(start_pos+1, end_pos-(start_pos+1));
+      ignore_funcs[func_name] = true;
+    }
   }
 }
 
@@ -244,6 +247,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     if (func.hasName()) {
       std::string fname = func.getName().str();
       if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+        std::cout << "Not instrumenting: " << fname << std::endl;
         continue;
       }
     }

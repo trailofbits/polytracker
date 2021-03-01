@@ -3,36 +3,39 @@
 #include "polytracker/tracing.h"
 #include "polytracker/polytracker.h"
 #include <iostream>
+#include <atomic>
 
 extern bool polytracker_trace_func;
 extern bool polytracker_trace;
 extern std::atomic_bool done;
 
 extern "C" void __polytracker_log_taint_op(dfsan_label label) {
-    if (label != 0 && LIKELY(!done)) {
+    if (label != 0 && !done) {
         logOperation(label);
     }
 }
 extern "C" void __polytracker_log_taint_cmp(dfsan_label cmp) {
-    if (cmp != 0 && LIKELY(!done)) {
+    if (cmp != 0 && !done) {
         logCompare(cmp);
     }
 }
 
 extern "C" void __polytracker_log_func_entry(char * fname, uint32_t index) {
-    if (LIKELY(!done)) {
+    if (!done) {
+        //std::cout << "Applying function entry" << std::endl;
+        fprintf(stderr, "FUNC ENTRY?\n");
         logFunctionEntry(fname, BBIndex(index, 0));
     }
 }
 
 extern "C" void __polytracker_log_func_exit(uint32_t func_index) {
-  if (LIKELY(!done)) {
+  if (!done) {
     logFunctionExit(BBIndex(func_index));
   }
 }
 
 extern "C" void __polytracker_log_bb_entry(char* name, uint32_t findex, uint32_t bindex, uint8_t btype) {
-  if (polytracker_trace && LIKELY(!done)) {
+  if (polytracker_trace && !done) {
     logBBEntry(name, BBIndex(findex, bindex),
                static_cast<polytracker::BasicBlockType>(btype));
   }

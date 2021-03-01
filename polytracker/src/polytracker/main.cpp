@@ -32,7 +32,7 @@ bool polytracker_trace_func = false;
 decay_val taint_node_ttl = -1;
 std::string target_file = "";
 char *forest_mem;
-std::atomic_bool done{false};
+std::atomic_bool done = ATOMIC_VAR_INIT(false);
 extern std::vector<RuntimeInfo *> thread_runtime_info;
 
 // For settings that have not been initialized, set to default if one exists
