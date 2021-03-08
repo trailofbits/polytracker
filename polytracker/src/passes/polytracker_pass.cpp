@@ -130,7 +130,6 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(f->getName());
   llvm::Value *index_val =
       llvm::ConstantInt::get(shadow_type, func_index, false);
-  std::cout << "Logging entry at: " << std::string(f->getName()) << std::endl;
   IRB.CreateCall(func_entry_log, {func_name, index_val});
 
   // Build the dominator tree for this function once blocks are split.
@@ -247,7 +246,6 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     if (func.hasName()) {
       std::string fname = func.getName().str();
       if (ignore_funcs.find(fname) != ignore_funcs.end()) {
-        std::cout << "Not instrumenting: " << fname << std::endl;
         continue;
       }
     }
