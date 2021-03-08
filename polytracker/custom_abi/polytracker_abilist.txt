@@ -9,6 +9,19 @@ fun:__dynamic_cast=discard
 ########################################
 fun:main=uninstrumented
 fun:main=discard
+fun:malloc=uninstrumented
+fun:malloc=discard
+fun:free=uninstrumented
+fun:free=discard
+fun:mmap=uninstrumented
+fun:mmap=custom
+fun:munmap=uninstrumented
+fun:munmap=custom
+fun:open=uninstrumented
+fun:open=custom
+fun:open64=uninstrumented
+fun:open64=custom
+
 
 ##########################################
 # Polytracker functions
@@ -2779,8 +2792,6 @@ fun:obstack_free=uninstrumented
 fun:obstack_printf=uninstrumented
 fun:obstack_vprintf=uninstrumented
 fun:on_exit=uninstrumented
-fun:open=uninstrumented
-fun:open64=uninstrumented
 fun:open_by_handle_at=uninstrumented
 fun:open_memstream=uninstrumented
 fun:open_wmemstream=uninstrumented
