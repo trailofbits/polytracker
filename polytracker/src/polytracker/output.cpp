@@ -254,7 +254,7 @@ static void createDBTables(sqlite3 * output_db) {
 
 static void storeFuncCFG(RuntimeInfo *runtime_info, sqlite3 * output_db, const input_id_t& input_id, const size_t& curr_thread_id) {
 	sqlite3_stmt * stmt;
-	const char * insert = "INSERT INTO func_cfg (callee, caller, event_id, thread_id, input_id)"
+	const char * insert = "INSERT OR IGNORE INTO func_cfg (callee, caller, event_id, thread_id, input_id)"
 	"VALUES (?, ?, ?, ?, ?);";
 	sql_prep(output_db, insert, -1, &stmt, NULL);
 	if (polytracker_trace_func) {
@@ -545,7 +545,7 @@ static void storeRuntimeTrace(const RuntimeInfo *runtime_info, sqlite3 * output_
 	if (canonical_mapping.size() < 1) {
 		std::cerr << "Unexpected number of taint sources: "
 				<< canonical_mapping.size() << std::endl;
-		exit(1);
+		return;
 	} else if (canonical_mapping.size() > 1) {
 		std::cerr << "Warning: More than one taint source found! The resulting "
 				<< "runtime trace will likely be incorrect!" << std::endl;
@@ -654,22 +654,19 @@ static void storeArtifacts(RuntimeInfo * runtime_info, sqlite3 * output_db, cons
 	storeFuncCFG(runtime_info, output_db, input_id, current_thread);
 }
 
-static void outputDB(RuntimeInfo * runtime_info, const std::string& forest_out_path, sqlite3 * output_db, const size_t& current_thread, const dfsan_label& last_label) {
-	createDBTables(output_db);
-	const input_id_t input_id = storeNewInput(output_db);
-	if (input_id) {
-		storeTaintForestDisk(forest_out_path, runtime_info, last_label);
-	    storeArtifacts(runtime_info, output_db, input_id, current_thread);
-	}
+// TODO (Carson) merge these functions
+static void outputDB(RuntimeInfo * runtime_info, const std::string& forest_out_path, sqlite3 * output_db, const size_t& current_thread, const dfsan_label& last_label, const input_id_t& input_id) {
+	// createDBTables(output_db);
+	std::cout << "Input id is! " << input_id << std::endl;
+	storeTaintForestDisk(forest_out_path, runtime_info, last_label);
+	storeArtifacts(runtime_info, output_db, input_id, current_thread);
 }
 
-static void outputDB(RuntimeInfo * runtime_info, sqlite3 * output_db, const size_t& current_thread, const dfsan_label& last_label) {
-	createDBTables(output_db);
-	const input_id_t input_id = storeNewInput(output_db);
-	if (input_id) {
-		storeTaintForest(runtime_info, output_db, input_id, last_label);
-	  storeArtifacts(runtime_info, output_db, input_id, current_thread);
-	}
+static void outputDB(RuntimeInfo * runtime_info, sqlite3 * output_db, const size_t& current_thread, const dfsan_label& last_label, const input_id_t& input_id) {
+	// createDBTables(output_db);
+	std::cout << "Input id is!(p2) " << input_id << std::endl;
+	storeTaintForest(runtime_info, output_db, input_id, last_label);
+	storeArtifacts(runtime_info, output_db, input_id, current_thread);
 }
 
 void output(const std::string& forest_path, const std::string& db_path, RuntimeInfo *runtime_info, const size_t& current_thread, const dfsan_label& last_label) {
@@ -681,13 +678,21 @@ void output(const std::string& forest_path, const std::string& db_path, RuntimeI
 		std::cout << "Error! Could not open output db " << db_path << std::endl;
 		exit(1);
 	}
+
 	char * errorMessage;
 	sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL, &errorMessage);
+	createDBTables(output_db);
+
+	const input_id_t input_id = storeNewInput(output_db);
+	if (!input_id) {
+		std::cerr << "No taint sources, exiting!" << std::endl;
+		return;
+	}
 	sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
-	outputDB(runtime_info, forest_fname, output_db, current_thread, last_label);
+	outputDB(runtime_info, forest_fname, output_db, current_thread, last_label, input_id);
 	sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 	sqlite3_close(output_db);
 }
@@ -701,14 +706,22 @@ void output(const std::string& db_path, RuntimeInfo *runtime_info, const size_t&
 		exit(1);
 	}
 	char * errorMessage;
-	std::cout << "Tracing done! Storing to disk" << std::endl;
-	std::cout << "DB name is: " << db_name << std::endl;
 	sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL, &errorMessage);
     sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL, &errorMessage);
+	createDBTables(output_db);
+	
+	std::cout << "Tracing done! Storing to disk" << std::endl;
+	std::cout << "DB name is: " << db_name << std::endl;
+
+	const input_id_t input_id = storeNewInput(output_db);
+	if (!input_id) {
+		std::cerr << "No taint sources, exiting!" << std::endl;
+		return;
+	}
 	sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
-	outputDB(runtime_info, output_db, current_thread, last_label);
+	outputDB(runtime_info, output_db, current_thread, last_label, input_id);
 	sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 	sqlite3_close(output_db);
 }
