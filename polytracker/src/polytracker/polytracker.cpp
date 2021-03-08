@@ -22,8 +22,6 @@ extern "C" void __polytracker_log_taint_cmp(dfsan_label cmp) {
 
 extern "C" void __polytracker_log_func_entry(char * fname, uint32_t index) {
     if (!done) {
-        //std::cout << "Applying function entry" << std::endl;
-        fprintf(stderr, "FUNC ENTRY?\n");
         logFunctionEntry(fname, BBIndex(index, 0));
     }
 }
