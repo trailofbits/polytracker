@@ -208,6 +208,7 @@ fun:getrlimit=custom
 fun:getrusage=custom
 fun:nanosleep=custom
 fun:pread=custom
+fun:pread64=custom
 fun:read=custom
 fun:socketpair=custom
 fun:stat=custom
