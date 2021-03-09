@@ -14,31 +14,79 @@
 #include <unordered_map>
 #include <fstream>
 
-static llvm::cl::opt<std::string> ignore_file_path("ignore-list", llvm::cl::desc("Specify functions to ignore"));
+// Can specify any number of ignore lists. 
+static llvm::cl::list<std::string> ignore_file_path("ignore-list", llvm::cl::desc("Specify functions to ignore"));
+// FIXME (Carson) turn into a bool
+static llvm::cl::opt<std::string> generate_ignore_list("gen-list", llvm::cl::desc("When specified, generates an ignore list from bitcode"));
 
 namespace polytracker {
 
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
   //Should never fail
   llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);
-  if (!inst->getType()->isVectorTy()) {
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isDoubleTy()) {
+    return;
+  }
+  if (!inst->getType()->isVectorTy() && !inst->getType()->isStructTy()) {
     //Insert after inst.
     llvm::IRBuilder<> IRB(inst->getNextNode());
     llvm::LLVMContext& context = mod->getContext();
-    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
-    CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-    CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+    llvm::Type* int32_ty = llvm::Type::getInt32Ty(context);
+    auto int32_size = int32_ty->getPrimitiveSizeInBits();
+    
+    auto inst_type_size = inst->getType()->getPrimitiveSizeInBits();
+    auto inst_type = inst->getType();
+    // Check size, if the size is not an Int32Ty, then we need to extend or truncate.
+    // In LLVM only one instance of a type is created, so checking type equality can be just
+    // pointer comparisons.
+    if (inst_type == int32_ty || int32_size == inst_type_size || inst->getType()->isPointerTy() || inst->getType()->isDoubleTy()) {
+      llvm::Value * hail = IRB.CreateBitCast(inst, int32_ty);
+      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+      CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+    }
+    else {
+      // Update size
+      //llvm::Value * mary;
+      //if (inst->getType()->isPointerTy()) {
+       // llvm::Value * cast = IRB.CreatePtrToInt(inst, int32_ty);
+      //} 
+      //inst->getType()->print(llvm::errs());
+      llvm::Value * mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
+      llvm::Value * hail = IRB.CreateBitCast(mary, int32_ty);
+      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+      CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
+    }
   }
 }
-
+// TODO (Carson) refactor a bit. 
 void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
   llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&i);
-  if (!inst->getType()->isVectorTy()) {
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isDoubleTy()) {
+    return;
+  }
+  if (!inst->getType()->isVectorTy() && !inst->getType()->isStructTy()) {
     llvm::LLVMContext& context = mod->getContext();
     llvm::IRBuilder<> IRB(inst->getNextNode());
-    llvm::Value * hail = IRB.CreateBitOrPointerCast(inst, llvm::Type::getInt32PtrTy(context));
-    CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-    CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
+    llvm::Type* int32_ty = llvm::Type::getInt32Ty(context);
+    auto int32_size = int32_ty->getPrimitiveSizeInBits();
+    
+    auto inst_type_size = inst->getType()->getPrimitiveSizeInBits();
+    auto inst_type = inst->getType();
+
+    // If sizes match, or we can just do pointer casts. 
+    if (inst_type == int32_ty || int32_size == inst_type_size || inst->getType()->isPointerTy() || inst->getType()->isDoubleTy()) {
+      llvm::Value * hail = IRB.CreateBitCast(inst, int32_ty);
+      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+      CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
+    }
+    else {
+      // Update size 
+      //inst->getType()->print(llvm::errs());
+      llvm::Value * mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
+      llvm::Value * hail = IRB.CreateBitCast(mary, int32_ty);
+      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
+      CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
+    }
   }
 }
 
@@ -206,7 +254,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   //This function is how Polytracker works with DFsan
   //dfsan_get_label is a special function that gets instrumented by dfsan and changes its ABI. The return type is a dfsan_label
   //as defined by dfsan
-  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32PtrTy(context)}, false);
+  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32Ty(context)}, false);
   dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
   
 }
@@ -233,8 +281,10 @@ void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
 }
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
-  if (!ignore_file_path.empty()) {
-    readIgnoreFile(ignore_file_path);
+  if (ignore_file_path.getNumOccurrences()) {
+    for (auto& file_path : ignore_file_path) {
+      readIgnoreFile(file_path);
+    }
   }
   initializeTypes(mod);
   bool ret = false;
