@@ -55,6 +55,7 @@ assert os.path.exists(POLY_LIB_PATH)
 ABI_LIST_PATH: str = os.path.join(COMPILER_DIR, "abi_lists", "polytracker_abilist.txt")
 assert os.path.exists(ABI_LIST_PATH)
 
+ABI_PATH: str = os.path.join(COMPILER_DIR, "abi_lists")
 
 is_cxx: bool = "++" in sys.argv[0]
 
@@ -100,26 +101,34 @@ def is_building(argv) -> bool:
 
 
 # (2)
-def instrument_bitcode(bitcode_file: str, output_bc: str):
+def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists: Optional[List[str]] = None) -> str:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
     Optimizes it all, asserts the output file exists.
     """
-    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}", bitcode_file, "-o", output_bc]
+    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
+    for item in ignore_lists:
+        opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
+    opt_command += [bitcode_file, "-o", output_bc]
     ret = subprocess.call(opt_command)
     assert ret == 0
-    opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}", output_bc, "-o", output_bc]
+    opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
+    for item in ignore_lists:
+        opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+    opt_command += [output_bc, "-o", output_bc]
     ret = subprocess.call(opt_command)
     assert ret == 0
+    # TODO (Carson)
     # opt_command = ["opt", "-O2", output_bc, "-o", output_bc]
     # ret = subprocess.call(opt_command)
     assert ret == 0
     assert os.path.exists(output_bc)
+    return output_bc
 
 
 # (3)
-# TODO Carson (decide if we need -static)
+# NOTE (Carson), no static here, but there might be times where we get-bc on libcxx and llvm-link some bitcode together
 def modify_exec_args(argv: List[str]):
     """
     Replaces clang with gclang, uses our libcxx, and links our libraries if needed
@@ -134,12 +143,12 @@ def modify_exec_args(argv: List[str]):
     linking: bool = is_linking(argv)
     if building:
         if linking and is_cxx:
-            compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
         elif is_cxx:
-            compile_command.extend(["-stdlib=libc++", "-static", f"-I{CXX_INCLUDE_PATH}"])
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}"])
 
     if not building and linking and is_cxx:
-        compile_command.extend(["-stdlib=libc++", "-static", f"-L{CXX_LIB_PATH}"])
+        compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH}"])
 
     for arg in argv[1:]:
         if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
@@ -159,6 +168,8 @@ def modify_exec_args(argv: List[str]):
 def store_artifact(file_path):
     filename = os.path.basename(file_path)
     artifact_file_path = os.path.join(ARTIFACT_STORE_PATH, filename)
+    if os.path.exists(artifact_file_path):
+        return
     # Check if its an absolute path
     if file_path[0] != "/":
         cwd = os.getcwd()
@@ -170,23 +181,40 @@ def store_artifact(file_path):
     assert ret == 0
 
 
+def handle_non_build(argv: List[str]):
+    cc = []
+    if is_cxx:
+        cc.append("gclang++")
+    else:
+        cc.append("gclang")
+    for arg in argv[1:]:
+        if arg == "-qversion":
+            cc.append("--version")
+            continue
+        cc.append(arg)
+    assert subprocess.call(cc) == 0
+
+
 # This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
 # First, figure out whats being built by looking for -o or -c
 # Returns the output file for convience
 def handle_cmd(argv: List[str]) -> Optional[str]:
-    # Build the object
-    modify_exec_args(argv)
-
+    # If not building, then we are not producing an object with -o or -c
+    # We might just be checking something like a version. So just do whatever.
     building: bool = is_building(argv)
     if not building:
+        handle_non_build(argv)
         return None
 
+    # Build the object
+    modify_exec_args(argv)
     # Store artifacts.
     output_file: Optional[str] = None
-    # TODO (Carson) handle -c, not really important rn though
     for index, arg in enumerate(argv):
         if arg == "-o":
             output_file = argv[index + 1]
+        if arg == "-c":
+            output_file = argv[index + 1].replace(".c", ".o")
     assert output_file is not None
 
     # Look for artifacts.
@@ -246,18 +274,30 @@ def do_everything(argv: List[str]):
     ret = subprocess.call(re_comp)
     assert ret == 0
 
+def lower_bc(input_bitcode, output_file, libs = None):
+    # Lower bitcode. Creates a .o
+    if is_cxx:
+        assert subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode]) == 0
+    else:
+        assert subprocess.call(["gclang", "-fPIC", "-c", input_bitcode]) == 0
+    obj_file = input_bitcode.replace(".bc", ".o")
 
-# (5) TODO (Carson) I don't think this works yet, needs polylibs.
-def lower_bitcode(input_bitcode: str, output: str, libs: Optional[List[str]]):
-    # Just use gclang++ to be safe.
-    re_comp = ["gclang++", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}", input_bitcode, "-o", output]
-    if libs:
-        re_comp.append("-Wl,--start-group")
-        re_comp.extend(["-l" + lib for lib in libs])
-        re_comp.append("-Wl,--end-group")
+    # Compile into executable
+    if is_cxx:
+        re_comp = ["gclang++"]
+    else:
+        re_comp = ["gclang"]
+    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
+                    "-Wl,--start-group", "-lc++abi"])
+    re_comp.extend(POLYCXX_LIBS)
+    for lib in libs:
+        if lib.endswith(".a") or lib.endswith(".o"):
+            re_comp.append(lib)
+        else:
+            re_comp.append(f"-l{lib}")
+    re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -295,6 +335,7 @@ def main():
         default=[],
         help="Specify libraries to link with the instrumented target, without the -l" "--libs lib1 lib2 lib3 etc",
     )
+    parser.add_argument("--lists", nargs="+", default=[], help="Specify additional ignore lists to Polytracker")
     if len(sys.argv) <= 1:
         return
     # Case 1, just instrument bitcode.
@@ -303,10 +344,10 @@ def main():
         if not os.path.exists(args.input_file):
             print("Error! Input file could not be found!")
             sys.exit(1)
-        if args.output_bitcode:
-            instrument_bitcode(args.input_file, args.output_file)
+        if args.output_file:
+            instrument_bitcode(args.input_file, args.output_file, args.lists)
         else:
-            instrument_bitcode(args.input_file, "output.bc")
+            instrument_bitcode(args.input_file, "output.bc", args.lists)
 
     # simple target.
     elif sys.argv[1] == "--instrument-target":
@@ -319,7 +360,8 @@ def main():
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
-        lower_bitcode(args.input_file, args.output_file, args.libs)
+        bc_file = instrument_bitcode(args.input_file, args.output_file + ".bc", args.lists)
+        lower_bc(bc_file, args.output_file, args.libs)
 
     # Do gllvm build
     else:
