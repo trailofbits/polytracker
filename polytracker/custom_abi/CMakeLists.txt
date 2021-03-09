@@ -1,1 +1,6 @@
 install (FILES "polytracker_abilist.txt" DESTINATION ${POLYTRACK_RULE_DIR})
+install (FILES "fontconfig" DESTINATION ${POLYTRACK_RULE_DIR})
+install (FILES "freetype" DESTINATION ${POLYTRACK_RULE_DIR})
+install (FILES "xml2" DESTINATION ${POLYTRACK_RULE_DIR})
+install (FILES "libz" DESTINATION ${POLYTRACK_RULE_DIR})
+
