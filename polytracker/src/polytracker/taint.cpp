@@ -170,7 +170,6 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
     if (byte_end < 0 ||
         (curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
       dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
-      std::cout << "SETTING LABEL " << new_label << " at: " << curr_byte << std::endl;
       dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
 
       // Log that we tainted data within this function from a taint source etc.
