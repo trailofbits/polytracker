@@ -27,7 +27,9 @@ WORKDIR /polytracker/the_klondike/mupdf/build/debug
 RUN get-bc -b mutool 
 
 #Instrument and link libs
-RUN ${CC} --instrument-bitcode -f mutool.bc -o mutool_track --libs libmupdf.a m pthread
+# RUN ${CC} --instrument-bitcode -i mutool.bc -o mutool_track --libs libmupdf.a m pthread
+# Instrument and Lower the bitcode and link libs 
+RUN ${CC} --lower-bitcode -i mutool.bc -o mutool_track --libs libmupdf.a m pthread
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]

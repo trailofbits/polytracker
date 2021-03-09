@@ -7,6 +7,7 @@ WORKDIR /polytracker/the_klondike
 RUN apt update && apt install pkg-config \
 	uuid-dev \
 	gperf \
+  wget \
 	libtool \
 	gettext \
 	autopoint \
@@ -47,7 +48,7 @@ WORKDIR /polytracker/the_klondike
 RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
 RUN tar -xzvf zlib-1.2.11.tar.gz
 WORKDIR zlib-1.2.11
-RUN ./configure --prefix=/usr  && make -j$(nproc) test && make -j$(nproc) install
+RUN ./configure --prefix=/usr && make -j$(nproc) test && make -j$(nproc) install
 
 #=================================
 WORKDIR /polytracker/the_klondike
@@ -57,7 +58,7 @@ WORKDIR /polytracker/the_klondike
 RUN wget http://xmlsoft.org/sources/libxml2-2.9.10.tar.gz
 RUN tar -xvf libxml2-2.9.10.tar.gz 
 WORKDIR libxml2-2.9.10 
-RUN ./configure --prefix=/usr --disable-dependency-tracking --with-python=/usr/bin/python3
+RUN ./configure --disable-dependency-tracking --prefix=/usr --with-python=/usr/bin/python3
 RUN make -j5 install
 RUN make install
 
@@ -87,30 +88,30 @@ RUN mkdir build
 WORKDIR build
 RUN cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_GTK_TESTS=OFF -DBUILD_QT4_TESTS=OFF -DBUILD_QT5_TESTS=OFF -DBUILD_CPP_TESTS=OFF -DENABLE_SPLASH=OFF -DENABLE_CPP=OFF -DENABLE_GLIB=OFF -DENABLE_GTK_DOC=OFF -DENABLE_QT4=OFF -DENABLE_QT5=OFF -DENABLE_LIBOPENJPEG=unmaintained -DENABLE_CMS=none -DENABLE_LIBCURL=OFF -DENABLE_ZLIB=OFF -DENABLE_DCTDECODER=unmaintained -DENABLE_ZLIB_UNCOMPRESS=OFF -DSPLASH_CMYK=OFF -DWITH_JPEG=OFF -DWITH_PNG=OFF -DWITH_TIFF=OFF -DWITH_NSS3=OFF -DWITH_Cairo=OFF -DWITH_FONTCONFIGURATION_FONTCONFIG=OFF -DCMAKE_EXE_LINKER_FLAGS="-pthread" ../
 
-RUN make -j5 install 
+RUN make -j5 install
 
 #=================================
 WORKDIR /polytracker/the_klondike/poppler-0.84.0/build/utils
 
 #Extract and instrument pdftotext, other poppler tools should work the same 
-RUN get-bc -b pdftotext 
-RUN ${CXX} --instrument-bitcode -f pdftotext.bc -o pdftotext_track --output-bitcode pdftotext_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+RUN get-bc -b pdftotext
+RUN ${CXX} --lower-bitcode -i pdftotext.bc -o pdftotext_track --libs /build_artifacts/libpoppler.a freetype fontconfig pthread --lists freetype fontconfig xml2 libz
 
-RUN get-bc -b pdfinfo
-RUN ${CXX} --instrument-bitcode -f pdfinfo.bc -o pdfinfo_track --output-bitcode pdfinfo_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+#RUN get-bc -b pdfinfo
+#RUN ${CXX} --instrument-bitcode -f pdfinfo.bc -o pdfinfo_track --output-bitcode pdfinfo_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
-RUN get-bc -b pdftops 
-RUN ${CXX} --instrument-bitcode -f pdftops.bc -o pdftops_track --output-bitcode pdftops_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+#RUN get-bc -b pdftops 
+#RUN ${CXX} --instrument-bitcode -f pdftops.bc -o pdftops_track --output-bitcode pdftops_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
-RUN get-bc -b pdfunite 
-RUN ${CXX} --instrument-bitcode -f pdfunite.bc -o pdfunite_track --output-bitcode pdfunite_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+#RUN get-bc -b pdfunite 
+#RUN ${CXX} --instrument-bitcode -f pdfunite.bc -o pdfunite_track --output-bitcode pdfunite_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
-RUN get-bc -b pdfattach 
-RUN ${CXX} --instrument-bitcode -f pdfattach.bc -o pdfattach_track --output-bitcode pdfattach_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+#RUN get-bc -b pdfattach 
+#RUN ${CXX} --instrument-bitcode -f pdfattach.bc -o pdfattach_track --output-bitcode pdfattach_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
-RUN get-bc -b pdfimages 
-RUN ${CXX} --instrument-bitcode -f pdfimages.bc -o pdfimages_track --output-bitcode pdfimages_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
+#RUN get-bc -b pdfimages 
+#RUN ${CXX} --instrument-bitcode -f pdfimages.bc -o pdfimages_track --output-bitcode pdfimages_track.bc --libs /build_artifacts/libpoppler.a freetype fontconfig pthread
 
 # Note, the /workdir directory is intended to be mounted at runtime
-VOLUME ["/workdir"]
-WORKDIR /workdir
+#VOLUME ["/workdir"]
+#WORKDIR /workdir
