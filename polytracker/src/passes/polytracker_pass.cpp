@@ -198,7 +198,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::Value* FuncIndex = llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(context), func_index, false);
   
   for (auto bb: blocks) {
-    analyzeBlock(f, FuncIndex, bb, bb_index, splitBBs, dominator_tree);
+    analyzeBlock(f, FuncIndex, bb, bb_index++, splitBBs, dominator_tree);
   }
 
   // FIXME I don't like this
