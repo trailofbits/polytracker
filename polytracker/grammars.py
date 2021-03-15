@@ -5,6 +5,8 @@ from collections import defaultdict
 from logging import getLogger
 from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
+# TODO remove
+import graphviz
 import networkx as nx
 from tqdm import tqdm
 
@@ -663,6 +665,25 @@ def extract(traces: Iterable[PolyTrackerTrace], simplify: bool = False) -> Gramm
     return Grammar()
 
 
+def to_dot(graph: DiGraph, comment: Optional[str] = None) -> graphviz.Digraph:
+    """
+    :param comment: comment for the graph
+    :return: Graphviz DiGraph
+
+    This function creates a dot object which can be saved to disk and converted to PDF
+    its a visualization of the chain fragment, useful for visualizing a reorg.
+    """
+    if comment is not None:
+        dot = graphviz.Digraph(comment=comment)
+    else:
+        dot = graphviz.Digraph()
+    for node in graph.nodes:
+        dot.node(f"{str(node)}")
+    for parent in graph.graph.keys():
+        for child in graph.graph[parent]:
+            dot.edge(f"{str(parent)}", f"{str(child)}")
+    return dot
+
 class ExtractGrammarCommand(Command):
     name = "grammar"
     help = "extract a grammar from one or more program traces"
@@ -688,17 +709,17 @@ class ExtractGrammarCommand(Command):
             raise ValueError("The number of files provided in the TRACES argument must be a multiple of two!")
         self.traces = []
         try:
-            for json_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
-                with open(json_file, "rb") as jf:
-                    with open(input_file, "rb") as inputf:
-                        trace = PolyTrackerTrace.parse(jf, input_file=inputf)
+            for db_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
+                trace = PolyTrackerTrace.parse(db_file, input_file)
+                to_dot(trace.cfg).save("cfg.dot")
+                print(f"num nodes {trace.cfg.number_of_nodes()}")
                 if not trace.is_cfg_connected():
                     roots = list(trace.cfg_roots())
                     if len(roots) == 0:
-                        log.error(f"Basic block trace of {json_file} has no roots!\n\n")
+                        log.error(f"Basic block trace of {db_file} has no roots!\n\n")
                     else:
                         root_names = "".join(f"\t{r!s}\n" for r in roots)
-                        log.error(f"Basic block trace of {json_file} has multiple roots:\n{root_names}")
+                        log.error(f"Basic block trace of {db_file} has multiple roots:\n{root_names}")
                     exit(1)
                 self.traces.append(trace)
         except ValueError as e:
