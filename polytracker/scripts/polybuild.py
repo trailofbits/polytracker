@@ -101,12 +101,14 @@ def is_building(argv) -> bool:
 
 
 # (2)
-def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists: Optional[List[str]] = None) -> str:
+def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None) -> str:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
     Optimizes it all, asserts the output file exists.
     """
+    if ignore_lists is None:
+        ignore_lists = []
     opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
