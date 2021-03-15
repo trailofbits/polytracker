@@ -476,6 +476,7 @@ static void storeTaintBlockAccess(sqlite3 * output_db, const RuntimeInfo* runtim
 	sqlite3_finalize(bb_stmt);
 	
 	sqlite3_stmt * instance_stmt;
+	
 	const char * inst_stmt_insert = "INSERT INTO block_instance(block_gid, event_id, entry_count, function_call_id, input_id, thread_id)"
 	"VALUES(?, ?, ?, ?, ?, ?);";
 	sql_prep(output_db, inst_stmt_insert, -1, &instance_stmt, NULL);

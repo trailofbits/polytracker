@@ -7,33 +7,30 @@
 
 extern bool polytracker_trace_func;
 extern bool polytracker_trace;
-extern std::atomic_bool done;
+// extern std::atomic_bool done;
 
 extern "C" void __polytracker_log_taint_op(dfsan_label label) {
-    if (label != 0 && !done) {
+    if (label != 0) {
         logOperation(label);
     }
 }
 extern "C" void __polytracker_log_taint_cmp(dfsan_label cmp) {
-    if (cmp != 0 && !done) {
+    if (cmp != 0) {
         logCompare(cmp);
     }
 }
 
 extern "C" void __polytracker_log_func_entry(char * fname, uint32_t index) {
-    if (!done) {
-        logFunctionEntry(fname, BBIndex(index, 0));
-    }
+    logFunctionEntry(fname, BBIndex(index, 0));
+    
 }
 
 extern "C" void __polytracker_log_func_exit(uint32_t func_index) {
-  if (!done) {
     logFunctionExit(BBIndex(func_index));
-  }
 }
 
 extern "C" void __polytracker_log_bb_entry(char* name, uint32_t findex, uint32_t bindex, uint8_t btype) {
-  if (polytracker_trace && !done) {
+  if (polytracker_trace) {
     logBBEntry(name, BBIndex(findex, bindex),
                static_cast<polytracker::BasicBlockType>(btype));
   }
