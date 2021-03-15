@@ -33,7 +33,12 @@ decay_val taint_node_ttl = -1;
 std::string target_file = "";
 char *forest_mem;
 std::atomic_bool done = ATOMIC_VAR_INIT(false);
-extern std::vector<RuntimeInfo *> thread_runtime_info;
+
+// DB for storing things
+sqlite3 * output_db;
+
+// Input id is unique document key 
+input_id_t input_id;
 
 // For settings that have not been initialized, set to default if one exists
 void set_defaults() {
@@ -207,26 +212,14 @@ void polytracker_get_settings() {
 
 void polytracker_end() {
   done.store(true);
-	static size_t thread_id = 0;
   const dfsan_label last_label = dfsan_get_label_count();
-  std::cout << "END last label: " << last_label << std::endl;
-  // Go over the array of thread info, and call output on everything.
-  std::cout << "(END) Thread info size is: " << thread_runtime_info.size() << std::endl;
-  for (auto& it : thread_runtime_info) {
-    std::cout << "We have some thread info! " << it << std::endl;
+  if (!polytracker_forest_name.empty()) {
+    storeTaintForestDisk(polytracker_forest_name, last_label);
   }
-  for (const auto& thread_info : thread_runtime_info) {
-    if (!polytracker_forest_name.empty()) {
-      output(polytracker_forest_name, polytracker_db_name, thread_info, thread_id, last_label); 
-    }
-    else {
-      std::cout << "Calling output! " << std::endl;
-      output(polytracker_db_name, thread_info, thread_id, last_label);
-    }
+  else {
+    storeTaintForest(output_db, input_id, last_label);
   }
-  for (auto& i : thread_runtime_info) {
-    delete i;
-  }
+  db_fini(output_db);
 }
 
 char* mmap_taint_forest(unsigned long size) {
@@ -242,6 +235,7 @@ char* mmap_taint_forest(unsigned long size) {
   }
   return (char*)p;
 }
+
 void polytracker_print_settings() {
   std::cout << "POLYPATH: " << target_file << std::endl;
   std::cout << "POLYDB: " << polytracker_db_name << std::endl;
@@ -255,9 +249,11 @@ void polytracker_print_settings() {
 void polytracker_start() {
   polytracker_get_settings();
   polytracker_print_settings();
+  output_db = db_init(polytracker_db_name);
+  // Store new file
+  input_id = storeNewInput(output_db, target_file, byte_start, byte_end, polytracker_trace);
   // Set up the atexit call
   atexit(polytracker_end);
-
   // Reserve memory for polytracker taintforest. 
   // Reserve enough for all possible labels
   forest_mem = (char *)mmap_taint_forest(MAX_LABELS * sizeof(dfsan_label));

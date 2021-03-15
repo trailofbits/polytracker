@@ -1,122 +1,118 @@
+#include "polytracker/polytracker_pass.h"
 #include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
-#include "polytracker/polytracker_pass.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Support/CommandLine.h"
-#include <iostream>
-#include <assert.h>     /* assert */
-#include <unordered_map>
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/IR/Dominators.h"
+#include <assert.h> /* assert */
 #include <fstream>
+#include <iostream>
+#include <unordered_map>
 
-// Can specify any number of ignore lists. 
-static llvm::cl::list<std::string> ignore_file_path("ignore-list", llvm::cl::desc("Specify functions to ignore"));
+// Can specify any number of ignore lists.
+static llvm::cl::list<std::string>
+    ignore_file_path("ignore-list",
+                     llvm::cl::desc("Specify functions to ignore"));
 // FIXME (Carson) turn into a bool
-static llvm::cl::opt<std::string> generate_ignore_list("gen-list", llvm::cl::desc("When specified, generates an ignore list from bitcode"));
+static llvm::cl::opt<std::string> generate_ignore_list(
+    "gen-list",
+    llvm::cl::desc("When specified, generates an ignore list from bitcode"));
 
 namespace polytracker {
 
-void PolyInstVisitor::visitCmpInst(llvm::CmpInst& CI) {
-  //Should never fail
-  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&CI);
-  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isDoubleTy()) {
+void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callback) {
+  // Should never fail
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy()) {
     return;
   }
-  if (!inst->getType()->isVectorTy() && !inst->getType()->isStructTy()) {
-    //Insert after inst.
-    llvm::IRBuilder<> IRB(inst->getNextNode());
-    llvm::LLVMContext& context = mod->getContext();
-    llvm::Type* int32_ty = llvm::Type::getInt32Ty(context);
-    auto int32_size = int32_ty->getPrimitiveSizeInBits();
-    
-    auto inst_type_size = inst->getType()->getPrimitiveSizeInBits();
-    auto inst_type = inst->getType();
-    // Check size, if the size is not an Int32Ty, then we need to extend or truncate.
-    // In LLVM only one instance of a type is created, so checking type equality can be just
-    // pointer comparisons.
-    if (inst_type == int32_ty || int32_size == inst_type_size || inst->getType()->isPointerTy() || inst->getType()->isDoubleTy()) {
-      llvm::Value * hail = IRB.CreateBitCast(inst, int32_ty);
-      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-      CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
-    }
-    else {
-      // Update size
-      //llvm::Value * mary;
-      //if (inst->getType()->isPointerTy()) {
-       // llvm::Value * cast = IRB.CreatePtrToInt(inst, int32_ty);
-      //} 
-      //inst->getType()->print(llvm::errs());
-      llvm::Value * mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
-      llvm::Value * hail = IRB.CreateBitCast(mary, int32_ty);
-      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-      CallInst * Call = IRB.CreateCall(taint_cmp_log, get_taint);
-    }
+  llvm::IRBuilder<> IRB(inst->getNextNode());
+  llvm::LLVMContext &context = mod->getContext();
+  llvm::Type *int32_ty = llvm::Type::getInt32Ty(context);
+  llvm::Value *get_taint;
+  if (inst->getType()->isDoubleTy()) {
+    llvm::Value *cast = IRB.CreateFPToSI(inst, int32_ty);
+    get_taint = IRB.CreateCall(dfsan_get_label, cast);
   }
+  else if (inst->getType()->isPointerTy()) {
+    llvm::Value *hail = IRB.CreateBitCast(inst, int32_ty);
+    get_taint = IRB.CreateCall(dfsan_get_label, hail);
+  }
+  else if (inst->getType() == int32_ty) {
+    get_taint = inst;
+  } else {
+    // Integer of a different size, extend/shrink. 
+    llvm::Value *mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
+    // llvm::Value *hail = IRB.CreateBitCast(mary, int32_ty);
+    get_taint = IRB.CreateCall(dfsan_get_label, mary);
+  }
+  if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
+    std::cerr << "Error! cmp parent block not in block_map"
+              << std::endl;
+    exit(1);
+  }
+  uint64_t gid = block_global_map[inst->getParent()];
+  bb_index_t bindex = gid & 0xFFFF;
+  func_index_t findex = (gid >> 32);
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), findex, false);
+  llvm::Value *BlockIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), bindex, false);
+  CallInst *Call = IRB.CreateCall(callback, {get_taint, FuncIndex, BlockIndex});
 }
-// TODO (Carson) refactor a bit. 
-void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
-  llvm::Instruction* inst = llvm::dyn_cast<llvm::Instruction>(&i);
-  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isDoubleTy()) {
-    return;
-  }
-  if (!inst->getType()->isVectorTy() && !inst->getType()->isStructTy()) {
-    llvm::LLVMContext& context = mod->getContext();
-    llvm::IRBuilder<> IRB(inst->getNextNode());
-    llvm::Type* int32_ty = llvm::Type::getInt32Ty(context);
-    auto int32_size = int32_ty->getPrimitiveSizeInBits();
-    
-    auto inst_type_size = inst->getType()->getPrimitiveSizeInBits();
-    auto inst_type = inst->getType();
 
-    // If sizes match, or we can just do pointer casts. 
-    if (inst_type == int32_ty || int32_size == inst_type_size || inst->getType()->isPointerTy() || inst->getType()->isDoubleTy()) {
-      llvm::Value * hail = IRB.CreateBitCast(inst, int32_ty);
-      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-      CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
-    }
-    else {
-      // Update size 
-      //inst->getType()->print(llvm::errs());
-      llvm::Value * mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
-      llvm::Value * hail = IRB.CreateBitCast(mary, int32_ty);
-      CallInst * get_taint = IRB.CreateCall(dfsan_get_label, hail);
-      CallInst * Call = IRB.CreateCall(taint_op_log, get_taint);
-    }
-  }
+void PolyInstVisitor::visitCmpInst(llvm::CmpInst &CI) {
+  logOp(&CI, taint_cmp_log);
+}
+
+void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
+  logOp(&i, taint_op_log);  
 }
 
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
-  llvm::Instruction * inst = llvm::dyn_cast<llvm::Instruction>(&ci);
-  llvm::Function* caller = inst->getParent()->getParent();
+  llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
+  llvm::Function *caller = inst->getParent()->getParent();
   assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
   func_index_t index = func_index_map[caller->getName().str()];
-  // Insert after 
+  if (block_global_map.find(ci.getParent()) == block_global_map.end()) {
+    std::cerr << "Error! Call instruction parent block not in block_map"
+              << std::endl;
+    exit(1);
+  }
+  uint64_t gid = block_global_map[ci.getParent()];
+  bb_index_t bindex = gid & 0xFFFF;
+  // Insert after
   llvm::IRBuilder<> IRB(inst->getNextNode());
-  llvm::LLVMContext& context = mod->getContext();
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(context), index, false);
-  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex});
+  llvm::LLVMContext &context = mod->getContext();
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), index, false);
+  llvm::Value *BlockIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), bindex, false);
+
+  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
 // Func, func_index, Block, block_index, split_blocks, DT.
-bool PolytrackerPass::analyzeBlock(llvm::Function *func,
-                                    llvm::Value* func_index,
-                                   llvm::BasicBlock* curr_bb,
+bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &findex,
+                                   llvm::BasicBlock *curr_bb,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
                                    llvm::DominatorTree &DT) {
-  //std::cout << "Visiting function!" << std::endl;
-  // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is always valid here 
-  // Is the address returned by reference always the same? Then yes it is 
-  BasicBlock* entry_block = &func->getEntryBlock();
+  // std::cout << "Visiting function!" << std::endl;
+  // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is
+  // always valid here Is the address returned by reference always the same?
+  // Then yes it is
+  BasicBlock *entry_block = &func->getEntryBlock();
   llvm::Instruction *Inst = &curr_bb->front();
-  llvm::LLVMContext& context = func->getContext();
-  llvm::Instruction* insert_point = &(*(func->getEntryBlock().getFirstInsertionPt()));
+  llvm::LLVMContext &context = func->getContext();
+  llvm::Instruction *insert_point =
+      &(*(func->getEntryBlock().getFirstInsertionPt()));
   llvm::IRBuilder<> IRB(insert_point);
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(func->getName());
   // Add a callback for BB entry
@@ -150,9 +146,15 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
     // so we need to add the callback afterward
     InsertBefore = InsertBefore->getNextNode();
   }
-  //FIXME figure out how to reuse the IRB
+  // FIXME figure out how to reuse the IRB
   llvm::IRBuilder<> new_IRB(InsertBefore);
-  new_IRB.CreateCall(bb_entry_log, {func_name, func_index, BBIndex, BBType});
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), findex, false);
+
+  auto res =
+      new_IRB.CreateCall(bb_entry_log, {func_name, FuncIndex, BBIndex, BBType});
+  uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
+  block_global_map[curr_bb] = gid;
   return true;
 }
 
@@ -162,7 +164,7 @@ If instructions have __polytracker, or they have __dfsan, ignore!
 */
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
-  //std::cout << "Visitng func" << std::endl;
+  // std::cout << "Visitng func" << std::endl;
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
@@ -188,17 +190,16 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   // Collect basic blocks, don't confuse the iterator
   bb_index_t bb_index = 0;
   std::vector<llvm::BasicBlock *> blocks;
-  std::vector<llvm::Instruction*> insts;
+  std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
     blocks.push_back(&bb);
-    for (auto& inst: bb) {
+    for (auto &inst : bb) {
       insts.push_back(&inst);
     }
   }
-  llvm::Value* FuncIndex = llvm::ConstantInt::get(llvm::IntegerType::getInt32Ty(context), func_index, false);
-  
-  for (auto bb: blocks) {
-    analyzeBlock(f, FuncIndex, bb, bb_index++, splitBBs, dominator_tree);
+
+  for (auto bb : blocks) {
+    analyzeBlock(f, func_index, bb, bb_index++, splitBBs, dominator_tree);
   }
 
   // FIXME I don't like this
@@ -209,7 +210,9 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   visitor.taint_op_log = taint_op_log;
   visitor.func_exit_log = func_exit_log;
   visitor.func_index_map = func_index_map;
-  for (auto& inst: insts) {
+  visitor.block_global_map = block_global_map;
+
+  for (auto &inst : insts) {
     visitor.visit(inst);
   }
 
@@ -222,8 +225,9 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
 
   // Return type, arg types, is vararg
-  auto taint_log_fn_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                                 {shadow_type}, false);
+  auto taint_log_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context),
+                              {shadow_type, shadow_type, shadow_type}, false);
   taint_op_log =
       mod.getOrInsertFunction("__polytracker_log_taint_op", taint_log_fn_ty);
   taint_cmp_log =
@@ -238,7 +242,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
 
   // Should pass in the function index
   auto exit_fn_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                            {shadow_type}, false);
+                                            {shadow_type, shadow_type}, false);
   func_exit_log =
       mod.getOrInsertFunction("__polytracker_log_func_exit", exit_fn_ty);
 
@@ -250,23 +254,23 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
                                              bb_func_args, false);
   bb_entry_log =
       mod.getOrInsertFunction("__polytracker_log_bb_entry", entry_bb_ty);
-    
-  //This function is how Polytracker works with DFsan
-  //dfsan_get_label is a special function that gets instrumented by dfsan and changes its ABI. The return type is a dfsan_label
-  //as defined by dfsan
-  auto dfsan_get_label_ty = llvm::FunctionType::get(shadow_type, {llvm::Type::getInt32Ty(context)}, false);
-  dfsan_get_label = mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty); 
-  
+
+  // This function is how Polytracker works with DFsan
+  // dfsan_get_label is a special function that gets instrumented by dfsan and
+  // changes its ABI. The return type is a dfsan_label as defined by dfsan
+  auto dfsan_get_label_ty = llvm::FunctionType::get(
+      shadow_type, {llvm::Type::getInt32Ty(context)}, false);
+  dfsan_get_label =
+      mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 }
-void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
+void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   std::ifstream ignore_file(ignore_file_path);
   if (!ignore_file.is_open()) {
     std::cerr << "Error! Could not read: " << ignore_file_path << std::endl;
     exit(1);
   }
   std::string line;
-  while (std::getline(ignore_file, line))
-  {
+  while (std::getline(ignore_file, line)) {
     if (line[0] == '#' || line == "\n") {
       continue;
     }
@@ -274,7 +278,8 @@ void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
       int start_pos = line.find(':');
       int end_pos = line.find("=");
       // :test=und
-      std::string func_name = line.substr(start_pos+1, end_pos-(start_pos+1));
+      std::string func_name =
+          line.substr(start_pos + 1, end_pos - (start_pos + 1));
       ignore_funcs[func_name] = true;
     }
   }
@@ -282,7 +287,7 @@ void PolytrackerPass::readIgnoreFile(const std::string& ignore_file_path) {
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
-    for (auto& file_path : ignore_file_path) {
+    for (auto &file_path : ignore_file_path) {
       readIgnoreFile(file_path);
     }
   }

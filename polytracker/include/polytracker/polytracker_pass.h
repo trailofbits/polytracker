@@ -8,6 +8,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/DerivedTypes.h"
 #include <unordered_map>
+#include "llvm/IR/Dominators.h"
 
 namespace polytracker {
 
@@ -20,7 +21,7 @@ struct PolytrackerPass : public llvm::ModulePass {
   bool runOnModule(llvm::Module &function) override;
   bool analyzeFunction(llvm::Function *f, const func_index_t& index);
   bool analyzeBlock(llvm::Function *func,
-                                  llvm::Value* func_index,
+                                  const func_index_t& func_index,
                                   llvm::BasicBlock* curr_bb,
                                   const bb_index_t &bb_index,
                                   std::vector<llvm::BasicBlock *> &split_bbs,
@@ -36,6 +37,7 @@ struct PolytrackerPass : public llvm::ModulePass {
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee dfsan_get_label;
 
+  std::unordered_map<llvm::BasicBlock*, uint64_t> block_global_map;
   std::unordered_map<std::string, func_index_t> func_index_map;
   const int shadow_width = 32;
   llvm::IntegerType *shadow_type;
@@ -43,6 +45,7 @@ struct PolytrackerPass : public llvm::ModulePass {
 };
 
 struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
+  void logOp(llvm::Instruction* inst, llvm::FunctionCallee& callback);
   // Visitor instructions
   // Special case for comparisons, just good to know 
   void visitCmpInst(llvm::CmpInst& CI);
@@ -52,6 +55,7 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   void visitCallInst(llvm::CallInst &ci);
 
   // TODO Make this reference and on construction
+  std::unordered_map<llvm::BasicBlock*, uint64_t> block_global_map;
   std::unordered_map<std::string, func_index_t> func_index_map;
   llvm::Module* mod;
   llvm::FunctionCallee dfsan_get_label;

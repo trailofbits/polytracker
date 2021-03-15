@@ -1,9 +1,8 @@
 
 #include "polytracker/taint.h"
-//#include "dfsan/dfsan.h"
 #include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
-//#include "sanitizer_common/sanitizer_common.h"
+#include "polytracker/output.h"
 #include <sanitizer/dfsan_interface.h>
 #include <iostream>
 #include <map>
@@ -15,23 +14,21 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
-// These structures do book keeping for shared execution state, like reading
-// input chunks, the canonical mapping, and union table.
-std::unordered_map<std::string, std::vector<std::pair<int, int>>>
-    tainted_input_chunks;
-std::unordered_map<std::string, std::unordered_map<dfsan_label, int>>
-    canonical_mapping;
 std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>>
     union_table;
-std::mutex canonical_mapping_lock;
-std::mutex tainted_input_chunks_lock;
 std::mutex union_table_lock;
 
-// FIXME We probably want strings here
 std::unordered_map<int, std::string> fd_name_map;
 std::unordered_map<std::string, std::pair<int, int>> track_target_name_map;
 std::unordered_map<int, std::pair<int, int>> track_target_fd_map;
 std::mutex track_target_map_lock;
+
+extern sqlite3* output_db;
+extern input_id_t input_id;
+extern thread_local int thread_id;
+extern thread_local block_id_t curr_block_index;
+extern thread_local function_id_t curr_func_index;
+extern thread_local event_id_t event_id;
 
 auto getInitialSources()
     -> std::unordered_map<std::string, std::pair<int, int>> & {
@@ -125,16 +122,15 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   new_node->p1 = NULL;
   new_node->p2 = NULL;
   new_node->decay = taint_node_ttl;
-  const std::lock_guard<std::mutex> guard(canonical_mapping_lock);
-  canonical_mapping[name][new_label] = file_byte_offset;
+  storeCanonicalMap(output_db, input_id, new_label, file_byte_offset);
   return new_label;
 }
 
 [[nodiscard]] dfsan_label createReturnLabel(const int file_byte_offset,
                                             std::string &name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
-  const std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
-  tainted_input_chunks[name].emplace_back(file_byte_offset, file_byte_offset);
+  // TODO (Carson) is this [start, end]?
+  storeTaintedChunk(output_db, input_id, file_byte_offset, file_byte_offset);
   return ret_label;
 }
 
@@ -173,7 +169,8 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
       dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
 
       // Log that we tainted data within this function from a taint source etc.
-      logOperation(new_label);
+      // logOperation(new_label);
+      storeTaintAccess(output_db, new_label, event_id++, curr_func_index, curr_block_index, input_id, thread_id, READ_ACCESS);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;
@@ -184,9 +181,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
     }
   }
   if (processed_bytes) {
-    const std::lock_guard<std::mutex> guard(tainted_input_chunks_lock);
-    tainted_input_chunks[name].emplace_back(taint_offset_start,
-                                            taint_offset_end);
+    storeTaintedChunk(output_db, input_id, taint_offset_start, taint_offset_end);
   }
 }
 
