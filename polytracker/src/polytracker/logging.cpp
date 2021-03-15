@@ -126,6 +126,8 @@ void logOperation(dfsan_label some_label) {
 }
 
 
+// TODO (Carson) we might not need this
+// This gave us directionality 
 thread_local bool ret_or_longjmp = false;
 void traceFunctionEntry(BBIndex index) {
   polytracker::Trace &trace = getPolytrackerTrace();
@@ -136,12 +138,13 @@ void traceFunctionEntry(BBIndex index) {
   }
   trace.functionEvents.emplace_back(index, false);
 }
-void traceAddContinuation(BBIndex index) {
+
+void traceAddContinuation(const BBIndex& index) {
   ret_or_longjmp = true;
 }
 
 
-void logFunctionEntry(const char *fname, BBIndex index) {
+void logFunctionEntry(const char *fname, const BBIndex& index) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
@@ -152,6 +155,8 @@ void logFunctionEntry(const char *fname, BBIndex index) {
     is_init = true;
     polytracker_start();
   }
+  printf("Visitng function: %d\n", index.index());
+
   auto& func_index_map = getIndexMap();
   func_index_map[fname] = index;
 
@@ -166,14 +171,16 @@ void logFunctionEntry(const char *fname, BBIndex index) {
       stack.newFrame(call);
     }
 }
-
-void logFunctionExit(BBIndex index) {
+// FIXME (Carson) make all these const auto references plz
+void logFunctionExit(const BBIndex& index) {
   if (UNLIKELY(!is_init)) {
     return;
   }
+  
   if (polytracker_trace_func) {
     traceAddContinuation(index);
   }
+
   if (polytracker_trace) {
     polytracker::Trace &trace = getPolytrackerTrace();
     auto &stack = trace.getStack(std::this_thread::get_id());
@@ -208,7 +215,7 @@ void logFunctionExit(BBIndex index) {
  * It will only be called if polytracker_trace is true,
  * which will only be set if the POLYTRACE environment variable is set.
  */
-void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType) {
+void logBBEntry(const char *fname, const BBIndex& bbIndex, BasicBlockType bbType) {
   auto currentStack = getPolytrackerTrace().currentStack();
   BasicBlockEntry *newBB;
   if (auto prevBB = currentStack->peek().lastOccurrence(bbIndex)) {
@@ -222,4 +229,5 @@ void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType) {
   if (auto ret = dynamic_cast<FunctionReturn *>(newBB->previous)) {
     ret->returningTo = newBB;
   }
+  printf("Visited block %d\n", bbIndex.index());
 }

@@ -11,9 +11,9 @@ using namespace polytracker;
 
 void logOperation(dfsan_label some_label);
 void logCompare(dfsan_label some_label);
-void logFunctionEntry(const char *fname, BBIndex index);
-void logFunctionExit(BBIndex index);
-void logBBEntry(const char *fname, BBIndex bbIndex, BasicBlockType bbType);
+void logFunctionEntry(const char *fname, const BBIndex& index);
+void logFunctionExit(const BBIndex& index);
+void logBBEntry(const char *fname, const BBIndex& bbIndex, BasicBlockType bbType);
 #define LIKELY(x)      __builtin_expect(!!(x), 1)
 #define UNLIKELY(x)    __builtin_expect(!!(x), 0)
 /*
