@@ -24,7 +24,8 @@ ${POLY_DIR}/main.cpp
 ${POLY_DIR}/logging.cpp 
 ${POLY_DIR}/taint.cpp
 ${POLY_DIR}/output.cpp 
-${POLY_DIR}/tracing.cpp 
+# ${POLY_DIR}/tracing.cpp
+${POLY_DIR}/tablegen.cpp 
 ${POLY_DIR}/polytracker.cpp
 )
 
