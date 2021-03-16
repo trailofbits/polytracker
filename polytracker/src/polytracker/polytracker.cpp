@@ -47,8 +47,7 @@ extern "C" dfsan_label __polytracker_union(dfsan_label l1, dfsan_label l2, dfsan
 }
 
 extern "C" void __polytracker_dump(const dfsan_label last_label) {
-    // std::cout << "Polytracker dump called, last label is: " << last_label << std::endl;
-    // polytracker_end(last_label);
+
 }
 
 extern "C" int __polytracker_has_label(dfsan_label label, dfsan_label elem) {

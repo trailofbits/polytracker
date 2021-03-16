@@ -316,8 +316,8 @@ void storeTaintForestDisk(const std::string &outfile,
   }
   for (int i = 0; i <= last_label; i++) {
     taint_node_t *curr = getTaintNode(i);
-    dfsan_label node_p1 = getTaintLabel(curr->p1);
-    dfsan_label node_p2 = getTaintLabel(curr->p2);
+    dfsan_label node_p1 = curr->p1;
+    dfsan_label node_p2 = curr->p2;
     fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
     fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
   }
@@ -334,8 +334,8 @@ void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id, const dfsa
   sql_prep(output_db, insert, -1, &stmt, NULL);
   for (int i = 0; i <= last_label; i++) {
     taint_node_t *curr = getTaintNode(i);
-    sqlite3_bind_int(stmt, 1, getTaintLabel(curr->p1));
-    sqlite3_bind_int(stmt, 2, getTaintLabel(curr->p2));
+	sqlite3_bind_int(stmt, 1, curr->p1);
+	sqlite3_bind_int(stmt, 2, curr->p1);
     sqlite3_bind_int(stmt, 3, i);
     sqlite3_bind_int(stmt, 4, input_id);
     sql_step(output_db, stmt);

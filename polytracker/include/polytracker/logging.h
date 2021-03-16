@@ -5,7 +5,6 @@
 
 [[nodiscard]] taint_node_t *getTaintNode(dfsan_label label);
 [[nodiscard]] dfsan_label getTaintLabel(taint_node_t *node);
-[[nodiscard]] bool getFuncIndex(const std::string& func_name, BBIndex & index);
 
 void logCompare(const dfsan_label& label, const function_id_t& findex, const block_id_t& bindex);
 void logOperation(const dfsan_label& label, const function_id_t& findex, const block_id_t& bindex);

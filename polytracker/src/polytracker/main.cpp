@@ -29,7 +29,7 @@ int byte_start = -1;
 int byte_end = -1;
 bool polytracker_trace = false;
 bool polytracker_trace_func = false;
-decay_val taint_node_ttl = -1;
+decay_val taint_node_ttl = 0;
 std::string target_file = "";
 char *forest_mem;
 std::atomic_bool done = ATOMIC_VAR_INIT(false);
@@ -65,7 +65,7 @@ void set_defaults() {
     fclose(temp_file);
   }
   // If taint/output not set, set their defaults as well.
-  if (taint_node_ttl == -1) {
+  if (taint_node_ttl <= 0) {
     taint_node_ttl = DEFAULT_TTL;
   }
   if (polytracker_db_name.empty()) {
@@ -257,4 +257,9 @@ void polytracker_start() {
   // Reserve memory for polytracker taintforest. 
   // Reserve enough for all possible labels
   forest_mem = (char *)mmap_taint_forest(MAX_LABELS * sizeof(dfsan_label));
+  dfsan_label zero_label = 0;
+  taint_node_t * init_node = getTaintNode(zero_label);
+  init_node->p1 = 0;
+  init_node->p2 = 0;
+  init_node->decay = taint_node_ttl;
 }

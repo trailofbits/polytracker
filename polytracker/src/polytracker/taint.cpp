@@ -30,10 +30,7 @@ extern thread_local block_id_t curr_block_index;
 extern thread_local function_id_t curr_func_index;
 extern thread_local event_id_t event_id;
 
-auto getInitialSources()
-    -> std::unordered_map<std::string, std::pair<int, int>> & {
-  return track_target_name_map;
-}
+extern char* forest_mem;
 
 void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
@@ -119,8 +116,8 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   dfsan_label new_label = dfsan_create_label(nullptr, nullptr);
   checkMaxLabel(new_label);
   taint_node_t *new_node = getTaintNode(new_label);
-  new_node->p1 = NULL;
-  new_node->p2 = NULL;
+  new_node->p1 = 0;
+  new_node->p2 = 0;
   new_node->decay = taint_node_ttl;
   storeCanonicalMap(output_db, input_id, new_label, file_byte_offset);
   return new_label;
@@ -133,6 +130,8 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   storeTaintedChunk(output_db, input_id, file_byte_offset, file_byte_offset);
   return ret_label;
 }
+
+
 
 /*
  * This function is responsible for marking memory locations as tainted, and is
@@ -191,15 +190,12 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   dfsan_label ret_label = dfsan_create_label(nullptr, nullptr);
   checkMaxLabel(ret_label);
   taint_node_t *new_node = getTaintNode(ret_label);
-  new_node->p1 = getTaintNode(l1);
-  new_node->p2 = getTaintNode(l2);
+  new_node->p1 = l1;
+  new_node->p2 = l2;
   new_node->decay = init_decay;
   return ret_label;
 }
 
-// TODO REMOVE
-// FIXME Do we lose decay funtionality?
-// No, we just need to look at parent nodes, which we can do ez
 [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // If sanitizer debug is on, this checks that l1 != l2
   //DCHECK_NE(l1, l2);
@@ -214,7 +210,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
     l1 = l2;
     l2 = temp;
   }
-
+  // TODO (Carson) can we remove this lock somehow?
   const std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check
   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
@@ -224,7 +220,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
 
   //Check if l2 has l1 as a parent. 
   auto l2_node = getTaintNode(l2);
-  if (getTaintLabel(l2_node->p1) == l1 || getTaintLabel(l2_node->p2) == l1) {
+  if (l2_node->p1 == l1 || l2_node->p2 == l1) {
     return l2;
   }
 

@@ -29,64 +29,15 @@ typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) dfsan_label;
 // An unsigned int big enough to address a dfsan label:
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
-// FIXME Should this be a uint8_t or uint16_t? 
-typedef uint32_t decay_val;
+typedef uint8_t decay_val;
 #undef PPCAT_NX
 #undef PPCAT
 
 typedef struct taint_node {
-  // FIXME (Carson) make these just labels
-  // Pointers for parent nodes
-  struct taint_node *p1;
-  struct taint_node *p2;
+  dfsan_label p1;
+  dfsan_label p2;
   // Decay field
   decay_val decay;
 } taint_node_t;
-
-class BBIndex {
-  // Most significant 32 bits are the UID for the function containing this BB
-  // Least significant 32 bits are the index of this BB within the function
-  // Taken together as a 64bit value, this entails a unique ID for this BB
-  uint64_t value;
-
-public:
-  constexpr BBIndex() : value(0) {}
-  constexpr BBIndex(uint32_t functionIndex, uint32_t indexInFunction)
-      : value((static_cast<uint64_t>(functionIndex) << 32) | indexInFunction) {}
-  constexpr BBIndex(uint64_t uid) : value(uid) {}
-  constexpr BBIndex(const BBIndex &copy) : value(copy.value){};
-
-  constexpr operator bool() const noexcept { return value != 0; }
-
-  constexpr operator uint64_t() const noexcept { return value; }
-
-  constexpr uint64_t uid() const noexcept { return value; }
-
-  /**
-   * Returns a unique ID for the function containing this BB
-   */
-  constexpr uint32_t functionIndex() const noexcept { return value >> 32; }
-
-  /**
-   * Returns the index of this basic block within its function
-   */
-  constexpr uint32_t index() const noexcept { return value & 0xFFFFFFFF; }
-
-  constexpr bool operator==(const BBIndex other) const noexcept {
-    return value == other.value;
-  }
-
-  constexpr bool operator<(const BBIndex other) const noexcept {
-    return value < other.value;
-  }
-};
-
-namespace std {
-
-template <> struct hash<BBIndex> {
-  constexpr std::size_t operator()(const BBIndex &i) const { return i.uid(); }
-};
-
-} // namespace std
 
 #endif

@@ -27,7 +27,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       graphviz																				\
 			libsqlite3-dev                                  \
       vim                                             \
-      gdb                                                                                
+      gdb                                             \
+			sqlite3                                   
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
 RUN python3 -m pip install pip
