@@ -1,0 +1,19 @@
+FROM trailofbits/polytracker
+MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike
+
+RUN apt update -y
+
+RUN git clone https://github.com/uclouvain/openjpeg.git
+
+RUN mkdir -p openjpeg/build
+WORKDIR openjpeg/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_JPWL:bool=on -DBUILD_MJ2:bool=on
+RUN make install
+WORKDIR bin
+
+RUN get-bc -b opj_decompress
+RUN get-bc -b libopenjp2.a 
+RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
+RUN ${CC} --instrument-bitcode -f exec.bc -o opj_decompress_track --libs z m rt pthread libopenjp2.a
