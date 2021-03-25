@@ -28,14 +28,14 @@ namespace polytracker {
 
 void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callback) {
   // Should never fail
-  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy()) {
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isArrayTy()) {
     return;
   }
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext &context = mod->getContext();
   llvm::Type *int32_ty = llvm::Type::getInt32Ty(context);
   llvm::Value *get_taint;
-  if (inst->getType()->isDoubleTy()) {
+  if (inst->getType()->isDoubleTy() || inst->getType()->isFloatTy()) {
     llvm::Value *cast = IRB.CreateFPToSI(inst, int32_ty);
     get_taint = IRB.CreateCall(dfsan_get_label, cast);
   }
