@@ -331,7 +331,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
         std::cerr << "█";
       }
       std::cerr << std::string(unfilledBars, ' ');
-      std::cerr << "| " << i << "/" << functions.size() << " [ " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
+      std::cerr << "| " << i << "/" << functions.size() << " [ " << std::setprecision(4) << functionsPerSecond << " functions/s ]" << std::flush;
     }
 
     if (!func || func->isDeclaration()) {
