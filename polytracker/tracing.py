@@ -1,11 +1,7 @@
-import json
-from abc import ABCMeta
+from abc import ABC, abstractmethod
 from typing import (
-    Any,
-    BinaryIO,
     cast,
     Dict,
-    IO,
     Iterable,
     List,
     Optional,
@@ -17,26 +13,10 @@ import os
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from .database import (
-    FunctionRetItem,
-    FunctionCallItem,
-    BlockInstanceItem,
-    InputItem,
-    FunctionItem,
-    TaintItem,
-)
 from tqdm import tqdm
 
 from .bitmap import Bitmap, BitmapValue
 from polytracker.cfg import DiGraph
-
-
-class TraceEventConstructor(Protocol):
-    def __call__(self, **kwargs) -> "TraceEvent":
-        ...
-
-
-EVENTS_BY_TYPE: Dict[str, TraceEventConstructor] = {}
 
 
 class BasicBlockType(Bitmap):
@@ -130,31 +110,8 @@ class FunctionInvocation:
         self.ret: FunctionReturn = ret
 
 
-class TraceEventMeta(ABCMeta):
-    def __init__(cls, name, bases, clsdict):
-        if (
-            len(cls.mro()) > 2
-            and not cls.__abstractmethods__
-            and hasattr(cls, "event_type")
-        ):
-            if cls.event_type in EVENTS_BY_TYPE:
-                raise ValueError(
-                    f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
-                    f"that type is already used by {EVENTS_BY_TYPE[cls.event_type].__name__}"
-                )
-            EVENTS_BY_TYPE[cls.event_type] = cls
-        super().__init__(name, bases, clsdict)
-
-
-class TraceEvent(metaclass=TraceEventMeta):
-    event_type: str = "TraceEvent"
-
-    def __init__(
-        self,
-        uid: int,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-    ):
+class TraceEvent:
+    def __init__(self, uid: int, previous_uid: Optional[int] = None, next_uid: Optional[int] = None):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
         self.next_uid: Optional[int] = next_uid
@@ -177,22 +134,15 @@ class TraceEvent(metaclass=TraceEventMeta):
     def trace(self, pttrace: "PolyTrackerTrace"):
         if self._trace is not None:
             raise ValueError(
-                f"Cannot assign event {self} to trace {pttrace} because "
-                "it is already assigned to trace {self._trace}"
+                f"Cannot assign event {self} to trace {pttrace} because it is already assigned to trace {self._trace}"
             )
         self._trace = pttrace
 
-    def initialized(self):
-        """Callback for when all events in a PolyTrackerTrace are ready for use"""
-        pass
-
     @property
-    def previous(self) -> Optional["TraceEvent"]:
+    def previous_event(self) -> Optional["TraceEvent"]:
         if self.previous_uid is None:
             return None
         else:
-            print(f"prev id {self.previous_uid}")
-            print(self.trace)
             return self.trace[self.previous_uid]
 
     @property
@@ -201,21 +151,6 @@ class TraceEvent(metaclass=TraceEventMeta):
             return None
         else:
             return self.trace[self.next_uid]
-
-    @staticmethod
-    def parse(json_obj: Dict[str, Any]) -> "TraceEvent":
-        if "type" not in json_obj:
-            raise KeyError(
-                'The JSON object must contain a key "type" for the event type'
-            )
-        elif json_obj["type"] not in EVENTS_BY_TYPE:
-            raise ValueError(
-                f"Unknown event type {json_obj['type']}; valid types are {list(EVENTS_BY_TYPE.keys())!r}"
-            )
-        event_type: str = json_obj["type"]
-        arguments: Dict[str, Any] = json_obj.copy()
-        del arguments["type"]
-        return EVENTS_BY_TYPE[event_type](**arguments)
 
     def __eq__(self, other):
         return isinstance(other, TraceEvent) and other.uid == self.uid
@@ -228,8 +163,6 @@ class TraceEvent(metaclass=TraceEventMeta):
 
 
 class FunctionCall(TraceEvent):
-    event_type = "FunctionCall"
-
     def __init__(
         self,
         uid: int,
@@ -258,7 +191,7 @@ class FunctionCall(TraceEvent):
 
     @property
     def caller(self) -> "BasicBlockEntry":
-        prev = self.previous
+        prev = self.previous_event
         if isinstance(prev, FunctionReturn) and prev.function_call is not None:
             try:
                 return prev.function_call.caller
@@ -282,8 +215,6 @@ class FunctionCall(TraceEvent):
 
 
 class BasicBlockEntry(TraceEvent):
-    event_type = "BasicBlockEntry"
-
     def __init__(
         self,
         uid: int,
@@ -344,10 +275,11 @@ class BasicBlockEntry(TraceEvent):
     @TraceEvent.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
         TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(self.previous, FunctionCall):  # type: ignore
-            self.previous.entrypoint = self
-        if isinstance(self.previous, BasicBlockEntry):
-            self.previous.children.append(self)
+        prev_event = self.previous_event
+        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(prev_event, FunctionCall):  # type: ignore
+            prev_event.entrypoint = self
+        if isinstance(prev_event, BasicBlockEntry):
+            prev_event.children.append(self)
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
@@ -376,8 +308,6 @@ class BasicBlockEntry(TraceEvent):
 
 
 class FunctionReturn(TraceEvent):
-    event_type = "FunctionReturn"
-
     def __init__(
         self,
         uid: int,
@@ -462,7 +392,73 @@ class FunctionReturn(TraceEvent):
         return self._function_call  # type: ignore
 
 
-class PolyTrackerTrace:
+class PolyTrackerTrace(ABC):
+    _cfg: Optional[DiGraph[BasicBlock]] = None
+
+    @abstractmethod
+    def __len__(self) -> int:
+        """Returns the total number of events in this trace"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __iter__(self) -> Iterable[TraceEvent]:
+        """Iterates over all of the events in this trace, in order"""
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def functions(self) -> Iterable[Function]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def basic_blocks(self) -> Iterable[BasicBlock]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __getitem__(self, uid: int) -> TraceEvent:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __contains__(self, uid: int):
+        raise NotImplementedError()
+
+    @property
+    def cfg(self) -> DiGraph[BasicBlock]:
+        if self._cfg is None:
+            self._cfg = DiGraph()
+            for bb in self.basic_blocks:
+                self._cfg.add_node(bb)
+                for child in bb.children:
+                    self._cfg.add_edge(bb, child)
+        return self._cfg
+
+    def cfg_roots(self) -> Iterable[BasicBlock]:
+        for bb in self.basic_blocks:
+            if not bb.predecessors:
+                yield bb
+
+    def is_cfg_connected(self) -> bool:
+        roots = iter(self.cfg_roots())
+        try:
+            next(roots)
+        except StopIteration:
+            # there are no roots
+            return False
+        # there is at least one root
+        try:
+            next(roots)
+            # there is more than one root
+            return False
+        except StopIteration:
+            return True
+
+
+class InMemoryPolyTrackerTrace(PolyTrackerTrace):
     def __init__(self, events: List[TraceEvent], inputstr: bytes):
         self.events: List[TraceEvent] = sorted(events)
         self.events_by_uid: Dict[int, TraceEvent] = {
@@ -486,7 +482,6 @@ class PolyTrackerTrace:
         self._functions_by_idx: Optional[Dict[int, Function]] = None
         self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
         self.inputstr: bytes = inputstr
-        self._cfg: Optional[DiGraph[BasicBlockEntry]] = None
 
     def __len__(self):
         return len(self.events)
@@ -539,36 +534,6 @@ class PolyTrackerTrace:
     def __contains__(self, uid: int):
         return uid in self.events_by_uid
 
-    @property
-    def cfg(self) -> DiGraph[BasicBlock]:
-        if self._cfg is None:
-            self._cfg = DiGraph()
-            for bb in self.basic_blocks:
-                self._cfg.add_node(bb)
-                for child in bb.children:
-                    self._cfg.add_edge(bb, child)
-        return self._cfg
-
-    def cfg_roots(self) -> Iterable[BasicBlock]:
-        for bb in self.basic_blocks:
-            if not bb.predecessors:
-                yield bb
-
-    def is_cfg_connected(self) -> bool:
-        roots = iter(self.cfg_roots())
-        try:
-            next(roots)
-        except StopIteration:
-            # there are no roots
-            return False
-        # there is at least one root
-        try:
-            next(roots)
-            # there is more than one root
-            return False
-        except StopIteration:
-            return True
-
     @staticmethod
     def parse(trace_file: str, input_file: str) -> "PolyTrackerTrace":
         trace_file = os.path.realpath(trace_file)
@@ -580,66 +545,6 @@ class PolyTrackerTrace:
         assert input_str is not None
 
         return PolyTrackerTrace(events=events, inputstr=input_str)
-
-
-def gen_func_ret(func_ret: FunctionRetItem, funcs: Dict[int, str]) -> FunctionReturn:
-    assert func_ret.function_index in funcs
-    last_event_id = func_ret.event_id - 1 if func_ret.event_id > 1 else None
-
-    return FunctionReturn(
-        func_ret.event_id,
-        funcs[func_ret.function_index],
-        last_event_id,
-        func_ret.event_id + 1,
-        func_ret.call_event_uid,
-        func_ret.ret_event_uid,
-    )
-
-
-def gen_func_call(func_call: FunctionCallItem, funcs: Dict[int, str]) -> FunctionCall:
-    assert func_call.function_index in funcs
-    last_event_id = func_call.event_id - 1 if func_call.event_id > 1 else None
-
-    return FunctionCall(
-        func_call.event_id,
-        funcs[func_call.function_index],
-        last_event_id,
-        func_call.event_id + 1,
-        func_call.ret_event_uid,
-        func_call.consumes_bytes,
-    )
-
-
-def gen_block_entry(bi: BlockInstanceItem, funcs, input_id, session) -> BasicBlockEntry:
-    func_index = bi.block_gid >> 32 & 0xFFFF
-    block_index = bi.block_gid & 0x0000FFFF
-    assert func_index in funcs
-    consumed_bytes = []
-    for taint_item in session.query(TaintItem).filter(
-        TaintItem.input_id == input_id and TaintItem.block_gid == bi.block_gid
-    ):
-        consumed_bytes.append(taint_item.label)
-
-    # FIXME (Carson) Assigned: (Evan) - The block type is a Iterable[str] which converts it into a bitfield
-    # I already have it as a uint8_t where each bit represents a different attribute like you set up in the C++
-    # I don't know what the corresponding strings are for each field right now, this is needed for grammar extraction
-    # But thought youd be the best to do it, im just gonna make sure the data comes correct.
-    last_event_id = bi.event_id - 1 if bi.event_id > 1 else None
-    print(f"eid/gid? {bi.event_id}, {bi.block_gid}")
-    block_entry = BasicBlockEntry(
-        bi.event_id,
-        func_index,
-        block_index,
-        bi.block_gid,
-        bi.function_call_id,
-        funcs[func_index],
-        last_event_id,
-        bi.event_id + 1,
-        bi.entry_count,
-        consumed_bytes,
-        [],
-    )
-    return block_entry
 
 
 def trace_to_dict(db_path: str, input_file: str) -> List[TraceEvent]:
