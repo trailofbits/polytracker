@@ -274,6 +274,7 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
     if (line[0] == '#' || line == "\n") {
       continue;
     }
+
     if (line.find("discard") && line.find("main") == std::string::npos) {
       int start_pos = line.find(':');
       int end_pos = line.find("=");
@@ -288,6 +289,7 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
     for (auto &file_path : ignore_file_path) {
+      std::cout << "IGNORING: " << file_path << std::endl;
       readIgnoreFile(file_path);
     }
   }

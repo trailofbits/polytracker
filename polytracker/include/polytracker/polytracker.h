@@ -1,6 +1,6 @@
 #ifndef __POLYTRACKER_H__
 #define __POLYTRACKER_H__
-
+#include "polytracker/dfsan_types.h"
 // NOTE: Whenever the version is updated, make sure to add support to the JSON
 // parsing code in polytracker.py!
 
