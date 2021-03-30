@@ -7,6 +7,7 @@ static constexpr const char *createInputTable() {
   return "CREATE TABLE if not exists input("
          "  id INTEGER PRIMARY KEY,"
          "  path TEXT,"
+         "  content TEXT NULL,"
          "  track_start BIGINT,"
          "  track_end BIGINT,"
          "  size BIGINT,"

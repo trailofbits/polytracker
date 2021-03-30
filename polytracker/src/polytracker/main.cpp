@@ -29,6 +29,10 @@ int byte_start = -1;
 int byte_end = -1;
 bool polytracker_trace = false;
 bool polytracker_trace_func = false;
+/**
+ * Whether or not to save the input files to the output database
+ */
+bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
 std::string target_file = "";
 char *forest_mem;
@@ -101,10 +105,20 @@ void polytracker_parse_config(std::ifstream &config_file) {
     std::string trace_str = config_json["POLYTRACE"].get<std::string>();
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
       polytracker_trace = false;
     } else {
       polytracker_trace = true;
+    }
+  }
+  if (config_json.contains("POLYSAVEINPUT")) {
+    std::string trace_str = config_json["POLYSAVEINPUT"].get<std::string>();
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
+      polytracker_save_input_file = false;
+    } else {
+      polytracker_save_input_file = true;
     }
   }
   if (config_json.contains("POLYTTL")) {
@@ -114,7 +128,7 @@ void polytracker_parse_config(std::ifstream &config_file) {
     std::string trace_str = config_json["POLYFUNC"].get<std::string>();
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
       polytracker_trace_func = false;
     } else {
       polytracker_trace_func = true;
@@ -161,11 +175,21 @@ void polytracker_parse_env() {
   if (auto pforest = getenv("POLYFOREST")) {
     polytracker_forest_name = pforest;
   }
+  if (getenv("POLYSAVEINPUT")) {
+    std::string trace_str = getenv("POLYSAVEINPUT");
+    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
+      polytracker_save_input_file = false;
+    } else {
+      polytracker_save_input_file = true;
+    }
+  }
   if (getenv("POLYTRACE")) {
     std::string trace_str = getenv("POLYTRACE");
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
       polytracker_trace = false;
     } else {
       polytracker_trace = true;
@@ -175,7 +199,7 @@ void polytracker_parse_env() {
     std::string trace_str = ptrace;
     std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0") {
+    if (trace_str == "off" || trace_str == "no" || trace_str == "0" || trace_str == "false") {
       polytracker_trace_func = false;
     } else {
       polytracker_trace_func = true;
@@ -237,13 +261,14 @@ char* mmap_taint_forest(unsigned long size) {
 }
 
 void polytracker_print_settings() {
-  std::cout << "POLYPATH: " << target_file << std::endl;
-  std::cout << "POLYDB: " << polytracker_db_name << std::endl;
-  std::cout << "POLYFUNC: " << polytracker_trace_func << std::endl;
-  std::cout << "POLYTRACE: " << polytracker_trace << std::endl;
-  std::cout << "POLYSTART: " << byte_start << std::endl;
-  std::cout << "POLYEND: " << byte_end << std::endl;
-  std::cout << "POLYTTL: " << taint_node_ttl << std::endl;
+  std::cout << "POLYPATH:      " << target_file << std::endl;
+  std::cout << "POLYDB:        " << polytracker_db_name << std::endl;
+  std::cout << "POLYFUNC:      " << polytracker_trace_func << std::endl;
+  std::cout << "POLYTRACE:     " << polytracker_trace << std::endl;
+  std::cout << "POLYSTART:     " << byte_start << std::endl;
+  std::cout << "POLYEND:       " << byte_end << std::endl;
+  std::cout << "POLYTTL:       " << taint_node_ttl << std::endl;
+  std::cout << "POLYSAVEINPUT: " << polytracker_save_input_file << std::endl;
 }
 
 void polytracker_start() {

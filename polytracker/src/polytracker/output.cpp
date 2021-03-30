@@ -22,6 +22,7 @@ object. Information about the two files can be found in the polytracker/doc
 directory
  */
 extern bool polytracker_trace;
+extern bool polytracker_save_input_file;
 
 // Could there be a race condition here?
 // TODO Check if input_table/taint_forest tables already filled
@@ -120,17 +121,39 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
 input_id_t storeNewInput(sqlite3 *output_db, const std::string& filename, const uint64_t& start, const uint64_t& end, const int& trace_level) {
 	sqlite3_stmt *stmt;
   	const char *insert =
-      "INSERT INTO input(path, track_start, track_end, size, trace_level)"
-      "VALUES(?, ?, ?, ?, ?);";
+      "INSERT INTO input(path, content, track_start, track_end, size, trace_level)"
+      "VALUES(?, ?, ?, ?, ?, ?);";
   	sql_prep(output_db, insert, -1, &stmt, NULL);
 	sqlite3_bind_text(stmt, 1, filename.c_str(), filename.length(), SQLITE_STATIC);
-    sqlite3_bind_int64(stmt, 2, start);
-    sqlite3_bind_int64(stmt, 3, end);
-    sqlite3_bind_int64(stmt, 4, [](const std::string &filename) {
+	if (polytracker_save_input_file) {
+	  ifstream file(filename, ios::in | ios::binary);
+      if (!file) {
+        cerr << "Warning: an error occurred opening input file " << filename << "! It will not be saved to the database." << std::endl;
+        sqlite3_bind_null(stmt, 2);
+      } else {
+        file.seekg(0, ifstream::end);
+        streampos size = file.tellg();
+        file.seekg(0);
+
+        char* buffer = new char[size];
+        file.read(buffer, size);
+        auto rc = sqlite3_bind_blob(stmt, 1, buffer, size, SQLITE_TRANSIENT);
+        delete buffer;
+        if (rc != SQLITE_OK) {
+          cerr << "error saving the input file to the database: " << sqlite3_errmsg(db) << endl;
+          sqlite3_bind_null(stmt, 2);
+        }
+      }
+	} else {
+	  sqlite3_bind_null(stmt, 2);
+	}
+    sqlite3_bind_int64(stmt, 3, start);
+    sqlite3_bind_int64(stmt, 4, end);
+    sqlite3_bind_int64(stmt, 5, [](const std::string &filename) {
       std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
       return file.tellg();
     }(filename));
-    sqlite3_bind_int(stmt, 5, trace_level);
+    sqlite3_bind_int(stmt, 6, trace_level);
     sql_step(output_db, stmt);
 	sqlite3_finalize(stmt);
 	return get_input_id(output_db);
