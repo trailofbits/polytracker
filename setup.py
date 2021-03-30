@@ -60,17 +60,18 @@ setup(
     packages=find_packages(),
     python_requires='>=3.7',
     install_requires=[
-        'cxxfilt==0.2.2',
-        'docker==4.4.0',
-        'graphviz==0.14.1',
-        'intervaltree==3.0.2',
-        'matplotlib==3.3.0',
-        'networkx==2.4',
+        'cxxfilt~=0.2.2',
+        'docker~=4.4.0',
+        'graphviz~=0.14.1',
+        'intervaltree~=3.0.2',
+        'matplotlib~=3.3.0',
+        'networkx~=2.4',
         'Pillow>=7.2.0',
-        'pygraphviz==1.5',
-        'pydot==1.4.1',
-        'tqdm==4.48.0',
-        'typing_extensions==3.7.4.2'
+        'pygraphviz~=1.5',
+        'pydot~=1.4.1',
+        'sqlalchemy~=1.3.23',
+        'tqdm~=4.48.0',
+        'typing_extensions~=3.7.4.2'
     ],
     extras_require={
         "dev": ["black>=20.8b1", "mypy", "pytest"]
