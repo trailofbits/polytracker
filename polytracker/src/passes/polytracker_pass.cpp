@@ -12,6 +12,7 @@
 #include "llvm/IR/Dominators.h"
 #include <assert.h> /* assert */
 #include <fstream>
+#include <iomanip> /* for std::setw */
 #include <iostream>
 #include <unordered_map>
 
@@ -309,12 +310,36 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     functions.push_back(&func);
     func_index_map[func.getName().str()] = function_index++;
   }
+  const auto startTime = std::chrono::system_clock::now();
+  auto lastUpdateTime = startTime;
+  size_t i = 0;
+  int lastPercent = -1;
   for (auto func : functions) {
+    int percent = static_cast<int>(static_cast<float>(i++) * 100.0 / static_cast<float>(functions.size()) + 0.5);
+    auto currentTime = std::chrono::system_clock::now();
+    if (percent > lastPercent || std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count() >= 5.0) {
+      lastUpdateTime = currentTime;
+      auto totalElapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+      auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
+      std::cerr << '\r' << std::string(80, ' ') << '\r';
+      lastPercent = percent;
+      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3) << percent << "% [";
+      const int barWidth = 20;
+      const auto filledBars = static_cast<int>(static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 * 0.5);
+      const auto unfilledBars = barWidth - filledBars;
+      for (size_t iter=0; iter < filledBars; ++iter) {
+        std::cerr << "█";
+      }
+      std::cerr << std::string(unfilledBars, ' ');
+      std::cerr << "| " << i << "/" << functions.size() << " [ " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
+    }
+
     if (!func || func->isDeclaration()) {
       continue;
     }
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
+  std::cerr << std::endl;
   return ret;
 }
 
