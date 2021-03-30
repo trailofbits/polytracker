@@ -26,7 +26,9 @@ def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
     if not path.exists():
         return True
     elif CAN_RUN_NATIVELY:
-        return True  # For now, always rebuild binaries if we can run PolyTracker natively
+        return (
+            True  # For now, always rebuild binaries if we can run PolyTracker natively
+        )
     # We need to run PolyTracker in a Docker container.
     last_build_time = docker_container().last_build_time()
     if last_build_time is None:
@@ -67,16 +69,23 @@ def polyclang_compile_target(target_name: str) -> int:
 
 
 # Returns the Polyprocess object
-def validate_execute_target(target_name: str, config_path: Optional[Union[str, Path]]) -> ProgramTrace:
+def validate_execute_target(
+    target_name: str, config_path: Optional[Union[str, Path]]
+) -> ProgramTrace:
     target_bin_path = BIN_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
-    env = {"POLYPATH": to_native_path(TEST_DATA_PATH), "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name)}
+    env = {
+        "POLYPATH": to_native_path(TEST_DATA_PATH),
+        "POLYOUTPUT": to_native_path(TEST_RESULTS_DIR / target_name),
+    }
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
     try:
-        ret_val = run_natively(*[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env)
+        ret_val = run_natively(
+            *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env
+        )
     finally:
         if tmp_config.exists():
             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
@@ -119,12 +128,16 @@ def program_trace(request):
 
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )
 
 
 @pytest.mark.program_trace("test_open.c")
 def test_source_open(program_trace: ProgramTrace):
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )
 
 
 # TODO: Update this test
@@ -158,7 +171,9 @@ def test_source_open(program_trace: ProgramTrace):
 def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
     json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )
     # TODO: Uncomment once we update this function
     # test_polyprocess_taint_sets(json_path, forest_path)
 
@@ -172,29 +187,47 @@ def test_memcpy_propagate(program_trace: ProgramTrace):
 
 @pytest.mark.program_trace("test_taint_log.c")
 def test_taint_log(program_trace: ProgramTrace):
-    input_bytes = program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    input_bytes = program_trace.functions["main"].input_bytes[
+        to_native_path(TEST_DATA_PATH)
+    ]
     for i in range(0, 10):
         assert i in input_bytes
 
 
-@pytest.mark.program_trace("test_taint_log.c", config_path=CONFIG_DIR / "new_range.json")
+@pytest.mark.program_trace(
+    "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
+)
 def test_config_files(program_trace: ProgramTrace):
     # the new_range.json config changes the polystart/polyend to
     # POLYSTART: 1, POLYEND: 3
     for i in range(1, 4):
-        assert i in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        assert (
+            i
+            in program_trace.functions["main"].input_bytes[
+                to_native_path(TEST_DATA_PATH)
+            ]
+        )
     for i in range(4, 10):
-        assert i not in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        assert (
+            i
+            not in program_trace.functions["main"].input_bytes[
+                to_native_path(TEST_DATA_PATH)
+            ]
+        )
 
 
 @pytest.mark.program_trace("test_fopen.c")
 def test_source_fopen(program_trace: ProgramTrace):
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )
 
 
 @pytest.mark.program_trace("test_ifstream.cpp")
 def test_source_ifstream(program_trace: ProgramTrace):
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )
 
 
 @pytest.mark.program_trace("test_object_propagation.cpp")
@@ -209,4 +242,6 @@ def test_cxx_object_propagation(program_trace: ProgramTrace):
 # TODO Compute DFG and query if we touch vector in libcxx from object
 @pytest.mark.program_trace("test_vector.cpp")
 def test_cxx_vector(program_trace: ProgramTrace):
-    assert 0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    assert (
+        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+    )

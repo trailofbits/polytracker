@@ -27,7 +27,12 @@ class TaintForest:
     def to_graph(self) -> DAG[int]:
         dag: DAG[int] = DAG()
         with open(self.path, "rb") as forest:
-            for label in trange(self.num_nodes, desc="Traversing the taint forest", leave=False, unit=" labels"):
+            for label in trange(
+                self.num_nodes,
+                desc="Traversing the taint forest",
+                leave=False,
+                unit=" labels",
+            ):
                 dag.add_node(label)
                 parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
                 if parent1 != 0:
@@ -36,7 +41,9 @@ class TaintForest:
                     dag.add_edge(parent2, label)
         return dag
 
-    def access_sequence(self, max_cache_size: Optional[int] = None) -> Iterator[FrozenSet[int]]:
+    def access_sequence(
+        self, max_cache_size: Optional[int] = None
+    ) -> Iterator[FrozenSet[int]]:
         cache: LRUCache[int, FrozenSet[int]] = LRUCache(max_cache_size)
         with open(self.path, "rb") as forest:
             for label in range(self.num_nodes):
@@ -69,25 +76,44 @@ class TaintForest:
             raise ValueError(f"Taint forest file does not exist: {self.path}")
         filesize = os.stat(self.path).st_size
         if filesize % TAINT_NODE_SIZE != 0:
-            raise ValueError(f"Taint forest is not a multiple of {TAINT_NODE_SIZE} bytes!")
+            raise ValueError(
+                f"Taint forest is not a multiple of {TAINT_NODE_SIZE} bytes!"
+            )
         self.num_nodes = filesize // TAINT_NODE_SIZE
         if full:
             # ensure that every label's parents are less than its own label value
             with open(self.path, "rb") as forest:
-                for label in trange(self.num_nodes, desc="Validating taint forest topology", leave=False, unit=" labels"):
-                    parent1, parent2 = struct.unpack("=II", forest.read(TAINT_NODE_SIZE))
+                for label in trange(
+                    self.num_nodes,
+                    desc="Validating taint forest topology",
+                    leave=False,
+                    unit=" labels",
+                ):
+                    parent1, parent2 = struct.unpack(
+                        "=II", forest.read(TAINT_NODE_SIZE)
+                    )
                     if parent1 == parent2 and parent1 != 0:
-                        raise ValueError(f"Taint label {label} has two parents that both have label {parent1}")
+                        raise ValueError(
+                            f"Taint label {label} has two parents that both have label {parent1}"
+                        )
                     elif parent1 != 0 and parent2 != 0:
                         if parent1 >= label:
-                            raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
+                            raise ValueError(
+                                f"Taint label {label} has a parent with a higher label: {parent1}"
+                            )
                         if parent2 >= label:
-                            raise ValueError(f"Taint label {label} has a parent with a higher label: {parent1}")
+                            raise ValueError(
+                                f"Taint label {label} has a parent with a higher label: {parent1}"
+                            )
                     elif parent1 == 0 and parent2 == 0:
                         if label not in self.canonical_mapping and label != 0:
-                            raise ValueError(f"Canonical taint label {label} is missing from the canonical mapping")
+                            raise ValueError(
+                                f"Canonical taint label {label} is missing from the canonical mapping"
+                            )
                     else:
-                        raise ValueError(f"Taint label {label} has one non-zero parent and another zero parent")
+                        raise ValueError(
+                            f"Taint label {label} has one non-zero parent and another zero parent"
+                        )
 
     def tainted_bytes(self, *labels: int) -> Set[int]:
         # reverse the labels to reduce the likelihood of reproducing work
@@ -112,7 +138,9 @@ class TaintForest:
                 if parent1 == 0:
                     assert parent2 == 0
                     if label not in self.canonical_mapping:
-                        raise ValueError(f"Taint label {label} is not in the canonical mapping!")
+                        raise ValueError(
+                            f"Taint label {label} is not in the canonical mapping!"
+                        )
                     taints.add(self.canonical_mapping[label])
                 else:
                     if parent1 not in history:

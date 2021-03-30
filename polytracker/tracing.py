@@ -1,11 +1,30 @@
 import json
 from abc import ABCMeta
-from typing import Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
+from typing import (
+    Any,
+    BinaryIO,
+    cast,
+    Dict,
+    IO,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Set,
+    Union,
+)
 import os
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
-from .database import FunctionRetItem, FunctionCallItem, BlockInstanceItem, InputItem, FunctionItem, TaintItem
+from .database import (
+    FunctionRetItem,
+    FunctionCallItem,
+    BlockInstanceItem,
+    InputItem,
+    FunctionItem,
+    TaintItem,
+)
 from tqdm import tqdm
 
 from .bitmap import Bitmap, BitmapValue
@@ -58,7 +77,9 @@ class Function:
         return self.function_index
 
     def __eq__(self, other):
-        return isinstance(other, Function) and self.function_index == other.function_index
+        return (
+            isinstance(other, Function) and self.function_index == other.function_index
+        )
 
     def __str__(self):
         return self.name
@@ -84,16 +105,18 @@ class BasicBlock:
 
     def is_conditional(self, trace: "PolyTrackerTrace") -> bool:
         # we are a conditional if we have at least two children in the same function and we are not a loop entry
-        return sum(1 for c in self.children if c.function == self.function) >= 2 and not self.is_loop_entry(trace)
+        return sum(
+            1 for c in self.children if c.function == self.function
+        ) >= 2 and not self.is_loop_entry(trace)
 
     def __hash__(self):
         return hash((self.function, self.index_in_function))
 
     def __eq__(self, other):
         return (
-                isinstance(other, BasicBlock)
-                and other.function == self.function
-                and self.index_in_function == other.index_in_function
+            isinstance(other, BasicBlock)
+            and other.function == self.function
+            and self.index_in_function == other.index_in_function
         )
 
     def __str__(self):
@@ -109,7 +132,11 @@ class FunctionInvocation:
 
 class TraceEventMeta(ABCMeta):
     def __init__(cls, name, bases, clsdict):
-        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and hasattr(cls, "event_type"):
+        if (
+            len(cls.mro()) > 2
+            and not cls.__abstractmethods__
+            and hasattr(cls, "event_type")
+        ):
             if cls.event_type in EVENTS_BY_TYPE:
                 raise ValueError(
                     f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
@@ -122,7 +149,12 @@ class TraceEventMeta(ABCMeta):
 class TraceEvent(metaclass=TraceEventMeta):
     event_type: str = "TraceEvent"
 
-    def __init__(self, uid: int, previous_uid: Optional[int] = None, next_uid: Optional[int] = None):
+    def __init__(
+        self,
+        uid: int,
+        previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
+    ):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
         self.next_uid: Optional[int] = next_uid
@@ -136,7 +168,8 @@ class TraceEvent(metaclass=TraceEventMeta):
     def trace(self) -> "PolyTrackerTrace":
         if self._trace is None:
             raise RuntimeError(
-                f"The trace for event {self!r} has not been set!" "Did you call `.trace` before the entire trace was loaded?"
+                f"The trace for event {self!r} has not been set!"
+                "Did you call `.trace` before the entire trace was loaded?"
             )
         return self._trace
 
@@ -144,7 +177,8 @@ class TraceEvent(metaclass=TraceEventMeta):
     def trace(self, pttrace: "PolyTrackerTrace"):
         if self._trace is not None:
             raise ValueError(
-                f"Cannot assign event {self} to trace {pttrace} because " "it is already assigned to trace {self._trace}"
+                f"Cannot assign event {self} to trace {pttrace} because "
+                "it is already assigned to trace {self._trace}"
             )
         self._trace = pttrace
 
@@ -171,9 +205,13 @@ class TraceEvent(metaclass=TraceEventMeta):
     @staticmethod
     def parse(json_obj: Dict[str, Any]) -> "TraceEvent":
         if "type" not in json_obj:
-            raise KeyError('The JSON object must contain a key "type" for the event type')
+            raise KeyError(
+                'The JSON object must contain a key "type" for the event type'
+            )
         elif json_obj["type"] not in EVENTS_BY_TYPE:
-            raise ValueError(f"Unknown event type {json_obj['type']}; valid types are {list(EVENTS_BY_TYPE.keys())!r}")
+            raise ValueError(
+                f"Unknown event type {json_obj['type']}; valid types are {list(EVENTS_BY_TYPE.keys())!r}"
+            )
         event_type: str = json_obj["type"]
         arguments: Dict[str, Any] = json_obj.copy()
         del arguments["type"]
@@ -193,13 +231,13 @@ class FunctionCall(TraceEvent):
     event_type = "FunctionCall"
 
     def __init__(
-            self,
-            uid: int,
-            name: str,
-            previous_uid: Optional[int] = None,
-            next_uid: Optional[int] = None,
-            return_uid: Optional[int] = None,
-            consumes_bytes: bool = True,
+        self,
+        uid: int,
+        name: str,
+        previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
+        return_uid: Optional[int] = None,
+        consumes_bytes: bool = True,
     ):
         super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         self.name = name
@@ -227,7 +265,9 @@ class FunctionCall(TraceEvent):
             except TypeError:
                 pass
         if not isinstance(prev, BasicBlockEntry):
-            raise TypeError(f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}")
+            raise TypeError(
+                f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}"
+            )
         return prev
 
     @property
@@ -245,18 +285,18 @@ class BasicBlockEntry(TraceEvent):
     event_type = "BasicBlockEntry"
 
     def __init__(
-            self,
-            uid: int,
-            function_index: int,
-            bb_index: int,
-            global_index: int,
-            function_call_uid: Optional[int] = None,
-            function_name: Optional[str] = None,
-            previous_uid: Optional[int] = None,
-            next_uid: Optional[int] = None,
-            entry_count: int = 1,
-            consumed: Iterable[int] = (),
-            types: Iterable[str] = (),
+        self,
+        uid: int,
+        function_index: int,
+        bb_index: int,
+        global_index: int,
+        function_call_uid: Optional[int] = None,
+        function_name: Optional[str] = None,
+        previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
+        entry_count: int = 1,
+        consumed: Iterable[int] = (),
+        types: Iterable[str] = (),
     ):
         super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         if entry_count < 1:
@@ -276,7 +316,9 @@ class BasicBlockEntry(TraceEvent):
         for ty in types:
             bb_type = BasicBlockType.get(ty.upper())
             if bb_type is None:
-                raise ValueError(f"Unknown basic block type: {ty!r} in basic block entry {uid}")
+                raise ValueError(
+                    f"Unknown basic block type: {ty!r} in basic block entry {uid}"
+                )
             self.bb_type |= bb_type
         self.children: List[BasicBlockEntry] = []
 
@@ -317,13 +359,13 @@ class BasicBlockEntry(TraceEvent):
             elif start_offset + 1 != offset:
                 # this is not a contiguous byte sequence
                 # so yield the previous token
-                yield self.trace.inputstr[start_offset: last_offset + 1]  # type: ignore
+                yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
                 start_offset = last_offset = offset
             else:
                 # this is a contiguous byte sequence, so update its end
                 last_offset = offset
         if start_offset is not None:
-            yield self.trace.inputstr[start_offset: last_offset + 1]  # type: ignore
+            yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
 
     @property
     def basic_block(self) -> BasicBlock:
@@ -337,13 +379,13 @@ class FunctionReturn(TraceEvent):
     event_type = "FunctionReturn"
 
     def __init__(
-            self,
-            uid: int,
-            name: str,
-            previous_uid: Optional[int] = None,
-            next_uid: Optional[int] = None,
-            call_event_uid: Optional[int] = None,
-            returning_to_uid: Optional[int] = None,
+        self,
+        uid: int,
+        name: str,
+        previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
+        call_event_uid: Optional[int] = None,
+        returning_to_uid: Optional[int] = None,
     ):
         super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
         self.function_name: str = name
@@ -412,7 +454,9 @@ class FunctionReturn(TraceEvent):
             if isinstance(prev, FunctionCall):
                 self._function_call = prev
             else:
-                self._function_call = ValueError(f"Could not find the function call associated with return {self}")
+                self._function_call = ValueError(
+                    f"Could not find the function call associated with return {self}"
+                )
         if isinstance(self._function_call, ValueError):
             raise self._function_call
         return self._function_call  # type: ignore
@@ -422,13 +466,20 @@ class PolyTrackerTrace:
     def __init__(self, events: List[TraceEvent], inputstr: bytes):
         self.events: List[TraceEvent] = sorted(events)
         self.events_by_uid: Dict[int, TraceEvent] = {
-            event.uid: event for event in tqdm(events, leave=False, unit=" events", desc="building UID map")
+            event.uid: event
+            for event in tqdm(
+                events, leave=False, unit=" events", desc="building UID map"
+            )
         }
         print(f"events {self.events}")
         self.entrypoint: Optional[BasicBlockEntry] = None
-        for event in tqdm(self.events, unit=" events", leave=False, desc="initializing trace events"):
+        for event in tqdm(
+            self.events, unit=" events", leave=False, desc="initializing trace events"
+        ):
             if event.has_trace:
-                raise ValueError(f"Event {event} is already associated with trace {event.trace}")
+                raise ValueError(
+                    f"Event {event} is already associated with trace {event.trace}"
+                )
             event.trace = self
             if self.entrypoint is None and isinstance(event, BasicBlockEntry):
                 self.entrypoint = event
@@ -460,12 +511,17 @@ class PolyTrackerTrace:
                     if event.function_index in self._functions_by_idx:
                         function = self._functions_by_idx[event.function_index]
                     else:
-                        function = Function(name=event.function_name, function_index=event.function_index)
+                        function = Function(
+                            name=event.function_name,
+                            function_index=event.function_index,
+                        )
                         self._functions_by_idx[event.function_index] = function
                     if event.global_index in self._basic_blocks_by_idx:
                         new_bb = self._basic_blocks_by_idx[event.global_index]
                     else:
-                        new_bb = BasicBlock(function=function, index_in_function=event.bb_index)
+                        new_bb = BasicBlock(
+                            function=function, index_in_function=event.bb_index
+                        )
                         self._basic_blocks_by_idx[event.global_index] = new_bb
                     if last_bb is not None:
                         new_bb.predecessors.add(last_bb)
@@ -518,9 +574,7 @@ class PolyTrackerTrace:
         trace_file = os.path.realpath(trace_file)
         events = trace_to_dict(trace_file, input_file)
         if input_file is None:
-            raise ValueError(
-                "`input_file` argument" "must be provided"
-            )
+            raise ValueError("`input_file` argument" "must be provided")
         with open(input_file, "rb") as f:
             input_str = f.read()
         assert input_str is not None
@@ -532,18 +586,28 @@ def gen_func_ret(func_ret: FunctionRetItem, funcs: Dict[int, str]) -> FunctionRe
     assert func_ret.function_index in funcs
     last_event_id = func_ret.event_id - 1 if func_ret.event_id > 1 else None
 
-    return FunctionReturn(func_ret.event_id, funcs[func_ret.function_index], last_event_id,
-                          func_ret.event_id + 1,
-                          func_ret.call_event_uid, func_ret.ret_event_uid)
+    return FunctionReturn(
+        func_ret.event_id,
+        funcs[func_ret.function_index],
+        last_event_id,
+        func_ret.event_id + 1,
+        func_ret.call_event_uid,
+        func_ret.ret_event_uid,
+    )
 
 
 def gen_func_call(func_call: FunctionCallItem, funcs: Dict[int, str]) -> FunctionCall:
     assert func_call.function_index in funcs
     last_event_id = func_call.event_id - 1 if func_call.event_id > 1 else None
 
-    return FunctionCall(func_call.event_id, funcs[func_call.function_index], last_event_id,
-                        func_call.event_id + 1,
-                        func_call.ret_event_uid, func_call.consumes_bytes)
+    return FunctionCall(
+        func_call.event_id,
+        funcs[func_call.function_index],
+        last_event_id,
+        func_call.event_id + 1,
+        func_call.ret_event_uid,
+        func_call.consumes_bytes,
+    )
 
 
 def gen_block_entry(bi: BlockInstanceItem, funcs, input_id, session) -> BasicBlockEntry:
@@ -551,8 +615,9 @@ def gen_block_entry(bi: BlockInstanceItem, funcs, input_id, session) -> BasicBlo
     block_index = bi.block_gid & 0x0000FFFF
     assert func_index in funcs
     consumed_bytes = []
-    for taint_item in session.query(TaintItem).filter(TaintItem.input_id == input_id and
-                                                      TaintItem.block_gid == bi.block_gid):
+    for taint_item in session.query(TaintItem).filter(
+        TaintItem.input_id == input_id and TaintItem.block_gid == bi.block_gid
+    ):
         consumed_bytes.append(taint_item.label)
 
     # FIXME (Carson) Assigned: (Evan) - The block type is a Iterable[str] which converts it into a bitfield
@@ -561,9 +626,19 @@ def gen_block_entry(bi: BlockInstanceItem, funcs, input_id, session) -> BasicBlo
     # But thought youd be the best to do it, im just gonna make sure the data comes correct.
     last_event_id = bi.event_id - 1 if bi.event_id > 1 else None
     print(f"eid/gid? {bi.event_id}, {bi.block_gid}")
-    block_entry = BasicBlockEntry(bi.event_id, func_index, block_index, bi.block_gid, bi.function_call_id,
-                                  funcs[func_index],
-                                  last_event_id, bi.event_id + 1, bi.entry_count, consumed_bytes, [])
+    block_entry = BasicBlockEntry(
+        bi.event_id,
+        func_index,
+        block_index,
+        bi.block_gid,
+        bi.function_call_id,
+        funcs[func_index],
+        last_event_id,
+        bi.event_id + 1,
+        bi.entry_count,
+        consumed_bytes,
+        [],
+    )
     return block_entry
 
 
@@ -594,13 +669,19 @@ def trace_to_dict(db_path: str, input_file: str) -> List[TraceEvent]:
 
     trace_events = []
 
-    for instance in session.query(FunctionRetItem).filter(FunctionRetItem.input_id == input_id):
+    for instance in session.query(FunctionRetItem).filter(
+        FunctionRetItem.input_id == input_id
+    ):
         trace_events.append(gen_func_ret(instance, funcs))
         print(instance)
-    for instance in session.query(FunctionCallItem).filter(FunctionCallItem.input_id == input_id):
+    for instance in session.query(FunctionCallItem).filter(
+        FunctionCallItem.input_id == input_id
+    ):
         trace_events.append(gen_func_call(instance, funcs))
         print(instance)
-    for instance in session.query(BlockInstanceItem).filter(BlockInstanceItem.input_id == input_id):
+    for instance in session.query(BlockInstanceItem).filter(
+        BlockInstanceItem.input_id == input_id
+    ):
         trace_events.append(gen_block_entry(instance, funcs, input_id, session))
         print(instance)
 

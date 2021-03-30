@@ -38,7 +38,9 @@ class Bitmap(metaclass=BitmapMeta):
 
     def __init__(self, value: int):
         if self.__class__ == Bitmap.__class__:
-            raise ValueError("You cannot instantiate a Bitmap object directly; it must be subclassed!")
+            raise ValueError(
+                "You cannot instantiate a Bitmap object directly; it must be subclassed!"
+            )
         self.value = value
 
     @classmethod

@@ -1,6 +1,13 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, BigInteger, PrimaryKeyConstraint, UniqueConstraint, \
-    ForeignKeyConstraint, Text, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    BigInteger,
+    PrimaryKeyConstraint,
+    UniqueConstraint,
+    Text,
+    ForeignKey,
+)
 
 Base = declarative_base()
 
@@ -41,7 +48,7 @@ class BlockInstanceItem(Base):
 
 # TODO (Carson) have method to create TraceObjects from each method
 class FunctionRetItem(Base):
-    __tablename__ = 'func_ret'
+    __tablename__ = "func_ret"
     event_id = Column(BigInteger)
     function_index = Column(Integer, ForeignKey("func.id"))
     ret_event_uid = Column(BigInteger)
@@ -49,9 +56,7 @@ class FunctionRetItem(Base):
     thread_id = Column(Integer)
     input_id = Column(Integer, ForeignKey("input.id"))
 
-    __table_args__ = (
-        PrimaryKeyConstraint('input_id', 'thread_id', 'event_id'),
-    )
+    __table_args__ = (PrimaryKeyConstraint("input_id", "thread_id", "event_id"),)
 
 
 class FunctionCallItem(Base):
@@ -73,8 +78,12 @@ class TaintItem(Base):
     label = Column(Integer)
     input_id = Column(Integer, ForeignKey("input.id"))
     access_type = Column(Integer)
-    __table_args__ = (PrimaryKeyConstraint("event_id", "block_gid", "label", "input_id", "access_type"),
-                     UniqueConstraint("block_gid", "label", "input_id"))
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "event_id", "block_gid", "label", "input_id", "access_type"
+        ),
+        UniqueConstraint("block_gid", "label", "input_id"),
+    )
 
 
 class PolytrackerItem(Base):
@@ -116,4 +125,3 @@ class TaintForestItem(Base):
     label = Column(Integer, ForeignKey("accessed_label.label"))
     input_id = Column(Integer, ForeignKey("input.id"))
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
-

@@ -22,4 +22,6 @@ def test_taint_forest_validation():
     with pytest.raises(ValueError, match="Taint forest is not a multiple of 8 bytes!"):
         TaintForest(str(BAD_FOREST_PATH))
 
-    TaintForest(str(GOOD_FOREST_PATH), canonical_mapping=canonical_mapping()).validate(full=True)
+    TaintForest(str(GOOD_FOREST_PATH), canonical_mapping=canonical_mapping()).validate(
+        full=True
+    )
