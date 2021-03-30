@@ -15,7 +15,15 @@ from sqlalchemy import (
     ForeignKey,
 )
 
-from .tracing import FunctionCall, FunctionReturn, TraceEvent, PolyTrackerTrace, BasicBlockEntry, BasicBlock, Function
+from .tracing import (
+    FunctionCall,
+    FunctionReturn,
+    TraceEvent,
+    PolyTrackerTrace,
+    BasicBlockEntry,
+    BasicBlock,
+    Function,
+)
 
 Base = declarative_base()
 
@@ -49,10 +57,14 @@ T = TypeVar("T", bound=TraceEvent)
 class DBTraceEvent:
     BASE_EVENT_TYPE: Type[TraceEvent]
 
-    def __class_getitem__(cls, trace_event_type: Type[T]) -> Type[Union["DBTraceEvent", T]]:
-        return type(f"DB{trace_event_type.__name__}Mixin", (DBTraceEvent, trace_event_type), {
-            "BASE_EVENT_TYPE": trace_event_type
-        })
+    def __class_getitem__(
+        cls, trace_event_type: Type[T]
+    ) -> Type[Union["DBTraceEvent", T]]:
+        return type(
+            f"DB{trace_event_type.__name__}Mixin",
+            (DBTraceEvent, trace_event_type),
+            {"BASE_EVENT_TYPE": trace_event_type},
+        )
 
     @property
     def previous_uid(self) -> Optional[int]:
@@ -67,7 +79,9 @@ class DBTraceEvent:
 class DBBasicBlockEntry(Base, DBTraceEvent[BasicBlockEntry]):
     __tablename__ = "block_instance"
     uid = Column("event_id", BigInteger)
-    function_call_uid = Column("function_call_id", Integer, ForeignKey("func_call.event_id"))
+    function_call_uid = Column(
+        "function_call_id", Integer, ForeignKey("func_call.event_id")
+    )
     global_index = Column("block_gid", BigInteger, ForeignKey("basic_block.id"))
     entry_count = Column(BigInteger)
     thread_id = Column(Integer)
@@ -82,12 +96,15 @@ class DBBasicBlockEntry(Base, DBTraceEvent[BasicBlockEntry]):
             BasicBlockEntry.trace.fset(self, pttrace)  # type: ignore
             consumed_bytes = []
             for taint_item in pttrace.session.query(TaintItem).filter(
-                    TaintItem.input_id == self.input_id and TaintItem.block_gid == self.global_index
+                TaintItem.input_id == self.input_id
+                and TaintItem.block_gid == self.global_index
             ):
                 consumed_bytes.append(taint_item.label)
             self.consumed = tuple(consumed_bytes)
         else:
-            raise ValueError(f"{self.__class__.__name__}.trace may only be set to subclasses of `DBPolyTrackerTrace`")
+            raise ValueError(
+                f"{self.__class__.__name__}.trace may only be set to subclasses of `DBPolyTrackerTrace`"
+            )
 
     @property
     def bb_index(self) -> int:

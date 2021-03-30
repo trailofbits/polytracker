@@ -111,7 +111,12 @@ class FunctionInvocation:
 
 
 class TraceEvent:
-    def __init__(self, uid: int, previous_uid: Optional[int] = None, next_uid: Optional[int] = None):
+    def __init__(
+        self,
+        uid: int,
+        previous_uid: Optional[int] = None,
+        next_uid: Optional[int] = None,
+    ):
         self.uid: int = uid
         self.previous_uid: Optional[int] = previous_uid
         self.next_uid: Optional[int] = next_uid
