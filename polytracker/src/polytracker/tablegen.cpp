@@ -1,7 +1,7 @@
+#include "polytracker/output.h"
+#include <iostream>
 #include <sqlite3.h>
 #include <string>
-#include <iostream>
-#include "polytracker/output.h"
 
 static constexpr const char *createInputTable() {
   return "CREATE TABLE if not exists input("
@@ -130,25 +130,27 @@ static constexpr const char *createTaintForestTable() {
          ") WITHOUT ROWID;";
 }
 
-static constexpr const char * createEventsTable() {
-    return "CREATE TABLE IF NOT EXISTS events ("
-        "event_id BIGINT,"
-        "event_type TINYINT,"
-        "input_id INTEGER,"
-        "thread_id INTEGER,"
-        "block_gid BIGINT,"
-        "PRIMARY KEY(input_id, event_id)"
-        ") WITHOUT ROWID;";
+static constexpr const char *createEventsTable() {
+  return "CREATE TABLE IF NOT EXISTS events ("
+         "event_id BIGINT,"
+         "event_type TINYINT,"
+         "input_id INTEGER,"
+         "thread_id INTEGER,"
+         "block_gid BIGINT,"
+         "PRIMARY KEY(input_id, event_id)"
+         ") WITHOUT ROWID;";
 }
 
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
       std::string(createInputTable()) + std::string(createFuncTable()) +
       std::string(createBlockTable()) +
-      // std::string(createBlockInstanceTable()) + //std::string(createCallTable()) +
+      // std::string(createBlockInstanceTable()) +
+      // //std::string(createCallTable()) +
       /*std::string(createRetTable()) +*/ std::string(createTaintTable()) +
       std::string(createPolytrackerTable()) +
       std::string(createCanonicalTable()) + std::string(createChunksTable()) +
-      std::string(createCFGTable()) + std::string(createTaintForestTable()) + std::string(createEventsTable());
+      std::string(createCFGTable()) + std::string(createTaintForestTable()) +
+      std::string(createEventsTable());
   sql_exec(output_db, table_gen.c_str());
 }

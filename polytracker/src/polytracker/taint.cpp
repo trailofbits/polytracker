@@ -3,10 +3,10 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
-#include <sanitizer/dfsan_interface.h>
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <sanitizer/dfsan_interface.h>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -23,14 +23,14 @@ std::unordered_map<std::string, std::pair<int, int>> track_target_name_map;
 std::unordered_map<int, std::pair<int, int>> track_target_fd_map;
 std::mutex track_target_map_lock;
 
-extern sqlite3* output_db;
+extern sqlite3 *output_db;
 extern input_id_t input_id;
 extern thread_local int thread_id;
 extern thread_local block_id_t curr_block_index;
 extern thread_local function_id_t curr_func_index;
 extern thread_local event_id_t event_id;
 
-extern char* forest_mem;
+extern char *forest_mem;
 
 void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
@@ -131,8 +131,6 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   return ret_label;
 }
 
-
-
 /*
  * This function is responsible for marking memory locations as tainted, and is
  * called when taint is processed by functions like read, pread, mmap, recv,
@@ -169,7 +167,8 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
 
       // Log that we tainted data within this function from a taint source etc.
       // logOperation(new_label);
-      storeTaintAccess(output_db, new_label, event_id++, curr_func_index, curr_block_index, input_id, thread_id, READ_ACCESS);
+      storeTaintAccess(output_db, new_label, event_id++, curr_func_index,
+                       curr_block_index, input_id, thread_id, READ_ACCESS);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;
@@ -180,7 +179,8 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
     }
   }
   if (processed_bytes) {
-    storeTaintedChunk(output_db, input_id, taint_offset_start, taint_offset_end);
+    storeTaintedChunk(output_db, input_id, taint_offset_start,
+                      taint_offset_end);
   }
 }
 
@@ -198,7 +198,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
 
 [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // If sanitizer debug is on, this checks that l1 != l2
-  //DCHECK_NE(l1, l2);
+  // DCHECK_NE(l1, l2);
   if (l1 == 0) {
     return l2;
   }
@@ -218,7 +218,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
     return val->second;
   }
 
-  //Check if l2 has l1 as a parent. 
+  // Check if l2 has l1 as a parent.
   auto l2_node = getTaintNode(l2);
   if (l2_node->p1 == l1 || l2_node->p2 == l1) {
     return l2;

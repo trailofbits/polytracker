@@ -1,8 +1,8 @@
 #include "polytracker/output.h"
 #include "polytracker/logging.h"
 #include "polytracker/polytracker.h"
-#include "polytracker/taint.h"
 #include "polytracker/tablegen.h"
+#include "polytracker/taint.h"
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -65,7 +65,7 @@ static void sql_step(sqlite3 *db, sqlite3_stmt *stmt) {
   if (err != SQLITE_DONE) {
     printf("execution failed: %s\n", sqlite3_errmsg(db));
     sqlite3_finalize(stmt);
-	abort();
+    abort();
   }
 }
 
@@ -95,10 +95,9 @@ static input_id_t get_input_id(sqlite3 *output_db) {
 }
 
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
-                          const size_t &curr_thread_id,
-                          const function_id_t &dest,
-                          const function_id_t &src,
-						  const event_id_t& event_id, const int edgetype) {
+                      const size_t &curr_thread_id, const function_id_t &dest,
+                      const function_id_t &src, const event_id_t &event_id,
+                      const int edgetype) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
                        "event_id, thread_id, input_id, edge_type)"
@@ -118,45 +117,50 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   // sqlite3_reset(stmt);
 }
 
-input_id_t storeNewInput(sqlite3 *output_db, const std::string& filename, const uint64_t& start, const uint64_t& end, const int& trace_level) {
-	sqlite3_stmt *stmt;
-  	const char *insert =
-      "INSERT INTO input(path, content, track_start, track_end, size, trace_level)"
-      "VALUES(?, ?, ?, ?, ?, ?);";
-  	sql_prep(output_db, insert, -1, &stmt, NULL);
-	sqlite3_bind_text(stmt, 1, filename.c_str(), filename.length(), SQLITE_STATIC);
-	if (polytracker_save_input_file) {
-	  ifstream file(filename, ios::in | ios::binary);
-      if (!file) {
-        cerr << "Warning: an error occurred opening input file " << filename << "! It will not be saved to the database." << std::endl;
-        sqlite3_bind_null(stmt, 2);
-      } else {
-        file.seekg(0, ifstream::end);
-        streampos size = file.tellg();
-        file.seekg(0);
+input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
+                         const uint64_t &start, const uint64_t &end,
+                         const int &trace_level) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT INTO input(path, content, track_start, "
+                       "track_end, size, trace_level)"
+                       "VALUES(?, ?, ?, ?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_text(stmt, 1, filename.c_str(), filename.length(),
+                    SQLITE_STATIC);
+  if (polytracker_save_input_file) {
+    std::ifstream file(filename, std::ios::in | std::ios::binary);
+    if (!file) {
+      std::cerr << "Warning: an error occurred opening input file " << filename
+                << "! It will not be saved to the database." << std::endl;
+      sqlite3_bind_null(stmt, 2);
+    } else {
+      file.seekg(0, std::ifstream::end);
+      std::streampos size = file.tellg();
+      file.seekg(0);
 
-        char* buffer = new char[size];
-        file.read(buffer, size);
-        auto rc = sqlite3_bind_blob(stmt, 1, buffer, size, SQLITE_TRANSIENT);
-        delete buffer;
-        if (rc != SQLITE_OK) {
-          cerr << "error saving the input file to the database: " << sqlite3_errmsg(db) << endl;
-          sqlite3_bind_null(stmt, 2);
-        }
+      char *buffer = new char[size];
+      file.read(buffer, size);
+      auto rc = sqlite3_bind_blob(stmt, 1, buffer, size, SQLITE_TRANSIENT);
+      delete[] buffer;
+      if (rc != SQLITE_OK) {
+        std::cerr << "error saving the input file to the database: "
+                  << sqlite3_errmsg(output_db) << std::endl;
+        sqlite3_bind_null(stmt, 2);
       }
-	} else {
-	  sqlite3_bind_null(stmt, 2);
-	}
-    sqlite3_bind_int64(stmt, 3, start);
-    sqlite3_bind_int64(stmt, 4, end);
-    sqlite3_bind_int64(stmt, 5, [](const std::string &filename) {
-      std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
-      return file.tellg();
-    }(filename));
-    sqlite3_bind_int(stmt, 6, trace_level);
-    sql_step(output_db, stmt);
-	sqlite3_finalize(stmt);
-	return get_input_id(output_db);
+    }
+  } else {
+    sqlite3_bind_null(stmt, 2);
+  }
+  sqlite3_bind_int64(stmt, 3, start);
+  sqlite3_bind_int64(stmt, 4, end);
+  sqlite3_bind_int64(stmt, 5, [](const std::string &filename) {
+    std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
+    return file.tellg();
+  }(filename));
+  sqlite3_bind_int(stmt, 6, trace_level);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+  return get_input_id(output_db);
 }
 /*
 const input_id_t storeNewInput(sqlite3 *output_db) {
@@ -192,7 +196,8 @@ const input_id_t storeNewInput(sqlite3 *output_db) {
 }
 */
 
-void storeCanonicalMap(sqlite3* output_db, const input_id_t& input_id, const dfsan_label& label, const uint64_t& file_offset) {
+void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
+                       const dfsan_label &label, const uint64_t &file_offset) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT INTO canonical_map(input_id, taint_label, "
                        "file_offset) VALUES (?, ?, ?);";
@@ -204,7 +209,8 @@ void storeCanonicalMap(sqlite3* output_db, const input_id_t& input_id, const dfs
   sqlite3_finalize(stmt);
 }
 
-void storeTaintedChunk(sqlite3* output_db, const input_id_t& input_id, const uint64_t& start, const uint64_t& end) {
+void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
+                       const uint64_t &start, const uint64_t &end) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
                        "start_offset, end_offset) VALUES (?, ?, ?);";
@@ -216,7 +222,8 @@ void storeTaintedChunk(sqlite3* output_db, const input_id_t& input_id, const uin
   sqlite3_finalize(stmt);
 }
 
-void storeFunc(sqlite3 * output_db, const char* fname, const function_id_t& func_id) {
+void storeFunc(sqlite3 *output_db, const char *fname,
+               const function_id_t &func_id) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT OR IGNORE INTO func (id, name) VALUES (?, ?);";
   sql_prep(output_db, insert, -1, &stmt, NULL);
@@ -226,39 +233,44 @@ void storeFunc(sqlite3 * output_db, const char* fname, const function_id_t& func
   sqlite3_finalize(stmt);
 }
 
-void storeEvent(sqlite3 * output_db, const input_id_t& input_id, const int& thread_id, 
-	const size_t& event_id, const int& event_type, const function_id_t& findex, const block_id_t& bindex) {
+void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
+                const int &thread_id, const size_t &event_id,
+                const int &event_type, const function_id_t &findex,
+                const block_id_t &bindex) {
 
-	sqlite3_stmt * stmt;
-	const char* insert = "INSERT OR IGNORE into events(event_id, event_type, input_id, thread_id, block_gid)"
-		"VALUES (?, ?, ?, ?, ?)";
-	uint64_t gid = (static_cast<uint64_t>(findex) << 32)  | bindex;
-    sql_prep(output_db, insert, -1, &stmt, NULL);	
-	sqlite3_bind_int64(stmt, 1, event_id);
-    sqlite3_bind_int64(stmt, 2, event_type);
-    sqlite3_bind_int64(stmt, 3, input_id);
-    sqlite3_bind_int(stmt, 4, thread_id);
-    sqlite3_bind_int(stmt, 5, gid);
-    sql_step(output_db, stmt);
-    sqlite3_finalize(stmt);
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE into events(event_id, event_type, "
+                       "input_id, thread_id, block_gid)"
+                       "VALUES (?, ?, ?, ?, ?)";
+  uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, event_id);
+  sqlite3_bind_int64(stmt, 2, event_type);
+  sqlite3_bind_int64(stmt, 3, input_id);
+  sqlite3_bind_int(stmt, 4, thread_id);
+  sqlite3_bind_int(stmt, 5, gid);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
 }
 
-void storeTaintAccess(sqlite3 * output_db, const dfsan_label& label, const size_t &event_id, const function_id_t& findex, 
-	const block_id_t& bindex, const input_id_t& input_id, const int& thread_id, const ByteAccessType& access_type) { 
-    
-	sqlite3_stmt *stmt;
-    const char *insert = "INSERT INTO accessed_label(block_gid, event_id, "
-                         "label, input_id, access_type)"
-                         "VALUES (?, ?, ?, ?, ?);";
-	uint64_t gid = (static_cast<uint64_t>(findex) << 32)  | bindex;
-    sql_prep(output_db, insert, -1, &stmt, NULL);	
-	sqlite3_bind_int64(stmt, 1, gid);
-    sqlite3_bind_int64(stmt, 2, event_id);
-    sqlite3_bind_int64(stmt, 3, label);
-    sqlite3_bind_int(stmt, 4, input_id);
-    sqlite3_bind_int(stmt, 5, access_type);
-    sql_step(output_db, stmt);
-    sqlite3_finalize(stmt);
+void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
+                      const size_t &event_id, const function_id_t &findex,
+                      const block_id_t &bindex, const input_id_t &input_id,
+                      const int &thread_id, const ByteAccessType &access_type) {
+
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT INTO accessed_label(block_gid, event_id, "
+                       "label, input_id, access_type)"
+                       "VALUES (?, ?, ?, ?, ?);";
+  uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, gid);
+  sqlite3_bind_int64(stmt, 2, event_id);
+  sqlite3_bind_int64(stmt, 3, label);
+  sqlite3_bind_int(stmt, 4, input_id);
+  sqlite3_bind_int(stmt, 5, access_type);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
 }
 /*
 static void storeTaintFuncAccess(RuntimeInfo *runtime_info, sqlite3 *output_db,
@@ -297,7 +309,8 @@ static void storeTaintFuncAccess(RuntimeInfo *runtime_info, sqlite3 *output_db,
   sqlite3_finalize(stmt);
 }
 */
-void storeBlock(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, uint8_t btype) {
+void storeBlock(sqlite3 *output_db, const function_id_t &findex,
+                const block_id_t &bindex, uint8_t btype) {
   sqlite3_stmt *bb_stmt;
   const char *bb_stmt_insert =
       "INSERT OR IGNORE INTO basic_block(id, block_attributes)"
@@ -308,11 +321,13 @@ void storeBlock(sqlite3 *output_db, const function_id_t& findex, const block_id_
   sqlite3_bind_int(bb_stmt, 2, btype);
   sql_step(output_db, bb_stmt);
   sqlite3_finalize(bb_stmt);
-} 
+}
 
-void storeBlockAccess(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, const input_id_t& input_id, const int& thread_id, const event_id_t& event_index) {
-sqlite3_stmt *instance_stmt;
-const char *inst_stmt_insert =
+void storeBlockAccess(sqlite3 *output_db, const function_id_t &findex,
+                      const block_id_t &bindex, const input_id_t &input_id,
+                      const int &thread_id, const event_id_t &event_index) {
+  sqlite3_stmt *instance_stmt;
+  const char *inst_stmt_insert =
       "INSERT INTO block_instance(block_gid, event_id, input_id, thread_id)"
       "VALUES(?, ?, ?, ?);";
 
@@ -330,7 +345,7 @@ const char *inst_stmt_insert =
 // When POLYFOREST is set we dump to disk instead of the database. This saves
 // space if needed but its not as convenient
 void storeTaintForestDisk(const std::string &outfile,
-                                 const dfsan_label &last_label) {
+                          const dfsan_label &last_label) {
   // TODO You know, this would be nice to know before the taint run is over...
   FILE *forest_file = fopen(outfile.c_str(), "w");
   if (forest_file == NULL) {
@@ -347,8 +362,9 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
-void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id, const dfsan_label &last_label) {
-  char* errorMessage;
+void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
+                      const dfsan_label &last_label) {
+  char *errorMessage;
   sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 
   const char *insert = "INSERT INTO taint_forest (parent_one, parent_two, "
@@ -357,8 +373,8 @@ void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id, const dfsa
   sql_prep(output_db, insert, -1, &stmt, NULL);
   for (int i = 0; i <= last_label; i++) {
     taint_node_t *curr = getTaintNode(i);
-	sqlite3_bind_int(stmt, 1, curr->p1);
-	sqlite3_bind_int(stmt, 2, curr->p1);
+    sqlite3_bind_int(stmt, 1, curr->p1);
+    sqlite3_bind_int(stmt, 2, curr->p1);
     sqlite3_bind_int(stmt, 3, i);
     sqlite3_bind_int(stmt, 4, input_id);
     sql_step(output_db, stmt);
@@ -380,7 +396,7 @@ void storeVersion(sqlite3 *output_db) {
   sqlite3_finalize(stmt);
 }
 
-sqlite3 * db_init(const std::string &db_path) {
+sqlite3 *db_init(const std::string &db_path) {
   const std::string db_name = db_path + ".db";
   sqlite3 *output_db;
   if (sqlite3_open(db_name.c_str(), &output_db)) {
@@ -401,7 +417,7 @@ sqlite3 * db_init(const std::string &db_path) {
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
 
-void db_fini(sqlite3 *output_db) { 
-	storeVersion(output_db);
-	sqlite3_close(output_db);
+void db_fini(sqlite3 *output_db) {
+  storeVersion(output_db);
+  sqlite3_close(output_db);
 }
