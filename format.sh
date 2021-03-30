@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Temporary formatting script to enforce some code style/standards 
 
 # Clang-format to auto format the relevant parts of the C++ code base
