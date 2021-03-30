@@ -24,8 +24,8 @@ struct PolytrackerPass : public llvm::ModulePass {
                                   const func_index_t& func_index,
                                   llvm::BasicBlock* curr_bb,
                                   const bb_index_t &bb_index,
-                                  std::vector<llvm::BasicBlock *> &split_bbs);
-                                  //llvm::DominatorTree &DT);
+                                  std::vector<llvm::BasicBlock *> &split_bbs,
+                                  llvm::DominatorTree &DT);
   void initializeTypes(llvm::Module &mod);
   void readIgnoreFile(const std::string& ignore_file);
   llvm::Module* mod;
