@@ -166,12 +166,13 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
   // std::cout << "Visitng func" << std::endl;
   // Add Function entry
-  polytracker::BBSplittingPass bbSplitter;
+  //polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
 
-  llvm::removeUnreachableBlocks(*f);
+  //llvm::removeUnreachableBlocks(*f);
 
-  std::vector<llvm::BasicBlock *> splitBBs = bbSplitter.analyzeFunction(*f);
+  //std::vector<llvm::BasicBlock *> splitBBs = bbSplitter.analyzeFunction(*f);
+  std::vector<llvm::BasicBlock *> splitBBs;
 
   // Instrument function entry here
   llvm::BasicBlock &bb = f->getEntryBlock();
