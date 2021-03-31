@@ -141,7 +141,7 @@ static constexpr const char *createEventsTable() {
          "input_id INTEGER,"
          "thread_id INTEGER,"
          "block_gid BIGINT,"
-         "PRIMARY KEY(input_id, event_id)"
+         "PRIMARY KEY(input_id, event_id, thread_id)"
          ") WITHOUT ROWID;";
 }
 
