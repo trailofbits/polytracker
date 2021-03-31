@@ -24,13 +24,14 @@ ${POLY_DIR}/main.cpp
 ${POLY_DIR}/logging.cpp 
 ${POLY_DIR}/taint.cpp
 ${POLY_DIR}/output.cpp 
-# ${POLY_DIR}/tracing.cpp
 ${POLY_DIR}/tablegen.cpp 
 ${POLY_DIR}/polytracker.cpp
 )
 
 set (TAINT_SOURCES 
 ${TAINT_DIR}/taint_sources.cpp
+${TAINT_DIR}/string_taints.cpp 
+${TAINT_DIR}/memory_taints.cpp 
 )
 
 add_library(Polytracker STATIC 
