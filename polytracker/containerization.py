@@ -460,7 +460,7 @@ class DockerRun(DockerSubcommand):
             option = input()
             if option.lower() == "n":
                 break
-            elif option.lower() == "y":
+            elif option.lower() == "y" or option == "":
                 self.container.rebuild()
                 break
         self.container.run(
