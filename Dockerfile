@@ -28,3 +28,4 @@ RUN ninja install
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV CC=/polytracker/build/bin/polybuild
 ENV CXX=/polytracker/build/bin/polybuild++
+ENV PATH=/polytracker/build/bin:$PATH
