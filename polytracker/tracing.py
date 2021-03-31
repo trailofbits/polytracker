@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
+from enum import IntFlag
 from typing import (
     cast,
     Dict,
     Iterable,
     List,
     Optional,
-    Protocol,
     Set,
     Union,
 )
@@ -15,11 +15,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from tqdm import tqdm
 
-from .bitmap import Bitmap, BitmapValue
 from polytracker.cfg import DiGraph
 
 
-class BasicBlockType(Bitmap):
+class BasicBlockType(IntFlag):
     """
     Basic block types
 
@@ -27,23 +26,23 @@ class BasicBlockType(Bitmap):
 
     """
 
-    UNKNOWN = BitmapValue(0)
+    UNKNOWN = 0
     """We don't know what kind of BB this is"""
-    STANDARD = BitmapValue(1)
+    STANDARD = 1
     """A standard, unremarkable BB"""
-    CONDITIONAL = BitmapValue(2)
+    CONDITIONAL = 2
     """Any BB that contains a conditional branch"""
-    LOOP_ENTRY = BitmapValue(6)
+    LOOP_ENTRY = 6
     """A BB that is an entrypoint into a loop"""
-    LOOP_EXIT = BitmapValue(10)
+    LOOP_EXIT = 10
     """A BB that is an exit to a loop"""
-    FUNCTION_ENTRY = BitmapValue(16)
+    FUNCTION_ENTRY = 16
     """A BB that is the first inside of its function"""
-    FUNCTION_EXIT = BitmapValue(32)
+    FUNCTION_EXIT = 32
     """A BB that exits a function (i.e., it contains a return instruction)"""
-    FUNCTION_RETURN = BitmapValue(64)
+    FUNCTION_RETURN = 64
     """A BB that is executed immediately after a CallInst returns"""
-    FUNCTION_CALL = BitmapValue(128)
+    FUNCTION_CALL = 128
     """A BB that contains a CallInst"""
 
 
