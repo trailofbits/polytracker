@@ -111,7 +111,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int64(stmt, 3, event_id);
   sqlite3_bind_int(stmt, 4, curr_thread_id);
   sqlite3_bind_int64(stmt, 5, input_id);
-  sqlite3_bind_int64(stmt, 6, edgetype);
+  sqlite3_bind_int(stmt, 6, static_cast<int>(edgetype));
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
   // sqlite3_reset(stmt);
@@ -245,7 +245,7 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
-  sqlite3_bind_int64(stmt, 2, event_type);
+  sqlite3_bind_int(stmt, 2, static_cast<int>(event_type));
   sqlite3_bind_int64(stmt, 3, input_id);
   sqlite3_bind_int(stmt, 4, thread_id);
   sqlite3_bind_int(stmt, 5, gid);
@@ -268,7 +268,7 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sqlite3_bind_int64(stmt, 2, event_id);
   sqlite3_bind_int64(stmt, 3, label);
   sqlite3_bind_int(stmt, 4, input_id);
-  sqlite3_bind_int(stmt, 5, access_type);
+  sqlite3_bind_int(stmt, 5, static_cast<int>(access_type));
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }

@@ -10,17 +10,22 @@ typedef uint64_t global_id_t;
 typedef uint64_t event_id_t;
 
 //Powers of 2 with 0 being unknown
-enum ByteAccessType {
+enum class ByteAccessType: uint8_t {
   UNKNOWN_ACCESS = 0,
   INPUT_ACCESS = 1,
   CMP_ACCESS = 2,
   READ_ACCESS = 4
 };
 
-enum EventType {
+enum EventType: uint8_t {
   FUNC_ENTER = 0,
   FUNC_RET = 1,
   BLOCK_ENTER = 2
+};
+
+enum EdgeType: uint8_t {
+  FORWARD = 0,
+  BACKWARD = 1
 };
 
 sqlite3* db_init(const std::string& db_path);
@@ -36,7 +41,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                           const function_id_t &callee,
                           const function_id_t &caller,
 						  const event_id_t& event_id,
-                          const int edgetype);
+                          EdgeType edgetype);
 void storeBlock(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, uint8_t btype);
 void storeBlockAccess(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, 
     const input_id_t& input_id, const int& thread_id, const event_id_t& event_index);
