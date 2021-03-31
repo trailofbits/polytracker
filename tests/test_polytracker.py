@@ -127,13 +127,9 @@ def program_trace(request):
 
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: PolyTrackerTrace):
-    for label in program_trace.get_function("main").accessed_labels:
-        print(label)
-    for bb in program_trace.basic_blocks:
-        print(str(bb))
-    #assert (
-    #    0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
-    #)
+    assert (
+        0 in program_trace.get_function("main").tainted_byte_offsets()
+    )
 
 
 @pytest.mark.program_trace("test_open.c")
