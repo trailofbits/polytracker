@@ -235,7 +235,7 @@ void storeFunc(sqlite3 *output_db, const char *fname,
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const int &thread_id, const size_t &event_id,
-                const int &event_type, const function_id_t &findex,
+                EventType event_type, const function_id_t &findex,
                 const block_id_t &bindex) {
 
   sqlite3_stmt *stmt;

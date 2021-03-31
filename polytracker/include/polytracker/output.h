@@ -17,6 +17,12 @@ enum ByteAccessType {
   READ_ACCESS = 4
 };
 
+enum EventType {
+  FUNC_ENTER = 0,
+  FUNC_RET = 1,
+  BLOCK_ENTER = 2
+};
+
 sqlite3* db_init(const std::string& db_path);
 void db_fini(sqlite3 * output_db);
 input_id_t storeNewInput(sqlite3 *output_db, const std::string& filename, const uint64_t& start, const uint64_t& end, const int& trace_level);
@@ -36,7 +42,7 @@ void storeBlockAccess(sqlite3 *output_db, const function_id_t& findex, const blo
     const input_id_t& input_id, const int& thread_id, const event_id_t& event_index);
 
 void storeEvent(sqlite3 * output_db, const input_id_t& input_id, const int& thread_id, 
-	const size_t& event_id, const int& event_type, const function_id_t& findex, const block_id_t& bindex);
+	const size_t& event_id, EventType event_type, const function_id_t& findex, const block_id_t& bindex);
 
 void storeCanonicalMap(sqlite3* output_db, const input_id_t& input_id, const dfsan_label& label, const uint64_t& file_offset);
 
