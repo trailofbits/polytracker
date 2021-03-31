@@ -1,12 +1,4 @@
-#include <sanitizer/dfsan_interface.h>
-#include "polytracker/taint.h"
-#include <string.h>
-
-#define BYTE 1
-#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
-#define EXT_CXX_FUNC extern __attribute__((visibility("default")))
-#define PPCAT_NX(A, B) A##B
-#define PPCAT(A, B) PPCAT_NX(A, B)
+#include "polytracker/taint_sources.h"
 
 EXT_C_FUNC 
 char* __dfsw_strcat(char * dest, char * src, dfsan_label dest_label, dfsan_label src_label, dfsan_label *ret_label) {

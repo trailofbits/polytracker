@@ -20,12 +20,7 @@
 #include <unistd.h>
 #include <vector>
 #include <wchar.h>
-
-#define BYTE 1
-#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
-#define EXT_CXX_FUNC extern __attribute__((visibility("default")))
-#define PPCAT_NX(A, B) A##B
-#define PPCAT(A, B) PPCAT_NX(A, B)
+#include "polytracker/taint_sources.h"
 
 #define DEBUG_INFO
 
@@ -33,8 +28,6 @@
 #include <iostream>
 #endif
 
-
-typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
