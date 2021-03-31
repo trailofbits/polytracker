@@ -397,7 +397,7 @@ void storeVersion(sqlite3 *output_db) {
 }
 
 sqlite3 *db_init(const std::string &db_path) {
-  const std::string db_name = db_path + ".db";
+  const std::string db_name = db_path;
   sqlite3 *output_db;
   if (sqlite3_open(db_name.c_str(), &output_db)) {
     std::cout << "Error! Could not open output db " << db_path << std::endl;
