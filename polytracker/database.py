@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import Iterable, Optional, Union
 
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
 from sqlalchemy import (
     BigInteger,
@@ -67,8 +69,20 @@ class DBFunction(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text)
 
+    basic_blocks = relationship("DBBasicBlock")
 
-class FunctionCFG(Base):
+    incoming_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.dest_id")
+    outgoing_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id")
+    accessed_labels = relationship("AccessedLabel",
+                                   primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
+                                               "foreign(AccessedLabel.block_gid)==DBBasicBlock.id)",
+                                   viewonly=True)
+
+    def __repr__(self):
+        return f"Function(id={self.id}, name={self.name!r})"
+
+
+class FunctionCFGEdge(Base):
     __tablename__ = "func_cfg"
     dest_id = Column("dest", Integer, ForeignKey("func.id"))
     src_id = Column("src", Integer, ForeignKey("func.id"))
@@ -77,8 +91,8 @@ class FunctionCFG(Base):
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     edge_type = Column(SmallInteger, SQLEnum(EdgeType))
 
-    dest = relationship("DBFunction", remote_side=[dest_id])
-    src = relationship("DBFunction", remote_side=[src_id])
+    dest = relationship("DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges")
+    src = relationship("DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges")
     input = relationship("Input")
     event = relationship("DBTraceEvent")
 
@@ -88,11 +102,21 @@ class FunctionCFG(Base):
 class DBBasicBlock(Base, BasicBlock):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
+    # function_id should always be equal to (id >> 32), but we have it for convenience
+    function_id = Column(BigInteger, ForeignKey("func.id"))
     attributes = Column("block_attributes", Integer, SQLEnum(BasicBlockType))
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
     accessed_labels = relationship("AccessedLabel")
+    function = relationship("DBFunction", back_populates="basic_blocks")
+
+    @hybrid_property
+    def bb_index(self) -> int:
+        return self.id & 0x0000FFFF
+
+    def __str__(self):
+        return f"{self.function.name}@{self.bb_index}"
 
 
 class AccessedLabel(Base):
@@ -125,6 +149,7 @@ class DBTraceEvent(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
 
     input = relationship("Input", back_populates="events")
+    accessed_labels = relationship("AccessedLabel")
 
     __mapper_args__ = {"polymorphic_on": "event_type"}
 
@@ -198,11 +223,17 @@ class DBPolyTrackerTrace(PolyTrackerTrace):
 
     @property
     def functions(self) -> Iterable[Function]:
-        pass
+        return self.session.query(DBFunction).all()
+
+    def get_function(self, name: str) -> Function:
+        try:
+            return self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+        except NoResultFound:
+            raise KeyError(name)
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        pass
+        return self.session.query(DBBasicBlock).all()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
         pass
