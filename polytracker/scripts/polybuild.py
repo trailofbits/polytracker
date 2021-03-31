@@ -198,7 +198,8 @@ def handle_non_build(argv: List[str]):
             cc.append("--version")
             continue
         cc.append(arg)
-    assert subprocess.call(cc) == 0
+    result = subprocess.call(cc)
+    assert result == 0
 
 
 # This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
@@ -263,9 +264,10 @@ def do_everything(argv: List[str]):
 
     # Lower bitcode. Creates a .o
     if is_cxx:
-        assert subprocess.call(["gclang++", "-fPIC", "-c", temp_bc]) == 0
+        result = subprocess.call(["gclang++", "-fPIC", "-c", temp_bc])
     else:
-        assert subprocess.call(["gclang", "-fPIC", "-c", temp_bc]) == 0
+        result = subprocess.call(["gclang", "-fPIC", "-c", temp_bc])
+    assert result == 0
     obj_file = output_file + "_temp.o"
 
     # Compile into executable
@@ -280,12 +282,14 @@ def do_everything(argv: List[str]):
     ret = subprocess.call(re_comp)
     assert ret == 0
 
+
 def lower_bc(input_bitcode, output_file, libs = None):
     # Lower bitcode. Creates a .o
     if is_cxx:
-        assert subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode]) == 0
+        result = subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode])
     else:
-        assert subprocess.call(["gclang", "-fPIC", "-c", input_bitcode]) == 0
+        result = subprocess.call(["gclang", "-fPIC", "-c", input_bitcode])
+    assert result == 0
     obj_file = input_bitcode.replace(".bc", ".o")
 
     # Compile into executable
@@ -304,6 +308,7 @@ def lower_bc(input_bitcode, output_file, libs = None):
     re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
+
 
 def main():
     parser = argparse.ArgumentParser(
