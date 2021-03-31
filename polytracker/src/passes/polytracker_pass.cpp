@@ -339,15 +339,29 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
       std::cerr << '\r' << std::string(80, ' ') << '\r';
       lastPercent = percent;
-      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3) << percent << "% [";
+      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3) << percent << "% |";
       const int barWidth = 20;
-      const auto filledBars = static_cast<int>(static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 * 0.5);
+      const auto filledBars = static_cast<int>(static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 + 0.5);
       const auto unfilledBars = barWidth - filledBars;
       for (size_t iter=0; iter < filledBars; ++iter) {
         std::cerr << "█";
       }
       std::cerr << std::string(unfilledBars, ' ');
-      std::cerr << "| " << i << "/" << functions.size() << " [ " << std::setprecision(4) << functionsPerSecond << " functions/s ]" << std::flush;
+      std::cerr << "| " << i << "/" << functions.size() << " [";
+      if (functionsPerSecond == 0) {
+        std::cerr << "??:??";
+      } else {
+        auto remainingSeconds = static_cast<int>(static_cast<float>(functions.size() - i) / functionsPerSecond + 0.5);
+        auto remainingMinutes = remainingSeconds / 60;
+        remainingSeconds %= 60;
+        if (remainingMinutes > 60) {
+            std::cerr << (remainingMinutes / 60) << ":";
+            remainingMinutes %= 60;
+        }
+        std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes << ":";
+        std::cerr << std::setfill('0') << std::setw(2) << std::remainingSeconds;
+      }
+      std::cerr << ", " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
     }
 
     if (!func || func->isDeclaration()) {
