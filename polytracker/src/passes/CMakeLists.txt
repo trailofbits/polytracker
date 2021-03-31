@@ -39,6 +39,8 @@ include_directories(${LLVM_INCLUDE_DIRS})
 #set(LLVM_LIBRARY_OUTPUT_INTDIR "${CMAKE_BINARY_DIR}/lib/${CMAKE_CFG_INT_DIR}")
 
 set (CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g")
+
 set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_CXX_LINK_FLAGS} -Wl,-znodelete")
 if(APPLE)
   # User teor2345 reports that this is required to make things work on MacOS X.

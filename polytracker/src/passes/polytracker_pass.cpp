@@ -104,7 +104,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &fin
                                    llvm::BasicBlock *curr_bb,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
-                                   llvm::DominatorTree &DT) {
+                                    llvm::DominatorTree &DT) {
   // std::cout << "Visiting function!" << std::endl;
   // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is
   // always valid here Is the address returned by reference always the same?
@@ -127,6 +127,8 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &fin
   // If so, set that it is a FUNCTION_RETURN
   bool wasSplit = std::find(split_bbs.cbegin(), split_bbs.cend(), curr_bb) !=
                   split_bbs.cend();
+  // bool wasSplit = false;
+ 
   llvm::Value *BBType = llvm::ConstantInt::get(
       llvm::IntegerType::getInt8Ty(context),
       static_cast<uint8_t>(polytracker::getType(curr_bb, DT) |
@@ -134,6 +136,9 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &fin
                                 ? polytracker::BasicBlockType::FUNCTION_RETURN
                                 : polytracker::BasicBlockType::UNKNOWN)),
       false);
+  
+  //llvm::Value *BBType = llvm::ConstantInt::get(llvm::IntegerType::getInt8Ty(context),
+   //(uint8_t)polytracker::BasicBlockType::UNKNOWN);
   if (curr_bb == entry_block) {
     // this is the entrypoint basic block in a function, so make sure the
     // BB instrumentation happens after the function call instrumentation
@@ -170,10 +175,12 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
 
-  llvm::removeUnreachableBlocks(*f);
+  //llvm::removeUnreachableBlocks(*f);
 
   std::vector<llvm::BasicBlock *> splitBBs = bbSplitter.analyzeFunction(*f);
-
+  // std::vector<llvm::BasicBlock *> splitBBs;
+  llvm::DominatorTree DT;
+  DT.recalculate(*f);
   // Instrument function entry here
   llvm::BasicBlock &bb = f->getEntryBlock();
   llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
@@ -185,8 +192,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   // Build the dominator tree for this function once blocks are split.
   // Used by the BBSplitting/entry analysis code
-  llvm::DominatorTree dominator_tree;
-  dominator_tree.recalculate(*f);
+  // llvm::DominatorTree dominator_tree;
+  // dominator_tree.recalculate(*f);
 
   // Collect basic blocks, don't confuse the iterator
   bb_index_t bb_index = 0;
@@ -195,12 +202,21 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   for (auto &bb : *f) {
     blocks.push_back(&bb);
     for (auto &inst : bb) {
-      insts.push_back(&inst);
+      if (auto bo = llvm::dyn_cast<llvm::BinaryOperator>(&inst)) {
+        insts.push_back(bo);
+      }
+      else if (auto call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+        insts.push_back(call);
+      }
+      else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
+        insts.push_back(cmp);
+      }
+      // insts.push_back(&inst);
     }
   }
 
   for (auto bb : blocks) {
-    analyzeBlock(f, func_index, bb, bb_index++, splitBBs, dominator_tree);
+    analyzeBlock(f, func_index, bb, bb_index++, splitBBs, DT);
   }
 
   // FIXME I don't like this
