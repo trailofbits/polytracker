@@ -313,12 +313,13 @@ void storeBlock(sqlite3 *output_db, const function_id_t &findex,
                 const block_id_t &bindex, uint8_t btype) {
   sqlite3_stmt *bb_stmt;
   const char *bb_stmt_insert =
-      "INSERT OR IGNORE INTO basic_block(id, block_attributes)"
-      "VALUES(?, ?);";
+      "INSERT OR IGNORE INTO basic_block(id, function_id, block_attributes)"
+      "VALUES(?, ?, ?);";
   sql_prep(output_db, bb_stmt_insert, -1, &bb_stmt, NULL);
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sqlite3_bind_int64(bb_stmt, 1, gid);
-  sqlite3_bind_int(bb_stmt, 2, btype);
+  sqlite3_bind_int64(bb_stmt, 2, findex);
+  sqlite3_bind_int(bb_stmt, 3, btype);
   sql_step(output_db, bb_stmt);
   sqlite3_finalize(bb_stmt);
 }
