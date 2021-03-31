@@ -90,7 +90,7 @@ class DBBasicBlock(Base, BasicBlock):
     id = Column(BigInteger, primary_key=True)
     attributes = Column("block_attributes", Integer, SQLEnum(BasicBlockType))
 
-    __table_args__ = (UniqueConstraint('id', 'block_attributes'),)
+    __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
     accessed_labels = relationship("AccessedLabel")
 
@@ -107,7 +107,11 @@ class AccessedLabel(Base):
     event = relationship("DBTraceEvent", back_populates="accessed_labels")
     basic_block = relationship("DBBasicBlock", back_populates="accessed_labels")
 
-    __table_args__ = (PrimaryKeyConstraint("block_gid", "event_id", "label", "input_id", "access_type"),)
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "block_gid", "event_id", "label", "input_id", "access_type"
+        ),
+    )
 
 
 class DBTraceEvent(Base):
@@ -122,9 +126,7 @@ class DBTraceEvent(Base):
 
     input = relationship("Input", back_populates="events")
 
-    __mapper_args__ = {
-        "polymorphic_on": "event_type"
-    }
+    __mapper_args__ = {"polymorphic_on": "event_type"}
 
     @property
     def uid(self) -> int:
@@ -151,8 +153,8 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
             BasicBlockEntry.trace.fset(self, pttrace)  # type: ignore
             consumed_bytes = []
             for taint_item in pttrace.session.query(TaintItem).filter(
-                    TaintItem.input_id == self.input_id
-                    and TaintItem.block_gid == self.global_index
+                TaintItem.input_id == self.input_id
+                and TaintItem.block_gid == self.global_index
             ):
                 consumed_bytes.append(taint_item.label)
             self.consumed = tuple(consumed_bytes)
@@ -171,15 +173,11 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
 
 
 class DBFunctionCall(DBTraceEvent, FunctionCall):
-    __mapper_args__ = {
-        "polymorphic_identity": EventType.FUNC_ENTER
-    }
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
 
 
 class DBFunctionReturn(DBTraceEvent, FunctionReturn):
-    __mapper_args__ = {
-        "polymorphic_identity": EventType.FUNC_RET
-    }
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
 
 
 class DBPolyTrackerTrace(PolyTrackerTrace):
