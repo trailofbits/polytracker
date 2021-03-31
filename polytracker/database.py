@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from pathlib import Path
 from typing import Iterable, Optional, Type, TypeVar, Union
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -148,8 +148,8 @@ class DBPolyTrackerTrace(PolyTrackerTrace):
         self.session: Session = session
 
     @staticmethod
-    def load(db_path: str) -> "DBPolyTrackerTrace":
-        engine = create_engine(f"sqlite:///{db_path}")
+    def load(db_path: Union[str, Path]) -> "DBPolyTrackerTrace":
+        engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
         return DBPolyTrackerTrace(session_maker())
 
