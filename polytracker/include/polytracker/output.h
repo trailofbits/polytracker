@@ -20,7 +20,8 @@ enum class ByteAccessType: uint8_t {
 enum EventType: uint8_t {
   FUNC_ENTER = 0,
   FUNC_RET = 1,
-  BLOCK_ENTER = 2
+  BLOCK_ENTER = 2,
+  TAINT_ACCESS = 3
 };
 
 enum EdgeType: uint8_t {
@@ -32,7 +33,7 @@ sqlite3* db_init(const std::string& db_path);
 void db_fini(sqlite3 * output_db);
 input_id_t storeNewInput(sqlite3 *output_db, const std::string& filename, const uint64_t& start, const uint64_t& end, const int& trace_level);
 void sql_exec(sqlite3 *output_db, const char *cmd);
-void storeTaintAccess(sqlite3 * output_db, const dfsan_label& label, const size_t &event_id, const function_id_t& findex, const block_id_t& bindex, 
+void storeTaintAccess(sqlite3 * output_db, const dfsan_label& label, const event_id_t &event_id, const function_id_t& findex, const block_id_t& bindex,
     const input_id_t& input_id, const int& thread_id, const ByteAccessType& access_type);
 
 void storeFunc(sqlite3 * output_db, const char* fname, const function_id_t& func_id);
@@ -43,11 +44,10 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
 						  const event_id_t& event_id,
                           EdgeType edgetype);
 void storeBlock(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, uint8_t btype);
-void storeBlockAccess(sqlite3 *output_db, const function_id_t& findex, const block_id_t& bindex, 
-    const input_id_t& input_id, const int& thread_id, const event_id_t& event_index);
 
 void storeEvent(sqlite3 * output_db, const input_id_t& input_id, const int& thread_id, 
-	const size_t& event_id, EventType event_type, const function_id_t& findex, const block_id_t& bindex);
+	const event_id_t& event_id, const event_id_t& thread_event_id, EventType event_type, const function_id_t& findex,
+	const block_id_t& bindex);
 
 void storeCanonicalMap(sqlite3* output_db, const input_id_t& input_id, const dfsan_label& label, const uint64_t& file_offset);
 

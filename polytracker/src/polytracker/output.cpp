@@ -234,21 +234,22 @@ void storeFunc(sqlite3 *output_db, const char *fname,
 }
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
-                const int &thread_id, const size_t &event_id,
+                const int &thread_id, const event_id_t &event_id, const event_id_t &thread_event_id,
                 EventType event_type, const function_id_t &findex,
                 const block_id_t &bindex) {
 
   sqlite3_stmt *stmt;
-  const char *insert = "INSERT OR IGNORE into events(event_id, event_type, "
+  const char *insert = "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
                        "input_id, thread_id, block_gid)"
-                       "VALUES (?, ?, ?, ?, ?)";
+                       "VALUES (?, ?, ?, ?, ?, ?)";
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
-  sqlite3_bind_int(stmt, 2, static_cast<int>(event_type));
-  sqlite3_bind_int64(stmt, 3, input_id);
-  sqlite3_bind_int(stmt, 4, thread_id);
-  sqlite3_bind_int(stmt, 5, gid);
+  sqlite3_bind_int64(stmt, 2, thread_event_id);
+  sqlite3_bind_int(stmt, 3, static_cast<int>(event_type));
+  sqlite3_bind_int64(stmt, 4, input_id);
+  sqlite3_bind_int(stmt, 5, thread_id);
+  sqlite3_bind_int(stmt, 6, gid);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }
@@ -272,43 +273,7 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }
-/*
-static void storeTaintFuncAccess(RuntimeInfo *runtime_info, sqlite3 *output_db,
-                                 const input_id_t &input_id) {
-  auto &events = runtime_info->trace.functionEvents;
-  sqlite3_stmt *stmt;
-  const char *insert = "INSERT OR IGNORE INTO accessed_label(block_gid, "
-                       "event_id, label, input_id, access_type)"
-                       "VALUES(?, ?, ?, ?, ?);";
-  sql_prep(output_db, insert, -1, &stmt, NULL);
-  std::unordered_map<uint32_t, bool> memoized_events;
-  for (int i = 0; i < events.size(); i++) {
-    auto &func_event = events[i];
-    if (func_event.is_cont) {
-      continue;
-    }
-    if (memoized_events.find(func_event.index.functionIndex()) !=
-        memoized_events.end()) {
-      continue;
-    }
-    auto &label_map =
-        runtime_info->trace.func_taint_labels[func_event.index.functionIndex()];
-    auto func_index = func_event.index.uid();
-    for (const auto &label_pair : label_map) {
-      sqlite3_bind_int64(stmt, 1, func_index);
-      sqlite3_bind_int64(stmt, 2, func_event.eventIndex);
-      sqlite3_bind_int(stmt, 3, label_pair.first);
-      // std::cout << "VSCODE " << input_id << std::endl;
-      sqlite3_bind_int(stmt, 4, input_id);
-      sqlite3_bind_int(stmt, 5, label_pair.second);
-      sql_step(output_db, stmt);
-      sqlite3_reset(stmt);
-    }
-    memoized_events[func_event.index.functionIndex()] = true;
-  }
-  sqlite3_finalize(stmt);
-}
-*/
+
 void storeBlock(sqlite3 *output_db, const function_id_t &findex,
                 const block_id_t &bindex, uint8_t btype) {
   sqlite3_stmt *bb_stmt;
@@ -322,25 +287,6 @@ void storeBlock(sqlite3 *output_db, const function_id_t &findex,
   sqlite3_bind_int(bb_stmt, 3, btype);
   sql_step(output_db, bb_stmt);
   sqlite3_finalize(bb_stmt);
-}
-
-void storeBlockAccess(sqlite3 *output_db, const function_id_t &findex,
-                      const block_id_t &bindex, const input_id_t &input_id,
-                      const int &thread_id, const event_id_t &event_index) {
-  sqlite3_stmt *instance_stmt;
-  const char *inst_stmt_insert =
-      "INSERT INTO block_instance(block_gid, event_id, input_id, thread_id)"
-      "VALUES(?, ?, ?, ?);";
-
-  sql_prep(output_db, inst_stmt_insert, -1, &instance_stmt, NULL);
-  uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
-
-  sqlite3_bind_int64(instance_stmt, 1, gid);
-  sqlite3_bind_int64(instance_stmt, 2, event_index);
-  sqlite3_bind_int64(instance_stmt, 3, input_id);
-  sqlite3_bind_int(instance_stmt, 4, thread_id);
-  sql_step(output_db, instance_stmt);
-  sqlite3_finalize(instance_stmt);
 }
 
 // When POLYFOREST is set we dump to disk instead of the database. This saves
