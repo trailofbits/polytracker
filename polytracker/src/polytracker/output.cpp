@@ -407,11 +407,12 @@ sqlite3 *db_init(const std::string &db_path) {
   sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL,
                &errorMessage);
-  sqlite3_exec(output_db, "PRAGMA journal_mode=MEMORY", NULL, NULL,
+  sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL,
                &errorMessage);
   sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
                &errorMessage);
-
+  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL,
+               &errorMessage);
   createDBTables(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
@@ -419,5 +420,8 @@ sqlite3 *db_init(const std::string &db_path) {
 
 void db_fini(sqlite3 *output_db) {
   storeVersion(output_db);
+  char * errorMessage;
+  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL,
+              &errorMessage);
   sqlite3_close(output_db);
 }
