@@ -59,6 +59,7 @@ extern "C" int __polytracker_has_label(dfsan_label label, dfsan_label elem) {
   return false;
 }
 
-#ifdef DEBUG_PASS
-dfsan_label dfsan_get_label(long data) { return 1337; }
-#endif
+// This will always get replaced by instrumentation
+// It exists here for instrumentation for tests
+// Rather than rework our build system, we can have this stub which gets transformed anyway
+// extern "C" dfsan_label dfsan_get_label(long data) { return 1337; }

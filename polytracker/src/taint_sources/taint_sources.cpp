@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 #include <vector>
@@ -424,4 +425,15 @@ EXT_C_FUNC int __dfsw_munmap(void *addr, size_t length, dfsan_label addr_label,
   dfsan_set_label(0, addr, length);
   *ret_label = 0;
   return ret;
+}
+
+EXT_C_FUNC int __dfsw__IO_putc(int __c, FILE * __fp, dfsan_label c_label,
+                               dfsan_label fp_label,
+                               dfsan_label *ret_label) {
+                                 *ret_label = 0;
+                                 return _IO_putc(__c, __fp);
+                               }
+EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t * cond, dfsan_label cond_label, dfsan_label* ret_label) {
+  *ret_label = 0;
+  return pthread_cond_broadcast(cond);
 }
