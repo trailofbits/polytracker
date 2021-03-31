@@ -72,7 +72,7 @@ void set_defaults() {
     taint_node_ttl = DEFAULT_TTL;
   }
   if (polytracker_db_name.empty()) {
-    polytracker_db_name = "polytracker";
+    polytracker_db_name = "polytracker.db";
   }
 }
 

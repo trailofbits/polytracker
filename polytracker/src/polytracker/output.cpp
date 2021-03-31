@@ -97,7 +97,7 @@ static input_id_t get_input_id(sqlite3 *output_db) {
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &dest,
                       const function_id_t &src, const event_id_t &event_id,
-                      const int edgetype) {
+                      EdgeType edgetype) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
                        "event_id, thread_id, input_id, edge_type)"
@@ -111,7 +111,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int64(stmt, 3, event_id);
   sqlite3_bind_int(stmt, 4, curr_thread_id);
   sqlite3_bind_int64(stmt, 5, input_id);
-  sqlite3_bind_int64(stmt, 6, edgetype);
+  sqlite3_bind_int(stmt, 6, static_cast<int>(edgetype));
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
   // sqlite3_reset(stmt);
@@ -235,7 +235,7 @@ void storeFunc(sqlite3 *output_db, const char *fname,
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const int &thread_id, const size_t &event_id,
-                const int &event_type, const function_id_t &findex,
+                EventType event_type, const function_id_t &findex,
                 const block_id_t &bindex) {
 
   sqlite3_stmt *stmt;
@@ -245,7 +245,7 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
-  sqlite3_bind_int64(stmt, 2, event_type);
+  sqlite3_bind_int(stmt, 2, static_cast<int>(event_type));
   sqlite3_bind_int64(stmt, 3, input_id);
   sqlite3_bind_int(stmt, 4, thread_id);
   sqlite3_bind_int(stmt, 5, gid);
@@ -268,7 +268,7 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sqlite3_bind_int64(stmt, 2, event_id);
   sqlite3_bind_int64(stmt, 3, label);
   sqlite3_bind_int(stmt, 4, input_id);
-  sqlite3_bind_int(stmt, 5, access_type);
+  sqlite3_bind_int(stmt, 5, static_cast<int>(access_type));
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }
@@ -397,7 +397,7 @@ void storeVersion(sqlite3 *output_db) {
 }
 
 sqlite3 *db_init(const std::string &db_path) {
-  const std::string db_name = db_path + ".db";
+  const std::string db_name = db_path;
   sqlite3 *output_db;
   if (sqlite3_open(db_name.c_str(), &output_db)) {
     std::cout << "Error! Could not open output db " << db_path << std::endl;
@@ -407,12 +407,10 @@ sqlite3 *db_init(const std::string &db_path) {
   sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL,
                &errorMessage);
-  sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL,
-               &errorMessage);
+  sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
                &errorMessage);
-  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL,
-               &errorMessage);
+  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL, &errorMessage);
   createDBTables(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
@@ -420,8 +418,7 @@ sqlite3 *db_init(const std::string &db_path) {
 
 void db_fini(sqlite3 *output_db) {
   storeVersion(output_db);
-  char * errorMessage;
-  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL,
-              &errorMessage);
+  char *errorMessage;
+  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL, &errorMessage);
   sqlite3_close(output_db);
 }

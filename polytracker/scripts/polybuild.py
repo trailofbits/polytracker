@@ -263,20 +263,19 @@ def do_everything(argv: List[str]):
     assert os.path.exists(temp_bc)
 
     # Lower bitcode. Creates a .o
-    if is_cxx:
-        result = subprocess.call(["gclang++", "-fPIC", "-c", temp_bc])
-    else:
-        result = subprocess.call(["gclang", "-fPIC", "-c", temp_bc])
-    assert result == 0
     obj_file = output_file + "_temp.o"
+    if is_cxx:
+        compiler = "gclang++"
+    else:
+        compiler = "gclang"
+    result = subprocess.call([compiler, "-fPIC", "-c", temp_bc, "-o", obj_file])
+    assert result == 0
 
     # Compile into executable
-    if is_cxx:
-        re_comp = ["gclang++"]
-    else:
-        re_comp = ["gclang"]
-    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
-                    "-Wl,--start-group", "-lc++abi"])
+    re_comp = [
+        compiler, "-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
+        "-Wl,--start-group", "-lc++abi"
+    ]
     re_comp.extend(POLYCXX_LIBS)
     re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)

@@ -1,34 +1,56 @@
-from abc import ABCMeta
-from typing import Iterable, Optional, Type, TypeVar, Union
+from enum import IntEnum, IntFlag
+from pathlib import Path
+from typing import Iterable, Optional, Union
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.orm.session import Session
 from sqlalchemy import (
+    BigInteger,
     Column,
     create_engine,
-    Integer,
-    BigInteger,
-    PrimaryKeyConstraint,
-    UniqueConstraint,
-    Text,
+    Enum as SQLEnum,
     ForeignKey,
+    Integer,
+    PrimaryKeyConstraint,
+    Text,
+    SmallInteger,
+    UniqueConstraint,
 )
 
 from .tracing import (
+    BasicBlock,
+    BasicBlockEntry,
+    BasicBlockType,
+    Function,
     FunctionCall,
     FunctionReturn,
-    TraceEvent,
     PolyTrackerTrace,
-    BasicBlockEntry,
-    BasicBlock,
-    Function,
+    TraceEvent,
 )
 
 Base = declarative_base()
 
 
-class InputItem(Base):
+class ByteAccessType(IntFlag):
+    UNKNOWN_ACCESS = 0
+    INPUT_ACCESS = 1
+    CMP_ACCESS = 2
+    READ_ACCESS = 4
+
+
+class EventType(IntEnum):
+    FUNC_ENTER = 0
+    FUNC_RET = 1
+    BLOCK_ENTER = 2
+
+
+class EdgeType(IntEnum):
+    FORWARD = 0
+    BACKWARD = 1
+
+
+class Input(Base):
     __tablename__ = "input"
     id = Column(Integer, primary_key=True)
     path = Column(Text)
@@ -37,34 +59,78 @@ class InputItem(Base):
     size = Column(BigInteger)
     trace_level = Column(Integer)
 
+    events = relationship("DBTraceEvent")
 
-class FunctionItem(Base):
+
+class DBFunction(Base):
     __tablename__ = "func"
     id = Column(Integer, primary_key=True)
     name = Column(Text)
 
 
-class BasicBlockItem(Base):
+class FunctionCFG(Base):
+    __tablename__ = "func_cfg"
+    dest_id = Column("dest", Integer, ForeignKey("func.id"))
+    src_id = Column("src", Integer, ForeignKey("func.id"))
+    input_id = Column(Integer, ForeignKey("input.id"))
+    thread_id = Column(Integer)
+    event_id = Column(BigInteger, ForeignKey("events.event_id"))
+    edge_type = Column(SmallInteger, SQLEnum(EdgeType))
+
+    dest = relationship("DBFunction", remote_side=[dest_id])
+    src = relationship("DBFunction", remote_side=[src_id])
+    input = relationship("Input")
+    event = relationship("DBTraceEvent")
+
+    __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
+
+
+class DBBasicBlock(Base, BasicBlock):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
-    block_attributes = Column(Integer)
-    # __table_args__ = (UniqueConstraint('id', 'block_attributes'),)
+    attributes = Column("block_attributes", Integer, SQLEnum(BasicBlockType))
+
+    __table_args__ = (UniqueConstraint("id", "block_attributes"),)
+
+    accessed_labels = relationship("AccessedLabel")
 
 
-T = TypeVar("T", bound=TraceEvent)
+class AccessedLabel(Base):
+    __tablename__ = "accessed_label"
+    block_gid = Column(BigInteger, ForeignKey("basic_block.id"))
+    event_id = Column(BigInteger, ForeignKey("events.event_id"))
+    label = Column(Integer)
+    input_id = Column(Integer)
+    access_type = Column(SmallInteger, SQLEnum(ByteAccessType))
+    thread_id = Column(Integer)
+
+    event = relationship("DBTraceEvent", back_populates="accessed_labels")
+    basic_block = relationship("DBBasicBlock", back_populates="accessed_labels")
+
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "block_gid", "event_id", "label", "input_id", "access_type"
+        ),
+    )
 
 
-class DBTraceEvent:
-    BASE_EVENT_TYPE: Type[TraceEvent]
+class DBTraceEvent(Base):
+    __tablename__ = "events"
+    event_id = Column(BigInteger)
+    event_type = Column(SmallInteger, SQLEnum(EventType))
+    input_id = Column(Integer, ForeignKey("input.id"))
+    thread_id = Column(Integer)
+    block_gid = Column(BigInteger)
 
-    def __class_getitem__(
-        cls, trace_event_type: Type[T]
-    ) -> Type[Union["DBTraceEvent", T]]:
-        return type(
-            f"DB{trace_event_type.__name__}Mixin",
-            (DBTraceEvent, trace_event_type),
-            {"BASE_EVENT_TYPE": trace_event_type},
-        )
+    __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
+
+    input = relationship("Input", back_populates="events")
+
+    __mapper_args__ = {"polymorphic_on": "event_type"}
+
+    @property
+    def uid(self) -> int:
+        return self.event_id
 
     @property
     def previous_uid(self) -> Optional[int]:
@@ -76,19 +142,10 @@ class DBTraceEvent:
         return self.uid + 1
 
 
-class DBBasicBlockEntry(Base, DBTraceEvent[BasicBlockEntry]):
-    __tablename__ = "block_instance"
-    uid = Column("event_id", BigInteger)
-    function_call_uid = Column(
-        "function_call_id", Integer, ForeignKey("func_call.event_id")
-    )
-    global_index = Column("block_gid", BigInteger, ForeignKey("basic_block.id"))
-    entry_count = Column(BigInteger)
-    thread_id = Column(Integer)
-    input_id = Column(Integer, ForeignKey("input.id"))
-    __table_args__ = (PrimaryKeyConstraint("event_id", "thread_id", "input_id"),)
-
-    consumed: Iterable[int] = ()
+class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
+    __mapper_args__ = {
+        "polymorphic_identity": EventType.BLOCK_ENTER,
+    }
 
     @BasicBlockEntry.trace.setter  # type: ignore
     def trace(self, pttrace: "PolyTrackerTrace"):
@@ -115,32 +172,12 @@ class DBBasicBlockEntry(Base, DBTraceEvent[BasicBlockEntry]):
         return (self.func_gid >> 32) & 0xFFFF
 
 
-class DBFunctionReturn(Base, DBTraceEvent[FunctionReturn]):
-    __tablename__ = "func_ret"
-    uid = Column("event_id", BigInteger)
-    function_index = Column(Integer, ForeignKey("func.id"))
-    returning_to_uid = Column("ret_event_uid", BigInteger)
-    call_event_uid = Column(BigInteger)
-    thread_id = Column(Integer)
-    input_id = Column(Integer, ForeignKey("input.id"))
-
-    __table_args__ = (PrimaryKeyConstraint("input_id", "thread_id", "event_id"),)
+class DBFunctionCall(DBTraceEvent, FunctionCall):
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
 
 
-class DBFunctionCall(Base, DBTraceEvent[FunctionCall]):
-    __tablename__ = "func_call"
-    uid = Column("event_id", BigInteger)
-    function_index = Column(Integer, ForeignKey("func.id"))
-    callee_index = Column(BigInteger)
-    return_uid = Column("ret_event_uid", BigInteger)
-    _consumes_bytes = Column("consumes_bytes", Integer)
-    thread_id = Column(Integer)
-    input_id = Column(Integer, ForeignKey("input.id"))
-    __table_args__ = (PrimaryKeyConstraint("event_id", "thread_id", "input_id"),)
-
-    @property
-    def consumes_bytes(self) -> bool:
-        return bool(self._consumes_bytes)
+class DBFunctionReturn(DBTraceEvent, FunctionReturn):
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
 
 
 class DBPolyTrackerTrace(PolyTrackerTrace):
@@ -148,8 +185,8 @@ class DBPolyTrackerTrace(PolyTrackerTrace):
         self.session: Session = session
 
     @staticmethod
-    def load(db_path: str) -> "DBPolyTrackerTrace":
-        engine = create_engine(f"sqlite:///{db_path}")
+    def load(db_path: Union[str, Path]) -> "DBPolyTrackerTrace":
+        engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
         return DBPolyTrackerTrace(session_maker())
 
@@ -177,21 +214,6 @@ class DBPolyTrackerTrace(PolyTrackerTrace):
         pass
 
 
-class TaintItem(Base):
-    __tablename__ = "accessed_label"
-    block_gid = Column(BigInteger, ForeignKey("block_instance.block_gid"))
-    event_id = Column(BigInteger)
-    label = Column(Integer)
-    input_id = Column(Integer, ForeignKey("input.id"))
-    access_type = Column(Integer)
-    __table_args__ = (
-        PrimaryKeyConstraint(
-            "event_id", "block_gid", "label", "input_id", "access_type"
-        ),
-        UniqueConstraint("block_gid", "label", "input_id"),
-    )
-
-
 class PolytrackerItem(Base):
     __tablename__ = "polytracker"
     store_key = Column(Text)
@@ -213,15 +235,6 @@ class TaintedChunksItem(Base):
     start_offset = Column(BigInteger)
     end_offset = Column(BigInteger)
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
-
-
-class FunctionCFGItem(Base):
-    __tablename__ = "func_cfg"
-    callee = Column(Integer, ForeignKey("func.id"))
-    caller = Column(Integer, ForeignKey("func.id"))
-    input_id = Column(Integer, ForeignKey("input.id"))
-    event_id = Column(BigInteger)
-    __table_args__ = (PrimaryKeyConstraint("input_id", "callee", "caller"),)
 
 
 class TaintForestItem(Base):

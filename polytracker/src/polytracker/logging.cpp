@@ -13,12 +13,6 @@
 #include <tuple>
 #include <unordered_map>
 
-#define FORWARD_EDGE 0
-#define BACKWARD_EDGE 1
-#define FUNC_ENTER 0
-#define FUNC_RET 1
-#define BLOCK_ENTER 2
-
 extern char *forest_mem;
 extern input_id_t input_id;
 extern sqlite3 *output_db;
@@ -47,13 +41,13 @@ static void assignThreadID() {
 void logCompare(const dfsan_label &label, const function_id_t &findex,
                 const block_id_t &bindex) {
   storeTaintAccess(output_db, label, event_id++, findex, bindex, input_id,
-                   thread_id, CMP_ACCESS);
+                   thread_id, ByteAccessType::CMP_ACCESS);
 }
 
 void logOperation(const dfsan_label &label, const function_id_t &findex,
                   const block_id_t &bindex) {
   storeTaintAccess(output_db, label, event_id++, findex, bindex, input_id,
-                   thread_id, INPUT_ACCESS);
+                   thread_id, ByteAccessType::INPUT_ACCESS);
 }
 
 thread_local bool recursive = false;
@@ -76,8 +70,9 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   storeFunc(output_db, fname, func_id);
   // Func CFG edges added by funcExit (as it knows the return location)
   storeFuncCFGEdge(output_db, input_id, thread_id, func_id, curr_func_index,
-                   event_id++, FORWARD_EDGE);
-  storeEvent(output_db, input_id, thread_id, event_id, FUNC_ENTER, func_id, 0);
+                   event_id++, EdgeType::FORWARD);
+  storeEvent(output_db, input_id, thread_id, event_id, EventType::FUNC_ENTER,
+             func_id, 0);
   if (UNLIKELY(func_id == curr_func_index)) {
     recursive_funcs[func_id] = true;
   }
@@ -95,8 +90,9 @@ void logFunctionExit(const function_id_t &index) {
   if (curr_func_index != index ||
       (recursive_funcs.find(curr_func_index) != recursive_funcs.end())) {
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
-                     event_id++, BACKWARD_EDGE);
-    storeEvent(output_db, input_id, thread_id, event_id, FUNC_RET, index, 0);
+                     event_id++, EdgeType::BACKWARD);
+    storeEvent(output_db, input_id, thread_id, event_id, EventType::FUNC_RET,
+               index, 0);
   }
   curr_func_index = index;
 }
@@ -107,7 +103,7 @@ void logBBEntry(const char *fname, const function_id_t &findex,
   // NOTE (Carson) we could memoize this to prevent repeated calls for loop
   // blocks
   storeBlock(output_db, findex, bindex, btype);
-  storeEvent(output_db, input_id, thread_id, event_id++, BLOCK_ENTER, findex,
-             bindex);
+  storeEvent(output_db, input_id, thread_id, event_id++, EventType::BLOCK_ENTER,
+             findex, bindex);
   curr_block_index = bindex;
 }
