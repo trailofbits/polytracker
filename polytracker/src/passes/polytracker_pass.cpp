@@ -354,7 +354,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
         auto remainingSeconds = static_cast<int>(static_cast<float>(functions.size() - i) / functionsPerSecond + 0.5);
         auto remainingMinutes = remainingSeconds / 60;
         remainingSeconds %= 60;
-        if (remainingMinutes > 60) {
+        if (remainingMinutes >= 60) {
             std::cerr << (remainingMinutes / 60) << ":";
             remainingMinutes %= 60;
         }
