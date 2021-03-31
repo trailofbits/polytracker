@@ -97,7 +97,7 @@ static input_id_t get_input_id(sqlite3 *output_db) {
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &dest,
                       const function_id_t &src, const event_id_t &event_id,
-                      const int edgetype) {
+                      EdgeType edgetype) {
   sqlite3_stmt *stmt;
   const char *insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
                        "event_id, thread_id, input_id, edge_type)"
