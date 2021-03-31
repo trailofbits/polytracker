@@ -359,7 +359,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
             remainingMinutes %= 60;
         }
         std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes << ":";
-        std::cerr << std::setfill('0') << std::setw(2) << std::remainingSeconds;
+        std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
       }
       std::cerr << ", " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
     }
