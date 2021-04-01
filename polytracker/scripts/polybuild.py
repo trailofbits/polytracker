@@ -20,185 +20,315 @@
   against the compiler-rt based runtime pre_init_array. This allows the user to extract BC for whatever DSOs and executables they want, while still being
   able to easily include other libraries they did not want tracking in.
 """
-from collections import defaultdict
 import argparse
 import os
-import tempfile
 import sys
 import subprocess
+from multiprocessing import Process, Manager
 from typing import List, Optional
-from dataclasses import dataclass
+import json
+import sqlite3
 
+"""
+Polybuild is supposed to do a few things. 
+
+1. It provides a wrapper to quickly build simple test targets.
+2. It instruments and optimizes whole program bitcode 
+3. During more complex builds, it swaps out clang for gclang and uses our libcxx
+4. It records the build steps and build artifacts to link against later
+5. Lower bitcode and link with some libraries (used for example docker files like MuPDF)
+"""
 
 SCRIPT_DIR: str = os.path.dirname(os.path.realpath(__file__))
 COMPILER_DIR: str = os.path.realpath(os.path.join(SCRIPT_DIR, ".."))
-
 
 if not os.path.isdir(COMPILER_DIR):
     sys.stderr.write(f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
     sys.exit(1)
 
+POLY_PASS_PATH: str = os.path.join(COMPILER_DIR, "pass", "libPolytrackerPass.so")
+assert os.path.exists(POLY_PASS_PATH)
 
-@dataclass
-class CompilerMeta:
-    is_cxx: bool
-    compiler_dir: str
+POLY_LIB_PATH: str = os.path.join(COMPILER_DIR, "lib", "libPolytracker.a")
+assert os.path.exists(POLY_LIB_PATH)
+
+ABI_LIST_PATH: str = os.path.join(COMPILER_DIR, "abi_lists", "polytracker_abilist.txt")
+assert os.path.exists(ABI_LIST_PATH)
+
+ABI_PATH: str = os.path.join(COMPILER_DIR, "abi_lists")
+
+is_cxx: bool = "++" in sys.argv[0]
+
+# FIXME (Carson) Ask Evan about his path stuff again? He has a pythonic way without os path joins
+CXX_DIR_PATH: str = os.getenv("CXX_LIB_PATH")
+assert CXX_DIR_PATH is not None
+assert os.path.exists(CXX_DIR_PATH)
+
+DFSAN_LIB_PATH: str = os.getenv("DFSAN_LIB_PATH")
+assert DFSAN_LIB_PATH is not None
+assert os.path.exists(DFSAN_LIB_PATH)
+
+ARTIFACT_STORE_PATH: str = os.getenv("WLLVM_ARTIFACT_STORE")
+assert ARTIFACT_STORE_PATH is not None
+assert os.path.exists(ARTIFACT_STORE_PATH)
+
+MANIFEST_FILE: str = f"{ARTIFACT_STORE_PATH}/manifest.db"
+db_conn = sqlite3.connect(MANIFEST_FILE)
+cur = db_conn.cursor()
+cur.execute("CREATE TABLE IF NOT EXISTS manifest (target TEXT, artifact TEXT);")
+db_conn.commit()
+db_conn.close()
+
+CXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "clean_build/include/c++/v1")
+CXX_LIB_PATH = os.path.join(CXX_DIR_PATH, "clean_build/lib")
+# POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
+POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++.a"),
+                os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++abi.a"),
+                POLY_LIB_PATH, "-lsqlite3", "-lm"]
+# TODO (Carson), double check, also maybe need -ldl?
+LINK_LIBS = [os.path.join(CXX_LIB_PATH, "libc++.a"),
+             os.path.join(CXX_LIB_PATH, "libc++abi.a"), "-lpthread"]
 
 
-class PolyBuilder:
-    def __init__(self, is_cxx):
-        self.meta = CompilerMeta(is_cxx, COMPILER_DIR)
+# Helper function, check to see if non linking options are present.
+def is_linking(argv) -> bool:
+    nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
+    for option in argv:
+        if option in nonlinking_options:
+            return False
+    return True
 
-    def poly_check_cxx(self, compiler: str) -> bool:
-        """
-        Checks if compiling a c++ or c program
-        """
-        if compiler.find("++") != -1:
+
+def is_building(argv) -> bool:
+    build_options = ["-c", "-o"]
+    for option in argv:
+        if option in build_options:
             return True
-        return False
-
-    def poly_is_linking(self, argv) -> bool:
-        nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
-        for option in argv:
-            if option in nonlinking_options:
-                return False
-        return True
-
-    def poly_add_inst_lists(self, directory: str) -> Optional[List[str]]:
-        """
-        Adds a directory of lists to the instrumentation
-        """
-        dir_path = os.path.join(self.meta.compiler_dir, "abi_lists", directory)
-        file_list = []
-        if not os.path.exists(dir_path):
-            print(f"Error! {dir_path} not found!")
-            return None
-        dir_ents = os.listdir(dir_path)
-        for file in dir_ents:
-            if file != "." and file != "..":
-                file_list.append(os.path.join(dir_path, file))
-        return file_list
-
-    def poly_compile(self, bitcode_path: str, output_path: str, libs: List[str]) -> bool:
-        """
-        This function builds the compile command to instrument the whole program bitcode
-        """
-        compile_command = []
-        source_dir = os.path.join(self.meta.compiler_dir, "lib", "libTaintSources.a")
-        rt_dir = os.path.join(self.meta.compiler_dir, "lib", "libdfsan_rt-x86_64.a")
-        poly_dir = os.path.join(self.meta.compiler_dir, "lib", "libPolytracker.a")
-        if self.meta.is_cxx:
-            compile_command.append("clang++")
-        else:
-            compile_command.append("clang")
-        compile_command += ["-pie", "-fPIC"]
-        optimize = os.getenv("POLYCLANG_OPTIMIZE")
-        if optimize is not None:
-            compile_command.append("-O3")
-        # -lpthread -Wl,--whole-archive libdfsan_rt-x86_64.a -Wl,--no-whole-archive libTaintSources.a -ldl -lrt -lstdc++
-        compile_command += ["-g", "-o", output_path, bitcode_path]
-        compile_command.append("-lpthread")
-        compile_command += ["-Wl,--whole-archive", rt_dir, "-Wl,--no-whole-archive", source_dir, poly_dir]
-        compile_command += ["-ldl", "-lrt"]
-        compile_command.append("-lstdc++")
-        for lib in libs:
-            if ".a" not in lib and ".o" not in lib:
-                compile_command.append("-l" + lib)
-            else:
-                compile_command.append(lib)
-        ret_code = subprocess.call(compile_command)
-        if ret_code != 0:
-            print(f"Error! Failed to execute compile command: {' '.join(compile_command)}")
-            return False
-        return True
-
-    def poly_opt(self, input_file: str, bitcode_file: str) -> bool:
-        opt_command = ["opt", "-O0",
-                       "-load", os.path.join(self.meta.compiler_dir, "pass", "libDataFlowSanitizerPass.so")]
-        ignore_list_files: Optional[List[str]] = self.poly_add_inst_lists("ignore_lists")
-        if ignore_list_files is None:
-            print("Error! Failed to add ignore lists")
-            return False
-        track_list_files: Optional[List[str]] = self.poly_add_inst_lists("track_lists")
-        if track_list_files is None:
-            print("Error! Failed to add track_lists")
-            return False
-        for file in ignore_list_files:
-            opt_command.append("-polytrack-dfsan-abilist=" + file)
-        for file in track_list_files:
-            opt_command.append("-polytrack-dfsan-abilist=" + file)
-        opt_command += [input_file, "-o", bitcode_file]
-        ret_code = subprocess.call(opt_command)
-        if ret_code != 0:
-            print(f"Error! opt command failed: {' '.join(opt_command)}")
-            return False
-        if not os.path.exists(bitcode_file):
-            print("Error! Bitcode file does not exist!")
-            return False
-        return True
-
-    def poly_instrument(self, input_file, output_file, bitcode_file, libs) -> bool:
-        res = self.poly_opt(input_file, bitcode_file)
-        if not res:
-            print(f"Error instrumenting bitcode {input_file} with opt!")
-            return False
-        res = self.poly_compile(bitcode_file, output_file, libs)
-        if not res:
-            print(f"Error compiling bitcode!")
-            return False
-        return True
-
-    # TODO add qUnusedArgs here
-    def poly_build(self, argv) -> bool:
-        compile_command = []
-        if self.meta.is_cxx:
-            compile_command.append("gclang++")
-        else:
-            compile_command.append("gclang")
-        compile_command += ["-pie", "-fPIC"]
-        if self.meta.is_cxx:
-            compile_command.append("-stdlib=libc++")
-            compile_command.append("-nostdinc++")
-            compile_command.append("-I" + os.path.join(self.meta.compiler_dir, "cxx_libs", "include", "c++", "v1"))
-            compile_command.append("-L" + os.path.join(self.meta.compiler_dir, "cxx_libs", "lib"))
-        for arg in argv[1:]:
-            if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
-                continue
-            compile_command.append(arg)
-        is_linking = self.poly_is_linking(argv)
-        if is_linking:
-            # If its cxx, link in our c++ libs
-            if self.meta.is_cxx:
-                compile_command += ["-lc++", "-lc++abipoly", "-lc++abi", "-lpthread"]
-        res = subprocess.call(compile_command)
-        if res != 0:
-            return False
-        return True
+    return False
 
 
-"""
-Store a build artifact to the artifact storage via copy
-"""
+# (2)
+def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None, file_id=None) -> str:
+    """
+    Instruments bitcode with polytracker instrumentation
+    Instruments that with dfsan instrumentation
+    Optimizes it all, asserts the output file exists.
+    """
+    opt_command = ["opt", "-O3", bitcode_file, "-o", bitcode_file]
+    ret = subprocess.call(opt_command)
+    if ignore_lists is None:
+        ignore_lists = []
+    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
+    if file_id is not None:
+        opt_command.append(f"-file-id={file_id}")
+    for item in ignore_lists:
+        opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
+    opt_command += [bitcode_file, "-o", output_bc]
+    ret = subprocess.call(opt_command)
+    assert ret == 0
+    opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
+    for item in ignore_lists:
+        opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+    opt_command += [output_bc, "-o", output_bc]
+    ret = subprocess.call(opt_command)
+    assert ret == 0
+    # TODO (Carson)
+    opt_command = ["opt", "-O3", output_bc, "-o", output_bc]
+    ret = subprocess.call(opt_command)
+    # opt_command = ["opt", "-O2", output_bc, "-o", output_bc]
+    # ret = subprocess.call(opt_command)
+    assert ret == 0
+    assert os.path.exists(output_bc)
+    return output_bc
 
 
-def store_artifact(file_path, artifact_path) -> bool:
+# (3)
+# NOTE (Carson), no static here, but there might be times where we get-bc on libcxx and llvm-link some bitcode together
+def modify_exec_args(argv: List[str]):
+    """
+    Replaces clang with gclang, uses our libcxx, and links our libraries if needed
+    """
+    compile_command = []
+    if is_cxx:
+        compile_command.append("gclang++")
+    else:
+        compile_command.append("gclang")
+
+    building: bool = is_building(argv)
+    linking: bool = is_linking(argv)
+    if building:
+        if linking and is_cxx:
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
+        elif is_cxx:
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}"])
+
+    if not building and linking and is_cxx:
+        compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH}"])
+
+    for arg in argv[1:]:
+        if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
+            continue
+        compile_command.append(arg)
+
+    # If linking, need to add in libc++.a, libc++abi.a, pthread.
+    if linking:
+        compile_command.append("-Wl,--start-group")
+        compile_command.extend(LINK_LIBS)
+        compile_command.append("-Wl,--end-group")
+    ret = subprocess.call(compile_command)
+    assert ret == 0
+
+
+# (4)
+def store_artifact(file_path):
     filename = os.path.basename(file_path)
-    artifact_file_path = os.path.join(artifact_path, filename)
+    artifact_file_path = os.path.join(ARTIFACT_STORE_PATH, filename)
+    if os.path.exists(artifact_file_path):
+        return
     # Check if its an absolute path
     if file_path[0] != "/":
         cwd = os.getcwd()
         targ_path = os.path.join(cwd, file_path)
     else:
         targ_path = file_path
-    if not os.path.exists(targ_path):
-        print(f"Error! cannot find {targ_path}")
-        return False
+    assert os.path.exists(targ_path)
     ret = subprocess.call(["cp", targ_path, artifact_file_path])
+    assert ret == 0
+
+
+def handle_non_build(argv: List[str]):
+    cc = []
+    if is_cxx:
+        cc.append("gclang++")
+    else:
+        cc.append("gclang")
+    for arg in argv[1:]:
+        if arg == "-qversion":
+            cc.append("--version")
+            continue
+        cc.append(arg)
+    result = subprocess.call(cc)
+    assert result == 0
+
+
+# This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
+# First, figure out whats being built by looking for -o or -c
+# Returns the output file for convience
+def handle_cmd(argv: List[str]) -> Optional[str]:
+    # If not building, then we are not producing an object with -o or -c
+    # We might just be checking something like a version. So just do whatever.
+    building: bool = is_building(argv)
+    if not building:
+        handle_non_build(argv)
+        return None
+
+    # Build the object
+    modify_exec_args(argv)
+    # Store artifacts.
+    output_file: Optional[str] = None
+    for index, arg in enumerate(argv):
+        if arg == "-o":
+            output_file = argv[index + 1]
+        if arg == "-c":
+            output_file = argv[index + 1].replace(".c", ".o")
+    assert output_file is not None
+
+    # Look for artifacts.
+    artifacts = []
+    for arg in argv:
+        # if its a static library, or an object.
+        if arg.endswith(".o") or arg.endswith(".a"):
+            artifacts.append(arg)
+            store_artifact(arg)
+
+    conn = sqlite3.connect(MANIFEST_FILE)
+    cur = conn.cursor()
+    for art in artifacts:
+        query = f"""INSERT INTO manifest (target, artifact) VALUES ("{os.path.realpath(output_file)}", "{os.path.realpath(art)}");"""
+        cur.execute(query)
+    conn.commit()
+    conn.close()
+    return output_file
+
+
+# (1)
+def do_everything(argv: List[str]):
+    """
+    Builds target
+    Extracts bitcode from target
+    Instruments bitcode
+    Recompiles executable.
+    """
+    output_file = handle_cmd(argv)
+    get_bc = ["get-bc", "-b", output_file]
+    ret = subprocess.call(get_bc)
+    assert ret == 0
+    bc_file = output_file + ".bc"
+    assert os.path.exists(bc_file)
+    temp_bc = output_file + "_temp.bc"
+    instrument_bitcode(bc_file, temp_bc)
+    assert os.path.exists(temp_bc)
+
+    # Lower bitcode. Creates a .o
+    obj_file = output_file + "_temp.o"
+    if is_cxx:
+        compiler = "gclang++"
+    else:
+        compiler = "gclang"
+    result = subprocess.call([compiler, "-fPIC", "-c", temp_bc, "-o", obj_file])
+    assert result == 0
+
+    # Compile into executable
+    re_comp = [
+        compiler, "-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file,
+        "-Wl,--allow-multiple-definition",
+        "-Wl,--start-group", "-lc++abi"
+    ]
+    re_comp.extend(POLYCXX_LIBS)
+    re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
+    ret = subprocess.call(re_comp)
+    assert ret == 0
+
+
+def lower_bc(input_bitcode, output_file, libs=None):
+    # Lower bitcode. Creates a .o
+    if is_cxx:
+        result = subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode])
+    else:
+        result = subprocess.call(["gclang", "-fPIC", "-c", input_bitcode])
+    assert result == 0
+    obj_file = input_bitcode.replace(".bc", ".o")
+
+    # Compile into executable
+    if is_cxx:
+        re_comp = ["gclang++"]
+    else:
+        re_comp = ["gclang"]
+    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
+                    "-Wl,--start-group", "-lc++abi"])
+    re_comp.extend(POLYCXX_LIBS)
+    for lib in libs:
+        if lib.endswith(".a") or lib.endswith(".o"):
+            re_comp.append(lib)
+        else:
+            re_comp.append(f"-l{lib}")
+    re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
+    ret = subprocess.call(re_comp)
+    assert ret == 0
+
+
+def replay_build_instance(artifact: str, file_id: int, ignore_lists, non_track_artifacts, bc_files):
+    output_bc = artifact + "_output.bc"
+    input_bc = str(file_id) + "_temp.bc"
+    get_bc = ["get-bc", "-o", input_bc, "-b", artifact]
+    ret = subprocess.call(get_bc)
     if ret != 0:
-        print(f"Error! failed to store {targ_path}, error was {ret}")
-        print(f"Artifact path: {artifact_file_path}")
-        return False
-    return True
+        print(f"Error getting BC for {artifact}")
+        print("Continuing anyway because that just might be an external library!")
+        non_track_artifacts.append(artifact)
+        return
+    bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
+    bc_files.append(bc_file)
 
 
 def main():
@@ -207,134 +337,107 @@ def main():
     Compiler wrapper around gllvm and instrumentation driver for PolyTracker
 
     For programs with a simple build system, you can quickstart the process
-    by invoking:  
+    by invoking: 
+        polybuild --instrument-target <your flags here> -o <output_file> 
 
-    Compile normally by invoking polybuild <whatever your arguments are> 
-    These arguments will get passed to gclang/gclang++
+    Instrumenting bitcode example:
+        polybuild --instrument-bitcode -i input.bc -o output.bc 
+    
+    Lowering bitcode (just compiles into an executable and links) example: 
+        polybuild --lower-bitcode -i input.bc -o output --libs pthread
 
-    Extract the bitcode from the built target
-    get-bc -b <target_binary> 
-
-    OPTIONAL: Link multiple bitcode files together with llvm-link
-
-    Instrument that whole program bitcode file by invoking 
-    polybuild --instrument-bitcode -f <bitcode_file.bc> -o <output_file> 
+    Run normally with gclang/gclang++:
+        polybuild <normal args> 
+    
+    Get bitcode from gclang built executables with get-bc -b 
     """
     )
     parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
-    parser.add_argument("--input-file", "-f", type=str, help="Path to the whole program bitcode file")
-    parser.add_argument(
-        "--output-bitcode",
-        "-b",
-        type=str,
-        default="/tmp/temp_bitcode.bc",
-        help="Outputs the bitcode file produced by opt, useful for debugging",
-    )
+    parser.add_argument("--input-file", "-i", type=str, help="Path to the whole program bitcode file")
     parser.add_argument("--output-file", "-o", type=str, help="Specify binary output path")
     parser.add_argument(
         "--instrument-target", action="store_true", help="Specify to build a single source file " "with instrumentation"
     )
-
+    parser.add_argument(
+        "--lower-bitcode", action="store_true", help="Specify to compile bitcode into an object file"
+    )
+    parser.add_argument(
+        "--file-id", type=int, help="File id for lowering bitcode in parallel"
+    )
+    parser.add_argument(
+        "--rebuild-track", type=str, help="full path to artifact to auto rebuild with instrumentation"
+    )
     parser.add_argument(
         "--libs",
         nargs="+",
         default=[],
         help="Specify libraries to link with the instrumented target, without the -l" "--libs lib1 lib2 lib3 etc",
     )
-    # TODO add verbosity flag
-    poly_build = PolyBuilder("++" in sys.argv[0])
-    if len(sys.argv) > 1 and sys.argv[1] == "--instrument-bitcode":
+    parser.add_argument("--lists", nargs="+", default=[], help="Specify additional ignore lists to Polytracker")
+    if len(sys.argv) <= 1:
+        return
+    # Case 1, just instrument bitcode.
+    if sys.argv[1] == "--instrument-bitcode":
         args = parser.parse_args(sys.argv[1:])
         if not os.path.exists(args.input_file):
             print("Error! Input file could not be found!")
             sys.exit(1)
-        if args.instrument_bitcode:
-            if args.output_bitcode is None:
-                res = poly_build.poly_instrument(args.input_file, args.output_file, "/tmp/temp_bitcode.bc", args.libs)
-                if not res:
-                    sys.exit(1)
-            else:
-                res = poly_build.poly_instrument(args.input_file, args.output_file, args.output_bitcode, args.libs)
-                if not res:
-                    sys.exit(1)
+        if args.output_file:
+            instrument_bitcode(args.input_file, args.output_file, args.lists)
+        else:
+            instrument_bitcode(args.input_file, "output.bc", args.lists)
 
-    # do Build and opt/Compile for simple C/C++ program with no libs, just ease of use
-    elif len(sys.argv) > 1 and sys.argv[1] == "--instrument-target":
+    # simple target.
+    elif sys.argv[1] == "--instrument-target":
+        new_argv = [x for x in sys.argv if x != "--instrument-target"]
         # Find the output file
-        output_file = ""
-        for i, arg in enumerate(sys.argv):
-            if arg == "-o":
-                output_file = sys.argv[i + 1]
-        if output_file == "":
-            print("Error! Output file could not be found! Try specifying with -o")
-            sys.exit(1)
-        # Build the output file
-        new_argv = [arg for arg in sys.argv if arg != "--instrument-target"]
-        res = poly_build.poly_build(new_argv)
-        if not res:
-            print("Error! Building target failed!")
-            sys.exit(1)
-        ret = subprocess.call(["get-bc", "-b", output_file])
+        do_everything(new_argv)
+
+    elif sys.argv[1] == "--lower-bitcode":
+        args = parser.parse_args(sys.argv[1:])
+        if not args.input_file or not args.output_file:
+            print("Error! Input and output file must be specified (-i and -o)")
+            exit(1)
+        bc_file = instrument_bitcode(args.input_file, args.output_file + ".bc", args.lists)
+        lower_bc(bc_file, args.output_file, args.libs)
+
+    elif sys.argv[1] == "--rebuild-track":
+        args = parser.parse_args(sys.argv[1:])
+        if not args.rebuild_track or not args.output_file:
+            print("Error! replay instrument path and output file must be specified")
+            exit(1)
+        args.rebuild_track = os.path.realpath(args.rebuild_track)
+        db_conn = sqlite3.connect(MANIFEST_FILE)
+        cur = db_conn.cursor()
+        query = f"""SELECT artifact from manifest where target="{args.rebuild_track}";"""
+        artifacts = [art[0] for art in cur.execute(query).fetchall()]
+        db_conn.close()
+        print(artifacts)
+        if len(artifacts) == 0:
+            print("Error, no artifacts found!")
+            exit(1)
+        manager = Manager()
+        bc_files = manager.list()
+        non_track_artifacts = manager.list()
+        processes = []
+        for i, artifact in enumerate(artifacts):
+            p = Process(target=replay_build_instance, args=(artifact, i, args.lists, non_track_artifacts, bc_files))
+            processes.append(p)
+            p.start()
+        for proc in processes:
+            proc.join()
+        if len(bc_files) == 0:
+            print("Error! No bitcode files! Nothing to instrument")
+            exit(1)
+        mega_link_output = "mega_link.bc"
+        ret = subprocess.call(["llvm-link", "-only-needed", "-o", mega_link_output] + [bc for bc in bc_files])
         if ret != 0:
-            print(f"Error! Failed to extract bitcode from {output_file}")
-            sys.exit(1)
-        input_bitcode_file = output_file + ".bc"
-        res = poly_build.poly_instrument(input_bitcode_file, output_file, "/tmp/temp_bitcode.bc", [])
-        if not res:
-            print(f"Error! Failed to instrument bitcode {input_bitcode_file}")
-            sys.exit(1)
+            print("llvm link failed!")
+            exit(1)
+
     # Do gllvm build
     else:
-        # Init the dictionary that contains info about file --> artifacts and file --> command line args
-        build_manifest = defaultdict(lambda: defaultdict(list))
-        # This is the path that stores build artifacts.
-        artifact_store_path = os.getenv("WLLVM_ARTIFACT_STORE")
-        if artifact_store_path is None:
-            print("Error! Artifact store path not set, please set WLLVM_ARTIFACT_STORE")
-            sys.exit(1)
-        if not os.path.exists(artifact_store_path):
-            print(f"Error! Path {artifact_store_path} not found!")
-            sys.exit(1)
-
-        # This actually builds the thing, we die if we fail a build.
-        res = poly_build.poly_build(sys.argv)
-        if not res:
-            sys.exit(1)
-
-        # Check to see if we are creating an object
-        outfile = ""
-        if "-o" in sys.argv:
-            for i, arg in enumerate(sys.argv):
-                # Find the object we are trying to build
-                if arg == "-o":
-                    outfile = sys.argv[i + 1]
-                # Focus on object files/archives/libraries
-                # The parsing here isnt that good, some files have -l in the name, like color-label.c ...
-                # So make sure they are not c files, and end in .a/.o etc.
-                if (("-l" in arg) or (".a" in arg) or (".o" in arg)) and not (
-                    arg.endswith(".c") or arg.endswith(".cc") or arg.endswith(".cpp")
-                ):
-                    build_manifest[outfile]["artifacts"] += [arg]
-                    # Dont store the shared libraries
-                    if "-l" not in arg:
-                        # Store a .o and a .a file
-                        ret = store_artifact(arg, artifact_store_path)
-                        if not ret:
-                            # .a files seem to not be found, and some .o files? But others work fine. idk why
-                            print(f"Warning! Failed to store {arg}")
-            # Write some output to a file storing command line args/artifacts used.
-            build_manifest[outfile]["cmd"] = sys.argv
-            if not os.path.exists(artifact_store_path + "/manifest.md"):
-                os.system("touch " + artifact_store_path + "/manifest.md")
-            # TODO This should just become a json like compile_commands.json
-            with open(artifact_store_path + "/manifest.md", mode="a") as manifest_file:
-                artifacts = " ".join(build_manifest[outfile]["artifacts"]) + "\n"
-                cmds = " ".join(build_manifest[outfile]["cmd"]) + "\n"
-                manifest_file.write(f"======= TARGET: {outfile} ========\n")
-                manifest_file.write(artifacts)
-                manifest_file.write("-----------------------------------\n")
-                manifest_file.write(cmds)
-                manifest_file.write("===================================\n")
+        handle_cmd(sys.argv)
 
 
 if __name__ == "__main__":

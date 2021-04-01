@@ -3,14 +3,33 @@ import itertools
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from logging import getLogger
-from typing import Any, cast, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    cast,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
+# TODO remove
+import graphviz
 import networkx as nx
 from tqdm import tqdm
 
 from .cfg import DiGraph
 from .plugins import Command
-from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
+from .tracing import (
+    BasicBlockEntry,
+    FunctionCall,
+    FunctionReturn,
+    ProgramTrace,
+    TraceEvent,
+)
 
 
 log = getLogger("grammars")
@@ -62,11 +81,15 @@ class Terminal:
 class Rule:
     def __init__(self, grammar: "Grammar", *sequence: Union[Terminal, str]):
         self.grammar: Grammar = grammar
-        self.sequence: Tuple[Union[Terminal, str], ...] = Rule.combine_terminals(sequence)
+        self.sequence: Tuple[Union[Terminal, str], ...] = Rule.combine_terminals(
+            sequence
+        )
         self.has_terminals: bool = any(isinstance(t, Terminal) for t in self.sequence)
 
     @staticmethod
-    def combine_terminals(sequence: Iterable[Union[Terminal, str]]) -> Tuple[Union[Terminal, str], ...]:
+    def combine_terminals(
+        sequence: Iterable[Union[Terminal, str]]
+    ) -> Tuple[Union[Terminal, str], ...]:
         seq: List[Union[Terminal, str]] = []
         for t in sequence:
             if isinstance(t, Terminal):
@@ -80,14 +103,20 @@ class Rule:
 
     @property
     def can_produce_terminal(self) -> bool:
-        return self.has_terminals or any(p.can_produce_terminal for p in self if isinstance(p, Production))
+        return self.has_terminals or any(
+            p.can_produce_terminal for p in self if isinstance(p, Production)
+        )
 
     def remove_sub_production(self, prod_name: str) -> bool:
         old_len = len(self.sequence)
-        self.sequence = Rule.combine_terminals([s for s in self.sequence if s != prod_name])
+        self.sequence = Rule.combine_terminals(
+            [s for s in self.sequence if s != prod_name]
+        )
         return len(self.sequence) != old_len
 
-    def replace_sub_production(self, to_replace: str, replace_with: Union[str, "Rule"]) -> bool:
+    def replace_sub_production(
+        self, to_replace: str, replace_with: Union[str, "Rule"]
+    ) -> bool:
         if isinstance(replace_with, str):
             if to_replace == replace_with:
                 return False
@@ -148,7 +177,9 @@ class Rule:
 class Production:
     def __init__(self, grammar: "Grammar", name: str, *rules: Rule):
         if name in grammar:
-            raise ValueError(f"A production named {name!r} already exists in grammar {grammar!s}!")
+            raise ValueError(
+                f"A production named {name!r} already exists in grammar {grammar!s}!"
+            )
         self.grammar: Grammar = grammar
         self.name: str = name
         self.rules: Set[Rule] = set(rules)
@@ -234,7 +265,11 @@ class Production:
 
     @staticmethod
     def load(grammar: "Grammar", name: str, *rules: Iterable[str]) -> "Production":
-        return Production(grammar, name, *(Rule.load(grammar, *alternatives) for alternatives in rules))
+        return Production(
+            grammar,
+            name,
+            *(Rule.load(grammar, *alternatives) for alternatives in rules),
+        )
 
     def add(self, rule: Rule) -> bool:
         # check if the rule already exists
@@ -319,9 +354,9 @@ class MatchPossibility:
         self.grammar: "Grammar" = grammar
         self.remainder: bytes = remainder
         self.rule: Rule = rule
-        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [(self, s) for s in rule.sequence] + list(
-            after_sequence
-        )
+        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [
+            (self, s) for s in rule.sequence
+        ] + list(after_sequence)
         self.previous: Optional[MatchPossibility] = previous
         self.parent: Optional[MatchPossibility] = parent
         self.production: Production = production
@@ -339,7 +374,9 @@ class MatchPossibility:
         return self._consumed  # type: ignore
 
     def __lt__(self, other: "MatchPossibility"):
-        return (self.depth < other.depth) or (self.depth == other.depth and len(self.remainder) < len(other.remainder))
+        return (self.depth < other.depth) or (
+            self.depth == other.depth and len(self.remainder) < len(other.remainder)
+        )
 
     def expand(self) -> Optional[List["MatchPossibility"]]:
         possibilities = []
@@ -389,15 +426,22 @@ class Grammar:
         self.used_by: Dict[str, Set[str]] = defaultdict(set)
         self.start: Optional[Production] = None
 
-    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> ParseTree:
+    def match(
+        self, sentence: Union[str, bytes], start: Optional[Production] = None
+    ) -> ParseTree:
         if isinstance(sentence, str):
             sentence = sentence.encode("utf-8")
         if start is None:
             if self.start is None:
-                raise ValueError("Either the grammar must have a start production or one must be provided to `match`")
+                raise ValueError(
+                    "Either the grammar must have a start production or one must be provided to `match`"
+                )
             start = self.start
         possibilities = [
-            MatchPossibility(grammar=self, remainder=sentence, production=start, rule=rule) for rule in start.rules
+            MatchPossibility(
+                grammar=self, remainder=sentence, production=start, rule=rule
+            )
+            for rule in start.rules
         ]
         while possibilities:
             possibility = heapq.heappop(possibilities)
@@ -462,7 +506,9 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(f"Production {prod.name} references {v}, which is not in the grammar")
+                            raise MissingProductionError(
+                                f"Production {prod.name} references {v}, which is not in the grammar"
+                            )
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -478,15 +524,23 @@ class Grammar:
             #     print(f"Warning: Production {prod.name} is never used")
         for prod_name in self.used_by.keys():
             if prod_name not in self:
-                raise CorruptedGrammarError(f'Production {prod_name} is in the "used by" table, but not in the grammar')
+                raise CorruptedGrammarError(
+                    f'Production {prod_name} is in the "used by" table, but not in the grammar'
+                )
         if self.start is not None and test_disconnection:
             # make sure there is a path from start to every other production
             graph = self.dependency_graph()
-            visited = set(node for node in nx.dfs_preorder_nodes(graph, source=self.start))
+            visited = set(
+                node for node in nx.dfs_preorder_nodes(graph, source=self.start)
+            )
             if len(visited) < len(self.productions):
-                not_visited_prods = set(node for node in self.productions.values() if node not in visited)
+                not_visited_prods = set(
+                    node for node in self.productions.values() if node not in visited
+                )
                 # it's okay if the unvisited productions aren't able to produce terminals
-                not_visited = [node.name for node in not_visited_prods if node.can_produce_terminal]
+                not_visited = [
+                    node.name for node in not_visited_prods if node.can_produce_terminal
+                ]
                 if not_visited:
                     raise DisconnectedGrammarError(
                         "These productions are not accessible from the start production "
@@ -496,7 +550,9 @@ class Grammar:
     def simplify(self) -> bool:
         modified = False
         modified_last_pass = True
-        with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
+        with tqdm(
+            desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1
+        ) as status:
             while modified_last_pass:
                 modified_last_pass = False
                 for prod in list(self.productions.values()):
@@ -520,7 +576,9 @@ class Grammar:
                 modified = modified or modified_last_pass
             # traverse the productions from the least dominant up
             dominators = self.dependency_graph().dominator_forest
-            ordered_productions: List[Production] = list(nx.dfs_postorder_nodes(dominators, source=self.start))
+            ordered_productions: List[Production] = list(
+                nx.dfs_postorder_nodes(dominators, source=self.start)
+            )
             # see if any of the productions are equivalent. if so, combine them
             for p1, p2 in itertools.combinations(ordered_productions, 2):
                 if p1 == p2:
@@ -560,7 +618,7 @@ def production_name(event: TraceEvent) -> str:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
-def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
+def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
@@ -568,11 +626,16 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
 
     grammar = Grammar()
 
-    for event in tqdm(trace, unit=" productions", leave=False, desc="extracting a base grammar"):
+    for event in tqdm(
+        trace, unit=" productions", leave=False, desc="extracting a base grammar"
+    ):
         # ignore events before the entrypoint, if it exists
         if trace.entrypoint and trace.entrypoint.uid > event.uid:
             # if it's a function call to the entrypoint, that's okay
-            if not isinstance(event, FunctionCall) or event.name != trace.entrypoint.function_name:
+            if (
+                not isinstance(event, FunctionCall)
+                or event.name != trace.entrypoint.function_name
+            ):
                 continue
 
         prod_name = production_name(event)
@@ -580,7 +643,9 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
         if isinstance(event, BasicBlockEntry):
             # Add a production rule for this BB
 
-            sub_productions: List[Union[Terminal, str]] = [Terminal(token) for token in event.consumed_tokens]
+            sub_productions: List[Union[Terminal, str]] = [
+                Terminal(token) for token in event.consumed_tokens
+            ]
 
             if event.called_function is not None:
                 sub_productions.append(production_name(event.called_function))
@@ -599,7 +664,10 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     # breakpoint()
 
             if event.called_function is None and event.children:
-                rules = [Rule(grammar, *(sub_productions + [f"<{child!s}>"])) for child in event.children]
+                rules = [
+                    Rule(grammar, *(sub_productions + [f"<{child!s}>"]))
+                    for child in event.children
+                ]
             else:
                 rules = [Rule(grammar, *sub_productions)]
 
@@ -643,14 +711,16 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
                     Production(grammar, call_name, Rule(grammar, next_event_name))
 
         if trace.entrypoint == event:
-            grammar.start = Production(grammar, "<START>", Rule.load(grammar, f"<{event.function_name}>"))
+            grammar.start = Production(
+                grammar, "<START>", Rule.load(grammar, f"<{event.function_name}>")
+            )
 
     grammar.verify()
 
     return grammar
 
 
-def extract(traces: Iterable[PolyTrackerTrace], simplify: bool = False) -> Grammar:
+def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
@@ -663,13 +733,33 @@ def extract(traces: Iterable[PolyTrackerTrace], simplify: bool = False) -> Gramm
     return Grammar()
 
 
+def to_dot(graph: DiGraph, comment: Optional[str] = None) -> graphviz.Digraph:
+    """
+    :param comment: comment for the graph
+    :return: Graphviz DiGraph
+
+    This function creates a dot object which can be saved to disk and converted to PDF
+    its a visualization of the chain fragment, useful for visualizing a reorg.
+    """
+    if comment is not None:
+        dot = graphviz.Digraph(comment=comment)
+    else:
+        dot = graphviz.Digraph()
+    for node in graph.nodes:
+        dot.node(f"{str(node)}")
+    for parent in graph.graph.keys():
+        for child in graph.graph[parent]:
+            dot.edge(f"{str(parent)}", f"{str(child)}")
+    return dot
+
+
 class ExtractGrammarCommand(Command):
     name = "grammar"
     help = "extract a grammar from one or more program traces"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.traces: List[PolyTrackerTrace] = []
+        self.traces: List[ProgramTrace] = []
         self.grammar: Optional[Grammar] = None
 
     def __init_arguments__(self, parser: ArgumentParser):
@@ -681,24 +771,30 @@ class ExtractGrammarCommand(Command):
             help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
             "was sent to the instrumented parser to generate polytracker_json",
         )
-        parser.add_argument("--simplify", "-s", action="store_true", help="simplify the grammar")
+        parser.add_argument(
+            "--simplify", "-s", action="store_true", help="simplify the grammar"
+        )
 
     def run(self, args: Namespace):
         if len(args.TRACES[0]) % 2 != 0:
-            raise ValueError("The number of files provided in the TRACES argument must be a multiple of two!")
+            raise ValueError(
+                "The number of files provided in the TRACES argument must be a multiple of two!"
+            )
         self.traces = []
         try:
-            for json_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
-                with open(json_file, "rb") as jf:
-                    with open(input_file, "rb") as inputf:
-                        trace = PolyTrackerTrace.parse(jf, input_file=inputf)
+            for db_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
+                trace = ProgramTrace.parse(db_file, input_file)
+                to_dot(trace.cfg).save("cfg.dot")
+                print(f"num nodes {trace.cfg.number_of_nodes()}")
                 if not trace.is_cfg_connected():
                     roots = list(trace.cfg_roots())
                     if len(roots) == 0:
-                        log.error(f"Basic block trace of {json_file} has no roots!\n\n")
+                        log.error(f"Basic block trace of {db_file} has no roots!\n\n")
                     else:
                         root_names = "".join(f"\t{r!s}\n" for r in roots)
-                        log.error(f"Basic block trace of {json_file} has multiple roots:\n{root_names}")
+                        log.error(
+                            f"Basic block trace of {db_file} has multiple roots:\n{root_names}"
+                        )
                     exit(1)
                 self.traces.append(trace)
         except ValueError as e:

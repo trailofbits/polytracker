@@ -29,7 +29,12 @@ def main():
         "execution, and process the resulting traces."
     )
 
-    parser.add_argument("--version", "-v", action="store_true", help="print PolyTracker's version and exit")
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="store_true",
+        help="print PolyTracker's version and exit",
+    )
 
     add_command_subparsers(parser)
 

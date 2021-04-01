@@ -1,8 +1,8 @@
 from inspect import isclass
 from pkgutil import iter_modules
-from pathlib import Path
 from importlib import import_module
 
+from .database import DBProgramTrace as PolyTrackerTrace
 from .polytracker import *
 
 # Automatically load all modules in the `polytracker` package,

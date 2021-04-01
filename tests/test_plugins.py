@@ -21,7 +21,9 @@ def test_plugin_name_collision():
 
 
 def test_incomplete_command():
-    with pytest.raises(TypeError, match="PolyTracker command MissingHelp does not define a help string"):
+    with pytest.raises(
+        TypeError, match="PolyTracker command MissingHelp does not define a help string"
+    ):
 
         class MissingHelp(plugins.Command):
             name = "missinghelp"
@@ -54,7 +56,10 @@ def test_subcommand_assignment():
         def run(self, args):
             pass
 
-    with pytest.raises(TypeError, match="Subcommand MissingParent must define its parent command's type in `parent_type`"):
+    with pytest.raises(
+        TypeError,
+        match="Subcommand MissingParent must define its parent command's type in `parent_type`",
+    ):
 
         class MissingParent(plugins.Subcommand[C1]):
             name = "subcommand"
@@ -68,13 +73,16 @@ def test_subcommand_assignment():
 
     with pytest.raises(
         TypeError,
-        match="Subcommand BadParent has a `parent_type` of Plugin that does not extend off of " "polytracker.plugins.Command",
+        match="Subcommand BadParent has a `parent_type` of Plugin that does not extend off of "
+        "polytracker.plugins.Command",
     ):
 
         class BadParent(plugins.Subcommand[C1]):
             name = "subcommand"
             help = ""
-            parent_type = plugins.Plugin  # This should actually be a subclass of Command
+            parent_type = (
+                plugins.Plugin
+            )  # This should actually be a subclass of Command
 
             def __init_arguments__(self, parser):
                 pass

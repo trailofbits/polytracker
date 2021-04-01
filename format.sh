@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Temporary formatting script to enforce some code style/standards 
 
 # Clang-format to auto format the relevant parts of the C++ code base
@@ -11,5 +12,5 @@ clang-format -i polytracker/include/polyclang/*.h
 clang-format -i polytracker/include/dfsan/*.h
 
 # Black to auto format code, mypy for type checking
-black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/' --line-length=127
+black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
 mypy --ignore-missing-imports polytracker tests

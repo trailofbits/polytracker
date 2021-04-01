@@ -1,14 +1,12 @@
 #ifndef POLYTRACKER_TAINT
 #define POLYTRACKER_TAINT
-#include "dfsan/dfsan_types.h"
+#include "dfsan_types.h"
 #include <mutex>
 #include <thread>
 #include <unordered_map>
 
 void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                       int byte_end, const char *name);
-auto getInitialSources()
-    -> std::unordered_map<std::string, std::pair<int, int>> &;
 [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2);
 void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                       int byte_end, std::string &name);

@@ -1,311 +1,368 @@
-#include "dfsan/json.hpp"
+#include "polytracker/output.h"
 #include "polytracker/logging.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/tablegen.h"
 #include "polytracker/taint.h"
-#include "polytracker/tracing.h"
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <set>
+#include <sqlite3.h>
 #include <sstream>
 #include <string>
 #include <thread>
-using json = nlohmann::json;
-using namespace polytracker;
 
 /*
 This file contains code responsible for outputting PolyTracker runtime
-informationt to disk. Currently, this is in the form of a JSON file and a binary
+information to disk. Currently, this is in the form of a JSON file and a binary
 object. Information about the two files can be found in the polytracker/doc
 directory
-*/
-
+ */
 extern bool polytracker_trace;
+extern bool polytracker_save_input_file;
 
 // Could there be a race condition here?
+// TODO Check if input_table/taint_forest tables already filled
 extern std::unordered_map<std::string, std::unordered_map<dfsan_label, int>>
     canonical_mapping;
 extern std::unordered_map<std::string, std::vector<std::pair<int, int>>>
     tainted_input_chunks;
-extern std::atomic<dfsan_label> next_label;
+std::mutex thread_id_lock;
 
-void addJsonVersion(json &output_json) {
-  output_json["version"] = POLYTRACKER_VERSION;
+extern bool polytracker_trace;
+extern bool polytracker_trace_func;
+
+// Callback function for sql_exces
+static int sql_callback(void *debug, int count, char **data, char **columns) {
+  return 0;
 }
 
-void addJsonRuntimeCFG(json &output_json, const RuntimeInfo *runtime_info) {
-  for (auto cfg_it = runtime_info->runtime_cfg.begin();
-       cfg_it != runtime_info->runtime_cfg.end(); cfg_it++) {
-    output_json["runtime_cfg"][cfg_it->first] = json(cfg_it->second);
+void sql_exec(sqlite3 *output_db, const char *cmd) {
+  char *err;
+  // std::cout << std::string(cmd) << std::endl;
+  int rc = sqlite3_exec(output_db, cmd, sql_callback, NULL, &err);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "SQL error: %s\n", err);
+    sqlite3_free(err);
+    abort();
   }
 }
 
-void addJsonTaintSources(json &output_json) {
-  auto name_target_map = getInitialSources();
-  for (const auto &it : name_target_map) {
-    auto &pair_map = it.second;
-    output_json["taint_sources"][it.first]["start_byte"] = pair_map.first;
-    output_json["taint_sources"][it.first]["end_byte"] = pair_map.second;
+static void sql_prep(sqlite3 *db, const char *sql, int max_len,
+                     sqlite3_stmt **stmt, const char **tail) {
+  int err = sqlite3_prepare_v2(db, sql, max_len, stmt, tail);
+  if (err != SQLITE_OK) {
+    fprintf(stderr, "SQL prep error: %s\n", sqlite3_errmsg(db));
+    abort();
   }
 }
 
-void addJsonCanonicalMapping(json &output_json) {
-  for (const auto &it : canonical_mapping) {
-    auto mapping = it.second;
-    json canonical_map(mapping);
-    output_json["canonical_mapping"][it.first] = canonical_map;
+static void sql_step(sqlite3 *db, sqlite3_stmt *stmt) {
+  int err = sqlite3_step(stmt);
+  if (err != SQLITE_DONE) {
+    printf("execution failed: %s\n", sqlite3_errmsg(db));
+    sqlite3_finalize(stmt);
+    abort();
   }
 }
 
-void addJsonTaintedBlocks(json &output_json) {
-  for (const auto &it : tainted_input_chunks) {
-    output_json["tainted_input_blocks"][it.first] = json(it.second);
+static int sql_fetch_input_id_callback(void *res, int argc, char **data,
+                                       char **columns) {
+  size_t *temp = (size_t *)res;
+  if (argc == 0) {
+    *temp = 0;
+  } else {
+    *temp = atoi(data[0]);
   }
+  return 0;
 }
 
-json escapeChar(int c) {
-  std::stringstream s;
-  s << '"';
-  if (c >= 32 && c <= 126 && c != '"' && c != '\\') {
-    s << (char)c;
-  } else if (c != EOF) {
-    s << "\\u" << std::hex << std::setw(4) << std::setfill('0') << c;
-  }
-  s << '"';
-  return json::parse(s.str());
-}
-
-static void addJsonRuntimeTrace(json &output_json,
-                                const RuntimeInfo *runtime_info) {
-  if (!polytracker_trace || runtime_info == nullptr) {
-    return;
-  }
-  /* FIXME: This assumes that there is a single key in this->canonical_mapping
-   * that corresponds to POLYPATH. If/when we support multiple taint sources,
-   * this code will have to be updated!
-   */
-  if (canonical_mapping.size() < 1) {
-    std::cerr << "Unexpected number of taint sources: "
-              << canonical_mapping.size() << std::endl;
+static input_id_t get_input_id(sqlite3 *output_db) {
+  const char *fetch_query = "SELECT * FROM input ORDER BY id DESC LIMIT 1;";
+  char *err;
+  size_t count = 0;
+  int rc = sqlite3_exec(output_db, fetch_query, sql_fetch_input_id_callback,
+                        &count, &err);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "SQL error: %s\n", err);
+    sqlite3_free(err);
     exit(1);
-  } else if (canonical_mapping.size() > 1) {
-    std::cerr << "Warning: More than one taint source found! The resulting "
-              << "runtime trace will likely be incorrect!" << std::endl;
   }
-  const auto mapping = canonical_mapping.begin()->second;
-  std::cerr << "Saving runtime trace to JSON..." << std::endl << std::flush;
-  std::vector<json> events;
-  size_t threadStack = 0;
-  const auto startTime = std::chrono::system_clock::now();
-  auto lastLogTime = startTime;
-  for (const auto &kvp : runtime_info->trace.eventStacks) {
-    const auto &stack = kvp.second;
-    std::cerr << "Processing events from thread " << threadStack << std::endl
-              << std::flush;
-    ++threadStack;
-    size_t eventNumber = 0;
-    for (auto event = stack.firstEvent(); event; event = event->next) {
-      json j;
-      const auto currentTime = std::chrono::system_clock::now();
-      auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              currentTime - lastLogTime)
-                              .count();
-      ++eventNumber;
-      if (milliseconds >= 1000) {
-        // Log our progress every second or so
-        lastLogTime = currentTime;
-        std::cerr << "\r" << std::string(80, ' ') << "\r";
-        std::cerr << "Event " << eventNumber << " / " << stack.numEvents()
-                  << std::flush;
-      }
-      if (const auto call = dynamic_cast<const FunctionCall *>(event)) {
-        j = json::object(
-            {{"type", "FunctionCall"},
-             {"name", call->fname},
-             {"consumes_bytes", call->consumesBytes(runtime_info->trace)}});
-        if (call->ret) {
-          j["return_uid"] = call->ret->eventIndex;
-        }
-      } else if (const auto bb = dynamic_cast<const BasicBlockEntry *>(event)) {
-        j = json::object({{"type", "BasicBlockEntry"},
-                          {"function_name", bb->fname},
-                          {"function_index", bb->index.functionIndex()},
-                          {"bb_index", bb->index.index()},
-                          {"global_index", bb->index.uid()}});
-        if (bb->function) {
-          j["function_call_uid"] = bb->function->eventIndex;
-        }
-        auto entryCount = bb->entryCount;
-        if (entryCount != 1) {
-          j["entry_count"] = entryCount;
-        }
-        const auto &taints = runtime_info->trace.taints(bb);
-        if (!taints.empty()) {
-          std::vector<int> byteOffsets;
-          byteOffsets.reserve(taints.size());
-          std::transform(taints.begin(), taints.end(),
-                         std::back_inserter(byteOffsets),
-                         [&mapping](dfsan_label d) {
-                           for (const auto &pair : mapping) {
-                             if (pair.first == d) {
-                               return pair.second;
-                             }
-                           }
-                           return -1;
-                         });
-          j["consumed"] = byteOffsets;
-        }
-        std::vector<std::string> types;
-        if (hasType(bb->type, BasicBlockType::STANDARD)) {
-          types.push_back("standard");
-        } else {
-          if (hasType(bb->type, BasicBlockType::CONDITIONAL)) {
-            types.push_back("conditional");
-          }
-          if (hasType(bb->type, BasicBlockType::FUNCTION_ENTRY)) {
-            types.push_back("function_entry");
-          }
-          if (hasType(bb->type, BasicBlockType::FUNCTION_EXIT)) {
-            types.push_back("function_exit");
-          }
-          if (hasType(bb->type, BasicBlockType::FUNCTION_RETURN)) {
-            types.push_back("function_return");
-          }
-          if (hasType(bb->type, BasicBlockType::FUNCTION_CALL)) {
-            types.push_back("function_call");
-          }
-          if (hasType(bb->type, BasicBlockType::LOOP_ENTRY)) {
-            types.push_back("loop_entry");
-          }
-          if (hasType(bb->type, BasicBlockType::LOOP_EXIT)) {
-            types.push_back("loop_exit");
-          }
-        }
-        if (!types.empty()) {
-          j["types"] = types;
-        }
-      } else if (const auto ret = dynamic_cast<const FunctionReturn *>(event)) {
-#if 0
-        // does this function call consume bytes?
-        // if not, we do not need it to do grammar extraction, and saving
-        // to JSON is very slow. So speed things up by just eliding it!
-        // TODO: If/when we implement another means of output (e.g., sqlite),
-        //       we can experiment with emitting all functions
-        if (ret->call && !(call->consumesBytes(runtime_info->trace))) {
-          std::cerr << "\rSkipping emitting the trace for function "
-                    << call->fname
-                    << " because it did not consume any tainted bytes."
-                    << std::endl
-                    << std::flush;
-          event = ret->call;
-          continue;
-        }
-#endif
-        j = json::object({
-            {"type", "FunctionReturn"},
-            {"name", ret->call ? ret->call->fname : nullptr},
-        });
-        if (ret->returningTo) {
-          j["returning_to_uid"] = ret->returningTo->eventIndex;
-        }
-        if (const auto functionCall = ret->call) {
-          j["call_event_uid"] = ret->call->eventIndex;
-        }
-      } else {
-        continue;
-      }
-      j["uid"] = event->eventIndex;
-      if (event->previous) {
-        j["previous_uid"] = event->previous->eventIndex;
-      }
-      if (event->next) {
-        j["next_uid"] = event->next->eventIndex;
-      }
-      events.push_back(j);
-      if (auto call = dynamic_cast<const FunctionCall *>(event)) {
-        // does this function call consume bytes?
-        // if not, we do not need it to do grammar extraction, and saving
-        // to JSON is very slow. So speed things up by just eliding its
-        // constituent events!
-        // TODO: If/when we implement another means of output (e.g., sqlite),
-        //       we can experiment with emitting all functions
-        if (call->ret && !(call->consumesBytes(runtime_info->trace))) {
-          std::cerr << "\rSkipping emitting the trace for function "
-                    << call->fname
-                    << " because it did not consume any tainted bytes."
-                    << std::endl
-                    << std::flush;
-          event = call->ret->previous;
-        }
+  return count;
+}
+
+void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
+                      const size_t &curr_thread_id, const function_id_t &dest,
+                      const function_id_t &src, const event_id_t &event_id,
+                      EdgeType edgetype) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
+                       "event_id, thread_id, input_id, edge_type)"
+                       "VALUES (?, ?, ?, ?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int(stmt, 1, dest);
+  sqlite3_bind_int(stmt, 2, src);
+  // Bind the dest, because the function entry is essentially the edge between
+  // src --> dest, this gives us some ordering between contexts/functions
+  // during function level tracing
+  sqlite3_bind_int64(stmt, 3, event_id);
+  sqlite3_bind_int(stmt, 4, curr_thread_id);
+  sqlite3_bind_int64(stmt, 5, input_id);
+  sqlite3_bind_int(stmt, 6, static_cast<int>(edgetype));
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+  // sqlite3_reset(stmt);
+}
+
+input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
+                         const uint64_t &start, const uint64_t &end,
+                         const int &trace_level) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT INTO input(path, content, track_start, "
+                       "track_end, size, trace_level)"
+                       "VALUES(?, ?, ?, ?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_text(stmt, 1, filename.c_str(), filename.length(),
+                    SQLITE_STATIC);
+  if (polytracker_save_input_file) {
+    std::ifstream file(filename, std::ios::in | std::ios::binary);
+    if (!file) {
+      std::cerr << "Warning: an error occurred opening input file " << filename
+                << "! It will not be saved to the database." << std::endl;
+      sqlite3_bind_null(stmt, 2);
+    } else {
+      file.seekg(0, std::ifstream::end);
+      std::streampos size = file.tellg();
+      file.seekg(0);
+
+      char *buffer = new char[size];
+      file.read(buffer, size);
+      auto rc = sqlite3_bind_blob(stmt, 2, buffer, size, SQLITE_TRANSIENT);
+      delete[] buffer;
+      if (rc != SQLITE_OK) {
+        std::cerr << "error saving the input file to the database: "
+                  << sqlite3_errmsg(output_db) << std::endl;
+        sqlite3_bind_null(stmt, 2);
       }
     }
-    std::cerr << std::endl << std::flush;
+  } else {
+    sqlite3_bind_null(stmt, 2);
   }
-  output_json["trace"] = events;
-  std::cerr << "Done emitting the trace events." << std::endl << std::flush;
+  sqlite3_bind_int64(stmt, 3, start);
+  sqlite3_bind_int64(stmt, 4, end);
+  sqlite3_bind_int64(stmt, 5, [](const std::string &filename) {
+    std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
+    return file.tellg();
+  }(filename));
+  sqlite3_bind_int(stmt, 6, trace_level);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+  return get_input_id(output_db);
 }
-
-static void outputTaintForest(const std::string &outfile,
-                              const RuntimeInfo *runtime_info) {
-  std::string forest_fname = std::string(outfile) + "_forest.bin";
-  FILE *forest_file = fopen(forest_fname.c_str(), "w");
-  if (forest_file == NULL) {
-    std::cout << "Failed to dump forest to file: " << forest_fname << std::endl;
+/*
+const input_id_t storeNewInput(sqlite3 *output_db) {
+  auto name_target_map = getInitialSources();
+  if (name_target_map.size() == 0) {
+    return 0;
+  }
+  if (name_target_map.size() > 1) {
+    std::cout << "More than once taint source detected!" << std::endl;
+    std::cout << "This is currently broken, exiting!" << std::endl;
     exit(1);
   }
-  const dfsan_label &num_labels = next_label;
-  for (int i = 0; i < num_labels; i++) {
+  sqlite3_stmt *stmt;
+  const char *insert =
+      "INSERT INTO input(path, track_start, track_end, size, trace_level)"
+      "VALUES(?, ?, ?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  for (const auto &pair : name_target_map) {
+    sqlite3_bind_text(stmt, 1, pair.first.c_str(), pair.first.length(),
+                      SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 2, pair.second.first);
+    sqlite3_bind_int64(stmt, 3, pair.second.second);
+    sqlite3_bind_int64(stmt, 4, [](const std::string &filename) {
+      std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
+      return file.tellg();
+    }(pair.first));
+    sqlite3_bind_int(stmt, 5, polytracker_trace);
+    sql_step(output_db, stmt);
+    sqlite3_reset(stmt);
+  }
+  sqlite3_finalize(stmt);
+  return get_input_id(output_db);
+}
+*/
+
+void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
+                       const dfsan_label &label, const uint64_t &file_offset) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT INTO canonical_map(input_id, taint_label, "
+                       "file_offset) VALUES (?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, input_id);
+  sqlite3_bind_int64(stmt, 2, label);
+  sqlite3_bind_int64(stmt, 3, file_offset);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+}
+
+void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
+                       const uint64_t &start, const uint64_t &end) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
+                       "start_offset, end_offset) VALUES (?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, input_id);
+  sqlite3_bind_int64(stmt, 2, start);
+  sqlite3_bind_int64(stmt, 3, end);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+}
+
+void storeFunc(sqlite3 *output_db, const char *fname,
+               const function_id_t &func_id) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE INTO func (id, name) VALUES (?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int(stmt, 1, func_id);
+  sqlite3_bind_text(stmt, 2, fname, strlen(fname), SQLITE_STATIC);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+}
+
+void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
+                const int &thread_id, const event_id_t &event_id, const event_id_t &thread_event_id,
+                EventType event_type, const function_id_t &findex,
+                const block_id_t &bindex) {
+
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
+                       "input_id, thread_id, block_gid)"
+                       "VALUES (?, ?, ?, ?, ?, ?)";
+  uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, event_id);
+  sqlite3_bind_int64(stmt, 2, thread_event_id);
+  sqlite3_bind_int(stmt, 3, static_cast<int>(event_type));
+  sqlite3_bind_int64(stmt, 4, input_id);
+  sqlite3_bind_int(stmt, 5, thread_id);
+  sqlite3_bind_int(stmt, 6, gid);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+}
+
+void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
+                      const event_id_t &event_id, const event_id_t &thread_event_id, const function_id_t &findex,
+                      const block_id_t &bindex, const input_id_t &input_id,
+                      const int &thread_id, const ByteAccessType &access_type) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT INTO accessed_label(event_id, label, access_type)"
+                       "VALUES (?, ?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_int64(stmt, 1, event_id);
+  sqlite3_bind_int64(stmt, 2, label);
+  sqlite3_bind_int(stmt, 3, static_cast<int>(access_type));
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+  storeEvent(output_db, input_id, thread_id, event_id, thread_event_id, EventType::TAINT_ACCESS,
+             findex, bindex);
+}
+
+void storeBlock(sqlite3 *output_db, const function_id_t &findex,
+                const block_id_t &bindex, uint8_t btype) {
+  sqlite3_stmt *bb_stmt;
+  const char *bb_stmt_insert =
+      "INSERT OR IGNORE INTO basic_block(id, function_id, block_attributes)"
+      "VALUES(?, ?, ?);";
+  sql_prep(output_db, bb_stmt_insert, -1, &bb_stmt, NULL);
+  uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
+  sqlite3_bind_int64(bb_stmt, 1, gid);
+  sqlite3_bind_int64(bb_stmt, 2, findex);
+  sqlite3_bind_int(bb_stmt, 3, btype);
+  sql_step(output_db, bb_stmt);
+  sqlite3_finalize(bb_stmt);
+}
+
+// When POLYFOREST is set we dump to disk instead of the database. This saves
+// space if needed but its not as convenient
+void storeTaintForestDisk(const std::string &outfile,
+                          const dfsan_label &last_label) {
+  // TODO You know, this would be nice to know before the taint run is over...
+  FILE *forest_file = fopen(outfile.c_str(), "w");
+  if (forest_file == NULL) {
+    std::cout << "Failed to dump forest to file: " << outfile << std::endl;
+    exit(1);
+  }
+  for (int i = 0; i <= last_label; i++) {
     taint_node_t *curr = getTaintNode(i);
-    dfsan_label node_p1 = getTaintLabel(curr->p1);
-    dfsan_label node_p2 = getTaintLabel(curr->p2);
+    dfsan_label node_p1 = curr->p1;
+    dfsan_label node_p2 = curr->p2;
     fwrite(&(node_p1), sizeof(dfsan_label), 1, forest_file);
     fwrite(&(node_p2), sizeof(dfsan_label), 1, forest_file);
   }
   fclose(forest_file);
 }
 
-static void outputJsonInformation(const std::string &outfile,
-                                  const RuntimeInfo *runtime_info) {
-  // NOTE: Whenever the output JSON format changes, make sure to:
-  //       (1) Up the version number in
-  //       /polytracker/include/polytracker/polytracker.h; and (2) Add support
-  //       for parsing the changes in /polytracker/polytracker.py
-  json output_json;
-  addJsonVersion(output_json);
-  addJsonRuntimeCFG(output_json, runtime_info);
-  addJsonRuntimeTrace(output_json, runtime_info);
-  addJsonTaintSources(output_json);
-  addJsonCanonicalMapping(output_json);
-  addJsonTaintedBlocks(output_json);
+void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
+                      const dfsan_label &last_label) {
+  char *errorMessage;
+  sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 
-  for (const auto &it : runtime_info->tainted_funcs_all_ops) {
-    auto &label_set = it.second;
-    // Take label set and create a json based on source.
-    json byte_set(label_set);
-    output_json["tainted_functions"][it.first]["input_bytes"] = byte_set;
-    if (runtime_info->tainted_funcs_cmp.find(it.first) !=
-        runtime_info->tainted_funcs_cmp.end()) {
-      auto cmp_set = it.second;
-      std::set<dfsan_label> cmp_label_set;
-      for (auto it = cmp_set.begin(); it != cmp_set.end(); it++) {
-        cmp_label_set.insert(*it);
-      }
-      json cmp_byte_set(cmp_label_set);
-      output_json["tainted_functions"][it.first]["cmp_bytes"] = cmp_byte_set;
-    }
+  const char *insert = "INSERT INTO taint_forest (parent_one, parent_two, "
+                       "label, input_id) VALUES (?, ?, ?, ?);";
+  sqlite3_stmt *stmt;
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  for (int i = 0; i <= last_label; i++) {
+    taint_node_t *curr = getTaintNode(i);
+    sqlite3_bind_int(stmt, 1, curr->p1);
+    sqlite3_bind_int(stmt, 2, curr->p1);
+    sqlite3_bind_int(stmt, 3, i);
+    sqlite3_bind_int(stmt, 4, input_id);
+    sql_step(output_db, stmt);
+    sqlite3_reset(stmt);
   }
-  std::ofstream o(outfile + "_process_set.json");
-  // If we are doing a full trace, only indent two spaces to save space!
-  o << std::setw(polytracker_trace ? 2 : 4) << output_json;
-  o.close();
+  sqlite3_finalize(stmt);
+  sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 }
 
-void output(const char *outfile, const RuntimeInfo *runtime_info) {
-  static size_t current_thread = 0;
-  const std::string output_file_prefix = [i = current_thread++, outfile]() {
-    return std::string(outfile) + std::to_string(i);
-  }();
-  outputTaintForest(output_file_prefix, runtime_info);
-  outputJsonInformation(output_file_prefix, runtime_info);
+void storeVersion(sqlite3 *output_db) {
+  sqlite3_stmt *stmt;
+  const char *insert = "INSERT OR IGNORE INTO polytracker(store_key, value)"
+                       "VALUES(?, ?);";
+  sql_prep(output_db, insert, -1, &stmt, NULL);
+  sqlite3_bind_text(stmt, 1, "version", strlen("version"), SQLITE_STATIC);
+  sqlite3_bind_text(stmt, 2, POLYTRACKER_VERSION, strlen(POLYTRACKER_VERSION),
+                    SQLITE_STATIC);
+  sql_step(output_db, stmt);
+  sqlite3_finalize(stmt);
+}
+
+sqlite3 *db_init(const std::string &db_path) {
+  const std::string db_name = db_path;
+  sqlite3 *output_db;
+  if (sqlite3_open(db_name.c_str(), &output_db)) {
+    std::cout << "Error! Could not open output db " << db_path << std::endl;
+    exit(1);
+  }
+  char *errorMessage;
+  sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
+  sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL,
+               &errorMessage);
+  sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL, &errorMessage);
+  sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
+               &errorMessage);
+  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL, &errorMessage);
+  createDBTables(output_db);
+  return output_db;
+  // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
+}
+
+void db_fini(sqlite3 *output_db) {
+  storeVersion(output_db);
+  char *errorMessage;
+  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL, &errorMessage);
+  sqlite3_close(output_db);
 }

@@ -89,19 +89,27 @@ setup(
     packages=find_packages(),
     python_requires=PYTHON_REQUIRES,
     install_requires=[
-        'cxxfilt==0.2.2',
-        'docker==4.4.0',
-        'graphviz==0.14.1',
-        'intervaltree==3.0.2',
-        'matplotlib==3.3.0',
-        'networkx==2.4',
+        'cxxfilt~=0.2.2',
+        'docker~=4.4.0',
+        'graphviz~=0.14.1',
+        'intervaltree~=3.0.2',
+        'matplotlib~=3.3.0',
+        'networkx~=2.4',
         'Pillow>=7.2.0',
+<<<<<<< HEAD
         'prompt_toolkit==3.0.8',
         'pygments==2.7.3',
         'pydot==1.4.1',
         'pygraphviz==1.5',
         'tqdm==4.48.0',
         'typing_extensions==3.7.4.2'
+=======
+        'pygraphviz~=1.5',
+        'pydot~=1.4.1',
+        'sqlalchemy~=1.3.23',
+        'tqdm~=4.48.0',
+        'typing_extensions~=3.7.4.2'
+>>>>>>> carson/debugging
     ],
     extras_require={
         "dev": ["black>=20.8b1", "mypy", "pytest"]
