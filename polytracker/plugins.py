@@ -25,14 +25,18 @@ class PluginMeta(ABCMeta):
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if not isabstract(cls) and name not in ("Plugin", "Command"):
-            if "name" not in clsdict:
+            if "plugin_name" in clsdict:
+                plugin_name = clsdict["plugin_name"]
+            elif "name" in clsdict:
+                plugin_name = clsdict["name"]
+            else:
                 raise TypeError(f"PolyTracker plugin {name} does not define a name")
-            elif clsdict["name"] in PLUGINS:
+            if plugin_name in PLUGINS:
                 raise TypeError(
-                    f"Cannot instaitiate class {cls.__name__} because a plugin named {name} already exists,"
-                    f" implemented by class {PLUGINS[clsdict['name']]}"
+                    f"Cannot instaitiate class {cls.__name__} because a plugin named {plugin_name} already exists,"
+                    f" implemented by class {PLUGINS[plugin_name]}"
                 )
-            PLUGINS[clsdict["name"]] = cls
+            PLUGINS[plugin_name] = cls
             if issubclass(cls, Command):
                 if "help" not in clsdict:
                     raise TypeError(
@@ -136,7 +140,6 @@ def _lookup_class_property(
 
 class CommandExtensionMeta(PluginMeta, Generic[C]):
     def __init__(cls, name, bases, clsdict):
-        super().__init__(name, bases, clsdict)
         if not isabstract(cls) and name not in (
             "Plugin",
             "Command",
@@ -162,6 +165,13 @@ class CommandExtensionMeta(PluginMeta, Generic[C]):
                     f"{basename} {cls.__name__}'s `parent_type` of {clsdict['parent_type']!r} does not "
                     "extend off of Command"
                 )
+            if "plugin_name" not in clsdict:
+                if hasattr(parent_type, "plugin_name"):
+                    parent_plugin_name = parent_type.plugin_name
+                else:
+                    parent_plugin_name = parent_type.name
+                clsdict["plugin_name"] = f"{parent_plugin_name}_{clsdict['name']}"
+        super().__init__(name, bases, clsdict)
 
     @property
     def parent_command_type(self) -> Type[C]:
