@@ -25,51 +25,15 @@ static constexpr const char *createFuncTable() {
 static constexpr const char *createBlockTable() {
   return "CREATE TABLE IF NOT EXISTS basic_block ("
          "  id BIGINT PRIMARY KEY,"
+         "  function_id BIGINT," /* we don't really need this, because it will always equal (id >> 32)
+                                  * however, it makes things a lot easier on the Python side due to
+                                  * deficiencies in SQLalchemy
+                                  */
          "  block_attributes INTEGER,"
          "UNIQUE(id, block_attributes)"
          " ) WITHOUT ROWID;";
 }
-/*
-static constexpr const char *createBlockInstanceTable() {
-  return "CREATE TABLE IF NOT EXISTS block_instance ("
-         "  event_id BIGINT,"
-         "  block_gid BIGINT,"
-         "  entry_count BIGINT,"
-         "  thread_id INTEGER, "
-         "  input_id INTEGER,"
-         "  PRIMARY KEY(event_id, thread_id, input_id),"
-         ") WITHOUT ROWID;";
-}
 
-static constexpr const char *createCallTable() {
-  return "CREATE TABLE IF NOT EXISTS func_call ("
-         "  event_id BIGINT,"
-         "  function_index INTEGER,"
-         "  dest_index BIGINT,"
-         "  ret_event_uid BIGINT,"
-         "  consumes_bytes TINYINT,"
-         "  thread_id INTEGER, "
-         "  input_id INTEGER,"
-         "  PRIMARY KEY (input_id, thread_id, event_id),"
-         "  FOREIGN KEY (input_id) REFERENCES input(id),"
-         "  FOREIGN KEY (function_index) REFERENCES func(id)"
-         ") WITHOUT ROWID;";
-}
-
-static constexpr const char *createRetTable() {
-  return "CREATE TABLE IF NOT EXISTS func_ret ("
-         "  event_id BIGINT,"
-         "  function_index INTEGER,"
-         "  ret_event_uid BIGINT,"
-         "  call_event_uid BIGINT,"
-         "  thread_id INTEGER,"
-         "  input_id INTEGER,"
-         "  PRIMARY KEY (input_id, thread_id, event_id),"
-         "  FOREIGN KEY (input_id) REFERENCES input(id),"
-         "  FOREIGN KEY (function_index) REFERENCES func(id)"
-         ") WITHOUT ROWID;";
-}
-*/
 static constexpr const char *createTaintTable() {
   return "CREATE TABLE IF NOT EXISTS accessed_label ("
          "  block_gid BIGINT,"
@@ -133,11 +97,12 @@ static constexpr const char *createTaintForestTable() {
 static constexpr const char *createEventsTable() {
   return "CREATE TABLE IF NOT EXISTS events ("
          "event_id BIGINT,"
+         "thread_event_id BIGINT,"
          "event_type TINYINT,"
          "input_id INTEGER,"
          "thread_id INTEGER,"
          "block_gid BIGINT,"
-         "PRIMARY KEY(input_id, event_id)"
+         "PRIMARY KEY(input_id, event_id, thread_id)"
          ") WITHOUT ROWID;";
 }
 

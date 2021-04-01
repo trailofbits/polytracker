@@ -1,9 +1,11 @@
 from enum import IntEnum, IntFlag
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Iterable, List, Optional, Set, Union
 
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
 from sqlalchemy import (
     BigInteger,
@@ -17,6 +19,8 @@ from sqlalchemy import (
     SmallInteger,
     UniqueConstraint,
 )
+
+from tqdm import tqdm
 
 from .tracing import (
     BasicBlock,
@@ -67,8 +71,23 @@ class DBFunction(Base):
     id = Column(Integer, primary_key=True)
     name = Column(Text)
 
+    basic_blocks = relationship("DBBasicBlock")
 
-class FunctionCFG(Base):
+    incoming_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.dest_id")
+    outgoing_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id")
+    accessed_labels = relationship("AccessedLabel",
+                                   primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
+                                               "foreign(AccessedLabel.block_gid)==DBBasicBlock.id)",
+                                   viewonly=True)
+
+    def tainted_byte_offsets(self) -> Set[int]:
+        return DBTaintForest.tainted_byte_offsets((label.taint_forest_node for label in self.accessed_labels))
+
+    def __repr__(self):
+        return f"Function(id={self.id}, name={self.name!r})"
+
+
+class FunctionCFGEdge(Base):
     __tablename__ = "func_cfg"
     dest_id = Column("dest", Integer, ForeignKey("func.id"))
     src_id = Column("src", Integer, ForeignKey("func.id"))
@@ -77,8 +96,8 @@ class FunctionCFG(Base):
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     edge_type = Column(SmallInteger, SQLEnum(EdgeType))
 
-    dest = relationship("DBFunction", remote_side=[dest_id])
-    src = relationship("DBFunction", remote_side=[src_id])
+    dest = relationship("DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges")
+    src = relationship("DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges")
     input = relationship("Input")
     event = relationship("DBTraceEvent")
 
@@ -88,30 +107,49 @@ class FunctionCFG(Base):
 class DBBasicBlock(Base, BasicBlock):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
+    # function_id should always be equal to (id >> 32), but we have it for convenience
+    function_id = Column(BigInteger, ForeignKey("func.id"))
     attributes = Column("block_attributes", Integer, SQLEnum(BasicBlockType))
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
     accessed_labels = relationship("AccessedLabel")
+    function = relationship("DBFunction", back_populates="basic_blocks")
+
+    @hybrid_property
+    def bb_index(self) -> int:
+        return self.id & 0x0000FFFF
+
+    def __str__(self):
+        return f"{self.function.name}@{self.bb_index}"
 
 
 class AccessedLabel(Base):
     __tablename__ = "accessed_label"
     block_gid = Column(BigInteger, ForeignKey("basic_block.id"))
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
-    label = Column(Integer)
-    input_id = Column(Integer)
+    label = Column(Integer, ForeignKey("taint_forest.label"))
+    input_id = Column(Integer, ForeignKey("input.id"), ForeignKey("taint_forest.input_id"))
     access_type = Column(SmallInteger, SQLEnum(ByteAccessType))
     thread_id = Column(Integer)
 
     event = relationship("DBTraceEvent", back_populates="accessed_labels")
     basic_block = relationship("DBBasicBlock", back_populates="accessed_labels")
+    input = relationship("Input")
+    taint_forest_node = relationship("DBTaintForest", primaryjoin="and_(AccessedLabel.label==DBTaintForest.label, "
+                                     "AccessedLabel.input_id==DBTaintForest.input_id)")
 
     __table_args__ = (
         PrimaryKeyConstraint(
             "block_gid", "event_id", "label", "input_id", "access_type"
         ),
     )
+
+    def __lt__(self, other):
+        return hasattr(other, "label") and self.label < other.label
+
+    def tainted_byte_offsets(self) -> Set[int]:
+        return DBTaintForest.tainted_byte_offsets((self.taint_forest_node,))
 
 
 class DBTraceEvent(Base):
@@ -125,6 +163,7 @@ class DBTraceEvent(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
 
     input = relationship("Input", back_populates="events")
+    accessed_labels = relationship("AccessedLabel")
 
     __mapper_args__ = {"polymorphic_on": "event_type"}
 
@@ -198,11 +237,17 @@ class DBPolyTrackerTrace(PolyTrackerTrace):
 
     @property
     def functions(self) -> Iterable[Function]:
-        pass
+        return self.session.query(DBFunction).all()
+
+    def get_function(self, name: str) -> Function:
+        try:
+            return self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+        except NoResultFound:
+            raise KeyError(name)
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        pass
+        return self.session.query(DBBasicBlock).all()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
         pass
@@ -221,12 +266,15 @@ class PolytrackerItem(Base):
     __table_args__ = (PrimaryKeyConstraint("store_key", "value"),)
 
 
-class CanonicalMapItem(Base):
+class CanonicalMap(Base):
     __tablename__ = "canonical_map"
     input_id = Column(Integer, ForeignKey("input.id"))
     taint_label = Column(BigInteger)
     file_offset = Column(BigInteger)
+
     __table_args__ = (PrimaryKeyConstraint("input_id", "taint_label", "file_offset"),)
+
+    input = relationship("Input")
 
 
 class TaintedChunksItem(Base):
@@ -237,10 +285,68 @@ class TaintedChunksItem(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
 
 
-class TaintForestItem(Base):
+class DBTaintForest(Base):
     __tablename__ = "taint_forest"
-    parent_one = Column(Integer)
-    parent_two = Column(Integer)
+    parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
+    parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
     label = Column(Integer, ForeignKey("accessed_label.label"))
     input_id = Column(Integer, ForeignKey("input.id"))
+
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
+
+    parent_one = relationship("DBTaintForest", foreign_keys=[parent_one_id], uselist=False)
+    parent_two = relationship("DBTaintForest", foreign_keys=[parent_two_id], uselist=False)
+    input = relationship("Input")
+    accessed_labels = relationship("AccessedLabel", foreign_keys=[label, input_id])
+
+    def __lt__(self, other):
+        return isinstance(other, DBTaintForest) and self.label < other.label
+
+    def __str__(self):
+        return f"I{self.input_id}L{self.label}"
+
+    @staticmethod
+    def tainted_byte_offsets(labels: Iterable["DBTaintForest"]) -> Set[int]:
+        # reverse the labels to reduce the likelihood of reproducing work
+        node_stack: List[DBTaintForest] = sorted(list(set(labels)), reverse=True)
+        history: Set[int] = set(node.label for node in node_stack)
+        taints = set()
+        if len(node_stack) < 10:
+            labels_str = ", ".join(map(str, node_stack))
+        else:
+            labels_str = f"{len(node_stack)} labels"
+        session: Optional[Session] = None
+        with tqdm(
+                desc=f"finding canonical taints for {labels_str}",
+                leave=False,
+                bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
+                total=sum(node.label for node in node_stack),
+        ) as t:
+            while node_stack:
+                node = node_stack.pop()
+                t.update(node.label)
+                if node.parent_one_id == 0:
+                    assert node.parent_two_id == 0
+                    if session is None:
+                        session = Session.object_session(node)
+                    try:
+                        file_offset = session.query(CanonicalMap).filter(
+                            CanonicalMap.taint_label == node.label,
+                            CanonicalMap.input_id == node.input_id
+                        ).one().file_offset
+                    except NoResultFound:
+                        raise ValueError(
+                            f"Taint label {node.label} is not in the canonical mapping!"
+                        )
+                    taints.add(file_offset)
+                else:
+                    parent1, parent2 = node.parent_one, node.parent_two
+                    if parent1.label not in history:
+                        history.add(parent1.label)
+                        node_stack.append(parent1)
+                        t.total += parent1.label
+                    if parent2 not in history:
+                        history.add(parent2.label)
+                        node_stack.append(parent2)
+                        t.total += parent2.label
+        return taints

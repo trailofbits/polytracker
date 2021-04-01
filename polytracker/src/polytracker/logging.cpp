@@ -19,7 +19,8 @@ extern sqlite3 *output_db;
 thread_local block_id_t curr_block_index = -1;
 thread_local function_id_t curr_func_index = -1;
 thread_local int thread_id = -1;
-thread_local event_id_t event_id = 0;
+thread_local event_id_t thread_event_id = 0;
+std::atomic<event_id_t> event_id = 0;
 std::atomic<size_t> last_thread_id{0};
 static bool is_init = false;
 std::mutex is_init_mutex;
@@ -71,7 +72,7 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   // Func CFG edges added by funcExit (as it knows the return location)
   storeFuncCFGEdge(output_db, input_id, thread_id, func_id, curr_func_index,
                    event_id++, EdgeType::FORWARD);
-  storeEvent(output_db, input_id, thread_id, event_id, EventType::FUNC_ENTER,
+  storeEvent(output_db, input_id, thread_id, event_id, thread_event_id++, EventType::FUNC_ENTER,
              func_id, 0);
   if (UNLIKELY(func_id == curr_func_index)) {
     recursive_funcs[func_id] = true;
@@ -91,7 +92,7 @@ void logFunctionExit(const function_id_t &index) {
       (recursive_funcs.find(curr_func_index) != recursive_funcs.end())) {
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      event_id++, EdgeType::BACKWARD);
-    storeEvent(output_db, input_id, thread_id, event_id, EventType::FUNC_RET,
+    storeEvent(output_db, input_id, thread_id, event_id, thread_event_id++, EventType::FUNC_RET,
                index, 0);
   }
   curr_func_index = index;
@@ -103,7 +104,7 @@ void logBBEntry(const char *fname, const function_id_t &findex,
   // NOTE (Carson) we could memoize this to prevent repeated calls for loop
   // blocks
   storeBlock(output_db, findex, bindex, btype);
-  storeEvent(output_db, input_id, thread_id, event_id++, EventType::BLOCK_ENTER,
+  storeEvent(output_db, input_id, thread_id, event_id++, thread_event_id++, EventType::BLOCK_ENTER,
              findex, bindex);
   curr_block_index = bindex;
 }

@@ -419,6 +419,9 @@ class PolyTrackerTrace(ABC):
     def basic_blocks(self) -> Iterable[BasicBlock]:
         raise NotImplementedError()
 
+    def get_function(self, name: str) -> Function:
+        raise NotImplementedError()
+
     @abstractmethod
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
         raise NotImplementedError()
