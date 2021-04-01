@@ -458,7 +458,7 @@ class DockerRun(DockerSubcommand):
             interactive = not notty
         try:
             container.run(
-                *args.ARGS, interactive=interactive, check_if_docker_out_of_date=True
+                *args, interactive=interactive, check_if_docker_out_of_date=True
             )
             return
         except DockerOutOfDateError as e:
