@@ -4,7 +4,7 @@ from typing import List, Dict, Union
 from .grammars import (
     ExtractGrammarCommand,
     Terminal,
-    PolyTrackerTrace,
+    ProgramTrace,
     trace_to_grammar,
 )
 from .plugins import CommandExtension
@@ -179,7 +179,7 @@ class DatalogClause:
 class DatalogGrammar:
     RULE_START = "a"
 
-    def __init__(self, trace: PolyTrackerTrace):
+    def __init__(self, trace: ProgramTrace):
         self.trace = trace
         self.clause_decls: List[DatalogRuleDecl] = []
         self.output_decls: List[DatalogOutputDecl] = []

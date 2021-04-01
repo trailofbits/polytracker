@@ -41,13 +41,13 @@ static void assignThreadID() {
 
 void logCompare(const dfsan_label &label, const function_id_t &findex,
                 const block_id_t &bindex) {
-  storeTaintAccess(output_db, label, event_id++, findex, bindex, input_id,
+  storeTaintAccess(output_db, label, event_id++, thread_event_id++, findex, bindex, input_id,
                    thread_id, ByteAccessType::CMP_ACCESS);
 }
 
 void logOperation(const dfsan_label &label, const function_id_t &findex,
                   const block_id_t &bindex) {
-  storeTaintAccess(output_db, label, event_id++, findex, bindex, input_id,
+  storeTaintAccess(output_db, label, event_id++, thread_event_id++, findex, bindex, input_id,
                    thread_id, ByteAccessType::INPUT_ACCESS);
 }
 

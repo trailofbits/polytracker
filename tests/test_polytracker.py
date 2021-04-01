@@ -1,9 +1,7 @@
 import pytest
 from shutil import copyfile
 
-from polytracker import TaintForestFunctionInfo
-from polytracker.tracing import PolyTrackerTrace
-from polytracker.database import DBPolyTrackerTrace
+from polytracker import PolyTrackerTrace, ProgramTrace, TaintForestFunctionInfo
 
 from .data import *
 
@@ -73,7 +71,7 @@ def polyclang_compile_target(target_name: str) -> int:
 # Returns the Polyprocess object
 def validate_execute_target(
     target_name: str, config_path: Optional[Union[str, Path]]
-) -> PolyTrackerTrace:
+) -> ProgramTrace:
     target_bin_path = BIN_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
@@ -97,7 +95,7 @@ def validate_execute_target(
             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
     assert ret_val == 0
     # Assert that the appropriate files were created
-    return DBPolyTrackerTrace.load(db_path)
+    return PolyTrackerTrace.load(db_path)
 
 
 @pytest.fixture
@@ -126,16 +124,16 @@ def program_trace(request):
 
 
 @pytest.mark.program_trace("test_mmap.c")
-def test_source_mmap(program_trace: PolyTrackerTrace):
+def test_source_mmap(program_trace: ProgramTrace):
     assert (
-        0 in program_trace.get_function("main").tainted_byte_offsets()
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
 
 
 @pytest.mark.program_trace("test_open.c")
-def test_source_open(program_trace: PolyTrackerTrace):
+def test_source_open(program_trace: ProgramTrace):
     assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
 
 
@@ -167,70 +165,65 @@ def test_source_open(program_trace: PolyTrackerTrace):
 
 
 @pytest.mark.program_trace("test_open.c")
-def test_source_open_full_validate_schema(program_trace: PolyTrackerTrace):
+def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
     json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
     assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
     # TODO: Uncomment once we update this function
     # test_polyprocess_taint_sets(json_path, forest_path)
 
 
 @pytest.mark.program_trace("test_memcpy.c")
-def test_memcpy_propagate(program_trace: PolyTrackerTrace):
-    info = program_trace.functions["dfs$touch_copied_byte"]
-    assert isinstance(info, TaintForestFunctionInfo)
-    assert 1 in info.input_byte_labels[to_native_path(TEST_DATA_PATH)]
+def test_memcpy_propagate(program_trace: ProgramTrace):
+    func = program_trace.get_function("touch_copied_byte")
+    taints = func.taints()
+    assert len(taints) == 1
+    assert next(iter(taints)).offset == 0
 
 
 @pytest.mark.program_trace("test_taint_log.c")
-def test_taint_log(program_trace: PolyTrackerTrace):
-    input_bytes = program_trace.functions["main"].input_bytes[
-        to_native_path(TEST_DATA_PATH)
-    ]
+def test_taint_log(program_trace: ProgramTrace):
+    taints = program_trace.get_function("main").taints()
     for i in range(0, 10):
-        assert i in input_bytes
+        assert any(i == offset.offset for offset in taints)
 
 
 @pytest.mark.program_trace(
     "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
 )
-def test_config_files(program_trace: PolyTrackerTrace):
+def test_config_files(program_trace: ProgramTrace):
     # the new_range.json config changes the polystart/polyend to
     # POLYSTART: 1, POLYEND: 3
+    taints = program_trace.get_function("main").taints()
     for i in range(1, 4):
-        assert (
-            i
-            in program_trace.functions["main"].input_bytes[
-                to_native_path(TEST_DATA_PATH)
-            ]
+        assert any(
+            i == offset.offset for offset in taints
         )
     for i in range(4, 10):
-        assert (
-            i
-            not in program_trace.functions["main"].input_bytes[
-                to_native_path(TEST_DATA_PATH)
-            ]
+        assert all(
+            i != offset.offset for offset in taints
         )
 
 
 @pytest.mark.program_trace("test_fopen.c")
-def test_source_fopen(program_trace: PolyTrackerTrace):
-    assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
-    )
+def test_source_fopen(program_trace: ProgramTrace):
+    taints = program_trace.get_function("main").taints()
+    assert any(offset.offset == 0 for offset in taints)
 
 
 @pytest.mark.program_trace("test_ifstream.cpp")
-def test_source_ifstream(program_trace: PolyTrackerTrace):
-    assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
-    )
+def test_source_ifstream(program_trace: ProgramTrace):
+    taints = program_trace.get_function("main").taints()
+    assert any(offset.offset == 0 for offset in taints)
 
 
 @pytest.mark.program_trace("test_object_propagation.cpp")
-def test_cxx_object_propagation(program_trace: PolyTrackerTrace):
+def test_cxx_object_propagation(program_trace: ProgramTrace):
+    #assert any(
+    #    func.taints().find("tainted_string") for func in program_trace.functions
+    #)
     # object_processed_sets = pp.processed_taint_sets
     # TODO: Update "tainted_string" in the ProgramTrace class
     # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
@@ -240,7 +233,7 @@ def test_cxx_object_propagation(program_trace: PolyTrackerTrace):
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
 @pytest.mark.program_trace("test_vector.cpp")
-def test_cxx_vector(program_trace: PolyTrackerTrace):
+def test_cxx_vector(program_trace: ProgramTrace):
     assert (
         0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
     )
