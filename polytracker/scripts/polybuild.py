@@ -20,14 +20,14 @@
   against the compiler-rt based runtime pre_init_array. This allows the user to extract BC for whatever DSOs and executables they want, while still being
   able to easily include other libraries they did not want tracking in.
 """
-from collections import defaultdict
 import argparse
 import os
-import tempfile
 import sys
 import subprocess
+from multiprocessing import Process, Manager
 from typing import List, Optional
-from dataclasses import dataclass
+import json
+import sqlite3
 
 """
 Polybuild is supposed to do a few things. 
@@ -72,6 +72,13 @@ ARTIFACT_STORE_PATH: str = os.getenv("WLLVM_ARTIFACT_STORE")
 assert ARTIFACT_STORE_PATH is not None
 assert os.path.exists(ARTIFACT_STORE_PATH)
 
+MANIFEST_FILE: str = f"{ARTIFACT_STORE_PATH}/manifest.db"
+db_conn = sqlite3.connect(MANIFEST_FILE)
+cur = db_conn.cursor()
+cur.execute("CREATE TABLE IF NOT EXISTS manifest (target TEXT, artifact TEXT);")
+db_conn.commit()
+db_conn.close()
+
 CXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "clean_build/include/c++/v1")
 CXX_LIB_PATH = os.path.join(CXX_DIR_PATH, "clean_build/lib")
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
@@ -101,7 +108,7 @@ def is_building(argv) -> bool:
 
 
 # (2)
-def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None) -> str:
+def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None, file_id=None) -> str:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
@@ -112,6 +119,8 @@ def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None) -> 
     if ignore_lists is None:
         ignore_lists = []
     opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
+    if file_id is not None:
+        opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [bitcode_file, "-o", output_bc]
@@ -232,15 +241,13 @@ def handle_cmd(argv: List[str]) -> Optional[str]:
             artifacts.append(arg)
             store_artifact(arg)
 
-    with open(f"{ARTIFACT_STORE_PATH}/manifest.txt", mode="w+") as manifest_file:
-        artifacts = " ".join(artifacts) + "\n"
-        cmds = " ".join(argv) + "\n"
-        manifest_file.write(f"======= TARGET: {output_file} ========\n")
-        manifest_file.write(artifacts)
-        manifest_file.write("-----------------------------------\n")
-        manifest_file.write(cmds)
-        manifest_file.write("===================================\n")
-
+    conn = sqlite3.connect(MANIFEST_FILE)
+    cur = conn.cursor()
+    for art in artifacts:
+        query = f"""INSERT INTO manifest (target, artifact) VALUES ("{os.path.realpath(output_file)}", "{os.path.realpath(art)}");"""
+        cur.execute(query)
+    conn.commit()
+    conn.close()
     return output_file
 
 
@@ -273,7 +280,8 @@ def do_everything(argv: List[str]):
 
     # Compile into executable
     re_comp = [
-        compiler, "-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
+        compiler, "-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file,
+        "-Wl,--allow-multiple-definition",
         "-Wl,--start-group", "-lc++abi"
     ]
     re_comp.extend(POLYCXX_LIBS)
@@ -282,7 +290,7 @@ def do_everything(argv: List[str]):
     assert ret == 0
 
 
-def lower_bc(input_bitcode, output_file, libs = None):
+def lower_bc(input_bitcode, output_file, libs=None):
     # Lower bitcode. Creates a .o
     if is_cxx:
         result = subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode])
@@ -307,6 +315,20 @@ def lower_bc(input_bitcode, output_file, libs = None):
     re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
+
+
+def replay_build_instance(artifact: str, file_id: int, ignore_lists, non_track_artifacts, bc_files):
+    output_bc = artifact + "_output.bc"
+    input_bc = str(file_id) + "_temp.bc"
+    get_bc = ["get-bc", "-o", input_bc, "-b", artifact]
+    ret = subprocess.call(get_bc)
+    if ret != 0:
+        print(f"Error getting BC for {artifact}")
+        print("Continuing anyway because that just might be an external library!")
+        non_track_artifacts.append(artifact)
+        return
+    bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
+    bc_files.append(bc_file)
 
 
 def main():
@@ -338,6 +360,12 @@ def main():
     )
     parser.add_argument(
         "--lower-bitcode", action="store_true", help="Specify to compile bitcode into an object file"
+    )
+    parser.add_argument(
+        "--file-id", type=int, help="File id for lowering bitcode in parallel"
+    )
+    parser.add_argument(
+        "--rebuild-track", type=str, help="full path to artifact to auto rebuild with instrumentation"
     )
     parser.add_argument(
         "--libs",
@@ -372,6 +400,40 @@ def main():
             exit(1)
         bc_file = instrument_bitcode(args.input_file, args.output_file + ".bc", args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
+
+    elif sys.argv[1] == "--rebuild-track":
+        args = parser.parse_args(sys.argv[1:])
+        if not args.rebuild_track or not args.output_file:
+            print("Error! replay instrument path and output file must be specified")
+            exit(1)
+        args.rebuild_track = os.path.realpath(args.rebuild_track)
+        db_conn = sqlite3.connect(MANIFEST_FILE)
+        cur = db_conn.cursor()
+        query = f"""SELECT artifact from manifest where target="{args.rebuild_track}";"""
+        artifacts = [art[0] for art in cur.execute(query).fetchall()]
+        db_conn.close()
+        print(artifacts)
+        if len(artifacts) == 0:
+            print("Error, no artifacts found!")
+            exit(1)
+        manager = Manager()
+        bc_files = manager.list()
+        non_track_artifacts = manager.list()
+        processes = []
+        for i, artifact in enumerate(artifacts):
+            p = Process(target=replay_build_instance, args=(artifact, i, args.lists, non_track_artifacts, bc_files))
+            processes.append(p)
+            p.start()
+        for proc in processes:
+            proc.join()
+        if len(bc_files) == 0:
+            print("Error! No bitcode files! Nothing to instrument")
+            exit(1)
+        mega_link_output = "mega_link.bc"
+        ret = subprocess.call(["llvm-link", "-only-needed", "-o", mega_link_output] + [bc for bc in bc_files])
+        if ret != 0:
+            print("llvm link failed!")
+            exit(1)
 
     # Do gllvm build
     else:
