@@ -151,7 +151,7 @@ class DockerContainer:
         stdout=None,
         stderr=None,
         cwd=None,
-    ):
+    ) -> int:
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
@@ -219,7 +219,7 @@ class DockerContainer:
         else:
             return subprocess.run(
                 cmd_args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd
-            )
+            ).returncode
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
@@ -450,17 +450,18 @@ class DockerRun(DockerSubcommand):
         )
 
     def run(self, args):
-        DockerRun.run_on(self.container, args.ARGS, notty=args.notty)
+        return DockerRun.run_on(self.container, args.ARGS, notty=args.notty)
 
     @staticmethod
-    def run_on(container: DockerContainer, args, interactive: Optional[bool] = None, notty: bool = False):
+    def run_on(
+            container: DockerContainer, args, interactive: Optional[bool] = None, notty: bool = False, **kwargs
+    ) -> int:
         if interactive is None:
             interactive = not notty
         try:
-            container.run(
-                *args, interactive=interactive, check_if_docker_out_of_date=True
+            return container.run(
+                *args, interactive=interactive, check_if_docker_out_of_date=True, **kwargs
             )
-            return
         except DockerOutOfDateError as e:
             out_of_date_error = e
         if not sys.stdin.isatty() or not sys.stdout.isatty():
@@ -477,4 +478,4 @@ class DockerRun(DockerSubcommand):
             elif option.lower() == "y" or option == "":
                 container.rebuild()
                 break
-        container.run(*args, interactive=interactive, check_if_docker_out_of_date=False)
+        return container.run(*args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs)

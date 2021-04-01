@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+from argparse import ArgumentParser, Namespace, REMAINDER
 from collections import defaultdict
 from enum import IntFlag
 from pathlib import Path
+import subprocess
 from typing import (
     Dict,
     Iterable,
@@ -14,7 +16,8 @@ from typing import (
 
 from cxxfilt import demangle
 
-from polytracker.cfg import DiGraph
+from .cfg import DiGraph
+from .plugins import Command, Subcommand
 
 
 class BasicBlockType(IntFlag):
@@ -535,3 +538,50 @@ class ProgramTrace(ABC):
             return False
         except StopIteration:
             return True
+
+
+class TraceCommand(Command):
+    name = "trace"
+    help = "commands related to tracing"
+    parser: ArgumentParser
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        self.parser = parser
+
+    def run(self, args: Namespace):
+        self.parser.print_help()
+
+
+class RunTraceCommand(Subcommand[TraceCommand]):
+    name = "run"
+    help = "run an instrumented binary"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("--no-bb-trace", action="store_true", help="do not trace at the basic block level")
+        parser.add_argument("--output-db", "-o", type=str, default="polytracker.db",
+                            help="path to the output database (default is polytracker.db)")
+        parser.add_argument("INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run")
+        parser.add_argument("INPUT_FILE", type=str, help="the file to track")
+        parser.add_argument("args", nargs=REMAINDER)
+
+    def run(self, args: Namespace):
+        from .containerization import CAN_RUN_NATIVELY, DockerContainer, DockerRun
+        import sys
+
+        if Path(args.output_db).exists():
+            sys.stderr.write(f"Warning: {args.output.db} already exists\n")
+
+        cmd_args = [args.INSTRUMENTED_BINARY] + args.args + [args.INPUT_FILE]
+        env = {
+            "POLYPATH": args.INPUT_FILE,
+            "POLYTRACE": ["1", "0"][args.no_bb_trace],
+            "POLYDB": args.output_db
+        }
+        if CAN_RUN_NATIVELY:
+            retval = subprocess.call(cmd_args, env=env)  # type: ignore
+        else:
+            retval = DockerRun.run_on(DockerContainer(), cmd_args, interactive=True, env=env)
+        if retval == 0:
+            print(f"Trace saved to {args.output_db}")
+        return retval

@@ -61,8 +61,8 @@ def main():
             retval = 0
         else:
             retval = 1
-    return retval
+    exit(retval)
 
 
 if __name__ == "__main__":
-    exit(main())
+    main()
