@@ -93,13 +93,13 @@ static constexpr const char *createTaintForestTable() {
 
 static constexpr const char *createEventsTable() {
   return "CREATE TABLE IF NOT EXISTS events ("
-         "event_id BIGINT,"
-         "thread_event_id BIGINT,"
+         "event_id BIGINT,"        /* event_id is globally unique and sequential for the whole program           */
+         "thread_event_id BIGINT," /* thread_event_id is sequential just for thre thread in which it was created */
          "event_type TINYINT,"
          "input_id INTEGER,"
          "thread_id INTEGER,"
          "block_gid BIGINT,"
-         "PRIMARY KEY(input_id, event_id, thread_id)"
+         "PRIMARY KEY(input_id, event_id)"
          ") WITHOUT ROWID;";
 }
 
