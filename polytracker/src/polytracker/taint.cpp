@@ -28,7 +28,7 @@ extern input_id_t input_id;
 extern thread_local int thread_id;
 extern thread_local block_id_t curr_block_index;
 extern thread_local function_id_t curr_func_index;
-extern thread_local event_id_t event_id;
+extern std::atomic<event_id_t> event_id;
 
 extern char *forest_mem;
 
