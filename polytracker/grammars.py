@@ -27,7 +27,7 @@ from .tracing import (
     BasicBlockEntry,
     FunctionCall,
     FunctionReturn,
-    PolyTrackerTrace,
+    ProgramTrace,
     TraceEvent,
 )
 
@@ -618,7 +618,7 @@ def production_name(event: TraceEvent) -> str:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
-def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
+def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
@@ -720,7 +720,7 @@ def trace_to_grammar(trace: PolyTrackerTrace) -> Grammar:
     return grammar
 
 
-def extract(traces: Iterable[PolyTrackerTrace], simplify: bool = False) -> Grammar:
+def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
@@ -759,7 +759,7 @@ class ExtractGrammarCommand(Command):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.traces: List[PolyTrackerTrace] = []
+        self.traces: List[ProgramTrace] = []
         self.grammar: Optional[Grammar] = None
 
     def __init_arguments__(self, parser: ArgumentParser):
@@ -783,7 +783,7 @@ class ExtractGrammarCommand(Command):
         self.traces = []
         try:
             for db_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
-                trace = PolyTrackerTrace.parse(db_file, input_file)
+                trace = ProgramTrace.parse(db_file, input_file)
                 to_dot(trace.cfg).save("cfg.dot")
                 print(f"num nodes {trace.cfg.number_of_nodes()}")
                 if not trace.is_cfg_connected():

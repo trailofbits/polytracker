@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Set, Union
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
@@ -29,7 +28,7 @@ from .tracing import (
     Function,
     FunctionCall,
     FunctionReturn,
-    PolyTrackerTrace,
+    ProgramTrace,
     TraceEvent,
 )
 
@@ -47,6 +46,7 @@ class EventType(IntEnum):
     FUNC_ENTER = 0
     FUNC_RET = 1
     BLOCK_ENTER = 2
+    TAINT_ACCESS = 3
 
 
 class EdgeType(IntEnum):
@@ -66,6 +66,7 @@ class Input(Base):
     events = relationship("DBTraceEvent")
 
 
+@Function.register
 class DBFunction(Base):
     __tablename__ = "func"
     id = Column(Integer, primary_key=True)
@@ -77,14 +78,16 @@ class DBFunction(Base):
     outgoing_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id")
     accessed_labels = relationship("AccessedLabel",
                                    primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
-                                               "foreign(AccessedLabel.block_gid)==DBBasicBlock.id)",
+                                               "foreign(DBTraceEvent.block_gid)==DBBasicBlock.id, "
+                                               "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
                                    viewonly=True)
 
     def tainted_byte_offsets(self) -> Set[int]:
-        return DBTaintForest.tainted_byte_offsets((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForest.tainted_byte_offsets((label.event.taint_forest_node for label in self.accessed_labels))
 
-    def __repr__(self):
-        return f"Function(id={self.id}, name={self.name!r})"
+    @property
+    def function_index(self) -> int:
+        return self.id
 
 
 class FunctionCFGEdge(Base):
@@ -104,7 +107,8 @@ class FunctionCFGEdge(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
 
 
-class DBBasicBlock(Base, BasicBlock):
+@BasicBlock.register
+class DBBasicBlock(Base):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
     # function_id should always be equal to (id >> 32), but we have it for convenience
@@ -113,35 +117,32 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    accessed_labels = relationship("AccessedLabel")
+    events = relationship("DBTraceEvent")
+    accessed_labels = relationship("AccessedLabel",
+                                   primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
+                                               "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
+                                   viewonly=True)
     function = relationship("DBFunction", back_populates="basic_blocks")
 
-    @hybrid_property
-    def bb_index(self) -> int:
+    @property
+    def index_in_function(self) -> int:
         return self.id & 0x0000FFFF
 
-    def __str__(self):
-        return f"{self.function.name}@{self.bb_index}"
+    def tainted_byte_offsets(self) -> Set[int]:
+        return DBTaintForest.tainted_byte_offsets((label.taint_forest_node for label in self.accessed_labels))
 
 
 class AccessedLabel(Base):
     __tablename__ = "accessed_label"
-    block_gid = Column(BigInteger, ForeignKey("basic_block.id"))
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     label = Column(Integer, ForeignKey("taint_forest.label"))
-    input_id = Column(Integer, ForeignKey("input.id"), ForeignKey("taint_forest.input_id"))
     access_type = Column(SmallInteger, SQLEnum(ByteAccessType))
-    thread_id = Column(Integer)
 
-    event = relationship("DBTraceEvent", back_populates="accessed_labels")
-    basic_block = relationship("DBBasicBlock", back_populates="accessed_labels")
-    input = relationship("Input")
-    taint_forest_node = relationship("DBTaintForest", primaryjoin="and_(AccessedLabel.label==DBTaintForest.label, "
-                                     "AccessedLabel.input_id==DBTaintForest.input_id)")
+    event = relationship("DBTaintAccess", uselist=False)
 
     __table_args__ = (
         PrimaryKeyConstraint(
-            "block_gid", "event_id", "label", "input_id", "access_type"
+            "event_id", "label", "access_type"
         ),
     )
 
@@ -152,17 +153,20 @@ class AccessedLabel(Base):
         return DBTaintForest.tainted_byte_offsets((self.taint_forest_node,))
 
 
+@TraceEvent.register
 class DBTraceEvent(Base):
     __tablename__ = "events"
-    event_id = Column(BigInteger)
+    event_id = Column(BigInteger)  # globally unique, globally sequential event counter
+    thread_event_id = Column(BigInteger)  # unique-to-thread id, sequential within the thread
     event_type = Column(SmallInteger, SQLEnum(EventType))
     input_id = Column(Integer, ForeignKey("input.id"))
     thread_id = Column(Integer)
-    block_gid = Column(BigInteger)
+    block_gid = Column(BigInteger, ForeignKey("basic_block.id"))
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
 
     input = relationship("Input", back_populates="events")
+    basic_block = relationship("DBBasicBlock", back_populates="events")
     accessed_labels = relationship("AccessedLabel")
 
     __mapper_args__ = {"polymorphic_on": "event_type"}
@@ -180,27 +184,53 @@ class DBTraceEvent(Base):
         # TODO: Check if we are the last event
         return self.uid + 1
 
+    def next_event(self) -> Optional["TraceEvent"]:
+        session = Session.object_session(self)
+        try:
+            return session.query(DBTraceEvent).filter(
+                DBTraceEvent.event_id == self.event_id + 1,
+                DBTraceEvent.thread_id == self.thread_id
+            ).one()
+        except NoResultFound:
+            return None
 
-class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
+    def previous_event(self) -> Optional["TraceEvent"]:
+        session = Session.object_session(self)
+        try:
+            return session.query(DBTraceEvent).filter(
+                DBTraceEvent.event_id == self.event_id - 1,
+                DBTraceEvent.thread_id == self.thread_id
+            ).one()
+        except NoResultFound:
+            return None
+
+
+class DBTaintAccess(DBTraceEvent):
+    __mapper_args__ = {
+        "polymorphic_identity": EventType.TAINT_ACCESS,
+    }
+
+    accessed_label = relationship(
+        "AccessedLabel", primaryjoin="AccessedLabel.event_id==DBTaintAccess.event_id", uselist=False
+    )
+    taint_forest_node = relationship(
+        "DBTaintForest",
+        primaryjoin="and_(DBTaintAccess.event_id==remote(AccessedLabel.event_id), "
+                    "AccessedLabel.label==foreign(DBTaintForest.label), "
+                    "DBTaintForest.input_id==DBTaintAccess.input_id)",
+        viewonly=True,
+        uselist = False
+    )
+
+    def tainted_byte_offsets(self) -> Set[int]:
+        return DBTaintForest.tainted_byte_offsets((self.taint_forest_node,))
+
+
+@BasicBlockEntry.register
+class DBBasicBlockEntry(DBTraceEvent):
     __mapper_args__ = {
         "polymorphic_identity": EventType.BLOCK_ENTER,
     }
-
-    @BasicBlockEntry.trace.setter  # type: ignore
-    def trace(self, pttrace: "PolyTrackerTrace"):
-        if isinstance(pttrace, DBPolyTrackerTrace):
-            BasicBlockEntry.trace.fset(self, pttrace)  # type: ignore
-            consumed_bytes = []
-            for taint_item in pttrace.session.query(TaintItem).filter(
-                TaintItem.input_id == self.input_id
-                and TaintItem.block_gid == self.global_index
-            ):
-                consumed_bytes.append(taint_item.label)
-            self.consumed = tuple(consumed_bytes)
-        else:
-            raise ValueError(
-                f"{self.__class__.__name__}.trace may only be set to subclasses of `DBPolyTrackerTrace`"
-            )
 
     @property
     def bb_index(self) -> int:
@@ -211,23 +241,25 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
         return (self.func_gid >> 32) & 0xFFFF
 
 
-class DBFunctionCall(DBTraceEvent, FunctionCall):
+@FunctionCall.register
+class DBFunctionCall(DBTraceEvent):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
 
 
-class DBFunctionReturn(DBTraceEvent, FunctionReturn):
+@FunctionReturn.register
+class DBFunctionReturn(DBTraceEvent):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
 
 
-class DBPolyTrackerTrace(PolyTrackerTrace):
+class DBProgramTrace(ProgramTrace):
     def __init__(self, session: Session):
         self.session: Session = session
 
     @staticmethod
-    def load(db_path: Union[str, Path]) -> "DBPolyTrackerTrace":
+    def load(db_path: Union[str, Path]) -> "DBProgramTrace":
         engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
-        return DBPolyTrackerTrace(session_maker())
+        return DBProgramTrace(session_maker())
 
     def __len__(self) -> int:
         pass
