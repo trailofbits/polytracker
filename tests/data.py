@@ -5,19 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 
-<<<<<<< HEAD
 from polytracker.containerization import CAN_RUN_NATIVELY, DockerContainer
-=======
-from polytracker.containerization import DockerContainer
-
-
-IS_LINUX: bool = platform.system() == "Linux"
-CAN_RUN_NATIVELY: bool = (
-    IS_LINUX
-    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0"
-    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
-)
->>>>>>> carson/debugging
 
 
 _DOCKER: Optional[DockerContainer] = None
