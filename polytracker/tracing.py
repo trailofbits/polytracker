@@ -82,25 +82,52 @@ class Input:
         return isinstance(other, Input) and self.uid == other.uid and self.path == other.path
 
 
-class ByteOffset:
-    def __init__(self, source: Input, offset: int):
+class TaintedRegion:
+    def __init__(self, source: Input, offset: int, length: int):
         self.source: Input = source
         self.offset: int = offset
+        self.length: int = length
 
     @property
     def value(self) -> bytes:
-        return self.source.content[self.offset:self.offset+1]
+        return self.source.content[self.offset:self.offset+self.length]
+
+    def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
+        if isinstance(index_or_slice, slice):
+            if index_or_slice.step is not None and index_or_slice.step != 1:
+                raise ValueError("TaintedRegion only supports slices with step == 1")
+            start = slice.start
+            if start < 0:
+                start = max(self.length + start, 0)
+            stop = slice.stop
+            if stop < 0:
+                stop = self.length + stop
+            if start >= stop or start >= self.length or stop <= 0:
+                return TaintedRegion(source=self.source, offset=self.offset, length=0)
+            return TaintedRegion(source=self.source, offset=self.offset+start, length=stop-start)
+        elif index_or_slice < 0 or index_or_slice >= self.length:
+            raise IndexError(index_or_slice)
+        else:
+            return ByteOffset(source=self.source, offset=self.offset + index_or_slice)
+
+    def __bytes__(self):
+        return self.value
 
     def __hash__(self):
         return hash((self.source, self.offset))
 
     def __eq__(self, other):
-        return isinstance(other, ByteOffset) and self.source == other.source and self.offset == other.offset
+        return isinstance(other, TaintedRegion) and self.source == other.source and self.offset == other.offset and \
+               self.length == other.length
 
     def __lt__(self, other):
-        return isinstance(other, ByteOffset) and (self.source.uid < other.source.uid) or (
-            self.source.uid == other.source.uid and self.offset < other.offset
-        )
+        return isinstance(other, TaintedRegion) and \
+               (self.source.uid, self.offset, self.length) < (other.source.uid, other.offset, other.length)
+
+
+class ByteOffset(TaintedRegion):
+    def __init__(self, source: Input, offset: int):
+        super().__init__(source=source, offset=offset, length=1)
 
 
 class Taints:
@@ -118,6 +145,48 @@ class Taints:
 
     def from_source(self, source: Input) -> "Taints":
         return Taints(self._offsets_by_source.get(source, ()))
+
+    def regions(self) -> Iterator[TaintedRegion]:
+        last_input: Optional[Input] = None
+        last_offset: Optional[ByteOffset] = None
+        region: Optional[TaintedRegion] = None
+        for offset in self:
+            if last_input is None:
+                last_input = offset.source
+            elif last_input != offset.source or (last_offset is not None and last_offset.offset != offset.offset - 1):
+                if region is not None:
+                    yield region
+                region = None
+            last_offset = offset
+            if region is None:
+                region = TaintedRegion(source=offset.source, offset=offset.offset, length=offset.length)
+            else:
+                region.length += offset.length
+        if region is not None:
+            yield region
+
+    def find(self, byte_sequence: Union[int, str, bytes]) -> Iterator[TaintedRegion]:
+        """Finds the start of any matching tainted byte sequence in this set of taints"""
+        if isinstance(byte_sequence, str):
+            byte_sequence = byte_sequence.encode("utf-8")
+        elif isinstance(byte_sequence, int):
+            byte_sequence = bytes([byte_sequence])
+        for region in self.regions():
+            offset = 0
+            while True:
+                content = region.value
+                offset = content.find(byte_sequence, start=offset)
+                if offset >= 0:
+                    yield region[offset:offset+len(byte_sequence)]
+                else:
+                    break
+
+    def __contains__(self, byte_sequence: Union[int, str, bytes]):
+        try:
+            next(iter(self.find(byte_sequence)))
+            return True
+        except StopIteration:
+            return False
 
     def __len__(self):
         return sum(map(len, self._offsets_by_source.values()))

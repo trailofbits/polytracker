@@ -169,7 +169,7 @@ def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
     json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
     assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
     # TODO: Uncomment once we update this function
     # test_polyprocess_taint_sets(json_path, forest_path)
@@ -177,18 +177,17 @@ def test_source_open_full_validate_schema(program_trace: ProgramTrace):
 
 @pytest.mark.program_trace("test_memcpy.c")
 def test_memcpy_propagate(program_trace: ProgramTrace):
-    info = program_trace.functions["dfs$touch_copied_byte"]
-    assert isinstance(info, TaintForestFunctionInfo)
-    assert 1 in info.input_byte_labels[to_native_path(TEST_DATA_PATH)]
+    func = program_trace.get_function("touch_copied_byte")
+    taints = func.taints()
+    assert len(taints) == 1
+    assert next(iter(taints)).offset == 0
 
 
 @pytest.mark.program_trace("test_taint_log.c")
 def test_taint_log(program_trace: ProgramTrace):
-    input_bytes = program_trace.functions["main"].input_bytes[
-        to_native_path(TEST_DATA_PATH)
-    ]
+    taints = program_trace.get_function("main").taints()
     for i in range(0, 10):
-        assert i in input_bytes
+        assert any(i == offset.offset for offset in taints)
 
 
 @pytest.mark.program_trace(
@@ -197,38 +196,34 @@ def test_taint_log(program_trace: ProgramTrace):
 def test_config_files(program_trace: ProgramTrace):
     # the new_range.json config changes the polystart/polyend to
     # POLYSTART: 1, POLYEND: 3
+    taints = program_trace.get_function("main").taints()
     for i in range(1, 4):
-        assert (
-            i
-            in program_trace.functions["main"].input_bytes[
-                to_native_path(TEST_DATA_PATH)
-            ]
+        assert any(
+            i == offset.offset for offset in taints
         )
     for i in range(4, 10):
-        assert (
-            i
-            not in program_trace.functions["main"].input_bytes[
-                to_native_path(TEST_DATA_PATH)
-            ]
+        assert all(
+            i != offset.offset for offset in taints
         )
 
 
 @pytest.mark.program_trace("test_fopen.c")
 def test_source_fopen(program_trace: ProgramTrace):
-    assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
-    )
+    taints = program_trace.get_function("main").taints()
+    assert any(offset.offset == 0 for offset in taints)
 
 
 @pytest.mark.program_trace("test_ifstream.cpp")
 def test_source_ifstream(program_trace: ProgramTrace):
-    assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
-    )
+    taints = program_trace.get_function("main").taints()
+    assert any(offset.offset == 0 for offset in taints)
 
 
 @pytest.mark.program_trace("test_object_propagation.cpp")
 def test_cxx_object_propagation(program_trace: ProgramTrace):
+    #assert any(
+    #    func.taints().find("tainted_string") for func in program_trace.functions
+    #)
     # object_processed_sets = pp.processed_taint_sets
     # TODO: Update "tainted_string" in the ProgramTrace class
     # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
