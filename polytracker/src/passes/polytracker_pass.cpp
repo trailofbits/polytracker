@@ -15,6 +15,7 @@
 #include <iomanip> /* for std::setw */
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 
 // Can specify any number of ignore lists.
 static llvm::cl::list<std::string>
@@ -80,6 +81,15 @@ void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
 
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
+  auto called_func = ci.getCalledFunction();
+  if (called_func != nullptr) {
+    if (called_func->hasName() && called_func->getName().find("polytracker") != std::string::npos) {
+      return;
+    }
+    if (called_func->isIntrinsic()) {
+      return;
+    }
+  }
   llvm::Function *caller = inst->getParent()->getParent();
   assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
   func_index_t index = func_index_map[caller->getName().str()];
@@ -200,10 +210,10 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   // Collect basic blocks, don't confuse the iterator
   bb_index_t bb_index = 0;
-  std::vector<llvm::BasicBlock *> blocks;
+  std::unordered_set<llvm::BasicBlock *> blocks;
   std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
-    blocks.push_back(&bb);
+    blocks.insert(&bb);
     for (auto &inst : bb) {
       if (auto bo = llvm::dyn_cast<llvm::BinaryOperator>(&inst)) {
         insts.push_back(bo);
@@ -216,6 +226,9 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
       }
       // insts.push_back(&inst);
     }
+  }
+  for (auto block : splitBBs) {
+    blocks.insert(block);
   }
 
   for (auto bb : blocks) {
@@ -337,7 +350,6 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   size_t i = 0;
   int lastPercent = -1;
   for (auto func : functions) {
-    /*
     int percent = static_cast<int>(static_cast<float>(i++) * 100.0 / static_cast<float>(functions.size()) + 0.5);
     auto currentTime = std::chrono::system_clock::now();
     if (percent > lastPercent || std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count() >= 5.0) {
@@ -370,7 +382,6 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       }
       std::cerr << ", " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
     }
-    */
 
     if (!func || func->isDeclaration()) {
       continue;
