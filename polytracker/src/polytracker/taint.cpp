@@ -28,7 +28,8 @@ extern input_id_t input_id;
 extern thread_local int thread_id;
 extern thread_local block_id_t curr_block_index;
 extern thread_local function_id_t curr_func_index;
-extern thread_local event_id_t event_id;
+extern thread_local event_id_t thread_event_id;
+extern std::atomic<event_id_t> event_id;
 
 extern char *forest_mem;
 
@@ -167,7 +168,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
 
       // Log that we tainted data within this function from a taint source etc.
       // logOperation(new_label);
-      storeTaintAccess(output_db, new_label, event_id++, curr_func_index,
+      storeTaintAccess(output_db, new_label, event_id++, thread_event_id++, curr_func_index,
                        curr_block_index, input_id, thread_id,
                        ByteAccessType::READ_ACCESS);
       if (taint_offset_start == -1) {

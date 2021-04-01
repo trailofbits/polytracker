@@ -33,7 +33,7 @@ sqlite3* db_init(const std::string& db_path);
 void db_fini(sqlite3 * output_db);
 input_id_t storeNewInput(sqlite3 *output_db, const std::string& filename, const uint64_t& start, const uint64_t& end, const int& trace_level);
 void sql_exec(sqlite3 *output_db, const char *cmd);
-void storeTaintAccess(sqlite3 * output_db, const dfsan_label& label, const event_id_t &event_id, const function_id_t& findex, const block_id_t& bindex,
+void storeTaintAccess(sqlite3 * output_db, const dfsan_label& label, const event_id_t &event_id, const event_id_t &thread_event_id, const function_id_t& findex, const block_id_t& bindex,
     const input_id_t& input_id, const int& thread_id, const ByteAccessType& access_type);
 
 void storeFunc(sqlite3 * output_db, const char* fname, const function_id_t& func_id);

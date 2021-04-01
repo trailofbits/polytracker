@@ -36,13 +36,10 @@ static constexpr const char *createBlockTable() {
 
 static constexpr const char *createTaintTable() {
   return "CREATE TABLE IF NOT EXISTS accessed_label ("
-         "  block_gid BIGINT,"
          "  event_id BIGINT,"
          "  label INTEGER,"
-         "  input_id INTEGER,"
          "  access_type TINYINT,"
-         "  thread_id INTEGER,"
-         "  PRIMARY KEY (block_gid, event_id, label, input_id, access_type)"
+         "  PRIMARY KEY (event_id, label, access_type)"
          ") WITHOUT ROWID;";
 }
 
