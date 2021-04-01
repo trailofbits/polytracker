@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from io import StringIO
@@ -9,25 +8,19 @@ import pkg_resources
 from typing import (
     Any,
     Callable,
-    Dict,
     FrozenSet,
-    Iterable,
     Iterator,
     KeysView,
-    List,
-    Optional,
-    Set,
     TextIO,
     Tuple,
-    Union,
 )
 
 from intervaltree import Interval, IntervalTree
-from tqdm import tqdm
 
 from .cfg import CFG, FunctionInfo
 from .plugins import Command, Subcommand
 from .taint_forest import TaintForest
+from .tracing import *
 from .visualizations import file_diff, Image, temporal_animation
 
 log = logging.getLogger("PolyTracker")
@@ -39,7 +32,7 @@ def version() -> str:
     return pkg_resources.require("polytracker")[0].version
 
 
-class ProgramTrace:
+class OldStyleProgramTrace:
     def __init__(
         self, version: Tuple[VersionElement, ...], function_data: Iterable[FunctionInfo]
     ):

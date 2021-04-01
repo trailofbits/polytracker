@@ -21,6 +21,8 @@ from sqlalchemy import (
 
 from tqdm import tqdm
 
+from .polytracker import ProgramTrace
+
 from .tracing import (
     BasicBlock,
     BasicBlockEntry,
@@ -28,7 +30,6 @@ from .tracing import (
     Function,
     FunctionCall,
     FunctionReturn,
-    ProgramTrace,
     TraceEvent,
 )
 
@@ -175,20 +176,11 @@ class DBTraceEvent(Base):
     def uid(self) -> int:
         return self.event_id
 
-    @property
-    def previous_uid(self) -> Optional[int]:
-        return self.uid - 1 if self.uid > 1 else None
-
-    @property
-    def next_uid(self) -> Optional[int]:
-        # TODO: Check if we are the last event
-        return self.uid + 1
-
     def next_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
             return session.query(DBTraceEvent).filter(
-                DBTraceEvent.event_id == self.event_id + 1,
+                DBTraceEvent.thread_event_id == self.thread_event_id + 1,
                 DBTraceEvent.thread_id == self.thread_id
             ).one()
         except NoResultFound:
@@ -198,8 +190,26 @@ class DBTraceEvent(Base):
         session = Session.object_session(self)
         try:
             return session.query(DBTraceEvent).filter(
-                DBTraceEvent.event_id == self.event_id - 1,
+                DBTraceEvent.thread_event_id == self.thread_event_id - 1,
                 DBTraceEvent.thread_id == self.thread_id
+            ).one()
+        except NoResultFound:
+            return None
+
+    def next_global_event(self) -> Optional["TraceEvent"]:
+        session = Session.object_session(self)
+        try:
+            return session.query(DBTraceEvent).filter(
+                DBTraceEvent.event_id == self.event_id + 1
+            ).one()
+        except NoResultFound:
+            return None
+
+    def previous_global_event(self) -> Optional["TraceEvent"]:
+        session = Session.object_session(self)
+        try:
+            return session.query(DBTraceEvent).filter(
+                DBTraceEvent.event_id == self.event_id - 1
             ).one()
         except NoResultFound:
             return None

@@ -9,10 +9,7 @@ from typing import (
     Set,
     Union,
 )
-import os
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 from tqdm import tqdm
 
 from polytracker.cfg import DiGraph
@@ -110,24 +107,9 @@ class BasicBlock(ABC):
         return f"{self.function!s}@{self.index_in_function}"
 
 
-class FunctionInvocation:
-    def __init__(self, function: Function, call: "FunctionCall", ret: "FunctionReturn"):
-        self.function: Function = function
-        self.call: FunctionCall = call
-        self.ret: FunctionReturn = ret
-
-
 class TraceEvent(ABC):
-    def __init__(
-        self,
-        uid: int,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-    ):
+    def __init__(self, uid: int):
         self.uid: int = uid
-        self.previous_uid: Optional[int] = previous_uid
-        self.next_uid: Optional[int] = next_uid
-        self._trace: Optional[ProgramTrace] = None
 
     @abstractmethod
     def tainted_byte_offsets(self) -> Set[int]:
@@ -143,6 +125,16 @@ class TraceEvent(ABC):
     def next_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def next_global_event(self) -> Optional["TraceEvent"]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def previous_global_event(self) -> Optional["TraceEvent"]:
+        raise NotImplementedError()
+
     def __eq__(self, other):
         return isinstance(other, TraceEvent) and other.uid == self.uid
 
@@ -153,22 +145,10 @@ class TraceEvent(ABC):
         return self.uid
 
 
-class FunctionCall(TraceEvent):
-    def __init__(
-        self,
-        uid: int,
-        name: str,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        return_uid: Optional[int] = None,
-        consumes_bytes: bool = True,
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
+class FunctionCall(TraceEvent, ABC):
+    def __init__(self, uid: int, name: str):
+        super().__init__(uid=uid)
         self.name = name
-        self.function_return: Optional[FunctionReturn] = None
-        self.entrypoint: Optional[BasicBlockEntry] = None
-        self.consumes_bytes: bool = consumes_bytes
-        self.return_uid: Optional[int] = return_uid
 
     @property
     def caller(self) -> "BasicBlockEntry":
@@ -195,45 +175,7 @@ class FunctionCall(TraceEvent):
         return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
 
 
-class BasicBlockEntry(TraceEvent):
-    def __init__(
-        self,
-        uid: int,
-        function_index: int,
-        bb_index: int,
-        global_index: int,
-        function_call_uid: Optional[int] = None,
-        function_name: Optional[str] = None,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        entry_count: int = 1,
-        consumed: Iterable[int] = (),
-        types: Iterable[str] = (),
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
-        if entry_count < 1:
-            raise ValueError("entry_count must be a natural number")
-        self.entry_count: int = entry_count
-        self._function_name: Optional[str] = function_name
-        self.function_call_uid: Optional[int] = function_call_uid
-        """The UID of the function containing this basic block"""
-        self.function_index: int = function_index
-        self.bb_index: int = bb_index
-        self.global_index: int = global_index
-        self.consumed: List[int] = sorted(consumed)
-        self.called_function: Optional[FunctionCall] = None
-        """The function this basic block calls"""
-        self.types: List[str] = list(types)
-        self.bb_type: BasicBlockType = cast(BasicBlockType, BasicBlockType.UNKNOWN)
-        for ty in types:
-            bb_type = BasicBlockType.get(ty.upper())
-            if bb_type is None:
-                raise ValueError(
-                    f"Unknown basic block type: {ty!r} in basic block entry {uid}"
-                )
-            self.bb_type |= bb_type
-        self.children: List[BasicBlockEntry] = []
-
+class BasicBlockEntry(TraceEvent, ABC):
     @property
     def containing_function(self) -> Optional[FunctionCall]:
         if self.function_call_uid is not None:
@@ -279,7 +221,7 @@ class BasicBlockEntry(TraceEvent):
         return f"{self.basic_block!s}#{self.entry_count}"
 
 
-class FunctionReturn(TraceEvent):
+class FunctionReturn(TraceEvent, ABC):
     def __init__(
         self,
         uid: int,
@@ -431,86 +373,3 @@ class ProgramTrace(ABC):
             return False
         except StopIteration:
             return True
-
-
-class InMemoryProgramTrace(ProgramTrace):
-    def __init__(self, events: List[TraceEvent], inputstr: bytes):
-        self.events: List[TraceEvent] = sorted(events)
-        self.events_by_uid: Dict[int, TraceEvent] = {
-            event.uid: event
-            for event in tqdm(
-                events, leave=False, unit=" events", desc="building UID map"
-            )
-        }
-        print(f"events {self.events}")
-        self.entrypoint: Optional[BasicBlockEntry] = None
-        for event in tqdm(
-            self.events, unit=" events", leave=False, desc="initializing trace events"
-        ):
-            if event.has_trace:
-                raise ValueError(
-                    f"Event {event} is already associated with trace {event.trace}"
-                )
-            event.trace = self
-            if self.entrypoint is None and isinstance(event, BasicBlockEntry):
-                self.entrypoint = event
-        self._functions_by_idx: Optional[Dict[int, Function]] = None
-        self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
-        self.inputstr: bytes = inputstr
-
-    def __len__(self):
-        return len(self.events)
-
-    def __iter__(self) -> Iterable[TraceEvent]:
-        return iter(self.events)
-
-    @property
-    def functions(self) -> Iterable[Function]:
-        if self._functions_by_idx is None:
-            _ = self.basic_blocks  # this populates the function mapping
-        return self._functions_by_idx.values()  # type: ignore
-
-    def get_function(self, name: str) -> Function:
-        for func in self.functions:
-            if func.name == name:
-                return func
-        raise KeyError(name)
-
-    @property
-    def basic_blocks(self) -> Iterable[BasicBlock]:
-        if self._basic_blocks_by_idx is None:
-            self._basic_blocks_by_idx = {}
-            self._functions_by_idx = {}
-            last_bb: Optional[BasicBlock] = None
-            for event in self.events:
-                if isinstance(event, BasicBlockEntry):
-                    if event.function_index in self._functions_by_idx:
-                        function = self._functions_by_idx[event.function_index]
-                    else:
-                        function = Function(
-                            name=event.function_name,
-                            function_index=event.function_index,
-                        )
-                        self._functions_by_idx[event.function_index] = function
-                    if event.global_index in self._basic_blocks_by_idx:
-                        new_bb = self._basic_blocks_by_idx[event.global_index]
-                    else:
-                        new_bb = BasicBlock(
-                            function=function, index_in_function=event.bb_index
-                        )
-                        self._basic_blocks_by_idx[event.global_index] = new_bb
-                    if last_bb is not None:
-                        new_bb.predecessors.add(last_bb)
-                        last_bb.children.add(new_bb)
-                    last_bb = new_bb
-        return self._basic_blocks_by_idx.values()
-
-    def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        _ = self.basic_blocks
-        return self._basic_blocks_by_idx[entry.global_index]  # type: ignore
-
-    def __getitem__(self, uid: int) -> TraceEvent:
-        return self.events_by_uid[uid]
-
-    def __contains__(self, uid: int):
-        return uid in self.events_by_uid

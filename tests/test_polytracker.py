@@ -1,9 +1,7 @@
 import pytest
 from shutil import copyfile
 
-from polytracker import TaintForestFunctionInfo
-from polytracker.tracing import ProgramTrace
-from polytracker.database import DBProgramTrace
+from polytracker import PolyTrackerTrace, ProgramTrace, TaintForestFunctionInfo
 
 from .data import *
 
@@ -97,7 +95,7 @@ def validate_execute_target(
             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
     assert ret_val == 0
     # Assert that the appropriate files were created
-    return DBProgramTrace.load(db_path)
+    return PolyTrackerTrace.load(db_path)
 
 
 @pytest.fixture
