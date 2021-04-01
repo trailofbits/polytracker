@@ -12,6 +12,8 @@ from typing import (
     Union,
 )
 
+from cxxfilt import demangle
+
 from polytracker.cfg import DiGraph
 
 
@@ -175,7 +177,7 @@ class Taints:
             offset = 0
             while True:
                 content = region.value
-                offset = content.find(byte_sequence, start=offset)
+                offset = content.find(byte_sequence, offset)
                 if offset >= 0:
                     yield region[offset:offset+len(byte_sequence)]
                 else:
@@ -195,12 +197,19 @@ class Taints:
         for offsets in self._offsets_by_source.values():
             yield from offsets
 
+    def __bool__(self):
+        return bool(len(self))
 
-class Function(ABC):
+
+class Function:
     def __init__(self, name: str, function_index: int):
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
         self.function_index = function_index
+
+    @property
+    def demangled_name(self) -> str:
+        return demangle(self.name)
 
     @abstractmethod
     def taints(self) -> Taints:
@@ -218,7 +227,7 @@ class Function(ABC):
         return self.name
 
 
-class BasicBlock(ABC):
+class BasicBlock:
     def __init__(self, function: Function, index_in_function: int):
         self.function: Function = function
         self.index_in_function: int = index_in_function
@@ -260,7 +269,7 @@ class BasicBlock(ABC):
         return f"{self.function!s}@{self.index_in_function}"
 
 
-class TraceEvent(ABC):
+class TraceEvent:
     def __init__(self, uid: int):
         self.uid: int = uid
 
@@ -298,7 +307,7 @@ class TraceEvent(ABC):
         return self.uid
 
 
-class FunctionCall(TraceEvent, ABC):
+class FunctionCall(TraceEvent):
     def __init__(self, uid: int, name: str):
         super().__init__(uid=uid)
         self.name = name
@@ -328,7 +337,7 @@ class FunctionCall(TraceEvent, ABC):
         return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
 
 
-class BasicBlockEntry(TraceEvent, ABC):
+class BasicBlockEntry(TraceEvent):
     @property
     def containing_function(self) -> Optional[FunctionCall]:
         if self.function_call_uid is not None:
@@ -374,7 +383,7 @@ class BasicBlockEntry(TraceEvent, ABC):
         return f"{self.basic_block!s}#{self.entry_count}"
 
 
-class FunctionReturn(TraceEvent, ABC):
+class FunctionReturn(TraceEvent):
     def __init__(
         self,
         uid: int,

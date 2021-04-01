@@ -221,19 +221,14 @@ def test_source_ifstream(program_trace: ProgramTrace):
 
 @pytest.mark.program_trace("test_object_propagation.cpp")
 def test_cxx_object_propagation(program_trace: ProgramTrace):
-    #assert any(
-    #    func.taints().find("tainted_string") for func in program_trace.functions
-    #)
-    # object_processed_sets = pp.processed_taint_sets
-    # TODO: Update "tainted_string" in the ProgramTrace class
-    # fnames = [func for func in object_processed_sets.keys() if "tainted_string" in func]
-    # assert len(fnames) > 0
-    pass
+    for func in program_trace.functions:
+        if func.demangled_name.startswith("tainted_string("):
+            assert len(func.taints()) > 0
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
 @pytest.mark.program_trace("test_vector.cpp")
 def test_cxx_vector(program_trace: ProgramTrace):
     assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )

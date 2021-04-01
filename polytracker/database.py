@@ -72,8 +72,7 @@ class DBInput(Base, Input):
     events = relationship("DBTraceEvent")
 
 
-@Function.register
-class DBFunction(Base):
+class DBFunction(Base, Function):
     __tablename__ = "func"
     id = Column(Integer, primary_key=True)
     name = Column(Text)
@@ -113,8 +112,7 @@ class FunctionCFGEdge(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
 
 
-@BasicBlock.register
-class DBBasicBlock(Base):
+class DBBasicBlock(Base, BasicBlock):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
     # function_id should always be equal to (id >> 32), but we have it for convenience
@@ -159,7 +157,6 @@ class AccessedLabel(Base):
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-@TraceEvent.register
 class DBTraceEvent(Base):
     __tablename__ = "events"
     event_id = Column(BigInteger)  # globally unique, globally sequential event counter
@@ -219,6 +216,9 @@ class DBTraceEvent(Base):
         except NoResultFound:
             return None
 
+    def taints(self) -> Taints:
+        return Taints(())
+
 
 class DBTaintAccess(DBTraceEvent):
     __mapper_args__ = {
@@ -241,8 +241,7 @@ class DBTaintAccess(DBTraceEvent):
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-@BasicBlockEntry.register
-class DBBasicBlockEntry(DBTraceEvent):
+class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
     __mapper_args__ = {
         "polymorphic_identity": EventType.BLOCK_ENTER,
     }
@@ -256,13 +255,11 @@ class DBBasicBlockEntry(DBTraceEvent):
         return (self.func_gid >> 32) & 0xFFFF
 
 
-@FunctionCall.register
-class DBFunctionCall(DBTraceEvent):
+class DBFunctionCall(DBTraceEvent, FunctionCall):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
 
 
-@FunctionReturn.register
-class DBFunctionReturn(DBTraceEvent):
+class DBFunctionReturn(DBTraceEvent, FunctionReturn):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
 
 
