@@ -67,6 +67,7 @@ def polytracker_version_string() -> str:
     else:
         return f"{'.'.join(primary)}{suffix}"
 
+
 CONSOLE_SCRIPTS = [
     'polytracker = polytracker.__main__:main'
 ]
@@ -78,7 +79,10 @@ if (
 ):
     # We are not installing inside the Docker container---in which polybuild can run natively---so
     # add our special polybuild script to run it from within Docker:
-    CONSOLE_SCRIPTS.append('polybuild = polytracker.build:main')
+    CONSOLE_SCRIPTS.extend([
+        'polybuild = polytracker.build:main',
+        'polybuild++ = polytracker.build:main_plus_plus'
+    ])
 
 setup(
     name='polytracker',
