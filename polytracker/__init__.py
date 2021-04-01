@@ -9,6 +9,8 @@ from .polytracker import *
 # so all PolyTracker plugins will auto-register themselves:
 package_dir = Path(__file__).resolve().parent
 for (_, module_name, _) in iter_modules([str(package_dir)]):
+    if module_name == "__main__":
+        continue
     # import the module and iterate through its attributes
     module = import_module(f"{__name__}.{module_name}")
     for attribute_name in dir(module):
