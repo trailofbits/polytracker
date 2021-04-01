@@ -25,6 +25,9 @@ static llvm::cl::opt<std::string> generate_ignore_list(
     "gen-list",
     llvm::cl::desc("When specified, generates an ignore list from bitcode"));
 
+static llvm::cl::opt<int> file_id("file-id", 
+  llvm::cl::desc("When specified, adds a file id to the function_ids in the module"));
+
 namespace polytracker {
 
 void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callback) {
@@ -313,6 +316,9 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   initializeTypes(mod);
   bool ret = false;
   func_index_t function_index = 0;
+  if (file_id) {
+    function_index = (file_id << 24) | function_index;
+  }
   // Collect functions before instrumenting
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
@@ -339,7 +345,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
       std::cerr << '\r' << std::string(80, ' ') << '\r';
       lastPercent = percent;
-      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3) << percent << "% |";
+      std::cerr << "Instrumenting: " << func->getName().str() << " " << std::setfill(' ') << std::setw(3) << percent << "% |";
       const int barWidth = 20;
       const auto filledBars = static_cast<int>(static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 + 0.5);
       const auto unfilledBars = barWidth - filledBars;
