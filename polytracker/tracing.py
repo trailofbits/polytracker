@@ -1,16 +1,16 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from enum import IntFlag
+from pathlib import Path
 from typing import (
-    cast,
     Dict,
     Iterable,
+    Iterator,
     List,
     Optional,
     Set,
     Union,
 )
-
-from tqdm import tqdm
 
 from polytracker.cfg import DiGraph
 
@@ -43,6 +43,90 @@ class BasicBlockType(IntFlag):
     """A BB that contains a CallInst"""
 
 
+class Input:
+    def __init__(
+            self,
+            uid: int,
+            path: str,
+            size: int,
+            track_start: int = 0,
+            track_end: Optional[int] = None,
+            content: Optional[bytes] = None
+    ):
+        self.uid: int = uid
+        self.path: str = path
+        self.size: int = size
+        self.track_start: int = track_start
+        if track_end is None:
+            self.track_end: int = size
+        else:
+            self.track_end = track_end
+        self.stored_content: Optional[bytes] = content
+
+    @property
+    def content(self) -> bytes:
+        if self.stored_content is not None:
+            return self.stored_content
+        elif not Path(self.path).exists():
+            raise ValueError(f"Input {self.uid} did not have its content stored to the database (the instrumented "
+                             f"binary was likely run with POLYSAVEINPUT=0) and the associated path {self.path!r} "
+                             "does not exist!")
+        with open(self.path, "rb") as f:
+            self.stored_content = f.read()
+        return self.stored_content
+
+    def __hash__(self):
+        return self.uid
+
+    def __eq__(self, other):
+        return isinstance(other, Input) and self.uid == other.uid and self.path == other.path
+
+
+class ByteOffset:
+    def __init__(self, source: Input, offset: int):
+        self.source: Input = source
+        self.offset: int = offset
+
+    @property
+    def value(self) -> bytes:
+        return self.source.content[self.offset:self.offset+1]
+
+    def __hash__(self):
+        return hash((self.source, self.offset))
+
+    def __eq__(self, other):
+        return isinstance(other, ByteOffset) and self.source == other.source and self.offset == other.offset
+
+    def __lt__(self, other):
+        return isinstance(other, ByteOffset) and (self.source.uid < other.source.uid) or (
+            self.source.uid == other.source.uid and self.offset < other.offset
+        )
+
+
+class Taints:
+    def __init__(self, byte_offsets: Iterable[ByteOffset]):
+        offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
+        for offset in byte_offsets:
+            offsets_by_source[offset.source].add(offset)
+        self._offsets_by_source: Dict[Input, List[ByteOffset]] = {
+            source: sorted(offsets)
+            for source, offsets in offsets_by_source.items()
+        }
+
+    def sources(self) -> Set[Input]:
+        return set(self._offsets_by_source.keys())
+
+    def from_source(self, source: Input) -> "Taints":
+        return Taints(self._offsets_by_source.get(source, ()))
+
+    def __len__(self):
+        return sum(map(len, self._offsets_by_source.values()))
+
+    def __iter__(self) -> Iterator[ByteOffset]:
+        for offsets in self._offsets_by_source.values():
+            yield from offsets
+
+
 class Function(ABC):
     def __init__(self, name: str, function_index: int):
         self.name: str = name
@@ -50,7 +134,7 @@ class Function(ABC):
         self.function_index = function_index
 
     @abstractmethod
-    def tainted_byte_offsets(self) -> Set[int]:
+    def taints(self) -> Taints:
         raise NotImplementedError()
 
     def __hash__(self):
@@ -74,7 +158,7 @@ class BasicBlock(ABC):
         function.basic_blocks.append(self)
 
     @abstractmethod
-    def tainted_byte_offsets(self) -> Set[int]:
+    def taints(self) -> Taints:
         raise NotImplementedError()
 
     def is_loop_entry(self, trace: "ProgramTrace") -> bool:
@@ -112,7 +196,7 @@ class TraceEvent(ABC):
         self.uid: int = uid
 
     @abstractmethod
-    def tainted_byte_offsets(self) -> Set[int]:
+    def taints(self) -> Taints:
         raise NotImplementedError()
 
     @property

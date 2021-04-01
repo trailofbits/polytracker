@@ -8,6 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
 from sqlalchemy import (
     BigInteger,
+    BLOB,
     Column,
     create_engine,
     Enum as SQLEnum,
@@ -27,9 +28,12 @@ from .tracing import (
     BasicBlock,
     BasicBlockEntry,
     BasicBlockType,
+    ByteOffset,
     Function,
     FunctionCall,
     FunctionReturn,
+    Input,
+    Taints,
     TraceEvent,
 )
 
@@ -55,9 +59,10 @@ class EdgeType(IntEnum):
     BACKWARD = 1
 
 
-class Input(Base):
+class DBInput(Base, Input):
     __tablename__ = "input"
-    id = Column(Integer, primary_key=True)
+    uid = Column("id", Integer, primary_key=True)
+    stored_content = Column("content", BLOB, nullable=True)
     path = Column(Text)
     track_start = Column(BigInteger)
     track_end = Column(BigInteger)
@@ -83,8 +88,8 @@ class DBFunction(Base):
                                                "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
                                    viewonly=True)
 
-    def tainted_byte_offsets(self) -> Set[int]:
-        return DBTaintForest.tainted_byte_offsets((label.event.taint_forest_node for label in self.accessed_labels))
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((label.event.taint_forest_node for label in self.accessed_labels))
 
     @property
     def function_index(self) -> int:
@@ -102,7 +107,7 @@ class FunctionCFGEdge(Base):
 
     dest = relationship("DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges")
     src = relationship("DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges")
-    input = relationship("Input")
+    input = relationship("DBInput")
     event = relationship("DBTraceEvent")
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
@@ -129,8 +134,8 @@ class DBBasicBlock(Base):
     def index_in_function(self) -> int:
         return self.id & 0x0000FFFF
 
-    def tainted_byte_offsets(self) -> Set[int]:
-        return DBTaintForest.tainted_byte_offsets((label.taint_forest_node for label in self.accessed_labels))
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((label.taint_forest_node for label in self.accessed_labels))
 
 
 class AccessedLabel(Base):
@@ -150,8 +155,8 @@ class AccessedLabel(Base):
     def __lt__(self, other):
         return hasattr(other, "label") and self.label < other.label
 
-    def tainted_byte_offsets(self) -> Set[int]:
-        return DBTaintForest.tainted_byte_offsets((self.taint_forest_node,))
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((self.taint_forest_node,))
 
 
 @TraceEvent.register
@@ -166,7 +171,7 @@ class DBTraceEvent(Base):
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
 
-    input = relationship("Input", back_populates="events")
+    input = relationship("DBInput", back_populates="events")
     basic_block = relationship("DBBasicBlock", back_populates="events")
     accessed_labels = relationship("AccessedLabel")
 
@@ -232,8 +237,8 @@ class DBTaintAccess(DBTraceEvent):
         uselist = False
     )
 
-    def tainted_byte_offsets(self) -> Set[int]:
-        return DBTaintForest.tainted_byte_offsets((self.taint_forest_node,))
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((self.taint_forest_node,))
 
 
 @BasicBlockEntry.register
@@ -316,7 +321,7 @@ class CanonicalMap(Base):
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "taint_label", "file_offset"),)
 
-    input = relationship("Input")
+    input = relationship("DBInput")
 
 
 class TaintedChunksItem(Base):
@@ -336,10 +341,16 @@ class DBTaintForest(Base):
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
-    parent_one = relationship("DBTaintForest", foreign_keys=[parent_one_id], uselist=False)
-    parent_two = relationship("DBTaintForest", foreign_keys=[parent_two_id], uselist=False)
-    input = relationship("Input")
+    parent_one = relationship("DBTaintForest", foreign_keys=[parent_one_id, input_id], uselist=False)
+    parent_two = relationship("DBTaintForest", foreign_keys=[parent_two_id, input_id], uselist=False)
+    input = relationship("DBInput")
     accessed_labels = relationship("AccessedLabel", foreign_keys=[label, input_id])
+
+    def __hash__(self):
+        return hash((self.input_id, self.label))
+
+    def __eq__(self, other):
+        return isinstance(other, DBTaintForest) and self.input_id == other.input_id and self.label == other.label
 
     def __lt__(self, other):
         return isinstance(other, DBTaintForest) and self.label < other.label
@@ -348,11 +359,11 @@ class DBTaintForest(Base):
         return f"I{self.input_id}L{self.label}"
 
     @staticmethod
-    def tainted_byte_offsets(labels: Iterable["DBTaintForest"]) -> Set[int]:
+    def taints(labels: Iterable["DBTaintForest"]) -> Taints:
         # reverse the labels to reduce the likelihood of reproducing work
-        node_stack: List[DBTaintForest] = sorted(list(set(labels)), reverse=True)
-        history: Set[int] = set(node.label for node in node_stack)
-        taints = set()
+        history: Set[DBTaintForest] = set(labels)
+        node_stack: List[DBTaintForest] = sorted(list(set(history)), reverse=True)
+        taints: Set[ByteOffset] = set()
         if len(node_stack) < 10:
             labels_str = ", ".join(map(str, node_stack))
         else:
@@ -380,15 +391,15 @@ class DBTaintForest(Base):
                         raise ValueError(
                             f"Taint label {node.label} is not in the canonical mapping!"
                         )
-                    taints.add(file_offset)
+                    taints.add(ByteOffset(source=node.input, offset=file_offset))
                 else:
                     parent1, parent2 = node.parent_one, node.parent_two
-                    if parent1.label not in history:
-                        history.add(parent1.label)
+                    if parent1 not in history:
+                        history.add(parent1)
                         node_stack.append(parent1)
                         t.total += parent1.label
                     if parent2 not in history:
-                        history.add(parent2.label)
+                        history.add(parent2)
                         node_stack.append(parent2)
                         t.total += parent2.label
-        return taints
+        return Taints(taints)

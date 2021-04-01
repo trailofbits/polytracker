@@ -126,14 +126,14 @@ def program_trace(request):
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
     assert (
-        0 in program_trace.get_function("main").tainted_byte_offsets()
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
 
 
 @pytest.mark.program_trace("test_open.c")
 def test_source_open(program_trace: ProgramTrace):
     assert (
-        0 in program_trace.functions["main"].input_bytes[to_native_path(TEST_DATA_PATH)]
+        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
     )
 
 
