@@ -337,6 +337,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   size_t i = 0;
   int lastPercent = -1;
   for (auto func : functions) {
+    /*
     int percent = static_cast<int>(static_cast<float>(i++) * 100.0 / static_cast<float>(functions.size()) + 0.5);
     auto currentTime = std::chrono::system_clock::now();
     if (percent > lastPercent || std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count() >= 5.0) {
@@ -369,6 +370,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       }
       std::cerr << ", " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
     }
+    */
 
     if (!func || func->isDeclaration()) {
       continue;
