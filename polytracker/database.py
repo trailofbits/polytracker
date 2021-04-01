@@ -290,7 +290,8 @@ class DBProgramTrace(ProgramTrace):
         try:
             return self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
         except NoResultFound:
-            raise KeyError(name)
+            pass
+        raise KeyError(name)
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
