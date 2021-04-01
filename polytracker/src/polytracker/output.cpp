@@ -140,7 +140,7 @@ input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
 
       char *buffer = new char[size];
       file.read(buffer, size);
-      auto rc = sqlite3_bind_blob(stmt, 1, buffer, size, SQLITE_TRANSIENT);
+      auto rc = sqlite3_bind_blob(stmt, 2, buffer, size, SQLITE_TRANSIENT);
       delete[] buffer;
       if (rc != SQLITE_OK) {
         std::cerr << "error saving the input file to the database: "
