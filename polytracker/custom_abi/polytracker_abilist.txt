@@ -30,10 +30,10 @@ fun:open64=custom
 ##########################################
 # Polytracker functions
 #########################################
-fun:__polytracker_func_entry=uninstrumented
-fun:__polytracker_func_entry=discard
-fun:__polytracker_func_exit=uninstrumented
-fun:__polytracker_func_exit=discard
+fun:__polytracker_log_func_entry=uninstrumented
+fun:__polytracker_log_func_entry=discard
+fun:__polytracker_log_func_exit=uninstrumented
+fun:__polytracker_log_func_exit=discard
 fun:__polytracker_log_bb_entry=uninstrumented
 fun:__polytracker_log_bb_entry=discard
 fun:__polytracker_log_taint_cmp=uninstrumented
