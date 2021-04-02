@@ -25,9 +25,10 @@ static constexpr const char *createFuncTable() {
 static constexpr const char *createBlockTable() {
   return "CREATE TABLE IF NOT EXISTS basic_block ("
          "  id BIGINT PRIMARY KEY,"
-         "  function_id BIGINT," /* we don't really need this, because it will always equal (id >> 32)
-                                  * however, it makes things a lot easier on the Python side due to
-                                  * deficiencies in SQLalchemy
+         "  function_id BIGINT," /* we don't really need this, because it will
+                                  * always equal (id >> 32) however, it makes
+                                  * things a lot easier on the Python side due
+                                  * to deficiencies in SQLalchemy
                                   */
          "  block_attributes INTEGER,"
          "UNIQUE(id, block_attributes)"
@@ -93,12 +94,16 @@ static constexpr const char *createTaintForestTable() {
 
 static constexpr const char *createEventsTable() {
   return "CREATE TABLE IF NOT EXISTS events ("
-         "event_id BIGINT,"        /* event_id is globally unique and sequential for the whole program           */
-         "thread_event_id BIGINT," /* thread_event_id is sequential just for thre thread in which it was created */
+         "event_id BIGINT," /* event_id is globally unique and sequential for
+                               the whole program           */
+         "thread_event_id BIGINT," /* thread_event_id is sequential just for
+                                      thre thread in which it was created */
          "event_type TINYINT,"
          "input_id INTEGER,"
          "thread_id INTEGER,"
          "block_gid BIGINT,"
+         "func_event_id BIGINT," /* the ID of the function entry event
+                                    associated with this event */
          "PRIMARY KEY(input_id, event_id)"
          ") WITHOUT ROWID;";
 }
