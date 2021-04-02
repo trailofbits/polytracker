@@ -46,7 +46,7 @@ void logCompare(const dfsan_label &label, const function_id_t &findex,
   storeTaintAccess(output_db, label, this_event_id, thread_event_id++, findex,
                    bindex, input_id, thread_id, ByteAccessType::CMP_ACCESS,
                    function_stack.empty() ? this_event_id
-                                          : function_stack.back());
+                                          : function_stack.top());
 }
 
 void logOperation(const dfsan_label &label, const function_id_t &findex,
@@ -55,7 +55,7 @@ void logOperation(const dfsan_label &label, const function_id_t &findex,
   storeTaintAccess(output_db, label, event_id++, thread_event_id++, findex,
                    bindex, input_id, thread_id, ByteAccessType::INPUT_ACCESS,
                    function_stack.empty() ? this_event_id
-                                          : function_stack.back());
+                                          : function_stack.top());
 }
 
 thread_local bool recursive = false;
@@ -112,8 +112,8 @@ void logFunctionExit(const function_id_t &index) {
           << "or non-standard control-flow in the instrumented program.\n";
       current_function_event = this_event_id;
     } else {
-      current_function_event = function_stack.back();
-      function_stack.pop()
+      current_function_event = function_stack.top();
+      function_stack.pop();
     }
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, index, 0, current_function_event);
@@ -130,6 +130,6 @@ void logBBEntry(const char *fname, const function_id_t &findex,
   const auto this_event_id = event_id++;
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::BLOCK_ENTER, findex, bindex,
-             function_stack.empty() ? this_event_id : function_stack.back());
+             function_stack.empty() ? this_event_id : function_stack.top());
   curr_block_index = bindex;
 }

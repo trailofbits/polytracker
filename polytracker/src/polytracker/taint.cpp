@@ -175,7 +175,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                        curr_func_index, curr_block_index, input_id, thread_id,
                        ByteAccessType::READ_ACCESS,
                        function_stack.empty() ? this_event_id
-                                              : function_stack.back());
+                                              : function_stack.top());
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;
