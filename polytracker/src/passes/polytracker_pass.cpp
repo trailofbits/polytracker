@@ -208,7 +208,12 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(f->getName());
   llvm::Value *index_val =
       llvm::ConstantInt::get(shadow_type, func_index, false);
-  IRB.CreateCall(func_entry_log, {func_name, index_val});
+
+  bb_index_t bb_index = 0;
+
+  llvm::Value *bindex_val =
+      llvm::ConstantInt::get(shadow_type, bb_index, false);
+  IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
 
   // Build the dominator tree for this function once blocks are split.
   // Used by the BBSplitting/entry analysis code
@@ -216,7 +221,6 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   // dominator_tree.recalculate(*f);
 
   // Collect basic blocks, don't confuse the iterator
-  bb_index_t bb_index = 0;
   std::unordered_set<llvm::BasicBlock *> blocks;
   std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
@@ -277,7 +281,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   // Should pass in func_name and uint32_t function index.
   func_entry_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(context),
-      {llvm::Type::getInt8PtrTy(context), shadow_type}, false);
+      {llvm::Type::getInt8PtrTy(context), shadow_type, shadow_type}, false);
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
