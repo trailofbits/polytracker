@@ -1,7 +1,7 @@
 import pytest
 from shutil import copyfile
 
-from polytracker import PolyTrackerTrace, ProgramTrace, TaintForestFunctionInfo
+from polytracker import PolyTrackerTrace, ProgramTrace
 
 from .data import *
 
@@ -125,15 +125,17 @@ def program_trace(request):
 
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
-    assert (
-        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
     )
 
 
 @pytest.mark.program_trace("test_open.c")
 def test_source_open(program_trace: ProgramTrace):
-    assert (
-        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
     )
 
 
@@ -168,8 +170,9 @@ def test_source_open(program_trace: ProgramTrace):
 def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
     json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
-    assert (
-        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
     )
     # TODO: Uncomment once we update this function
     # test_polyprocess_taint_sets(json_path, forest_path)
@@ -198,13 +201,9 @@ def test_config_files(program_trace: ProgramTrace):
     # POLYSTART: 1, POLYEND: 3
     taints = program_trace.get_function("main").taints()
     for i in range(1, 4):
-        assert any(
-            i == offset.offset for offset in taints
-        )
+        assert any(i == offset.offset for offset in taints)
     for i in range(4, 10):
-        assert all(
-            i != offset.offset for offset in taints
-        )
+        assert all(i != offset.offset for offset in taints)
 
 
 @pytest.mark.program_trace("test_fopen.c")
@@ -229,6 +228,7 @@ def test_cxx_object_propagation(program_trace: ProgramTrace):
 # TODO Compute DFG and query if we touch vector in libcxx from object
 @pytest.mark.program_trace("test_vector.cpp")
 def test_cxx_vector(program_trace: ProgramTrace):
-    assert (
-        any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
     )
