@@ -12,6 +12,8 @@ from typing import (
     Union,
 )
 
+from cxxfilt import demangle
+
 from polytracker.cfg import DiGraph
 
 
@@ -175,7 +177,7 @@ class Taints:
             offset = 0
             while True:
                 content = region.value
-                offset = content.find(byte_sequence, start=offset)
+                offset = content.find(byte_sequence, offset)
                 if offset >= 0:
                     yield region[offset:offset+len(byte_sequence)]
                 else:
@@ -195,12 +197,19 @@ class Taints:
         for offsets in self._offsets_by_source.values():
             yield from offsets
 
+    def __bool__(self):
+        return bool(len(self))
 
-class Function(ABC):
+
+class Function:
     def __init__(self, name: str, function_index: int):
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
         self.function_index = function_index
+
+    @property
+    def demangled_name(self) -> str:
+        return demangle(self.name)
 
     @abstractmethod
     def taints(self) -> Taints:
@@ -218,7 +227,7 @@ class Function(ABC):
         return self.name
 
 
-class BasicBlock(ABC):
+class BasicBlock:
     def __init__(self, function: Function, index_in_function: int):
         self.function: Function = function
         self.index_in_function: int = index_in_function
@@ -260,7 +269,7 @@ class BasicBlock(ABC):
         return f"{self.function!s}@{self.index_in_function}"
 
 
-class TraceEvent(ABC):
+class TraceEvent:
     def __init__(self, uid: int):
         self.uid: int = uid
 
@@ -288,6 +297,11 @@ class TraceEvent(ABC):
     def previous_global_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def function_entry(self) -> Optional["FunctionEntry"]:
+        raise NotImplementedError()
+
     def __eq__(self, other):
         return isinstance(other, TraceEvent) and other.uid == self.uid
 
@@ -298,7 +312,7 @@ class TraceEvent(ABC):
         return self.uid
 
 
-class FunctionCall(TraceEvent, ABC):
+class FunctionEntry(TraceEvent):
     def __init__(self, uid: int, name: str):
         super().__init__(uid=uid)
         self.name = name
@@ -328,9 +342,9 @@ class FunctionCall(TraceEvent, ABC):
         return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
 
 
-class BasicBlockEntry(TraceEvent, ABC):
+class BasicBlockEntry(TraceEvent):
     @property
-    def containing_function(self) -> Optional[FunctionCall]:
+    def containing_function(self) -> Optional[FunctionEntry]:
         if self.function_call_uid is not None:
             try:
                 return self.trace[self.function_call_uid]
@@ -374,7 +388,7 @@ class BasicBlockEntry(TraceEvent, ABC):
         return f"{self.basic_block!s}#{self.entry_count}"
 
 
-class FunctionReturn(TraceEvent, ABC):
+class FunctionReturn(TraceEvent):
     def __init__(
         self,
         uid: int,
@@ -389,7 +403,7 @@ class FunctionReturn(TraceEvent, ABC):
         self.returning_to_uid: Optional[int] = returning_to_uid
         self.call_event_uid: Optional[int] = call_event_uid
         self._returning_to: Optional[BasicBlockEntry] = None
-        self._function_call: Optional[Union[FunctionCall, ValueError]] = None
+        self._function_call: Optional[Union[FunctionEntry, ValueError]] = None
 
     def __repr__(self):
         return (
@@ -416,11 +430,11 @@ class FunctionReturn(TraceEvent, ABC):
             )
 
     @property
-    def function_call(self) -> FunctionCall:
+    def function_call(self) -> FunctionEntry:
         if self._function_call is None:
             if self.call_event_uid is not None:
                 fc = self.trace[self.call_event_uid]
-                if isinstance(fc, FunctionCall):
+                if isinstance(fc, FunctionEntry):
                     self._function_call = fc
                     return fc
                 else:
@@ -433,21 +447,21 @@ class FunctionReturn(TraceEvent, ABC):
             prev: Optional[TraceEvent] = self.previous
             subcalls = 0
             while prev is not None:
-                if isinstance(prev, FunctionCall):
+                if isinstance(prev, FunctionEntry):
                     if subcalls == 0:
                         break
                     else:
                         subcalls -= 1
                 elif isinstance(prev, FunctionReturn):
                     if prev._function_call is not None:
-                        if isinstance(prev._function_call, FunctionCall):
+                        if isinstance(prev._function_call, FunctionEntry):
                             prev = prev._function_call.caller.previous
                         else:
                             break
                     else:
                         subcalls += 1
                 prev = prev.previous  # type: ignore
-            if isinstance(prev, FunctionCall):
+            if isinstance(prev, FunctionEntry):
                 self._function_call = prev
             else:
                 self._function_call = ValueError(

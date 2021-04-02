@@ -30,7 +30,7 @@ from .tracing import (
     BasicBlockType,
     ByteOffset,
     Function,
-    FunctionCall,
+    FunctionEntry,
     FunctionReturn,
     Input,
     Taints,
@@ -72,24 +72,31 @@ class DBInput(Base, Input):
     events = relationship("DBTraceEvent")
 
 
-@Function.register
-class DBFunction(Base):
+class DBFunction(Base, Function):
     __tablename__ = "func"
     id = Column(Integer, primary_key=True)
     name = Column(Text)
 
     basic_blocks = relationship("DBBasicBlock")
 
-    incoming_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.dest_id")
-    outgoing_edges = relationship("FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id")
-    accessed_labels = relationship("AccessedLabel",
-                                   primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
-                                               "foreign(DBTraceEvent.block_gid)==DBBasicBlock.id, "
-                                               "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
-                                   viewonly=True)
+    incoming_edges = relationship(
+        "FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.dest_id"
+    )
+    outgoing_edges = relationship(
+        "FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id"
+    )
+    accessed_labels = relationship(
+        "AccessedLabel",
+        primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
+        "foreign(DBTraceEvent.block_gid)==DBBasicBlock.id, "
+        "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
+        viewonly=True,
+    )
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints((label.event.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForest.taints(
+            (label.event.taint_forest_node for label in self.accessed_labels)
+        )
 
     @property
     def function_index(self) -> int:
@@ -105,16 +112,19 @@ class FunctionCFGEdge(Base):
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     edge_type = Column(SmallInteger, SQLEnum(EdgeType))
 
-    dest = relationship("DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges")
-    src = relationship("DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges")
+    dest = relationship(
+        "DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges"
+    )
+    src = relationship(
+        "DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges"
+    )
     input = relationship("DBInput")
     event = relationship("DBTraceEvent")
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
 
 
-@BasicBlock.register
-class DBBasicBlock(Base):
+class DBBasicBlock(Base, BasicBlock):
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
     # function_id should always be equal to (id >> 32), but we have it for convenience
@@ -124,10 +134,12 @@ class DBBasicBlock(Base):
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
     events = relationship("DBTraceEvent")
-    accessed_labels = relationship("AccessedLabel",
-                                   primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
-                                               "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
-                                   viewonly=True)
+    accessed_labels = relationship(
+        "AccessedLabel",
+        primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
+        "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
+        viewonly=True,
+    )
     function = relationship("DBFunction", back_populates="basic_blocks")
 
     @property
@@ -135,7 +147,9 @@ class DBBasicBlock(Base):
         return self.id & 0x0000FFFF
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForest.taints(
+            (label.taint_forest_node for label in self.accessed_labels)
+        )
 
 
 class AccessedLabel(Base):
@@ -146,11 +160,7 @@ class AccessedLabel(Base):
 
     event = relationship("DBTaintAccess", uselist=False)
 
-    __table_args__ = (
-        PrimaryKeyConstraint(
-            "event_id", "label", "access_type"
-        ),
-    )
+    __table_args__ = (PrimaryKeyConstraint("event_id", "label", "access_type"),)
 
     def __lt__(self, other):
         return hasattr(other, "label") and self.label < other.label
@@ -159,21 +169,26 @@ class AccessedLabel(Base):
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-@TraceEvent.register
 class DBTraceEvent(Base):
     __tablename__ = "events"
     event_id = Column(BigInteger)  # globally unique, globally sequential event counter
-    thread_event_id = Column(BigInteger)  # unique-to-thread id, sequential within the thread
+    thread_event_id = Column(
+        BigInteger
+    )  # unique-to-thread id, sequential within the thread
     event_type = Column(SmallInteger, SQLEnum(EventType))
     input_id = Column(Integer, ForeignKey("input.id"))
     thread_id = Column(Integer)
     block_gid = Column(BigInteger, ForeignKey("basic_block.id"))
+    func_event_id = Column(BigInteger, ForeignKey("events.event_id"))
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "event_id"),)
 
     input = relationship("DBInput", back_populates="events")
     basic_block = relationship("DBBasicBlock", back_populates="events")
     accessed_labels = relationship("AccessedLabel")
+    _func_entry = relationship(
+        "DBTraceEvent", foreign_keys=[func_event_id], uselist=False
+    )
 
     __mapper_args__ = {"polymorphic_on": "event_type"}
 
@@ -181,43 +196,65 @@ class DBTraceEvent(Base):
     def uid(self) -> int:
         return self.event_id
 
+    @property
+    def function_entry(self) -> Optional[FunctionEntry]:
+        if isinstance(self._func_entry, FunctionEntry):
+            return self._func_entry
+        else:
+            return None
+
     def next_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(
-                DBTraceEvent.thread_event_id == self.thread_event_id + 1,
-                DBTraceEvent.thread_id == self.thread_id
-            ).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(
+                    DBTraceEvent.thread_event_id == self.thread_event_id + 1,
+                    DBTraceEvent.thread_id == self.thread_id,
+                )
+                .one()
+            )
         except NoResultFound:
             return None
 
     def previous_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(
-                DBTraceEvent.thread_event_id == self.thread_event_id - 1,
-                DBTraceEvent.thread_id == self.thread_id
-            ).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(
+                    DBTraceEvent.thread_event_id == self.thread_event_id - 1,
+                    DBTraceEvent.thread_id == self.thread_id,
+                )
+                .one()
+            )
         except NoResultFound:
             return None
 
     def next_global_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(
-                DBTraceEvent.event_id == self.event_id + 1
-            ).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(DBTraceEvent.event_id == self.event_id + 1)
+                .one()
+            )
         except NoResultFound:
             return None
 
     def previous_global_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(
-                DBTraceEvent.event_id == self.event_id - 1
-            ).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(DBTraceEvent.event_id == self.event_id - 1)
+                .one()
+            )
         except NoResultFound:
             return None
+
+    def taints(self) -> Taints:
+        return Taints(())
 
 
 class DBTaintAccess(DBTraceEvent):
@@ -226,23 +263,24 @@ class DBTaintAccess(DBTraceEvent):
     }
 
     accessed_label = relationship(
-        "AccessedLabel", primaryjoin="AccessedLabel.event_id==DBTaintAccess.event_id", uselist=False
+        "AccessedLabel",
+        primaryjoin="AccessedLabel.event_id==DBTaintAccess.event_id",
+        uselist=False,
     )
     taint_forest_node = relationship(
         "DBTaintForest",
         primaryjoin="and_(DBTaintAccess.event_id==remote(AccessedLabel.event_id), "
-                    "AccessedLabel.label==foreign(DBTaintForest.label), "
-                    "DBTaintForest.input_id==DBTaintAccess.input_id)",
+        "AccessedLabel.label==foreign(DBTaintForest.label), "
+        "DBTaintForest.input_id==DBTaintAccess.input_id)",
         viewonly=True,
-        uselist = False
+        uselist=False,
     )
 
     def taints(self) -> Taints:
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-@BasicBlockEntry.register
-class DBBasicBlockEntry(DBTraceEvent):
+class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
     __mapper_args__ = {
         "polymorphic_identity": EventType.BLOCK_ENTER,
     }
@@ -256,13 +294,11 @@ class DBBasicBlockEntry(DBTraceEvent):
         return (self.func_gid >> 32) & 0xFFFF
 
 
-@FunctionCall.register
-class DBFunctionCall(DBTraceEvent):
+class DBFunctionEntry(DBTraceEvent, FunctionEntry):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
 
 
-@FunctionReturn.register
-class DBFunctionReturn(DBTraceEvent):
+class DBFunctionReturn(DBTraceEvent, FunctionReturn):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
 
 
@@ -288,7 +324,9 @@ class DBProgramTrace(ProgramTrace):
 
     def get_function(self, name: str) -> Function:
         try:
-            return self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+            return (
+                self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+            )
         except NoResultFound:
             pass
         raise KeyError(name)
@@ -342,8 +380,12 @@ class DBTaintForest(Base):
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
-    parent_one = relationship("DBTaintForest", foreign_keys=[parent_one_id, input_id], uselist=False)
-    parent_two = relationship("DBTaintForest", foreign_keys=[parent_two_id, input_id], uselist=False)
+    parent_one = relationship(
+        "DBTaintForest", foreign_keys=[parent_one_id, input_id], uselist=False
+    )
+    parent_two = relationship(
+        "DBTaintForest", foreign_keys=[parent_two_id, input_id], uselist=False
+    )
     input = relationship("DBInput")
     accessed_labels = relationship("AccessedLabel", foreign_keys=[label, input_id])
 
@@ -351,7 +393,11 @@ class DBTaintForest(Base):
         return hash((self.input_id, self.label))
 
     def __eq__(self, other):
-        return isinstance(other, DBTaintForest) and self.input_id == other.input_id and self.label == other.label
+        return (
+            isinstance(other, DBTaintForest)
+            and self.input_id == other.input_id
+            and self.label == other.label
+        )
 
     def __lt__(self, other):
         return isinstance(other, DBTaintForest) and self.label < other.label
@@ -371,10 +417,10 @@ class DBTaintForest(Base):
             labels_str = f"{len(node_stack)} labels"
         session: Optional[Session] = None
         with tqdm(
-                desc=f"finding canonical taints for {labels_str}",
-                leave=False,
-                bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
-                total=sum(node.label for node in node_stack),
+            desc=f"finding canonical taints for {labels_str}",
+            leave=False,
+            bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
+            total=sum(node.label for node in node_stack),
         ) as t:
             while node_stack:
                 node = node_stack.pop()
@@ -384,10 +430,15 @@ class DBTaintForest(Base):
                     if session is None:
                         session = Session.object_session(node)
                     try:
-                        file_offset = session.query(CanonicalMap).filter(
-                            CanonicalMap.taint_label == node.label,
-                            CanonicalMap.input_id == node.input_id
-                        ).one().file_offset
+                        file_offset = (
+                            session.query(CanonicalMap)
+                            .filter(
+                                CanonicalMap.taint_label == node.label,
+                                CanonicalMap.input_id == node.input_id,
+                            )
+                            .one()
+                            .file_offset
+                        )
                     except NoResultFound:
                         raise ValueError(
                             f"Taint label {node.label} is not in the canonical mapping!"

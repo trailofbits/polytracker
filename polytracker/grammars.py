@@ -25,7 +25,7 @@ from .cfg import DiGraph
 from .plugins import Command
 from .tracing import (
     BasicBlockEntry,
-    FunctionCall,
+    FunctionEntry,
     FunctionReturn,
     ProgramTrace,
     TraceEvent,
@@ -610,7 +610,7 @@ class Grammar:
 def production_name(event: TraceEvent) -> str:
     if isinstance(event, BasicBlockEntry):
         return f"<{event!s}>"
-    elif isinstance(event, FunctionCall):
+    elif isinstance(event, FunctionEntry):
         return f"<{event.name}>"
     elif isinstance(event, FunctionReturn):
         return f"<{event.function_name}>"
@@ -633,7 +633,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
         if trace.entrypoint and trace.entrypoint.uid > event.uid:
             # if it's a function call to the entrypoint, that's okay
             if (
-                not isinstance(event, FunctionCall)
+                not isinstance(event, FunctionEntry)
                 or event.name != trace.entrypoint.function_name
             ):
                 continue
@@ -679,7 +679,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
             else:
                 Production(grammar, prod_name, *rules)
 
-        elif isinstance(event, FunctionCall):
+        elif isinstance(event, FunctionEntry):
             if event.entrypoint is None:
                 if prod_name not in grammar:
                     Production(grammar, prod_name)

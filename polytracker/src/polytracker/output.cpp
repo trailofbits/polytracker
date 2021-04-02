@@ -234,14 +234,16 @@ void storeFunc(sqlite3 *output_db, const char *fname,
 }
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
-                const int &thread_id, const event_id_t &event_id, const event_id_t &thread_event_id,
-                EventType event_type, const function_id_t &findex,
-                const block_id_t &bindex) {
+                const int &thread_id, const event_id_t &event_id,
+                const event_id_t &thread_event_id, EventType event_type,
+                const function_id_t &findex, const block_id_t &bindex,
+                const event_id_t &func_event_id) {
 
   sqlite3_stmt *stmt;
-  const char *insert = "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
-                       "input_id, thread_id, block_gid)"
-                       "VALUES (?, ?, ?, ?, ?, ?)";
+  const char *insert =
+      "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
+      "input_id, thread_id, block_gid, func_event_id)"
+      "VALUES (?, ?, ?, ?, ?, ?, ?)";
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
@@ -250,25 +252,30 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int64(stmt, 4, input_id);
   sqlite3_bind_int(stmt, 5, thread_id);
   sqlite3_bind_int(stmt, 6, gid);
+  sqlite3_bind_int64(stmt, 7, func_event_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }
 
 void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
-                      const event_id_t &event_id, const event_id_t &thread_event_id, const function_id_t &findex,
-                      const block_id_t &bindex, const input_id_t &input_id,
-                      const int &thread_id, const ByteAccessType &access_type) {
+                      const event_id_t &event_id,
+                      const event_id_t &thread_event_id,
+                      const function_id_t &findex, const block_id_t &bindex,
+                      const input_id_t &input_id, const int &thread_id,
+                      const ByteAccessType &access_type,
+                      const event_id_t &func_event_id) {
   sqlite3_stmt *stmt;
-  const char *insert = "INSERT INTO accessed_label(event_id, label, access_type)"
-                       "VALUES (?, ?, ?);";
+  const char *insert =
+      "INSERT INTO accessed_label(event_id, label, access_type)"
+      "VALUES (?, ?, ?);";
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
   sqlite3_bind_int64(stmt, 2, label);
   sqlite3_bind_int(stmt, 3, static_cast<int>(access_type));
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
-  storeEvent(output_db, input_id, thread_id, event_id, thread_event_id, EventType::TAINT_ACCESS,
-             findex, bindex);
+  storeEvent(output_db, input_id, thread_id, event_id, thread_event_id,
+             EventType::TAINT_ACCESS, findex, bindex, func_event_id);
 }
 
 void storeBlock(sqlite3 *output_db, const function_id_t &findex,
