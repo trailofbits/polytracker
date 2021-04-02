@@ -91,7 +91,7 @@ void logFunctionExit(const function_id_t &index) {
   // index
   if (curr_func_index != index ||
       (recursive_funcs.find(curr_func_index) != recursive_funcs.end())) {
-    auto this_event_id = event_id++
+    auto this_event_id = event_id++;
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      this_event_id, EdgeType::BACKWARD);
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++, EventType::FUNC_RET,
