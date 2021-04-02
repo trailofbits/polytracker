@@ -105,12 +105,16 @@ class DBFunction(Base, Function):
 
     def calls_to(self) -> Set["Function"]:
         return {
-            edge.dest for edge in self.outgoing_edges if edge.dest is not None and edge.edge_type == EdgeType.FORWARD
+            edge.dest
+            for edge in self.outgoing_edges
+            if edge.dest is not None and edge.edge_type == EdgeType.FORWARD
         }
 
     def called_from(self) -> Set["Function"]:
         return {
-            edge.src for edge in self.incoming_edges if edge.src is not None and edge.edge_type == EdgeType.FORWARD
+            edge.src
+            for edge in self.incoming_edges
+            if edge.src is not None and edge.edge_type == EdgeType.FORWARD
         }
 
 
@@ -211,8 +215,12 @@ class DBTraceEvent(Base):
     def function_entry(self) -> Optional[FunctionEntry]:
         if not self._queried_for_entry:
             try:
-                self._function_entry = Session.object_session(self).query(DBFunctionEntry)\
-                    .filter(DBFunctionEntry.event_id == self.func_event_id).one()
+                self._function_entry = (
+                    Session.object_session(self)
+                    .query(DBFunctionEntry)
+                    .filter(DBFunctionEntry.event_id == self.func_event_id)
+                    .one()
+                )
             except NoResultFound:
                 self._function_entry = None
         return self._function_entry

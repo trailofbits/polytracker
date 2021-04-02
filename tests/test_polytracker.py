@@ -2,7 +2,13 @@ from collections import defaultdict
 import pytest
 from shutil import copyfile
 
-from polytracker import BasicBlockEntry, FunctionEntry, FunctionReturn, PolyTrackerTrace, ProgramTrace
+from polytracker import (
+    BasicBlockEntry,
+    FunctionEntry,
+    FunctionReturn,
+    PolyTrackerTrace,
+    ProgramTrace,
+)
 
 from .data import *
 

@@ -312,9 +312,8 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
-void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id, const dfsan_label &last_label) {
-
-}
+void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
+                          const dfsan_label &last_label) {}
 
 void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
                       const dfsan_label &last_label) {

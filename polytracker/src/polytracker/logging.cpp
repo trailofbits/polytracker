@@ -101,9 +101,11 @@ void logFunctionExit(const function_id_t &index) {
   } else {
     const auto current_function_event = function_stack.top().func_event_id;
     const auto this_event_id = event_id++;
-    // std::cerr << "logFunctionExit(" << index << ") event_id = " << this_event_id <<
+    // std::cerr << "logFunctionExit(" << index << ") event_id = " <<
+    // this_event_id <<
     //              ", curr_func_index = " << curr_func_index <<
-    //              ", current_function_event = " << current_function_event << "\n";
+    //              ", current_function_event = " << current_function_event <<
+    //              "\n";
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      this_event_id, EdgeType::BACKWARD);
     function_stack.pop();
