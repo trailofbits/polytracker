@@ -139,6 +139,27 @@ def test_source_open(program_trace: ProgramTrace):
     )
 
 
+@pytest.mark.program_trace("test_control_flow.c")
+def test_control_flow(program_trace: ProgramTrace):
+    # make sure the trace contains all of the functions:
+    main = program_trace.get_function("main")
+    assert len(main.called_from()) == 0
+    assert len(main.calls_to()) == 1
+    func1 = program_trace.get_function("func1")
+    assert func1 in main.calls_to()
+    assert len(func1.called_from()) == 1
+    assert main in func1.called_from()
+    assert len(func1.calls_to()) == 1
+    func2 = program_trace.get_function("func2")
+    assert func2 in func1.calls_to()
+    assert len(func2.called_from()) == 2
+    assert func1 in func2.called_from()
+    assert func2 in func2.called_from()
+    assert len(func2.calls_to()) == 1
+    for event in program_trace:
+        print(event.uid, event)
+
+
 # TODO: Update this test
 # def test_polyprocess_taint_sets(json_path, forest_path):
 #     logger.info("Testing taint set processing")

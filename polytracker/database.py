@@ -69,7 +69,7 @@ class DBInput(Base, Input):
     size = Column(BigInteger)
     trace_level = Column(Integer)
 
-    events = relationship("DBTraceEvent")
+    events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
 
 
 class DBFunction(Base, Function):
@@ -79,10 +79,10 @@ class DBFunction(Base, Function):
 
     basic_blocks = relationship("DBBasicBlock")
 
-    incoming_edges = relationship(
+    incoming_edges: Iterable["FunctionCFGEdge"] = relationship(
         "FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.dest_id"
     )
-    outgoing_edges = relationship(
+    outgoing_edges: Iterable["FunctionCFGEdge"] = relationship(
         "FunctionCFGEdge", primaryjoin="DBFunction.id==FunctionCFGEdge.src_id"
     )
     accessed_labels = relationship(
@@ -101,6 +101,16 @@ class DBFunction(Base, Function):
     @property
     def function_index(self) -> int:
         return self.id
+
+    def calls_to(self) -> Set["Function"]:
+        return {
+            edge.dest for edge in self.outgoing_edges if edge.dest is not None and edge.edge_type == EdgeType.FORWARD
+        }
+
+    def called_from(self) -> Set["Function"]:
+        return {
+            edge.src for edge in self.incoming_edges if edge.src is not None and edge.edge_type == EdgeType.FORWARD
+        }
 
 
 class FunctionCFGEdge(Base):
@@ -133,7 +143,7 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events = relationship("DBTraceEvent")
+    events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
     accessed_labels = relationship(
         "AccessedLabel",
         primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
@@ -203,6 +213,7 @@ class DBTraceEvent(Base):
         else:
             return None
 
+    @property
     def next_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -217,6 +228,7 @@ class DBTraceEvent(Base):
         except NoResultFound:
             return None
 
+    @property
     def previous_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -231,6 +243,7 @@ class DBTraceEvent(Base):
         except NoResultFound:
             return None
 
+    @property
     def next_global_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -242,6 +255,7 @@ class DBTraceEvent(Base):
         except NoResultFound:
             return None
 
+    @property
     def previous_global_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -313,10 +327,12 @@ class DBProgramTrace(ProgramTrace):
         return DBProgramTrace(session_maker())
 
     def __len__(self) -> int:
-        pass
+        return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterable[TraceEvent]:
-        pass
+        return iter(
+            self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()).all()
+        )
 
     @property
     def functions(self) -> Iterable[Function]:
@@ -336,13 +352,13 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBBasicBlock).all()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        pass
+        raise NotImplementedError()
 
     def __getitem__(self, uid: int) -> TraceEvent:
-        pass
+        raise NotImplementedError()
 
     def __contains__(self, uid: int):
-        pass
+        raise NotImplementedError()
 
 
 class PolytrackerItem(Base):

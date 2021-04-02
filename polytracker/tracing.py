@@ -215,6 +215,14 @@ class Function:
     def taints(self) -> Taints:
         raise NotImplementedError()
 
+    @abstractmethod
+    def calls_to(self) -> Set["Function"]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def called_from(self) -> Set["Function"]:
+        raise NotImplementedError()
+
     def __hash__(self):
         return self.function_index
 
@@ -273,6 +281,15 @@ class TraceEvent:
     def __init__(self, uid: int):
         self.uid: int = uid
 
+    @property
+    @abstractmethod
+    def basic_block(self) -> BasicBlock:
+        raise NotImplementedError()
+
+    @property
+    def function(self) -> Function:
+        return self.basic_block.function
+
     @abstractmethod
     def taints(self) -> Taints:
         raise NotImplementedError()
@@ -313,9 +330,8 @@ class TraceEvent:
 
 
 class FunctionEntry(TraceEvent):
-    def __init__(self, uid: int, name: str):
+    def __init__(self, uid: int):
         super().__init__(uid=uid)
-        self.name = name
 
     @property
     def caller(self) -> "BasicBlockEntry":
@@ -339,28 +355,19 @@ class FunctionEntry(TraceEvent):
             return self.next_event
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
+        return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
 class BasicBlockEntry(TraceEvent):
-    @property
-    def containing_function(self) -> Optional[FunctionEntry]:
-        if self.function_call_uid is not None:
-            try:
-                return self.trace[self.function_call_uid]
-            except KeyError:
-                return None
-        else:
-            return None
-
-    @property
-    def function_name(self) -> str:
-        if self._function_name is None:
-            func = self.containing_function
-            if func is None:
-                raise ValueError(f"The function name of {self!r} is not known!")
-            self._function_name = func.name
-        return self._function_name
+    def entry_count(self) -> int:
+        """Calculates the number of times this basic block has been entered in the current stack frame"""
+        entry_count = 0
+        event = self.previous_event
+        while event is not None and event != self.function_entry:
+            if isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
+                entry_count += 1
+            event = event.previous_event
+        return entry_count
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
@@ -380,96 +387,26 @@ class BasicBlockEntry(TraceEvent):
         if start_offset is not None:
             yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
 
-    @property
-    def basic_block(self) -> BasicBlock:
-        return self.trace.get_basic_block(self)
-
     def __str__(self):
-        return f"{self.basic_block!s}#{self.entry_count}"
+        return f"{self.basic_block!s}#{self.entry_count()}"
 
 
 class FunctionReturn(TraceEvent):
-    def __init__(
-        self,
-        uid: int,
-        name: str,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        call_event_uid: Optional[int] = None,
-        returning_to_uid: Optional[int] = None,
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
-        self.function_name: str = name
-        self.returning_to_uid: Optional[int] = returning_to_uid
-        self.call_event_uid: Optional[int] = call_event_uid
-        self._returning_to: Optional[BasicBlockEntry] = None
-        self._function_call: Optional[Union[FunctionEntry, ValueError]] = None
+    def __init__(self, uid: int):
+        super().__init__(uid=uid)
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.function_name!r}, "
-            f"{self.returning_to_uid!r})"
+            f"{self.__class__.__name__}({self.uid!r})"
         )
 
     @property
     def returning_to(self) -> Optional[TraceEvent]:
-        if self._returning_to is None:
-            if self.returning_to_uid is None:
-                return self.next_event
-            self._returning_to = self.trace[self.returning_to_uid]
-        return self._returning_to
-
-    def trace(self, pttrace: "ProgramTrace"):
-        TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if self.function_call.function_return is None:
-            self.function_call.function_return = self
-        elif self.function_call.function_return is not self:
-            raise ValueError(
-                f"Function call {self.function_call} was expected to return to {self}, "
-                f"but instead returns to {self.function_call.function_return}"
-            )
+        return self.next_event
 
     @property
-    def function_call(self) -> FunctionEntry:
-        if self._function_call is None:
-            if self.call_event_uid is not None:
-                fc = self.trace[self.call_event_uid]
-                if isinstance(fc, FunctionEntry):
-                    self._function_call = fc
-                    return fc
-                else:
-                    self._function_call = ValueError(
-                        f"Function return {self!r} was associated with "
-                        f"function call uid {self.call_event_uid}, but this was "
-                        f"not a function call: {fc!r}"
-                    )
-                    raise self._function_call
-            prev: Optional[TraceEvent] = self.previous
-            subcalls = 0
-            while prev is not None:
-                if isinstance(prev, FunctionEntry):
-                    if subcalls == 0:
-                        break
-                    else:
-                        subcalls -= 1
-                elif isinstance(prev, FunctionReturn):
-                    if prev._function_call is not None:
-                        if isinstance(prev._function_call, FunctionEntry):
-                            prev = prev._function_call.caller.previous
-                        else:
-                            break
-                    else:
-                        subcalls += 1
-                prev = prev.previous  # type: ignore
-            if isinstance(prev, FunctionEntry):
-                self._function_call = prev
-            else:
-                self._function_call = ValueError(
-                    f"Could not find the function call associated with return {self}"
-                )
-        if isinstance(self._function_call, ValueError):
-            raise self._function_call
-        return self._function_call  # type: ignore
+    def returning_from(self) -> Function:
+        return self.previous_event.basic_block.function
 
 
 class ProgramTrace(ABC):
