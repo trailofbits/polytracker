@@ -121,12 +121,15 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events = relationship("DBTraceEvent")
+    events: Iterable["DBTraceEvent"] = relationship("DBTraceEvent")
     accessed_labels = relationship("AccessedLabel",
                                    primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
                                                "foreign(AccessedLabel.event_id)==DBTraceEvent.event_id)",
                                    viewonly=True)
     function = relationship("DBFunction", back_populates="basic_blocks")
+
+    _children: Optional[Set[BasicBlock]] = None
+    _predecessors: Optional[Set[BasicBlock]] = None
 
     @property
     def index_in_function(self) -> int:
@@ -134,6 +137,59 @@ class DBBasicBlock(Base, BasicBlock):
 
     def taints(self) -> Taints:
         return DBTaintForest.taints((label.taint_forest_node for label in self.accessed_labels))
+
+    def _discover_neighbors(self):
+        if self._children is not None and self._predecessors is not None:
+            return
+        self._children = set()
+        self._predecessors = set()
+        next_event_queue = []
+        prev_event_queue = []
+        with tqdm(desc=f"resolving neighborhood for event {self.id}", unit=" BBs", total=3, leave=False) as t:
+            t.update(1)
+            for event in tqdm(self.events, desc="processing", unit=" events", leave=False):
+                next_event = event.next_event
+                if next_event is not None:
+                    next_event_queue.append(next_event)
+                prev_event = event.previous_event
+                if prev_event is not None:
+                    prev_event_queue.append(prev_event)
+            t.update(1)
+            with tqdm(desc="processing", unit="descendants", leave=False, total=len(next_event_queue)) as d:
+                while next_event_queue:
+                    d.update(1)
+                    next_event = next_event_queue.pop()
+                    if isinstance(next_event, BasicBlockEntry):
+                        if next_event.basic_block != self:
+                            self._children.add(next_event.basic_block)
+                    else:
+                        grandchild = next_event.next_event
+                        if grandchild is not None:
+                            next_event_queue.append(grandchild)
+                            d.total += 1
+            t.update(1)
+            with tqdm(desc="processing", unit="predecessors", leave=False, total=len(prev_event_queue)) as d:
+                while prev_event_queue:
+                    d.update(1)
+                    prev_event = prev_event_queue.pop()
+                    if isinstance(prev_event, BasicBlockEntry):
+                        if prev_event.basic_block != self:
+                            self._predecessors.add(prev_event.basic_block)
+                    else:
+                        grandparent = prev_event.previous_event
+                        if grandparent is not None:
+                            prev_event_queue.append(grandparent)
+                            d.total += 1
+
+    @property
+    def predecessors(self) -> Set[BasicBlock]:
+        self._discover_neighbors()
+        return self._predecessors
+
+    @property
+    def children(self) -> Set[BasicBlock]:
+        self._discover_neighbors()
+        return self._children
 
 
 class AccessedLabel(Base):
@@ -178,6 +234,7 @@ class DBTraceEvent(Base):
     def uid(self) -> int:
         return self.event_id
 
+    @property
     def next_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -188,6 +245,7 @@ class DBTraceEvent(Base):
         except NoResultFound:
             return None
 
+    @property
     def previous_event(self) -> Optional["TraceEvent"]:
         session = Session.object_session(self)
         try:
@@ -246,6 +304,9 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
         "polymorphic_identity": EventType.BLOCK_ENTER,
     }
 
+    _processed_containing_func: bool = False
+    _containing_function: Optional[FunctionCall] = None
+
     @property
     def bb_index(self) -> int:
         return self.block_gid & 0x0000FFFF
@@ -253,6 +314,27 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
     @property
     def function_index(self) -> int:
         return (self.func_gid >> 32) & 0xFFFF
+
+    @property
+    def containing_function(self) -> Optional[FunctionCall]:
+        if self._processed_containing_func:
+            return self._containing_function
+        self._processed_containing_func = True
+        num_funcs = 0
+        pred = self.previous_event
+        while pred is not None and self._containing_function is None:
+            if isinstance(pred, FunctionCall):
+                if num_funcs == 0:
+                    self._containing_function = pred
+                else:
+                    num_funcs += 1
+            elif isinstance(pred, FunctionReturn):
+                num_funcs = max(num_funcs - 1, 0)
+        return self._containing_function
+
+    @property
+    def consumed_tokens(self) -> Iterable[bytes]:
+        pass
 
 
 class DBFunctionCall(DBTraceEvent, FunctionCall):
@@ -295,7 +377,7 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBBasicBlock).all()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        pass
+        return entry.basic_block
 
     def __getitem__(self, uid: int) -> TraceEvent:
         pass

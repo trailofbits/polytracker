@@ -341,15 +341,12 @@ class FunctionCall(TraceEvent):
 
 
 class BasicBlockEntry(TraceEvent):
+    _function_name: Optional[str]
+
     @property
+    @abstractmethod
     def containing_function(self) -> Optional[FunctionCall]:
-        if self.function_call_uid is not None:
-            try:
-                return self.trace[self.function_call_uid]
-            except KeyError:
-                return None
-        else:
-            return None
+        raise NotImplementedError()
 
     @property
     def function_name(self) -> str:
@@ -361,26 +358,14 @@ class BasicBlockEntry(TraceEvent):
         return self._function_name
 
     @property
+    @abstractmethod
     def consumed_tokens(self) -> Iterable[bytes]:
-        start_offset: Optional[int] = None
-        last_offset: Optional[int] = None
-        for offset in self.consumed:
-            if start_offset is None:
-                start_offset = last_offset = offset
-            elif start_offset + 1 != offset:
-                # this is not a contiguous byte sequence
-                # so yield the previous token
-                yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
-                start_offset = last_offset = offset
-            else:
-                # this is a contiguous byte sequence, so update its end
-                last_offset = offset
-        if start_offset is not None:
-            yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
+        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def basic_block(self) -> BasicBlock:
-        return self.trace.get_basic_block(self)
+        raise NotImplementedError()
 
     def __str__(self):
         return f"{self.basic_block!s}#{self.entry_count}"
@@ -585,3 +570,17 @@ class RunTraceCommand(Subcommand[TraceCommand]):
         if retval == 0:
             print(f"Trace saved to {args.output_db}")
         return retval
+
+
+class CFGTraceCommand(Subcommand[TraceCommand]):
+    name = "cfg"
+    help = "export a trace as an annotated cfg"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
+
+    def run(self, args: Namespace):
+        from . import PolyTrackerTrace
+        db = PolyTrackerTrace.load(args.TRACE_DB)
+        db.cfg.to_dot().save("trace.dot")
