@@ -312,6 +312,10 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
+void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id, const dfsan_label &last_label) {
+
+}
+
 void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
                       const dfsan_label &last_label) {
   char *errorMessage;
@@ -360,7 +364,6 @@ sqlite3 *db_init(const std::string &db_path) {
   sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
                &errorMessage);
-  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL, &errorMessage);
   createDBTables(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
@@ -368,7 +371,5 @@ sqlite3 *db_init(const std::string &db_path) {
 
 void db_fini(sqlite3 *output_db) {
   storeVersion(output_db);
-  char *errorMessage;
-  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL, &errorMessage);
   sqlite3_close(output_db);
 }
