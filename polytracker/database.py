@@ -377,11 +377,27 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
-        pass
+        raise NotImplementedError()
 
 
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
+
+    @property
+    def function(self) -> Function:
+        if self.basic_block is None:
+            # this can happen on main()
+            return self.entrypoint.function
+        else:
+            return self.basic_block.function
+
+    @property
+    def function_return(self) -> Optional["FunctionReturn"]:
+        try:
+            return Session.object_session(self).query(DBFunctionReturn)\
+                .filter(DBFunctionReturn.func_event_id == self.uid).one()
+        except NoResultFound:
+            return None
 
 
 class DBFunctionReturn(DBTraceEvent, FunctionReturn):

@@ -339,23 +339,29 @@ class FunctionEntry(TraceEvent):
     @property
     def caller(self) -> "BasicBlockEntry":
         prev = self.previous_event
-        if isinstance(prev, FunctionReturn) and prev.function_call is not None:
-            try:
-                return prev.function_call.caller
-            except TypeError:
-                pass
-        if not isinstance(prev, BasicBlockEntry):
-            raise TypeError(
-                f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}"
-            )
-        return prev
+        while prev is not None:
+            if isinstance(prev, BasicBlockEntry):
+                return prev
+            elif isinstance(prev, FunctionReturn):
+                prev = prev.function_entry
+            prev = prev.previous_event
+        raise ValueError(f"Unable to determine the caller for {self}")
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        if self.function_return is not None:
-            return self.function_return.returning_to
-        else:
-            return self.next_event
+    def entrypoint(self) -> Optional["BasicBlockEntry"]:
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, BasicBlockEntry):
+                if next_event.function_entry != self:
+                    raise ValueError(f"Unexpected basic block: {next_event}")
+                return next_event
+            next_event = next_event.next_event
+        return None
+
+    @property
+    @abstractmethod
+    def function_return(self) -> Optional["FunctionReturn"]:
+        raise NotImplementedError()
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
@@ -380,6 +386,31 @@ class BasicBlockEntry(TraceEvent):
         return entry_count
 
     @property
+    def called_function(self) -> Optional[FunctionEntry]:
+        """
+        Returns the function entry event called from this basic block, or None if this basic block does not call
+        a function
+
+        """
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, FunctionEntry):
+                return next_event
+            elif isinstance(next_event, TaintAccess):
+                next_event = next_event.next_event
+        return None
+
+    def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
+        """Finds the next basic block in this function"""
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, BasicBlockEntry) and next_event.function_entry == self.function_entry:
+                return next_event
+            elif isinstance(next_event, TaintAccess):
+                next_event = next_event.next_event
+        return None
+
+    @property
     @abstractmethod
     def consumed_tokens(self) -> Iterable[bytes]:
         raise NotImplementedError()
@@ -398,12 +429,18 @@ class FunctionReturn(TraceEvent):
         )
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        return self.next_event
+    def returning_to(self) -> Optional[BasicBlockEntry]:
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, BasicBlockEntry):
+                return next_event
+            elif isinstance(next_event, TaintAccess):
+                next_event = next_event.next_event
+        return None
 
     @property
     def returning_from(self) -> Function:
-        return self.previous_event.basic_block.function
+        return self.function_entry.basic_block.function
 
 
 class ProgramTrace(ABC):
