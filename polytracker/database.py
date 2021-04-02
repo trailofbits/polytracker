@@ -69,7 +69,7 @@ class DBInput(Base, Input):
     size = Column(BigInteger)
     trace_level = Column(Integer)
 
-    events = relationship("DBTraceEvent")
+    events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
 
 
 class DBFunction(Base, Function):
@@ -133,7 +133,7 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events = relationship("DBTraceEvent")
+    events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
     accessed_labels = relationship(
         "AccessedLabel",
         primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
@@ -313,10 +313,10 @@ class DBProgramTrace(ProgramTrace):
         return DBProgramTrace(session_maker())
 
     def __len__(self) -> int:
-        pass
+        return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterable[TraceEvent]:
-        pass
+        return iter(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()).all())
 
     @property
     def functions(self) -> Iterable[Function]:
@@ -336,13 +336,13 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBBasicBlock).all()
 
     def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        pass
+        raise NotImplementedError()
 
     def __getitem__(self, uid: int) -> TraceEvent:
-        pass
+        raise NotImplementedError()
 
     def __contains__(self, uid: int):
-        pass
+        raise NotImplementedError()
 
 
 class PolytrackerItem(Base):
