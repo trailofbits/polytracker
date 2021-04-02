@@ -238,7 +238,6 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const event_id_t &thread_event_id, EventType event_type,
                 const function_id_t &findex, const block_id_t &bindex,
                 const event_id_t &func_event_id) {
-
   sqlite3_stmt *stmt;
   const char *insert =
       "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
@@ -251,7 +250,7 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int(stmt, 3, static_cast<int>(event_type));
   sqlite3_bind_int64(stmt, 4, input_id);
   sqlite3_bind_int(stmt, 5, thread_id);
-  sqlite3_bind_int(stmt, 6, gid);
+  sqlite3_bind_int64(stmt, 6, gid);
   sqlite3_bind_int64(stmt, 7, func_event_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
@@ -313,6 +312,9 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
+void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
+                          const dfsan_label &last_label) {}
+
 void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
                       const dfsan_label &last_label) {
   char *errorMessage;
@@ -361,7 +363,6 @@ sqlite3 *db_init(const std::string &db_path) {
   sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
                &errorMessage);
-  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL, &errorMessage);
   createDBTables(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
@@ -369,7 +370,5 @@ sqlite3 *db_init(const std::string &db_path) {
 
 void db_fini(sqlite3 *output_db) {
   storeVersion(output_db);
-  char *errorMessage;
-  sqlite3_exec(output_db, "COMMIT TRANSACTION;", NULL, NULL, &errorMessage);
   sqlite3_close(output_db);
 }

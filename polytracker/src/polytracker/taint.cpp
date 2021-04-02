@@ -7,7 +7,6 @@
 #include <map>
 #include <mutex>
 #include <sanitizer/dfsan_interface.h>
-#include <stack>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -31,7 +30,7 @@ extern thread_local block_id_t curr_block_index;
 extern thread_local function_id_t curr_func_index;
 extern std::atomic<event_id_t> event_id;
 extern thread_local event_id_t thread_event_id;
-extern thread_local std::stack<event_id_t> function_stack;
+extern thread_local FunctionStack function_stack;
 
 extern char *forest_mem;
 
@@ -174,8 +173,9 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
       storeTaintAccess(output_db, new_label, this_event_id, thread_event_id++,
                        curr_func_index, curr_block_index, input_id, thread_id,
                        ByteAccessType::READ_ACCESS,
-                       function_stack.empty() ? this_event_id
-                                              : function_stack.top());
+                       function_stack.empty()
+                           ? this_event_id
+                           : function_stack.top().func_event_id);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;

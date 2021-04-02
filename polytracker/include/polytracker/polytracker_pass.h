@@ -57,6 +57,7 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   // TODO Make this reference and on construction
   std::unordered_map<llvm::BasicBlock*, uint64_t> block_global_map;
   std::unordered_map<std::string, func_index_t> func_index_map;
+  std::unordered_map<std::string, bool> ignore_funcs;
   llvm::Module* mod;
   llvm::FunctionCallee dfsan_get_label;
   llvm::FunctionCallee taint_op_log;

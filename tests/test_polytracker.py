@@ -1,8 +1,15 @@
+from collections import defaultdict
 import os
 import pytest
 from shutil import copyfile
 
-from polytracker import PolyTrackerTrace, ProgramTrace
+from polytracker import (
+    BasicBlockEntry,
+    FunctionEntry,
+    FunctionReturn,
+    PolyTrackerTrace,
+    ProgramTrace,
+)
 
 from .data import *
 
@@ -138,6 +145,41 @@ def test_source_open(program_trace: ProgramTrace):
         byte_offset.offset == 0
         for byte_offset in program_trace.get_function("main").taints()
     )
+
+
+@pytest.mark.program_trace("test_control_flow.c")
+def test_control_flow(program_trace: ProgramTrace):
+    # make sure the trace contains all of the functions:
+    main = program_trace.get_function("main")
+    assert len(main.called_from()) == 0
+    assert len(main.calls_to()) == 1
+    func1 = program_trace.get_function("func1")
+    assert func1 in main.calls_to()
+    assert len(func1.called_from()) == 1
+    assert main in func1.called_from()
+    assert len(func1.calls_to()) == 1
+    func2 = program_trace.get_function("func2")
+    assert func2 in func1.calls_to()
+    assert len(func2.called_from()) == 2
+    assert func1 in func2.called_from()
+    assert func2 in func2.called_from()
+    assert len(func2.calls_to()) == 1
+    entries = defaultdict(int)
+    returns = defaultdict(int)
+    for event in program_trace:
+        if isinstance(event, BasicBlockEntry):
+            assert event.entry_count() == 0
+        elif isinstance(event, FunctionEntry):
+            entries[event.function.name] += 1
+        elif isinstance(event, FunctionReturn):
+            returns[event.function.name] += 1
+    assert entries["main"] == 1
+    assert entries["func1"] == 1
+    assert entries["func2"] == 6
+    assert returns["func1"] == 1
+    assert returns["func2"] == 6
+    # our instrumentation doesn't currently emit a function return event for main, but that might change in the future
+    # so for now just ignore main
 
 
 # TODO: Update this test

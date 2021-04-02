@@ -23,7 +23,8 @@ extern "C" void __polytracker_log_taint_cmp(dfsan_label cmp, uint32_t findex,
   }
 }
 
-extern "C" void __polytracker_log_func_entry(char *fname, uint32_t index) {
+extern "C" void __polytracker_log_func_entry(char *fname, uint32_t index,
+                                             uint32_t block_index) {
   if (LIKELY(!done)) {
     logFunctionEntry(fname, index);
   }
