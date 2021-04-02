@@ -7,6 +7,7 @@
 #include <map>
 #include <mutex>
 #include <sanitizer/dfsan_interface.h>
+#include <stack>
 #include <thread>
 #include <unordered_map>
 #include <vector>
