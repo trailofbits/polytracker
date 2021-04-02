@@ -2,9 +2,7 @@
 
 void func2(int remainder) {
     printf("in func2(%d)\n", remainder);
-    if (remainder <= 0) {
-        return;
-    } else {
+    if (remainder > 0) {
         func2(remainder - 1);
     }
     printf("exiting func2\n");

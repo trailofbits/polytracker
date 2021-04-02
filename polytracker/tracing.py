@@ -358,13 +358,20 @@ class FunctionEntry(TraceEvent):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
+class TaintAccess(TraceEvent):
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+
 class BasicBlockEntry(TraceEvent):
     def entry_count(self) -> int:
         """Calculates the number of times this basic block has been entered in the current stack frame"""
         entry_count = 0
         event = self.previous_event
         while event is not None and event != self.function_entry:
-            if isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
+            if isinstance(event, FunctionReturn):
+                event = event.function_entry
+            elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
             event = event.previous_event
         return entry_count

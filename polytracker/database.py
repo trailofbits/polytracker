@@ -33,6 +33,7 @@ from .tracing import (
     FunctionEntry,
     FunctionReturn,
     Input,
+    TaintAccess,
     Taints,
     TraceEvent,
 )
@@ -196,11 +197,11 @@ class DBTraceEvent(Base):
     input = relationship("DBInput", back_populates="events")
     basic_block = relationship("DBBasicBlock", back_populates="events")
     accessed_labels = relationship("AccessedLabel")
-    _func_entry = relationship(
-        "DBTraceEvent", foreign_keys=[func_event_id], uselist=False
-    )
 
     __mapper_args__ = {"polymorphic_on": "event_type"}
+
+    _queried_for_entry: bool = False
+    _function_entry: Optional[FunctionEntry] = None
 
     @property
     def uid(self) -> int:
@@ -208,10 +209,13 @@ class DBTraceEvent(Base):
 
     @property
     def function_entry(self) -> Optional[FunctionEntry]:
-        if isinstance(self._func_entry, FunctionEntry):
-            return self._func_entry
-        else:
-            return None
+        if not self._queried_for_entry:
+            try:
+                self._function_entry = Session.object_session(self).query(DBFunctionEntry)\
+                    .filter(DBFunctionEntry.event_id == self.func_event_id).one()
+            except NoResultFound:
+                self._function_entry = None
+        return self._function_entry
 
     @property
     def next_event(self) -> Optional["TraceEvent"]:
@@ -271,7 +275,7 @@ class DBTraceEvent(Base):
         return Taints(())
 
 
-class DBTaintAccess(DBTraceEvent):
+class DBTaintAccess(DBTraceEvent, TaintAccess):
     __mapper_args__ = {
         "polymorphic_identity": EventType.TAINT_ACCESS,
     }

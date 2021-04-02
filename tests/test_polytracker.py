@@ -1,7 +1,8 @@
+from collections import defaultdict
 import pytest
 from shutil import copyfile
 
-from polytracker import PolyTrackerTrace, ProgramTrace
+from polytracker import BasicBlockEntry, FunctionEntry, FunctionReturn, PolyTrackerTrace, ProgramTrace
 
 from .data import *
 
@@ -156,8 +157,22 @@ def test_control_flow(program_trace: ProgramTrace):
     assert func1 in func2.called_from()
     assert func2 in func2.called_from()
     assert len(func2.calls_to()) == 1
+    entries = defaultdict(int)
+    returns = defaultdict(int)
     for event in program_trace:
-        print(event.uid, event)
+        if isinstance(event, BasicBlockEntry):
+            assert event.entry_count() == 0
+        elif isinstance(event, FunctionEntry):
+            entries[event.function.name] += 1
+        elif isinstance(event, FunctionReturn):
+            returns[event.function.name] += 1
+    assert entries["main"] == 1
+    assert entries["func1"] == 1
+    assert entries["func2"] == 6
+    assert returns["func1"] == 1
+    assert returns["func2"] == 6
+    # our instrumentation doesn't currently emit a function return event for main, but that might change in the future
+    # so for now just ignore main
 
 
 # TODO: Update this test
