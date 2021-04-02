@@ -300,6 +300,11 @@ class TraceEvent:
     def previous_global_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def function_entry(self) -> Optional["FunctionEntry"]:
+        raise NotImplementedError()
+
     def __eq__(self, other):
         return isinstance(other, TraceEvent) and other.uid == self.uid
 
@@ -310,7 +315,7 @@ class TraceEvent:
         return self.uid
 
 
-class FunctionCall(TraceEvent):
+class FunctionEntry(TraceEvent):
     def __init__(self, uid: int, name: str):
         super().__init__(uid=uid)
         self.name = name
@@ -344,14 +349,9 @@ class BasicBlockEntry(TraceEvent):
     _function_name: Optional[str]
 
     @property
-    @abstractmethod
-    def containing_function(self) -> Optional[FunctionCall]:
-        raise NotImplementedError()
-
-    @property
     def function_name(self) -> str:
         if self._function_name is None:
-            func = self.containing_function
+            func = self.function_entry
             if func is None:
                 raise ValueError(f"The function name of {self!r} is not known!")
             self._function_name = func.name
@@ -386,7 +386,7 @@ class FunctionReturn(TraceEvent):
         self.returning_to_uid: Optional[int] = returning_to_uid
         self.call_event_uid: Optional[int] = call_event_uid
         self._returning_to: Optional[BasicBlockEntry] = None
-        self._function_call: Optional[Union[FunctionCall, ValueError]] = None
+        self._function_call: Optional[Union[FunctionEntry, ValueError]] = None
 
     def __repr__(self):
         return (
@@ -413,11 +413,11 @@ class FunctionReturn(TraceEvent):
             )
 
     @property
-    def function_call(self) -> FunctionCall:
+    def function_call(self) -> FunctionEntry:
         if self._function_call is None:
             if self.call_event_uid is not None:
                 fc = self.trace[self.call_event_uid]
-                if isinstance(fc, FunctionCall):
+                if isinstance(fc, FunctionEntry):
                     self._function_call = fc
                     return fc
                 else:
@@ -430,21 +430,21 @@ class FunctionReturn(TraceEvent):
             prev: Optional[TraceEvent] = self.previous
             subcalls = 0
             while prev is not None:
-                if isinstance(prev, FunctionCall):
+                if isinstance(prev, FunctionEntry):
                     if subcalls == 0:
                         break
                     else:
                         subcalls -= 1
                 elif isinstance(prev, FunctionReturn):
                     if prev._function_call is not None:
-                        if isinstance(prev._function_call, FunctionCall):
+                        if isinstance(prev._function_call, FunctionEntry):
                             prev = prev._function_call.caller.previous
                         else:
                             break
                     else:
                         subcalls += 1
                 prev = prev.previous  # type: ignore
-            if isinstance(prev, FunctionCall):
+            if isinstance(prev, FunctionEntry):
                 self._function_call = prev
             else:
                 self._function_call = ValueError(

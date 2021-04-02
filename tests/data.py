@@ -43,7 +43,6 @@ def run_natively(*args, **kwargs) -> int:
                 stderr=sys.stderr,
                 cwd=str(Path(__file__).parent.parent),
             )
-            .returncode
         )
 
 
