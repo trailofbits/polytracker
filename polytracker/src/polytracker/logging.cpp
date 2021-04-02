@@ -57,9 +57,6 @@ void logOperation(const dfsan_label &label, const function_id_t &findex,
                                           : function_stack.top().func_event_id);
 }
 
-thread_local bool recursive = false;
-thread_local std::unordered_map<function_id_t, bool> recursive_funcs;
-
 void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
@@ -83,9 +80,6 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
   function_stack.push({this_event_id, func_id});
-  if (UNLIKELY(func_id == curr_func_index)) {
-    recursive_funcs[func_id] = true;
-  }
   curr_func_index = func_id;
 }
 
@@ -104,22 +98,17 @@ void logFunctionExit(const function_id_t &index) {
     }
     std::cerr << ". This is likely due to either an instrumentation error "
               << "or non-standard control-flow in the instrumented program.\n";
-  }
-  // Here, the curr_func_index is from the function we just returned from
-  // NOTE (Carson) the map makes sure we don't add accidental recursive edges
-  // due to missing instrumentation Draw return edge from curr_func_index -->
-  // index
-  else if (curr_func_index != index ||
-           (recursive_funcs.find(curr_func_index) != recursive_funcs.end())) {
-    // std::cerr << "logFunctionExit(" << index << ")\n";
+  } else {
+    const auto current_function_event = function_stack.top().func_event_id;
     const auto this_event_id = event_id++;
+    // std::cerr << "logFunctionExit(" << index << ") event_id = " << this_event_id <<
+    //              ", curr_func_index = " << curr_func_index <<
+    //              ", current_function_event = " << current_function_event << "\n";
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      this_event_id, EdgeType::BACKWARD);
-    event_id_t current_function_event;
-    current_function_event = function_stack.top().func_event_id;
     function_stack.pop();
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
-               EventType::FUNC_RET, index, 0, current_function_event);
+               EventType::FUNC_RET, curr_func_index, 0, current_function_event);
   }
   curr_func_index = index;
 }
