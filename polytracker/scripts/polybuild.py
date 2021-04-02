@@ -317,18 +317,10 @@ def lower_bc(input_bitcode, output_file, libs=None):
     assert ret == 0
 
 
-def replay_build_instance(artifact: str, file_id: int, ignore_lists, non_track_artifacts, bc_files):
-    output_bc = artifact + "_output.bc"
-    input_bc = str(file_id) + "_temp.bc"
-    get_bc = ["get-bc", "-o", input_bc, "-b", artifact]
-    ret = subprocess.call(get_bc)
-    if ret != 0:
-        print(f"Error getting BC for {artifact}")
-        print("Continuing anyway because that just might be an external library!")
-        non_track_artifacts.append(artifact)
-        return
+def replay_build_instance(input_bc: str, file_id: int, ignore_lists, non_track_artifacts, bc_files):
+    output_bc = input_bc + "_done.bc"
     bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
-    bc_files.append(bc_file)
+    bc_files.append(os.path.realpath(bc_file))
 
 
 def main():
@@ -373,6 +365,17 @@ def main():
         default=[],
         help="Specify libraries to link with the instrumented target, without the -l" "--libs lib1 lib2 lib3 etc",
     )
+    parser.add_argument(
+        "--num-opt",
+        type=int,
+        default=10,
+        help="When rebuilding with track, parallelize the instrumentation process with num opt instances"
+    )
+    parser.add_argument(
+        "--compile-bitcode",
+        action="store_true",
+        help="for debugging"
+    )
     parser.add_argument("--lists", nargs="+", default=[], help="Specify additional ignore lists to Polytracker")
     if len(sys.argv) <= 1:
         return
@@ -401,27 +404,35 @@ def main():
         bc_file = instrument_bitcode(args.input_file, args.output_file + ".bc", args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
 
+    elif sys.argv[1] == "--compile-bitcode":
+        args = parser.parse_args(sys.argv[1:])
+        lower_bc(args.input_file, args.output_file, args.libs)
+
     elif sys.argv[1] == "--rebuild-track":
         args = parser.parse_args(sys.argv[1:])
         if not args.rebuild_track or not args.output_file:
             print("Error! replay instrument path and output file must be specified")
             exit(1)
-        args.rebuild_track = os.path.realpath(args.rebuild_track)
-        db_conn = sqlite3.connect(MANIFEST_FILE)
-        cur = db_conn.cursor()
-        query = f"""SELECT artifact from manifest where target="{args.rebuild_track}";"""
-        artifacts = [art[0] for art in cur.execute(query).fetchall()]
-        db_conn.close()
-        print(artifacts)
-        if len(artifacts) == 0:
-            print("Error, no artifacts found!")
+        extracted_bc = args.rebuild_track + ".bc"
+        get_bc = ["get-bc", "-o", extracted_bc, "-b", args.rebuild_track]
+        ret = subprocess.call(get_bc)
+        if ret != 0:
+            print("Error! Extraction failed!")
+            exit(1)
+        prefix = "split_"
+        split_num = 20
+        llvm_split = ["llvm-split", "-o", prefix, extracted_bc, f"-j{split_num}"]
+        ret = subprocess.call(llvm_split)
+        if ret != 0:
+            print("Error!, llvm-split failed!")
             exit(1)
         manager = Manager()
         bc_files = manager.list()
         non_track_artifacts = manager.list()
         processes = []
-        for i, artifact in enumerate(artifacts):
-            p = Process(target=replay_build_instance, args=(artifact, i, args.lists, non_track_artifacts, bc_files))
+        for i in range(split_num):
+            curr_bc = f"{prefix}{i}"
+            p = Process(target=replay_build_instance, args=(curr_bc, i, args.lists, non_track_artifacts, bc_files))
             processes.append(p)
             p.start()
         for proc in processes:
@@ -430,10 +441,14 @@ def main():
             print("Error! No bitcode files! Nothing to instrument")
             exit(1)
         mega_link_output = "mega_link.bc"
-        ret = subprocess.call(["llvm-link", "-only-needed", "-o", mega_link_output] + [bc for bc in bc_files])
+        print("LINKING")
+        mega_link_args = ["llvm-link", "-only-needed"] + [bc for bc in bc_files] + ["-o", mega_link_output]
+        print(mega_link_args)
+        ret = subprocess.call(mega_link_args)
         if ret != 0:
             print("llvm link failed!")
             exit(1)
+        lower_bc(mega_link_output, args.output_file, args.libs)
 
     # Do gllvm build
     else:
