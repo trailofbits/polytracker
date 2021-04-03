@@ -104,6 +104,7 @@ setup(
         'pygments~=2.7.3',
         'pydot~=1.4.1',
         'pygraphviz~=1.5',
+        'sqlalchemy~=1.3.23',
         'tqdm~=4.48.0',
         'typing_extensions~=3.7.4.2'
     ],
