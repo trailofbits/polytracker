@@ -3,6 +3,7 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -213,9 +214,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
     return l1;
   }
   if (l1 > l2) {
-    auto temp = l2;
-    l1 = l2;
-    l2 = temp;
+    std::swap(l1, l2);
   }
   // TODO (Carson) can we remove this lock somehow?
   const std::lock_guard<std::mutex> guard(union_table_lock);
