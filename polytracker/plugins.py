@@ -109,6 +109,7 @@ class AbstractCommand(Plugin):
 
     def _run(self, args: Namespace):
         Plugin.__getattribute__(self, "run")(args)
+        # Fixme: Do extensions really need to be run every time?
         for extension in self.extensions:
             extension.run(self, args)
 
