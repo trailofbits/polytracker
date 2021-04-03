@@ -201,7 +201,7 @@ class Production:
     @property
     def can_produce_terminal(self) -> bool:
         if self._can_produce_terminal is None:
-            with tqdm(leave=False, unit=" productions") as status:
+            with tqdm(leave=False, unit=" productions", delay=1.0) as status:
                 status.set_description("building grammar dependency graph")
                 graph: DiGraph = self.grammar.dependency_graph()
                 status.total = len(graph)
