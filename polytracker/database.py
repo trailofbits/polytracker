@@ -1,6 +1,6 @@
 from enum import IntEnum, IntFlag
 from pathlib import Path
-from typing import Iterable, List, Optional, Set, Union
+from typing import Iterable, Iterator, List, Optional, Set, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -375,9 +375,14 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
     def function_index(self) -> int:
         return (self.func_gid >> 32) & 0xFFFF
 
-    @property
-    def consumed_tokens(self) -> Iterable[bytes]:
-        raise NotImplementedError()
+    def taint_accesses(self) -> Iterator[DBTaintAccess]:
+        next_event = self.next_event
+        while isinstance(next_event, DBTaintAccess):
+            yield next_event
+            next_event = next_event.next_event
+
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((access.taint_forest_node for access in self.taint_accesses()))
 
 
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):

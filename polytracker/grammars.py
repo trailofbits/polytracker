@@ -29,6 +29,7 @@ from .tracing import (
     FunctionEntry,
     FunctionReturn,
     ProgramTrace,
+    TaintAccess,
     TraceEvent,
 )
 
@@ -627,10 +628,9 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     for event in tqdm(
         trace, unit=" productions", leave=False, desc="extracting a base grammar"
     ):
-        prod_name = production_name(event)
-
         if isinstance(event, BasicBlockEntry):
             # Add a production rule for this BB
+            prod_name = production_name(event)
 
             sub_productions: List[Union[Terminal, str]] = [
                 Terminal(token) for token in event.consumed_tokens
@@ -669,6 +669,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                 Production(grammar, prod_name, *rules)
 
         elif isinstance(event, FunctionEntry):
+            prod_name = production_name(event)
             if event.entrypoint is None:
                 if prod_name not in grammar:
                     _ = Production(grammar, prod_name)

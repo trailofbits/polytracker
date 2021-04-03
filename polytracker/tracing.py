@@ -398,6 +398,8 @@ class BasicBlockEntry(TraceEvent):
                 return next_event
             elif isinstance(next_event, TaintAccess):
                 next_event = next_event.next_event
+            else:
+                break
         return None
 
     def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
@@ -408,12 +410,13 @@ class BasicBlockEntry(TraceEvent):
                 return next_event
             elif isinstance(next_event, TaintAccess):
                 next_event = next_event.next_event
+            else:
+                break
         return None
 
     @property
-    @abstractmethod
     def consumed_tokens(self) -> Iterable[bytes]:
-        raise NotImplementedError()
+        return tuple(r.value for r in self.taints().regions())
 
     def __str__(self):
         return f"{self.basic_block!s}#{self.entry_count()}"
