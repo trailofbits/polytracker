@@ -206,15 +206,18 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
 [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
   // If sanitizer debug is on, this checks that l1 != l2
   // DCHECK_NE(l1, l2);
-  if (l1 == 0) {
-    return l2;
-  }
-  if (l2 == 0) {
-    return l1;
-  }
 
-  /*  We don't need to explicitly check for ordering, because the caller in polytracker-llvm already
-   *  guarantees that l1 < l2:
+  /* These checks are also called earlier in polytracker-llvm, so we don't need to do it here:
+   */
+  // if (l1 == 0) {
+  //   return l2;
+  // }
+  // if (l2 == 0) {
+  //   return l1;
+  // }
+
+  /* We don't need to explicitly check for ordering, because the caller in polytracker-llvm already
+   * guarantees that l1 < l2:
    */
   //  if (l1 > l2) {
   //    std::swap(l1, l2);
