@@ -3,7 +3,6 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
-#include <algorithm>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -213,9 +212,14 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   if (l2 == 0) {
     return l1;
   }
-  if (l1 > l2) {
-    std::swap(l1, l2);
-  }
+
+  /*  We don't need to explicitly check for ordering, because the caller in polytracker-llvm already
+   *  guarantees that l1 < l2:
+   */
+  //  if (l1 > l2) {
+  //    std::swap(l1, l2);
+  //  }
+
   // TODO (Carson) can we remove this lock somehow?
   const std::lock_guard<std::mutex> guard(union_table_lock);
   // Quick union table check
