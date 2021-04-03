@@ -525,6 +525,7 @@ class DBTaintForest(Base):
         with tqdm(
             desc=f"finding canonical taints for {labels_str}",
             leave=False,
+            delay=5.0,
             bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
             total=sum(node.label for node in node_stack),
         ) as t:
