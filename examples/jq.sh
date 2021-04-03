@@ -18,5 +18,5 @@ if [[ "$(docker images -q trailofbits/polytracker-demo-jq 2> /dev/null)" == "" ]
 fi
 
 rm -f $1.db
-docker run --read-only -ti --rm -e POLYTRACE="1" -e POLYPATH="$1" -e POLYDB="$1.db" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-jq:latest jq . "$1"
+docker run -ti --rm -e POLYTRACE="1" -e POLYPATH="$1" -e POLYDB="/$1.db" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-jq:latest bash -c "jq . \"$1\" && mv \"/$1.db\" \"$1.db\""
 echo trace saved to $1.db
