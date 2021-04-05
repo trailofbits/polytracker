@@ -3,7 +3,7 @@ import inspect
 import traceback
 from datetime import datetime
 from io import StringIO
-from typing import Any, Callable, Dict, Iterable, Optional, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set
 
 from prompt_toolkit import HTML, print_formatted_text, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -15,7 +15,6 @@ from prompt_toolkit.lexers import PygmentsLexer
 from pygments import lex
 from pygments.lexers.python import PythonLexer, PythonTracebackLexer
 
-from .polytracker import version
 from .plugins import Command, COMMANDS
 
 
@@ -133,6 +132,7 @@ def print_function_help(func, func_name: Optional[str] = None):
 class PolyTrackerREPL:
     commands: Dict[str, REPLCommand] = {}
     registered_globals: Dict[str, Any] = {}
+    _current_instance: Optional["PolyTrackerREPL"] = None
 
     def __init__(self):
         self.session = PromptSession(lexer=PygmentsLexer(PythonLexer))
@@ -147,6 +147,17 @@ class PolyTrackerREPL:
         self.state.update(self.registered_globals)
         self.builtins = set(self.state.keys())
         self.multi_line: bool = False
+        self._run_on_exit: List[Callable[[], Any]] = []
+
+    def run_on_exit(self, function: Callable[[], Any]):
+        """Registers a function to be executed when this REPL completes"""
+        self._run_on_exit.append(function)
+
+    @classmethod
+    def current_instance(cls) -> "PolyTrackerREPL":
+        if cls._current_instance is None:
+            raise ValueError("No PolyTrackerREPL instance is currently running!")
+        return cls._current_instance
 
     @classmethod
     def register(cls, command_name: str):
@@ -167,6 +178,10 @@ class PolyTrackerREPL:
             if cls.registered_globals[name] is not value:
                 raise ValueError(f"REPL global {name!s} is already defined as {cls.registered_globals[name]!r}")
         cls.registered_globals[name] = value
+
+    @staticmethod
+    def warning(message: str):
+        print_formatted_text(HTML(f"<b><style fg=\"yellow\">Warning: </style></b> {message}"))
 
     def print_exc(self):
         buffer = StringIO()
@@ -261,11 +276,19 @@ class PolyTrackerREPL:
     def commands_command(cls):
         """print the PolyTracker commands"""
         longest_command = max(len(cmd_name) for cmd_name in cls.commands)
-        for name, command in cls.commands.items():
+        for name, command in sorted(cls.commands.items()):
             dots = "." * (longest_command - len(name) + 1)
-            print_formatted_text(HTML(f'<b fg="ansiblue">{name}</b>{dots}<i> {command.__doc__} </i>'))
+            first_docstring_line = command.help[:command.help.find("\n")]
+            print_formatted_text(HTML(f'<b fg="ansiblue">{name}</b>{dots}<i> {first_docstring_line} </i>'))
 
     def run(self):
+        from . import version
+
+        if PolyTrackerREPL._current_instance is not None:
+            PolyTrackerREPL.warning("More than one instance of PolyTrackerREPL is running at the same time! This can "
+                                    "result in undefined behavior.")
+        else:
+            PolyTrackerREPL._current_instance = self
         print_formatted_text(HTML(f"<b>PolyTracker</b> ({version()})"))
         print_formatted_text(HTML('<u fg="ansigray">https://github.com/trailofbits/polytracker</u>'))
         print_formatted_text(
@@ -304,6 +327,11 @@ class PolyTrackerREPL:
             except:
                 self.print_exc()
                 next_prompt = error_prompt
+        for func in self._run_on_exit:
+            func()
+        self._run_on_exit = []
+        if PolyTrackerREPL._current_instance is self:
+            PolyTrackerREPL._current_instance = None
         return 0
 
 

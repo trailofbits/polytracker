@@ -4,6 +4,7 @@ from collections import defaultdict
 from enum import IntFlag
 from pathlib import Path
 import subprocess
+from tempfile import TemporaryDirectory
 from typing import (
     Dict,
     Iterable,
@@ -18,6 +19,7 @@ from cxxfilt import demangle
 
 from .cfg import DiGraph
 from .plugins import Command, Subcommand
+from .repl import PolyTrackerREPL
 
 
 class BasicBlockType(IntFlag):
@@ -555,23 +557,67 @@ class RunTraceCommand(Subcommand[TraceCommand]):
         parser.add_argument("INPUT_FILE", type=str, help="the file to track")
         parser.add_argument("args", nargs=REMAINDER)
 
-    def run(self, args: Namespace):
-        from .containerization import CAN_RUN_NATIVELY, DockerContainer, DockerRun
-        import sys
+    @staticmethod
+    @PolyTrackerREPL.register("run_trace")
+    def run_trace(
+            instrumented_binary_path: str,
+            input_file_path: str,
+            no_bb_trace: bool = False,
+            output_db_path: Optional[str] = None,
+            args=(),
+            return_trace: bool = True
+    ) -> Union[ProgramTrace, int]:
+        """
+        Runs an instrumented binary and returns the resulting trace
+
+        Args:
+            instrumented_binary_path: path to the instrumented binary
+            input_file_path: input file to track
+            no_bb_trace: if True, only functions will be traced and not basic blocks
+            output_db_path: path to save the output database
+            args: additional arguments to pass the binary
+            return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
+
+        Returns: The program trace or the instrumented binary's exit code
+
+        """
+        can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
+
+        if output_db_path is None:
+            # use a temporary file
+            tmpdir = TemporaryDirectory()
+            output_db_path = Path(tmpdir.name) / "polytracker.db"
+            PolyTrackerREPL.current_instance().run_on_exit(tmpdir.cleanup)
 
         if Path(args.output_db).exists():
-            sys.stderr.write(f"Warning: {args.output.db} already exists\n")
+            PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
 
-        cmd_args = [args.INSTRUMENTED_BINARY] + args.args + [args.INPUT_FILE]
+        cmd_args = [instrumented_binary_path] + args.args + [input_file_path]
         env = {
-            "POLYPATH": args.INPUT_FILE,
-            "POLYTRACE": ["1", "0"][args.no_bb_trace],
-            "POLYDB": args.output_db
+            "POLYPATH": input_file_path,
+            "POLYTRACE": ["1", "0"][no_bb_trace],
+            "POLYDB": output_db_path
         }
-        if CAN_RUN_NATIVELY:
+        if can_run_natively:
             retval = subprocess.call(cmd_args, env=env)  # type: ignore
         else:
-            retval = DockerRun.run_on(DockerContainer(), cmd_args, interactive=True, env=env)
+            run_command = PolyTrackerREPL.commands["docker_run"]
+            retval = run_command(args=cmd_args, interactive=True, env=env)
+        if return_trace:
+            from . import PolyTrackerTrace
+            return PolyTrackerTrace.load(output_db_path)
+        else:
+            return retval
+
+    def run(self, args: Namespace):
+        retval = RunTraceCommand.run_trace(
+            instrumented_binary_path=args.INSTRUMENTED_BINARY,
+            input_file_path=args.INPUT_FILE,
+            no_bb_trace=args.no_bb_trace,
+            output_db_path=args.output_db,
+            args=args.args,
+            return_trace=False
+        )
         if retval == 0:
             print(f"Trace saved to {args.output_db}")
         return retval
