@@ -1,24 +1,17 @@
 #ifndef DFSAN_TYPES_H
 #define DFSAN_TYPES_H
-//#include "sanitizer_common/sanitizer_atomic.h"
-//#include "sanitizer_common/sanitizer_internal_defs.h"
 #include <functional>
 #include <stdint.h>
 
-//using __sanitizer::u16;
-//using __sanitizer::u32;
-//using __sanitizer::uptr;
-//using namespace __dfsan;
 /* This defines how many bits are used for dfsan labels.
  * It automatically influences the types of `dfsan_label`,
  * `atomic_dfsan_label`, `uint_dfsan_label_t`, as well as
  * the calculation of `MAX_LABELS`.
  */
 #define DFSAN_LABEL_BITS 32
-#define DFSAN_MAX_TAINT_ID 128
 // MAX_LABELS = (2^DFSAN_LABEL_BITS) / 2 - 2 = (1 << (DFSAN_LABEL_BITS - 1)) - 2
 // = 2^31 - 2 = 0x7FFFFFFE
-#define MAX_LABELS ((1L << (DFSAN_LABEL_BITS - 1)) - 2)
+#define MAX_LABELS 0xfffffffe
 
 #define PPCAT_NX(A, B) A##B
 #define PPCAT(A, B) PPCAT_NX(A, B)
