@@ -63,6 +63,7 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee func_exit_log;
+  llvm::IntegerType* shadow_type;
 
 };
 

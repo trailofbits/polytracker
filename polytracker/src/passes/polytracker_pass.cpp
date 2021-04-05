@@ -38,21 +38,20 @@ void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callb
   }
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext &context = mod->getContext();
-  llvm::Type *int32_ty = llvm::Type::getInt32Ty(context);
   llvm::Value *get_taint;
   if (inst->getType()->isDoubleTy() || inst->getType()->isFloatTy()) {
-    llvm::Value *cast = IRB.CreateFPToSI(inst, int32_ty);
+    llvm::Value *cast = IRB.CreateFPToSI(inst, shadow_type);
     get_taint = IRB.CreateCall(dfsan_get_label, cast);
   }
   else if (inst->getType()->isPointerTy()) {
-    llvm::Value *hail = IRB.CreateBitCast(inst, int32_ty);
+    llvm::Value *hail = IRB.CreateBitCast(inst, shadow_type);
     get_taint = IRB.CreateCall(dfsan_get_label, hail);
   }
-  else if (inst->getType() == int32_ty) {
+  else if (inst->getType() == shadow_type) {
     get_taint = inst;
   } else {
     // Integer of a different size, extend/shrink. 
-    llvm::Value *mary = IRB.CreateSExtOrTrunc(inst, int32_ty);
+    llvm::Value *mary = IRB.CreateSExtOrTrunc(inst, shadow_type);
     // llvm::Value *hail = IRB.CreateBitCast(mary, int32_ty);
     get_taint = IRB.CreateCall(dfsan_get_label, mary);
   }
@@ -256,7 +255,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   visitor.func_index_map = func_index_map;
   visitor.block_global_map = block_global_map;
   visitor.ignore_funcs = ignore_funcs;
-
+  visitor.shadow_type = shadow_type;
   for (auto &inst : insts) {
     visitor.visit(inst);
   }
@@ -304,7 +303,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   // dfsan_get_label is a special function that gets instrumented by dfsan and
   // changes its ABI. The return type is a dfsan_label as defined by dfsan
   auto dfsan_get_label_ty = llvm::FunctionType::get(
-      shadow_type, {llvm::Type::getInt32Ty(context)}, false);
+      shadow_type, shadow_type, false);
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 }
