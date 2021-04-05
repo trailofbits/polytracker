@@ -24,12 +24,12 @@ from tqdm import tqdm
 from . import PolyTrackerTrace
 from .cfg import DiGraph
 from .plugins import Command
+from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
     FunctionEntry,
     FunctionReturn,
     ProgramTrace,
-    TaintAccess,
     TraceEvent,
 )
 
@@ -710,7 +710,9 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     return grammar
 
 
+@PolyTrackerREPL.register("extract_grammar")
 def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
+    """extract a grammar from a set of traces"""
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
@@ -784,5 +786,5 @@ class ExtractGrammarCommand(Command):
         except ValueError as e:
             log.error(f"{e!s}\n\n")
             exit(1)
-        self.grammar = extract(self.traces, simplify=args.simplify)
+        self.grammar = extract(self.traces, args.simplify)
         print(str(self.grammar))

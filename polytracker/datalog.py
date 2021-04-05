@@ -260,6 +260,8 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
             raise NotImplementedError(
                 "TODO: Add support for generating DataLog grammars from multiple traces"
             )
+        elif args.extract_datalog is None:
+            return 0
         trace = command.traces[0]
         self.datalog_grammar = DatalogGrammar(trace)
         unique_bytes: Dict[int, bool] = {}
@@ -276,6 +278,7 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
                 self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
                 unique_bytes[byte] = True
             self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
+        return 0
 
     def __str__(self):
         facts = "\n".join(

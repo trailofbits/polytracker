@@ -1,9 +1,9 @@
-import argparse
 import ast
+import inspect
 import traceback
 from datetime import datetime
 from io import StringIO
-from typing import Iterable, Optional, Set
+from typing import Any, Callable, Dict, Iterable, Optional, Set
 
 from prompt_toolkit import HTML, print_formatted_text, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -16,24 +16,12 @@ from pygments import lex
 from pygments.lexers.python import PythonLexer, PythonTracebackLexer
 
 from .polytracker import version
-from .plugins import add_command_subparsers, Command, COMMANDS
-
-
-class Commands(Command):
-    name = "commands"
-    help = "print the PolyTracker commands"
-
-    def run(self, args):
-        longest_command = max(len(cmd_name) for cmd_name in COMMANDS)
-        for command in COMMANDS.values():
-            dots = "." * (longest_command - len(command.name) + 1)
-            print_formatted_text(HTML(f'<b fg="ansiblue">{command.name}</b>{dots}<i> {command.help} </i>'))
+from .plugins import Command, COMMANDS
 
 
 class PolyTrackerCompleter(Completer):
     def __init__(self, repl: "PolyTrackerREPL"):
         self.repl: PolyTrackerREPL = repl
-        self.current_command: Optional[Command] = None
         self.current_help: Optional[str] = None
 
     @staticmethod
@@ -49,10 +37,8 @@ class PolyTrackerCompleter(Completer):
     def bottom_toolbar(self):
         if self.current_help is not None:
             return self.current_help
-        elif self.current_command is None:
-            return ""
         else:
-            return self.current_command.help
+            return ""
 
     def get_completions(self, document, complete_event):
         if self.repl.multi_line and document.text == "":
@@ -62,17 +48,14 @@ class PolyTrackerCompleter(Completer):
         already_yielded = set()
         if partial == document.text:
             # we are at the start of the line, so complete for commands:
-            yield from PolyTrackerCompleter._get_completions(partial, COMMANDS, already_yielded, "fg:ansiblue")
+            yield from PolyTrackerCompleter._get_completions(partial, PolyTrackerREPL.commands, already_yielded,
+                                                             "fg:ansiblue")
         args = document.text.split(" ")
-        if args[0] in COMMANDS:
+        if args[0] in PolyTrackerREPL.commands:
             # We are completing a command
-            parser = argparse.ArgumentParser()
-            self.current_command = COMMANDS[args[0]](parser)
             # TODO: Parse options and add their help to self.current_help
-            # parsed = parser.parse_known_args(args[1:])
             self.current_help = None
         else:
-            self.current_command = None
             self.current_help = None
 
         yield from PolyTrackerCompleter._get_completions(
@@ -95,7 +78,61 @@ class PolyTrackerCompleter(Completer):
                 )
 
 
+class REPLCommand:
+    def __init__(self, name: str, func: Callable[..., Any]):
+        self._name: str = name
+        self._func: Callable[..., Any] = func
+        if " " in name or "\t" in name or "\n" in name:
+            raise ValueError(f"Command name {name!r} must not contain whitespace")
+        elif func.__doc__ is None or func.__doc__ == "":
+            raise ValueError(f"Command {name!r}/{func!r} must define a docstring for its help message")
+        self._help: str = inspect.getdoc(self.func)
+        self.__doc__ = self.help
+        try:
+            inspect.getcallargs(func)
+            return_annotation = inspect.signature(func).return_annotation
+            self._can_be_called_with_no_args: bool = (
+                    return_annotation == inspect.Signature.empty or return_annotation is None
+            )
+        except TypeError:
+            self._can_be_called_with_no_args = False
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def func(self) -> Callable[..., Any]:
+        return self._func
+
+    @property
+    def help(self) -> str:
+        return self._help
+
+    def run_bare(self):
+        """called when the command is run from the REPL with no parenthesis"""
+        if self._can_be_called_with_no_args:
+            self.func()
+        else:
+            print_function_help(self._func, self._name)
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+
+def print_function_help(func, func_name: Optional[str] = None):
+    if func_name is None:
+        func_name = func.__name__
+    sig = inspect.signature(func)
+    func_signature = f"{func_name}{sig!s}"
+    print_formatted_text(PygmentsTokens(lex(func_signature, lexer=PythonLexer())))
+    if func.__doc__ is not None:
+        print_formatted_text(HTML(f"<b>{func.__doc__}</b>"))
+
+
 class PolyTrackerREPL:
+    commands: Dict[str, REPLCommand] = {}
+
     def __init__(self):
         self.session = PromptSession(lexer=PygmentsLexer(PythonLexer))
         self.state = {
@@ -106,8 +143,20 @@ class PolyTrackerREPL:
     as well as the Angora project for inspiration.
 """,
         }
+        self.state.update(self.commands)
         self.builtins = set(self.state.keys())
         self.multi_line: bool = False
+
+    @classmethod
+    def register(cls, command_name: str):
+        """Function decorator for registering a command with this REPL"""
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            if command_name in cls.commands:
+                raise ValueError(f"REPL command {command_name!r} is already registered to function "
+                                 f"{cls.commands[command_name]!r}")
+            cls.commands[command_name] = REPLCommand(name=command_name, func=func)
+            return func
+        return decorator
 
     def print_exc(self):
         buffer = StringIO()
@@ -182,17 +231,31 @@ class PolyTrackerREPL:
                         break
                     command = f"{command}\n{next_line}"
 
-            if is_assignment or self.multi_line:
+            if command in self.commands:
+                self.commands[command].run_bare()
+            elif is_assignment or self.multi_line:
                 exec(command, self.state)
             else:
-                print(eval(command, self.state))
+                result = eval(command, self.state)
+                if hasattr(result, "__name__") and result.__name__ == command and command in __builtins__:
+                    try:
+                        print_function_help(result)
+                    except ValueError:
+                        print(result)
+                else:
+                    print(result)
         finally:
             self.multi_line = False
 
-    def run(self):
-        argparser = argparse.ArgumentParser()
-        add_command_subparsers(argparser)
+    @classmethod
+    def commands_command(cls):
+        """print the PolyTracker commands"""
+        longest_command = max(len(cmd_name) for cmd_name in cls.commands)
+        for name, command in cls.commands.items():
+            dots = "." * (longest_command - len(name) + 1)
+            print_formatted_text(HTML(f'<b fg="ansiblue">{name}</b>{dots}<i> {command.__doc__} </i>'))
 
+    def run(self):
         print_formatted_text(HTML(f"<b>PolyTracker</b> ({version()})"))
         print_formatted_text(HTML('<u fg="ansigray">https://github.com/trailofbits/polytracker</u>'))
         print_formatted_text(
@@ -221,39 +284,28 @@ class PolyTrackerREPL:
                 continue
             except EOFError:
                 break
-            raw_args = text.split(" ")
-            is_cmd = raw_args and raw_args[0] in COMMANDS
-            if is_cmd:
-                try:
-                    try:
-                        args = argparser.parse_args(raw_args)
-                        if hasattr(args, "func"):
-                            try:
-                                retval = args.func(args)
-                                if retval is not None and retval != 0:
-                                    next_prompt = error_prompt
-                            except KeyboardInterrupt:
-                                next_prompt = error_prompt
-                            except SystemExit:
-                                next_prompt = error_prompt
-                            except:
-                                self.print_exc()
-                                next_prompt = error_prompt
-                    except SystemExit:
-                        next_prompt = error_prompt
-                except:
-                    self.print_exc()
-                    next_prompt = error_prompt
-            else:
-                # assume it is a Python command
-                try:
-                    self.run_python(text)
-                except NameError as e:
-                    print(str(e))
-                    next_prompt = error_prompt
-                except SystemExit:
-                    break
-                except:
-                    self.print_exc()
-                    next_prompt = error_prompt
+            try:
+                self.run_python(text)
+            except NameError as e:
+                print(str(e))
+                next_prompt = error_prompt
+            except SystemExit:
+                break
+            except:
+                self.print_exc()
+                next_prompt = error_prompt
         return 0
+
+
+PolyTrackerREPL.register("commands")(PolyTrackerREPL.commands_command)
+
+
+class Commands(Command):
+    name = "commands"
+    help = "print the PolyTracker commands"
+
+    def run(self, args):
+        longest_command = max(len(cmd_name) for cmd_name in COMMANDS)
+        for command in COMMANDS.values():
+            dots = "." * (longest_command - len(command.name) + 1)
+            print_formatted_text(HTML(f'<b fg="ansiblue">{command.name}</b>{dots}<i> {command.help} </i>'))
