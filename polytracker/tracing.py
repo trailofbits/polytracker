@@ -14,6 +14,7 @@ from typing import (
     Set,
     Union,
 )
+import weakref
 
 from cxxfilt import demangle
 
@@ -587,7 +588,8 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             # use a temporary file
             tmpdir = TemporaryDirectory()
             output_db_path = Path(tmpdir.name) / "polytracker.db"
-            PolyTrackerREPL.current_instance().run_on_exit(tmpdir.cleanup)
+        else:
+            tmpdir = None
 
         if Path(args.output_db).exists():
             PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
@@ -605,8 +607,13 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             retval = run_command(args=cmd_args, interactive=True, env=env)
         if return_trace:
             from . import PolyTrackerTrace
-            return PolyTrackerTrace.load(output_db_path)
+            trace = PolyTrackerTrace.load(output_db_path)
+            if tmpdir is not None:
+                weakref.finalize(trace, tmpdir.cleanup)
+            return trace
         else:
+            if tmpdir is not None:
+                tmpdir.cleanup()
             return retval
 
     def run(self, args: Namespace):
