@@ -308,6 +308,24 @@ class TraceEvent:
         raise NotImplementedError()
 
     @property
+    def next_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, ControlFlowEvent):
+                return next_event
+            next_event = next_event.next_event
+        return None
+
+    @property
+    def previous_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        previous_event = self.previous_event
+        while previous_event is not None:
+            if isinstance(previous_event, ControlFlowEvent):
+                return previous_event
+            previous_event = previous_event.previous_event
+        return None
+
+    @property
     @abstractmethod
     def next_global_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
@@ -332,30 +350,32 @@ class TraceEvent:
         return self.uid
 
 
-class FunctionEntry(TraceEvent):
+class ControlFlowEvent(TraceEvent):
+    pass
+
+
+class FunctionEntry(ControlFlowEvent):
     def __init__(self, uid: int):
         super().__init__(uid=uid)
 
     @property
     def caller(self) -> "BasicBlockEntry":
-        prev = self.previous_event
+        prev = self.previous_control_flow_event
         while prev is not None:
             if isinstance(prev, BasicBlockEntry):
                 return prev
             elif isinstance(prev, FunctionReturn):
                 prev = prev.function_entry
-            prev = prev.previous_event
+            prev = prev.previous_control_flow_event
         raise ValueError(f"Unable to determine the caller for {self}")
 
     @property
     def entrypoint(self) -> Optional["BasicBlockEntry"]:
-        next_event = self.next_event
-        while next_event is not None:
-            if isinstance(next_event, BasicBlockEntry):
-                if next_event.function_entry != self:
-                    raise ValueError(f"Unexpected basic block: {next_event}")
-                return next_event
-            next_event = next_event.next_event
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            if next_event.function_entry != self:
+                raise ValueError(f"Unexpected basic block: {next_event}")
+            return next_event
         return None
 
     @property
@@ -372,17 +392,17 @@ class TaintAccess(TraceEvent):
         return f"{self.__class__.__name__}({self.uid!r})"
 
 
-class BasicBlockEntry(TraceEvent):
+class BasicBlockEntry(ControlFlowEvent):
     def entry_count(self) -> int:
         """Calculates the number of times this basic block has been entered in the current stack frame"""
         entry_count = 0
-        event = self.previous_event
+        event = self.previous_control_flow_event
         while event is not None and event != self.function_entry:
             if isinstance(event, FunctionReturn):
                 event = event.function_entry
             elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
-            event = event.previous_event
+            event = event.previous_control_flow_event
         return entry_count
 
     @property
@@ -392,24 +412,25 @@ class BasicBlockEntry(TraceEvent):
         a function
 
         """
-        next_event = self.next_event
-        while next_event is not None:
-            if isinstance(next_event, FunctionEntry):
-                return next_event
-            elif isinstance(next_event, TaintAccess):
-                next_event = next_event.next_event
-            else:
-                break
+        next_event = self.previous_control_flow_event
+        if isinstance(next_event, FunctionEntry):
+            return next_event
         return None
 
     def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
         """Finds the next basic block in this function"""
-        next_event = self.next_event
+        next_event = self.next_control_flow_event
         while next_event is not None:
-            if isinstance(next_event, BasicBlockEntry) and next_event.function_entry == self.function_entry:
-                return next_event
-            elif isinstance(next_event, TaintAccess):
-                next_event = next_event.next_event
+            if isinstance(next_event, BasicBlockEntry):
+                if next_event.function_entry == self.function_entry:
+                    return next_event
+                else:
+                    break
+            elif isinstance(next_event, FunctionEntry):
+                next_event = next_event.function_return
+                if next_event is None:
+                    break
+                next_event = next_event.next_control_flow_event
             else:
                 break
         return None
@@ -422,7 +443,7 @@ class BasicBlockEntry(TraceEvent):
         return f"{self.basic_block!s}#{self.entry_count()}"
 
 
-class FunctionReturn(TraceEvent):
+class FunctionReturn(ControlFlowEvent):
     def __init__(self, uid: int):
         super().__init__(uid=uid)
 
@@ -433,12 +454,9 @@ class FunctionReturn(TraceEvent):
 
     @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
-        next_event = self.next_event
-        while next_event is not None:
-            if isinstance(next_event, BasicBlockEntry):
-                return next_event
-            elif isinstance(next_event, TaintAccess):
-                next_event = next_event.next_event
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            return next_event
         return None
 
     @property
