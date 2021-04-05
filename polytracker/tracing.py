@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
+from argparse import ArgumentParser, Namespace, REMAINDER
 from collections import defaultdict
 from enum import IntFlag
 from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
 from typing import (
     Dict,
     Iterable,
@@ -14,7 +17,9 @@ from typing import (
 
 from cxxfilt import demangle
 
-from polytracker.cfg import DiGraph
+from .cfg import DiGraph
+from .plugins import Command, Subcommand
+from .repl import PolyTrackerREPL
 
 
 class BasicBlockType(IntFlag):
@@ -305,6 +310,24 @@ class TraceEvent:
         raise NotImplementedError()
 
     @property
+    def next_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, ControlFlowEvent):
+                return next_event
+            next_event = next_event.next_event
+        return None
+
+    @property
+    def previous_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        previous_event = self.previous_event
+        while previous_event is not None:
+            if isinstance(previous_event, ControlFlowEvent):
+                return previous_event
+            previous_event = previous_event.previous_event
+        return None
+
+    @property
     @abstractmethod
     def next_global_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
@@ -329,30 +352,38 @@ class TraceEvent:
         return self.uid
 
 
-class FunctionEntry(TraceEvent):
+class ControlFlowEvent(TraceEvent):
+    pass
+
+
+class FunctionEntry(ControlFlowEvent):
     def __init__(self, uid: int):
         super().__init__(uid=uid)
 
     @property
     def caller(self) -> "BasicBlockEntry":
-        prev = self.previous_event
-        if isinstance(prev, FunctionReturn) and prev.function_call is not None:
-            try:
-                return prev.function_call.caller
-            except TypeError:
-                pass
-        if not isinstance(prev, BasicBlockEntry):
-            raise TypeError(
-                f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}"
-            )
-        return prev
+        prev = self.previous_control_flow_event
+        while prev is not None:
+            if isinstance(prev, BasicBlockEntry):
+                return prev
+            elif isinstance(prev, FunctionReturn):
+                prev = prev.function_entry
+            prev = prev.previous_control_flow_event
+        raise ValueError(f"Unable to determine the caller for {self}")
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        if self.function_return is not None:
-            return self.function_return.returning_to
-        else:
-            return self.next_event
+    def entrypoint(self) -> Optional["BasicBlockEntry"]:
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            if next_event.function_entry != self:
+                raise ValueError(f"Unexpected basic block: {next_event}")
+            return next_event
+        return None
+
+    @property
+    @abstractmethod
+    def function_return(self) -> Optional["FunctionReturn"]:
+        raise NotImplementedError()
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
@@ -363,42 +394,58 @@ class TaintAccess(TraceEvent):
         return f"{self.__class__.__name__}({self.uid!r})"
 
 
-class BasicBlockEntry(TraceEvent):
+class BasicBlockEntry(ControlFlowEvent):
     def entry_count(self) -> int:
         """Calculates the number of times this basic block has been entered in the current stack frame"""
         entry_count = 0
-        event = self.previous_event
+        event = self.previous_control_flow_event
         while event is not None and event != self.function_entry:
             if isinstance(event, FunctionReturn):
                 event = event.function_entry
             elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
-            event = event.previous_event
+            event = event.previous_control_flow_event
         return entry_count
 
     @property
-    def consumed_tokens(self) -> Iterable[bytes]:
-        start_offset: Optional[int] = None
-        last_offset: Optional[int] = None
-        for offset in self.consumed:
-            if start_offset is None:
-                start_offset = last_offset = offset
-            elif start_offset + 1 != offset:
-                # this is not a contiguous byte sequence
-                # so yield the previous token
-                yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
-                start_offset = last_offset = offset
+    def called_function(self) -> Optional[FunctionEntry]:
+        """
+        Returns the function entry event called from this basic block, or None if this basic block does not call
+        a function
+
+        """
+        next_event = self.previous_control_flow_event
+        if isinstance(next_event, FunctionEntry):
+            return next_event
+        return None
+
+    def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
+        """Finds the next basic block in this function"""
+        next_event = self.next_control_flow_event
+        while next_event is not None:
+            if isinstance(next_event, BasicBlockEntry):
+                if next_event.function_entry == self.function_entry:
+                    return next_event
+                else:
+                    break
+            elif isinstance(next_event, FunctionEntry):
+                next_event = next_event.function_return
+                if next_event is None:
+                    break
+                next_event = next_event.next_control_flow_event
             else:
-                # this is a contiguous byte sequence, so update its end
-                last_offset = offset
-        if start_offset is not None:
-            yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
+                break
+        return None
+
+    @property
+    def consumed_tokens(self) -> Iterable[bytes]:
+        return tuple(r.value for r in self.taints().regions())
 
     def __str__(self):
         return f"{self.basic_block!s}#{self.entry_count()}"
 
 
-class FunctionReturn(TraceEvent):
+class FunctionReturn(ControlFlowEvent):
     def __init__(self, uid: int):
         super().__init__(uid=uid)
 
@@ -408,12 +455,15 @@ class FunctionReturn(TraceEvent):
         )
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        return self.next_event
+    def returning_to(self) -> Optional[BasicBlockEntry]:
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            return next_event
+        return None
 
     @property
     def returning_from(self) -> Function:
-        return self.previous_event.basic_block.function
+        return self.function_entry.basic_block.function
 
 
 class ProgramTrace(ABC):
@@ -441,10 +491,6 @@ class ProgramTrace(ABC):
 
     @abstractmethod
     def get_function(self, name: str) -> Function:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
         raise NotImplementedError()
 
     @abstractmethod
@@ -484,3 +530,108 @@ class ProgramTrace(ABC):
             return False
         except StopIteration:
             return True
+
+
+class TraceCommand(Command):
+    name = "trace"
+    help = "commands related to tracing"
+    parser: ArgumentParser
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        self.parser = parser
+
+    def run(self, args: Namespace):
+        self.parser.print_help()
+
+
+class RunTraceCommand(Subcommand[TraceCommand]):
+    name = "run"
+    help = "run an instrumented binary"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("--no-bb-trace", action="store_true", help="do not trace at the basic block level")
+        parser.add_argument("--output-db", "-o", type=str, default="polytracker.db",
+                            help="path to the output database (default is polytracker.db)")
+        parser.add_argument("INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run")
+        parser.add_argument("INPUT_FILE", type=str, help="the file to track")
+        parser.add_argument("args", nargs=REMAINDER)
+
+    @staticmethod
+    @PolyTrackerREPL.register("run_trace")
+    def run_trace(
+            instrumented_binary_path: str,
+            input_file_path: str,
+            no_bb_trace: bool = False,
+            output_db_path: Optional[str] = None,
+            args=(),
+            return_trace: bool = True
+    ) -> Union[ProgramTrace, int]:
+        """
+        Runs an instrumented binary and returns the resulting trace
+
+        Args:
+            instrumented_binary_path: path to the instrumented binary
+            input_file_path: input file to track
+            no_bb_trace: if True, only functions will be traced and not basic blocks
+            output_db_path: path to save the output database
+            args: additional arguments to pass the binary
+            return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
+
+        Returns: The program trace or the instrumented binary's exit code
+
+        """
+        can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
+
+        if output_db_path is None:
+            # use a temporary file
+            tmpdir = TemporaryDirectory()
+            output_db_path = Path(tmpdir.name) / "polytracker.db"
+            PolyTrackerREPL.current_instance().run_on_exit(tmpdir.cleanup)
+
+        if Path(args.output_db).exists():
+            PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
+
+        cmd_args = [instrumented_binary_path] + args.args + [input_file_path]
+        env = {
+            "POLYPATH": input_file_path,
+            "POLYTRACE": ["1", "0"][no_bb_trace],
+            "POLYDB": output_db_path
+        }
+        if can_run_natively:
+            retval = subprocess.call(cmd_args, env=env)  # type: ignore
+        else:
+            run_command = PolyTrackerREPL.commands["docker_run"]
+            retval = run_command(args=cmd_args, interactive=True, env=env)
+        if return_trace:
+            from . import PolyTrackerTrace
+            return PolyTrackerTrace.load(output_db_path)
+        else:
+            return retval
+
+    def run(self, args: Namespace):
+        retval = RunTraceCommand.run_trace(
+            instrumented_binary_path=args.INSTRUMENTED_BINARY,
+            input_file_path=args.INPUT_FILE,
+            no_bb_trace=args.no_bb_trace,
+            output_db_path=args.output_db,
+            args=args.args,
+            return_trace=False
+        )
+        if retval == 0:
+            print(f"Trace saved to {args.output_db}")
+        return retval
+
+
+class CFGTraceCommand(Subcommand[TraceCommand]):
+    name = "cfg"
+    help = "export a trace as an annotated cfg"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
+
+    def run(self, args: Namespace):
+        from . import PolyTrackerTrace
+        db = PolyTrackerTrace.load(args.TRACE_DB)
+        db.cfg.to_dot().save("trace.dot")

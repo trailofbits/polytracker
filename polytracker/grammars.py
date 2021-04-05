@@ -21,8 +21,10 @@ import graphviz
 import networkx as nx
 from tqdm import tqdm
 
+from . import PolyTrackerTrace
 from .cfg import DiGraph
 from .plugins import Command
+from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
     FunctionEntry,
@@ -199,7 +201,7 @@ class Production:
     @property
     def can_produce_terminal(self) -> bool:
         if self._can_produce_terminal is None:
-            with tqdm(leave=False, unit=" productions") as status:
+            with tqdm(leave=False, unit=" productions", delay=1.0) as status:
                 status.set_description("building grammar dependency graph")
                 graph: DiGraph = self.grammar.dependency_graph()
                 status.total = len(graph)
@@ -611,17 +613,14 @@ def production_name(event: TraceEvent) -> str:
     if isinstance(event, BasicBlockEntry):
         return f"<{event!s}>"
     elif isinstance(event, FunctionEntry):
-        return f"<{event.name}>"
+        return f"<{event.function.name}>"
     elif isinstance(event, FunctionReturn):
-        return f"<{event.function_name}>"
+        return f"<{event.function.name}>"
     else:
         raise ValueError(f"Unhandled event: {event!r}")
 
 
 def trace_to_grammar(trace: ProgramTrace) -> Grammar:
-    if trace.entrypoint is None:
-        raise ValueError(f"Trace {trace} does not have an entrypoint!")
-
     # trace.simplify()
 
     grammar = Grammar()
@@ -629,29 +628,21 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     for event in tqdm(
         trace, unit=" productions", leave=False, desc="extracting a base grammar"
     ):
-        # ignore events before the entrypoint, if it exists
-        if trace.entrypoint and trace.entrypoint.uid > event.uid:
-            # if it's a function call to the entrypoint, that's okay
-            if (
-                not isinstance(event, FunctionEntry)
-                or event.name != trace.entrypoint.function_name
-            ):
-                continue
-
-        prod_name = production_name(event)
-
         if isinstance(event, BasicBlockEntry):
             # Add a production rule for this BB
+            prod_name = production_name(event)
 
             sub_productions: List[Union[Terminal, str]] = [
                 Terminal(token) for token in event.consumed_tokens
             ]
 
-            if event.called_function is not None:
-                sub_productions.append(production_name(event.called_function))
-                ret = event.called_function.function_return
+            called_function = event.called_function
+
+            if called_function is not None:
+                sub_productions.append(production_name(called_function))
+                ret = called_function.function_return
                 if ret is not None:
-                    returning_to = event.called_function.returning_to
+                    returning_to = called_function.function_return.returning_to
                     if returning_to is not None:
                         sub_productions.append(f"<{returning_to!s}>")
                     else:
@@ -663,11 +654,9 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                     pass
                     # breakpoint()
 
-            if event.called_function is None and event.children:
-                rules = [
-                    Rule(grammar, *(sub_productions + [f"<{child!s}>"]))
-                    for child in event.children
-                ]
+            next_bb = event.next_basic_block_in_function()
+            if next_bb is not None:
+                rules = [Rule(grammar, *(sub_productions + [f"<{next_bb!s}>"]))]
             else:
                 rules = [Rule(grammar, *sub_productions)]
 
@@ -680,9 +669,10 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                 Production(grammar, prod_name, *rules)
 
         elif isinstance(event, FunctionEntry):
+            prod_name = production_name(event)
             if event.entrypoint is None:
                 if prod_name not in grammar:
-                    Production(grammar, prod_name)
+                    _ = Production(grammar, prod_name)
             else:
                 rule = Rule(grammar, production_name(event.entrypoint))
                 if prod_name in grammar:
@@ -690,37 +680,39 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                     if rule not in production:
                         production.add(rule)
                 else:
-                    Production(grammar, prod_name, rule)
+                    _ = Production(grammar, prod_name, rule)
 
-        elif isinstance(event, FunctionReturn):
-            next_event = event.returning_to
-            if next_event is not None and not isinstance(next_event, BasicBlockEntry):
-                # sometimes instrumentation errors can cause functions to return directly into another call
-                call_name = production_name(event.function_call)
-                next_event_name = production_name(next_event)
-                if call_name in grammar:
-                    production = grammar[call_name]
-                    if not production.rules:
-                        production.add(Rule(grammar, next_event_name))
-                    else:
-                        for rule in production.rules:
-                            if next_event_name not in rule.sequence:
-                                rule.sequence = rule.sequence + (next_event_name,)
-                    grammar.used_by[next_event_name].add(call_name)
-                else:
-                    Production(grammar, call_name, Rule(grammar, next_event_name))
+            if grammar.start is None:
+                grammar.start = Production(
+                    grammar, "<START>", Rule.load(grammar, prod_name)
+                )
 
-        if trace.entrypoint == event:
-            grammar.start = Production(
-                grammar, "<START>", Rule.load(grammar, f"<{event.function_name}>")
-            )
+        # elif isinstance(event, FunctionReturn):
+        #     next_event = event.returning_to
+        #     if next_event is not None and not isinstance(next_event, BasicBlockEntry):
+        #         # sometimes instrumentation errors can cause functions to return directly into another call
+        #         call_name = production_name(event.function_call)
+        #         next_event_name = production_name(next_event)
+        #         if call_name in grammar:
+        #             production = grammar[call_name]
+        #             if not production.rules:
+        #                 production.add(Rule(grammar, next_event_name))
+        #             else:
+        #                 for rule in production.rules:
+        #                     if next_event_name not in rule.sequence:
+        #                         rule.sequence = rule.sequence + (next_event_name,)
+        #             grammar.used_by[next_event_name].add(call_name)
+        #         else:
+        #             _ = Production(grammar, call_name, Rule(grammar, next_event_name))
 
     grammar.verify()
 
     return grammar
 
 
+@PolyTrackerREPL.register("extract_grammar")
 def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
+    """extract a grammar from a set of traces"""
     trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
@@ -766,39 +758,33 @@ class ExtractGrammarCommand(Command):
         parser.add_argument(
             "TRACES",
             nargs="+",
-            action="append",
             type=str,
-            help="extract a grammar from the provided pairs of JSON trace files as well as the associated input_file that "
-            "was sent to the instrumented parser to generate polytracker_json",
+            help="extract a grammar from the provided PolyTracker trace databases"
         )
         parser.add_argument(
             "--simplify", "-s", action="store_true", help="simplify the grammar"
         )
 
     def run(self, args: Namespace):
-        if len(args.TRACES[0]) % 2 != 0:
-            raise ValueError(
-                "The number of files provided in the TRACES argument must be a multiple of two!"
-            )
         self.traces = []
         try:
-            for db_file, input_file in zip(args.TRACES[0], args.TRACES[0][1:]):
-                trace = ProgramTrace.parse(db_file, input_file)
-                to_dot(trace.cfg).save("cfg.dot")
-                print(f"num nodes {trace.cfg.number_of_nodes()}")
-                if not trace.is_cfg_connected():
-                    roots = list(trace.cfg_roots())
-                    if len(roots) == 0:
-                        log.error(f"Basic block trace of {db_file} has no roots!\n\n")
-                    else:
-                        root_names = "".join(f"\t{r!s}\n" for r in roots)
-                        log.error(
-                            f"Basic block trace of {db_file} has multiple roots:\n{root_names}"
-                        )
-                    exit(1)
+            for trace_db_path in args.TRACES:
+                trace = PolyTrackerTrace.load(trace_db_path)
+                # to_dot(trace.cfg).save("cfg.dot")
+                # print(f"num nodes {trace.cfg.number_of_nodes()}")
+                # if not trace.is_cfg_connected():
+                #     roots = list(trace.cfg_roots())
+                #     if len(roots) == 0:
+                #         log.error(f"Basic block trace of {trace_db_path} has no roots!\n\n")
+                #     else:
+                #         root_names = "".join(f"\t{r!s}\n" for r in roots)
+                #         log.error(
+                #             f"Basic block trace of {trace_db_path} has multiple roots:\n{root_names}"
+                #         )
+                #     exit(1)
                 self.traces.append(trace)
         except ValueError as e:
             log.error(f"{e!s}\n\n")
             exit(1)
-        self.grammar = extract(self.traces, simplify=args.simplify)
+        self.grammar = extract(self.traces, args.simplify)
         print(str(self.grammar))

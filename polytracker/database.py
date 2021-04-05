@@ -1,6 +1,6 @@
 from enum import IntEnum, IntFlag
 from pathlib import Path
-from typing import Iterable, List, Optional, Set, Union
+from typing import Iterable, Iterator, List, Optional, Set, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -148,7 +148,7 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
+    events: Iterable["DBTraceEvent"] = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
     accessed_labels = relationship(
         "AccessedLabel",
         primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
@@ -156,6 +156,9 @@ class DBBasicBlock(Base, BasicBlock):
         viewonly=True,
     )
     function = relationship("DBFunction", back_populates="basic_blocks")
+
+    _children: Optional[Set[BasicBlock]] = None
+    _predecessors: Optional[Set[BasicBlock]] = None
 
     @property
     def index_in_function(self) -> int:
@@ -165,6 +168,59 @@ class DBBasicBlock(Base, BasicBlock):
         return DBTaintForest.taints(
             (label.taint_forest_node for label in self.accessed_labels)
         )
+
+    def _discover_neighbors(self):
+        if self._children is not None and self._predecessors is not None:
+            return
+        self._children = set()
+        self._predecessors = set()
+        next_event_queue = []
+        prev_event_queue = []
+        with tqdm(desc=f"resolving neighborhood for event {self.id}", unit=" BBs", total=3, leave=False) as t:
+            t.update(1)
+            for event in tqdm(self.events, desc="processing", unit=" events", leave=False):
+                next_event = event.next_event
+                if next_event is not None:
+                    next_event_queue.append(next_event)
+                prev_event = event.previous_event
+                if prev_event is not None:
+                    prev_event_queue.append(prev_event)
+            t.update(1)
+            with tqdm(desc="processing", unit="descendants", leave=False, total=len(next_event_queue)) as d:
+                while next_event_queue:
+                    d.update(1)
+                    next_event = next_event_queue.pop()
+                    if isinstance(next_event, BasicBlockEntry):
+                        if next_event.basic_block != self:
+                            self._children.add(next_event.basic_block)
+                    else:
+                        grandchild = next_event.next_event
+                        if grandchild is not None:
+                            next_event_queue.append(grandchild)
+                            d.total += 1
+            t.update(1)
+            with tqdm(desc="processing", unit="predecessors", leave=False, total=len(prev_event_queue)) as d:
+                while prev_event_queue:
+                    d.update(1)
+                    prev_event = prev_event_queue.pop()
+                    if isinstance(prev_event, BasicBlockEntry):
+                        if prev_event.basic_block != self:
+                            self._predecessors.add(prev_event.basic_block)
+                    else:
+                        grandparent = prev_event.previous_event
+                        if grandparent is not None:
+                            prev_event_queue.append(grandparent)
+                            d.total += 1
+
+    @property
+    def predecessors(self) -> Set[BasicBlock]:
+        self._discover_neighbors()
+        return self._predecessors
+
+    @property
+    def children(self) -> Set[BasicBlock]:
+        self._discover_neighbors()
+        return self._children
 
 
 class AccessedLabel(Base):
@@ -319,9 +375,34 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
     def function_index(self) -> int:
         return (self.func_gid >> 32) & 0xFFFF
 
+    def taint_accesses(self) -> Iterator[DBTaintAccess]:
+        next_event = self.next_event
+        while isinstance(next_event, DBTaintAccess):
+            yield next_event
+            next_event = next_event.next_event
+
+    def taints(self) -> Taints:
+        return DBTaintForest.taints((access.taint_forest_node for access in self.taint_accesses()))
+
 
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
+
+    @property
+    def function(self) -> Function:
+        if self.basic_block is None:
+            # this can happen on main()
+            return self.entrypoint.function
+        else:
+            return self.basic_block.function
+
+    @property
+    def function_return(self) -> Optional["FunctionReturn"]:
+        try:
+            return Session.object_session(self).query(DBFunctionReturn)\
+                .filter(DBFunctionReturn.func_event_id == self.uid).one()
+        except NoResultFound:
+            return None
 
 
 class DBFunctionReturn(DBTraceEvent, FunctionReturn):
@@ -362,9 +443,6 @@ class DBProgramTrace(ProgramTrace):
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
         return self.session.query(DBBasicBlock).all()
-
-    def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        raise NotImplementedError()
 
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
@@ -447,6 +525,7 @@ class DBTaintForest(Base):
         with tqdm(
             desc=f"finding canonical taints for {labels_str}",
             leave=False,
+            delay=5.0,
             bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
             total=sum(node.label for node in node_stack),
         ) as t:

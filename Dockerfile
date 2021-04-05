@@ -24,6 +24,7 @@ WORKDIR /polytracker/build
 RUN cmake -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE -DCXX_LIB_PATH=/cxx_libs .. 
 RUN ninja install
 
+
 # Setting up build enviornment for targets 
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV CC=/polytracker/build/bin/polybuild

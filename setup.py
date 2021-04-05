@@ -1,8 +1,25 @@
 import os
+import platform
 import re
 import sys
 from setuptools import setup, find_packages
 from typing import Optional, Tuple
+
+
+PYTHON_REQUIRES = ">=3.7"
+if sys.platform == "darwin":
+    try:
+        macos_major_version = int(platform.release().split(".")[0])
+        if macos_major_version >= 20:
+            # We are running macOS Big Sur or later.
+            # The new shared cache on Big Sur breaks `ctypes.util.find_library`,
+            # which is used by the `cxxfilt` dependency.
+            # https://stackoverflow.com/questions/62587131/macos-big-sur-python-ctypes-find-library-does-not-find-libraries-ssl-corefou/63609524#63609524
+            # https://github.com/python/cpython/pull/22855
+            # This wasn't patched in CPython until version 3.9.1, so require that:
+            PYTHON_REQUIRES = ">=3.9.1"
+    except ValueError:
+        pass
 
 SETUP_DIR = os.path.dirname(os.path.realpath(__file__))
 POLYTRACKER_HEADER = os.path.join(SETUP_DIR, 'polytracker', 'include', 'polytracker', 'polytracker.h')
@@ -51,6 +68,22 @@ def polytracker_version_string() -> str:
         return f"{'.'.join(primary)}{suffix}"
 
 
+CONSOLE_SCRIPTS = [
+    'polytracker = polytracker.__main__:main'
+]
+
+if (
+        platform.system() != "Linux" or
+        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") == "0" or
+        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") == ""
+):
+    # We are not installing inside the Docker container---in which polybuild can run natively---so
+    # add our special polybuild script to run it from within Docker:
+    CONSOLE_SCRIPTS.extend([
+        'polybuild = polytracker.build:main',
+        'polybuild++ = polytracker.build:main_plus_plus'
+    ])
+
 setup(
     name='polytracker',
     description='API and Library for operating and interacting with PolyTracker',
@@ -58,7 +91,7 @@ setup(
     author='Trail of Bits',
     version=polytracker_version_string(),
     packages=find_packages(),
-    python_requires='>=3.7',
+    python_requires=PYTHON_REQUIRES,
     install_requires=[
         'cxxfilt~=0.2.2',
         'docker~=4.4.0',
@@ -67,19 +100,19 @@ setup(
         'matplotlib~=3.3.0',
         'networkx~=2.4',
         'Pillow>=7.2.0',
-        'pygraphviz~=1.5',
+        'prompt_toolkit~=3.0.8',
+        'pygments~=2.7.3',
         'pydot~=1.4.1',
+        'pygraphviz~=1.5',
         'sqlalchemy~=1.3.23',
-        'tqdm~=4.48.0',
+        'tqdm>=4.59.0',  # We need at least this version to get the `delay` option
         'typing_extensions~=3.7.4.2'
     ],
     extras_require={
         "dev": ["black>=20.8b1", "mypy", "pytest"]
     },
     entry_points={
-        'console_scripts': [
-            'polytracker = polytracker.__main__:main'
-        ]
+        'console_scripts': CONSOLE_SCRIPTS
     },
     classifiers=[
         'Development Status :: 4 - Beta',
