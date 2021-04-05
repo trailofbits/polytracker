@@ -132,6 +132,7 @@ def print_function_help(func, func_name: Optional[str] = None):
 
 class PolyTrackerREPL:
     commands: Dict[str, REPLCommand] = {}
+    registered_globals: Dict[str, Any] = {}
 
     def __init__(self):
         self.session = PromptSession(lexer=PygmentsLexer(PythonLexer))
@@ -143,7 +144,7 @@ class PolyTrackerREPL:
     as well as the Angora project for inspiration.
 """,
         }
-        self.state.update(self.commands)
+        self.state.update(self.registered_globals)
         self.builtins = set(self.state.keys())
         self.multi_line: bool = False
 
@@ -154,9 +155,18 @@ class PolyTrackerREPL:
             if command_name in cls.commands:
                 raise ValueError(f"REPL command {command_name!r} is already registered to function "
                                  f"{cls.commands[command_name]!r}")
-            cls.commands[command_name] = REPLCommand(name=command_name, func=func)
+            command = REPLCommand(name=command_name, func=func)
+            cls.register_global(command_name, command)
+            cls.commands[command_name] = command
             return func
         return decorator
+
+    @classmethod
+    def register_global(cls, name: str, value: Any):
+        if name in cls.registered_globals:
+            if cls.registered_globals[name] is not value:
+                raise ValueError(f"REPL global {name!s} is already defined as {cls.registered_globals[name]!r}")
+        cls.registered_globals[name] = value
 
     def print_exc(self):
         buffer = StringIO()
