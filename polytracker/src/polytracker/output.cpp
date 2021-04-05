@@ -312,29 +312,18 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
-void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
-                          const dfsan_label &last_label) {}
-
-void storeTaintForest(sqlite3 *output_db, const input_id_t &input_id,
-                      const dfsan_label &last_label) {
-  char *errorMessage;
-  sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
-
+void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id, const dfsan_label &new_label, const dfsan_label& p1, 
+  const dfsan_label& p2) {
   const char *insert = "INSERT INTO taint_forest (parent_one, parent_two, "
                        "label, input_id) VALUES (?, ?, ?, ?);";
   sqlite3_stmt *stmt;
   sql_prep(output_db, insert, -1, &stmt, NULL);
-  for (int i = 0; i <= last_label; i++) {
-    taint_node_t *curr = getTaintNode(i);
-    sqlite3_bind_int(stmt, 1, curr->p1);
-    sqlite3_bind_int(stmt, 2, curr->p1);
-    sqlite3_bind_int(stmt, 3, i);
-    sqlite3_bind_int(stmt, 4, input_id);
-    sql_step(output_db, stmt);
-    sqlite3_reset(stmt);
-  }
+  sqlite3_bind_int64(stmt, 1, p1);
+  sqlite3_bind_int64(stmt, 2, p2);
+  sqlite3_bind_int64(stmt, 3, new_label);
+  sqlite3_bind_int(stmt, 4, input_id);
+  sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
-  sqlite3_exec(output_db, "COMMIT TRANSACTION", NULL, NULL, &errorMessage);
 }
 
 void storeVersion(sqlite3 *output_db) {
@@ -364,11 +353,11 @@ sqlite3 *db_init(const std::string &db_path) {
   sqlite3_exec(output_db, "PRAGMA temp_store=MEMORY", NULL, NULL,
                &errorMessage);
   createDBTables(output_db);
+  storeVersion(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
 
 void db_fini(sqlite3 *output_db) {
-  storeVersion(output_db);
   sqlite3_close(output_db);
 }
