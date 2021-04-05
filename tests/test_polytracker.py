@@ -1,4 +1,5 @@
 from collections import defaultdict
+import os
 import pytest
 from shutil import copyfile
 

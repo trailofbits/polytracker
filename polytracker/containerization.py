@@ -1,4 +1,6 @@
 import json
+import os
+import platform
 import re
 import subprocess
 import sys
@@ -14,6 +16,12 @@ from docker.models.images import Image
 
 from .plugins import Command, Subcommand
 from .polytracker import version as polytracker_version
+
+
+IS_LINUX: bool = platform.system() == "Linux"
+CAN_RUN_NATIVELY: bool = (
+    IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
+)
 
 
 class Dockerfile:
@@ -143,7 +151,7 @@ class DockerContainer:
         stdout=None,
         stderr=None,
         cwd=None,
-    ):
+    ) -> int:
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
@@ -211,7 +219,7 @@ class DockerContainer:
         else:
             return subprocess.run(
                 cmd_args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd
-            )
+            ).returncode
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
@@ -442,11 +450,18 @@ class DockerRun(DockerSubcommand):
         )
 
     def run(self, args):
+        return DockerRun.run_on(self.container, args.ARGS, notty=args.notty)
+
+    @staticmethod
+    def run_on(
+            container: DockerContainer, args, interactive: Optional[bool] = None, notty: bool = False, **kwargs
+    ) -> int:
+        if interactive is None:
+            interactive = not notty
         try:
-            self.container.run(
-                *args.ARGS, interactive=not args.notty, check_if_docker_out_of_date=True
+            return container.run(
+                *args, interactive=interactive, check_if_docker_out_of_date=True, **kwargs
             )
-            return
         except DockerOutOfDateError as e:
             out_of_date_error = e
         if not sys.stdin.isatty() or not sys.stdout.isatty():
@@ -461,8 +476,6 @@ class DockerRun(DockerSubcommand):
             if option.lower() == "n":
                 break
             elif option.lower() == "y" or option == "":
-                self.container.rebuild()
+                container.rebuild()
                 break
-        self.container.run(
-            *args.ARGS, interactive=not args.notty, check_if_docker_out_of_date=False
-        )
+        return container.run(*args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs)
