@@ -5,6 +5,10 @@
 </p>
 <br />
 
+[![PyPI version](https://badge.fury.io/py/polytracker.svg)](https://badge.fury.io/py/polytracker)
+[![Tests](https://github.com/trailofbits/polytracker/workflows/Tests/badge.svg)](https://github.com/trailofbits/polytracker/actions)
+[![Slack Status](https://empireslacking.herokuapp.com/badge.svg)](https://empireslacking.herokuapp.com)
+
 PolyTracker is a tool originally created for the _Automated Lexical Annotation and Navigation of Parsers_, a backronym
 devised solely for the purpose of referring to it as _The ALAN Parsers Project_. However, it has evolved into a general
 purpose tool for efficiently performing data-flow and control-flow analysis of programs. PolyTracker is an LLVM pass
