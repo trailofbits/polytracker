@@ -369,6 +369,8 @@ class FunctionEntry(ControlFlowEvent):
                 return prev
             elif isinstance(prev, FunctionReturn):
                 prev = prev.function_entry
+                if prev is None:
+                    break
             prev = prev.previous_control_flow_event
         raise ValueError(f"Unable to determine the caller for {self}")
 
@@ -405,7 +407,8 @@ class BasicBlockEntry(ControlFlowEvent):
                 event = event.function_entry
             elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
-            event = event.previous_control_flow_event
+            if event is not None:
+                event = event.previous_control_flow_event
         return entry_count
 
     @property
@@ -464,7 +467,10 @@ class FunctionReturn(ControlFlowEvent):
 
     @property
     def returning_from(self) -> Function:
-        return self.function_entry.basic_block.function
+        entry = self.function_entry
+        if entry is None:
+            raise ValueError(f"Unable to determine the function entry object associated with function return {self!r}")
+        return entry.basic_block.function
 
 
 class ProgramTrace(ABC):
@@ -586,8 +592,8 @@ class RunTraceCommand(Subcommand[TraceCommand]):
 
         if output_db_path is None:
             # use a temporary file
-            tmpdir = TemporaryDirectory()
-            output_db_path = Path(tmpdir.name) / "polytracker.db"
+            tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
+            output_db_path = str(Path(tmpdir.name) / "polytracker.db")  # type: ignore
         else:
             tmpdir = None
 
