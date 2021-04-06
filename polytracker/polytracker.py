@@ -1,8 +1,6 @@
-import json
 import logging
 import pkg_resources
 
-from .taint_forest import TaintForest
 from .tracing import *
 
 log = logging.getLogger("PolyTracker")
