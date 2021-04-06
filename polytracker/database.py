@@ -474,6 +474,17 @@ class DBProgramTrace(ProgramTrace):
     def basic_blocks(self) -> Iterable[BasicBlock]:
         return self.session.query(DBBasicBlock).all()
 
+    def access_sequence(self) -> Iterator[TaintAccess]:
+        yield from self.session.query(DBTaintAccess).order_by(DBTaintAccess.event_id.asc()).all()
+
+    @property
+    def num_accesses(self) -> int:
+        return self.session.query(DBTaintAccess).count()
+
+    @property
+    def inputs(self) -> Iterable[Input]:
+        return self.session.query(DBInput).all()
+
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
 

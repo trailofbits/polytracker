@@ -556,6 +556,20 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def access_sequence(self) -> Iterator[TaintAccess]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def num_accesses(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def inputs(self) -> Iterable[Input]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
 

@@ -2,12 +2,14 @@ from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from io import StringIO
 import os
-from typing import Dict, FrozenSet, Iterator, Optional, Set, TextIO, Tuple
+from typing import Dict, FrozenSet, Iterator, Optional, TextIO
 
-from intervaltree import IntervalTree
+from intervaltree import Interval, IntervalTree
+from tqdm import tqdm
 
 from .plugins import Command
-from .tracing import ByteOffset, Function, Input, ProgramTrace, TaintDiff, TaintedRegion
+from .tracing import Function, Input, ProgramTrace, TaintDiff, TaintedRegion
+from .visualizations import file_diff, Image, temporal_animation
 
 
 def print_file_context(
@@ -106,7 +108,7 @@ class ControlFlowDiff:
         for a1, a2 in zip(ancestors1, ancestors2):
             if a1.name != a2.name:
                 continue
-            if a1.cmp_bytes != a2.cmp_bytes:
+            if a1.taints() != a2.taints():
                 self._first_function_with_different_control_flow = a1.name
                 break
 
@@ -181,7 +183,7 @@ class TraceDiff:
                 leave=False,
             ):
                 for region in func.taints().regions():
-                    self._first_intervals[regoun.source].add(Interval(region.offset, region.offset + region.length))
+                    self._first_intervals[region.source].add(Interval(region.offset, region.offset + region.length))
             for interval in self._first_intervals.values():
                 interval.merge_overlaps()
             t.update(1)
@@ -450,3 +452,33 @@ class TraceDiffCommand(Command):
         print(str(diff))
         if args.image is not None:
             diff.to_image().save(args.image)
+
+
+class TemporalVisualization(Command):
+    name = "temporal"
+    help = "generate an animation of the file accesses in a runtime trace"
+
+    def __init_arguments__(self, parser):
+        parser.add_argument(
+            "polytracker_json", type=str, help="the JSON file for the trace"
+        )
+        parser.add_argument(
+            "taint_forest_bin", type=str, help="the taint forest file for the trace"
+        )
+        parser.add_argument(
+            "OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation"
+        )
+
+    def run(self, args):
+        with open(args.polytracker_json, "r") as f:
+            polytracker_json_obj = json.load(f)
+        sources = polytracker_json_obj["canonical_mapping"].keys()
+        if len(sources) != 1:
+            raise ValueError(
+                f"Expected only a single taint source, but found {sources}"
+            )
+        source = next(iter(sources))
+        canonical_mapping = dict(polytracker_json_obj["canonical_mapping"][source])
+        del polytracker_json_obj
+        forest = TaintForest(args.taint_forest_bin, canonical_mapping=canonical_mapping)
+        temporal_animation(args.OUTPUT_GIF_PATH, forest)
