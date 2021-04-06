@@ -38,7 +38,7 @@ static constexpr const char *createBlockTable() {
 static constexpr const char *createTaintTable() {
   return "CREATE TABLE IF NOT EXISTS accessed_label ("
          "  event_id BIGINT,"
-         "  label INTEGER,"
+         "  label BIGINT,"
          "  access_type TINYINT,"
          "  PRIMARY KEY (event_id, label, access_type)"
          ") WITHOUT ROWID;";
@@ -84,9 +84,9 @@ static constexpr const char *createCFGTable() {
 
 static constexpr const char *createTaintForestTable() {
   return "CREATE TABLE IF NOT EXISTS taint_forest ("
-         "parent_one INTEGER,"
-         "parent_two INTEGER,"
-         "label INTEGER,"
+         "parent_one BIGINT,"
+         "parent_two BIGINT,"
+         "label BIGINT,"
          "input_id INTEGER,"
          "PRIMARY KEY(input_id, label)"
          ") WITHOUT ROWID;";

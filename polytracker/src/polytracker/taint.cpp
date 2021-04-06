@@ -122,6 +122,7 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   new_node->p2 = 0;
   new_node->decay = taint_node_ttl;
   storeCanonicalMap(output_db, input_id, new_label, file_byte_offset);
+  storeTaintForestNode(output_db, input_id, new_label, 0, 0);
   return new_label;
 }
 
@@ -200,6 +201,7 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   new_node->p1 = l1;
   new_node->p2 = l2;
   new_node->decay = init_decay;
+  storeTaintForestNode(output_db, input_id, ret_label, l1, l2);
   return ret_label;
 }
 

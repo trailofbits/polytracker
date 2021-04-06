@@ -242,9 +242,7 @@ void polytracker_end() {
   const dfsan_label last_label = dfsan_get_label_count();
   if (!polytracker_forest_name.empty()) {
     storeTaintForestDisk(polytracker_forest_name, last_label);
-  } else {
-    storeTaintForest(output_db, input_id, last_label);
-  }
+  } 
   db_fini(output_db);
 }
 
