@@ -2,7 +2,7 @@ from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from io import StringIO
 import os
-from typing import Dict, FrozenSet, Iterator, Optional, TextIO
+from typing import Dict, FrozenSet, Iterable, Iterator, Optional, TextIO, Tuple
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
@@ -150,7 +150,7 @@ class TraceDiff:
         return self._functions_only_in_second  # type: ignore
 
     @property
-    def functions_in_both(self) -> Iterator[TaintDiff]:
+    def functions_in_both(self) -> Iterator[Tuple[str, TaintDiff]]:
         for fname in {
             func.name
             for func in self.trace1.functions
@@ -160,7 +160,7 @@ class TraceDiff:
                 for f in (self.functions_only_in_first | self.functions_only_in_second)
             }
         }:
-            yield self.trace1.get_function(fname).taints().diff(self.trace2.get_function(fname).taints())
+            yield fname, self.trace1.get_function(fname).taints().diff(self.trace2.get_function(fname).taints())
 
     def _diff_functions(self):
         if self._functions_only_in_first is None:
@@ -242,7 +242,7 @@ class TraceDiff:
     def input_chunks_only_in_first(self) -> Iterator[TaintedRegion]:
         if self._bytes_only_in_first is None:
             self._diff_bytes()
-        for source, tree in self._bytes_only_in_first.items():
+        for source, tree in self._bytes_only_in_first.items():  # type: ignore
             for interval in sorted(tree):
                 yield TaintedRegion(source=source, offset=interval.begin, length=interval.end - interval.begin)
 
@@ -250,7 +250,7 @@ class TraceDiff:
     def input_chunks_only_in_second(self) -> Iterator[TaintedRegion]:
         if self._bytes_only_in_second is None:
             self._diff_bytes()
-        for source, tree in self._bytes_only_in_second.items():
+        for source, tree in self._bytes_only_in_second.items():  # type: ignore
             for interval in sorted(tree):
                 yield TaintedRegion(source=source, offset=interval.begin, length=interval.end - interval.begin)
 
@@ -268,11 +268,9 @@ class TraceDiff:
 
     def to_image(self) -> Image:
         self._diff_bytes()
-        sources = self.trace1.taint_sources | self.trace2.taint_sources
+        sources = set(self.trace1.inputs) | set(self.trace2.inputs)
         for source in sources:
-            num_bytes = max(
-                self.trace1.source_size(source), self.trace2.source_size(source)
-            )
+            num_bytes = source.size
             return file_diff(
                 num_bytes,
                 lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),  # type: ignore
@@ -286,29 +284,29 @@ class TraceDiff:
         status = StringIO()
 
         def print_chunk_info(chunks: Iterable[TaintedRegion], indent: str = "\t"):
-            for region in chunks:
-                if os.path.exists(region.source.path):
+            for r in chunks:
+                if os.path.exists(r.source.path):
                     print_file_context(
                         status,
-                        path=region.source.path,
-                        offset=region.offset,
-                        length=region.length,
+                        path=r.source.path,
+                        offset=r.offset,
+                        length=r.length,
                         indent=indent,
                     )
                 else:
-                    status.write(f"\tTouched {region.length} bytes at offset {region.offset}\n")
+                    status.write(f"\tTouched {r.length} bytes at offset {r.offset}\n")
 
         if self.has_input_chunks_only_in_first:
             status.write(
                 "The reference trace touched the following byte regions that were not touched by the diffed "
                 "trace:\n"
             )
-            for src, (st, en) in self.input_chunks_only_in_first:
-                print_chunk_info(((src, (st, en)),))
-                for func in self.trace1.functions.values():
+            for region in self.input_chunks_only_in_first:
+                print_chunk_info((region,))
+                for func in self.trace1.functions:
                     if IntervalTree.from_tuples(
-                        (s, e) for r, (s, e) in func.input_chunks() if r == src
-                    ).overlaps(st, en):
+                        (r.offset, r.offset + r.length) for r in func.taints().regions() if r.source == region.source
+                    ).overlaps(region.offset, region.offset + region.length):
                         # find the control flows that could have caused the diff
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
@@ -322,7 +320,7 @@ class TraceDiff:
                                 f"\tFunction {different_function!s} could contain the control flow that led "
                                 "to this differential\n"
                             )
-                            if function_diff.cmp_bytes_only_in_first:
+                            if function_diff.bytes_only_in_first:
                                 status.write(
                                     "\t\tHere are the bytes that affected control flow only in the reference "
                                     "trace:\n"
@@ -331,7 +329,7 @@ class TraceDiff:
                                     function_diff.regions_only_in_first,
                                     indent="\t\t\t",
                                 )
-                            if function_diff.cmp_bytes_only_in_first:
+                            if function_diff.bytes_only_in_second:
                                 status.write(
                                     "\t\tHere are the bytes that affected control flow only in the differed "
                                     "trace:\n"
@@ -346,46 +344,41 @@ class TraceDiff:
                 "The diffed trace touched the following byte regions that were not touched by the reference "
                 "trace:\n"
             )
-            # generate the CFG first, because that can add functions to the trace:
-            _ = self.trace2.cfg
-            for src, (st, en) in self.input_chunks_only_in_second:
-                print_chunk_info(((src, (st, en)),))
-                for func in self.trace2.functions.values():
+            for region in self.input_chunks_only_in_second:
+                print_chunk_info((region,))
+                for func in self.trace2.functions:
                     if IntervalTree.from_tuples(
-                        (s, e) for r, (s, e) in func.input_chunks() if r == src
-                    ).overlaps(st, en):
+                        (r.offset, r.offset + r.length) for r in func.taints().regions() if r.source == region.source
+                    ).overlaps(region.offset, region.offset + region.length):
                         # find the control flows that could have caused the diff
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
-                            different_function = (
-                                cfd.first_function_with_different_control_flow
-                            )
-                            function_diff = FunctionDiff(
-                                self.trace1.functions[different_function],
-                                self.trace2.functions[different_function],
+                            different_function = cfd.first_function_with_different_control_flow
+                            function_diff = self.trace1.get_function(different_function).taints().diff(
+                                self.trace2.get_function(different_function).taints()
                             )
                             if not bool(function_diff):
                                 continue
                             status.write(
-                                f"\tFunction {function_diff.func1!s} could contain the control flow that led "
+                                f"\tFunction {different_function!s} could contain the control flow that led "
                                 "to this differential\n"
                             )
-                            if function_diff.cmp_bytes_only_in_first:
+                            if function_diff.bytes_only_in_first:
                                 status.write(
                                     "\t\tHere are the bytes that affected control flow only in the reference "
                                     "trace:\n"
                                 )
                                 print_chunk_info(
-                                    function_diff.cmp_regions_only_in_first(),
+                                    function_diff.regions_only_in_first,
                                     indent="\t\t\t",
                                 )
-                            if function_diff.cmp_bytes_only_in_first:
+                            if function_diff.bytes_only_in_first:
                                 status.write(
                                     "\t\tHere are the bytes that affected control flow only in the differed "
                                     "trace:\n"
                                 )
                                 print_chunk_info(
-                                    function_diff.cmp_regions_only_in_second(),
+                                    function_diff.regions_only_in_second,
                                     indent="\t\t\t",
                                 )
 
@@ -399,27 +392,27 @@ class TraceDiff:
             status.write(
                 f"Function {func!s} was called in the reference trace but not in the diffed trace\n"
             )
-            print_chunk_info(func.input_chunks())
+            print_chunk_info(func.taints().regions())
         for func in self.functions_only_in_second:
             status.write(
                 f"Function {func!s} was called in the diffed trace but not in the reference trace\n"
             )
-            print_chunk_info(func.input_chunks())
-        for func in self.functions_in_both:
+            print_chunk_info(func.taints().regions())
+        for fname, func in self.functions_in_both:
             if func:
                 # different input bytes affected control flow
-                if func.cmp_bytes_only_in_first:
+                if func.bytes_only_in_first:
                     status.write(
-                        f"Function {func.func1!s} in the reference trace had the following bytes that tainted "
+                        f"Function {fname!s} in the reference trace had the following bytes that tainted "
                         "control flow which did not affect control flow in the diffed trace:\n"
                     )
-                    print_chunk_info(func.cmp_regions_only_in_first())
-                if func.cmp_bytes_only_in_second:
+                    print_chunk_info(func.regions_only_in_first)
+                if func.bytes_only_in_second:
                     status.write(
-                        f"Function {func.func2!s} in the diffed trace had the following bytes that tainted "
+                        f"Function {fname!s} in the diffed trace had the following bytes that tainted "
                         "control flow which did not affect control flow in the reference trace:\n"
                     )
-                    print_chunk_info(func.cmp_regions_only_in_second())
+                    print_chunk_info(func.regions_only_in_second)
 
         if not self:
             status.write(f"Traces do not differ")
@@ -460,25 +453,13 @@ class TemporalVisualization(Command):
 
     def __init_arguments__(self, parser):
         parser.add_argument(
-            "polytracker_json", type=str, help="the JSON file for the trace"
-        )
-        parser.add_argument(
-            "taint_forest_bin", type=str, help="the taint forest file for the trace"
+            "POLYTRACKER_DB", type=str, help="the trace database"
         )
         parser.add_argument(
             "OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation"
         )
 
     def run(self, args):
-        with open(args.polytracker_json, "r") as f:
-            polytracker_json_obj = json.load(f)
-        sources = polytracker_json_obj["canonical_mapping"].keys()
-        if len(sources) != 1:
-            raise ValueError(
-                f"Expected only a single taint source, but found {sources}"
-            )
-        source = next(iter(sources))
-        canonical_mapping = dict(polytracker_json_obj["canonical_mapping"][source])
-        del polytracker_json_obj
-        forest = TaintForest(args.taint_forest_bin, canonical_mapping=canonical_mapping)
-        temporal_animation(args.OUTPUT_GIF_PATH, forest)
+        from . import PolyTrackerTrace
+        trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
+        temporal_animation(args.OUTPUT_GIF_PATH, trace)
