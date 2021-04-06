@@ -72,9 +72,10 @@ class PolyTrackerCompleter(Completer):
             to_complete = portions[-1]
             if varname in self.repl.state:
                 attr = self.repl.state[varname]
-                yield from PolyTrackerCompleter._get_completions(
-                    to_complete, (a for a in dir(attr) if not a.startswith("_")), already_yielded
-                )
+                if not isinstance(attr, REPLCommand):
+                    yield from PolyTrackerCompleter._get_completions(
+                        to_complete, (a for a in dir(attr) if not a.startswith("_")), already_yielded
+                    )
 
 
 class REPLCommand:
