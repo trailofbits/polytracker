@@ -533,7 +533,7 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def __iter__(self) -> Iterable[TraceEvent]:
+    def __iter__(self) -> Iterator[TraceEvent]:
         """Iterates over all of the events in this trace, in order"""
         raise NotImplementedError()
 

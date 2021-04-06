@@ -452,7 +452,7 @@ class DBProgramTrace(ProgramTrace):
     def __len__(self) -> int:
         return self.session.query(DBTraceEvent).count()
 
-    def __iter__(self) -> Iterable[TraceEvent]:
+    def __iter__(self) -> Iterator[TraceEvent]:
         return iter(
             self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()).all()
         )
