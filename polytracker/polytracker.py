@@ -32,68 +32,6 @@ def version() -> str:
     return pkg_resources.require("polytracker")[0].version
 
 
-class OldStyleProgramTrace:
-    def __init__(
-        self, version: Tuple[VersionElement, ...], function_data: Iterable[FunctionInfo]
-    ):
-        self.polytracker_version: Tuple[VersionElement, ...] = version
-        self.functions: Dict[str, FunctionInfo] = {f.name: f for f in function_data}
-        self._cfg: Optional[CFG] = None
-        self._taint_sources: Optional[FrozenSet[str]] = None
-
-    @property
-    def taint_sources(self) -> FrozenSet[str]:
-        if self._taint_sources is None:
-            self._taint_sources = frozenset(
-                [s for func in self.functions.values() for s in func.taint_sources]
-            )
-        return self._taint_sources
-
-    def source_size(self, source: str) -> int:
-        first_function = next(iter(self.functions.values()))
-        if os.path.exists(source) or (
-            len(self.taint_sources) == 1
-            and isinstance(first_function, TaintForestFunctionInfo)
-        ):
-            return first_function.source_size(source)
-        else:
-            return max(func.source_size(source) for func in self.functions.values())
-
-    def taint_source_sizes(self) -> Dict[str, int]:
-        return {source: self.source_size(source) for source in self.taint_sources}
-
-    @property
-    def cfg(self) -> CFG:
-        if self._cfg is not None:
-            return self._cfg
-        self._cfg = CFG()
-        self._cfg.add_nodes_from(self.functions.values())
-        for f in list(self.functions.values()):
-            for caller in f.called_from:
-                if caller not in self.functions:
-                    info = FunctionInfo(caller, {})
-                    self.functions[caller] = info
-                    self._cfg.add_node(info)
-                    self._cfg.add_edge(info, f)
-                else:
-                    self._cfg.add_edge(self.functions[caller], f)
-        return self._cfg
-
-    def diff(self, trace: "ProgramTrace") -> "TraceDiff":
-        return TraceDiff(self, trace)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(polytracker_version={self.polytracker_version!r}, function_data={list(self.functions.values())!r})"
-
-    def __str__(self):
-        if len(self.taint_sources) == 0:
-            return repr(self)
-        elif len(self.taint_sources) == 1:
-            return next(iter(self.taint_sources))
-        else:
-            return f"{{{', '.join(self.taint_sources)}}}"
-
-
 class TemporalVisualization(Command):
     name = "temporal"
     help = "generate an animation of the file accesses in a runtime trace"
