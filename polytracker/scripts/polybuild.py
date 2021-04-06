@@ -25,8 +25,8 @@ import os
 import sys
 import subprocess
 from multiprocessing import Process, Manager
-from typing import List, Optional
-import json
+from pathlib import Path
+from typing import Iterable, List, Optional
 import sqlite3
 
 """
@@ -39,55 +39,76 @@ Polybuild is supposed to do a few things.
 5. Lower bitcode and link with some libraries (used for example docker files like MuPDF)
 """
 
-SCRIPT_DIR: str = os.path.dirname(os.path.realpath(__file__))
-COMPILER_DIR: str = os.path.realpath(os.path.join(SCRIPT_DIR, ".."))
+SCRIPT_DIR: Path = Path(__file__).parent.absolute()
+COMPILER_DIR: Path = SCRIPT_DIR.parent / "share" / "polytracker"
 
-if not os.path.isdir(COMPILER_DIR):
+
+def ensure_exists(path: Path) -> Path:
+    if not path.exists():
+        sys.stderr.write(f"Error: {path!s} not found\n\n")
+        sys.exit(1)
+    return path
+
+
+def append_to_stem(path: Path, to_append: str) -> Path:
+    name = path.name
+    name_without_suffix = name[:-len(path.suffix)]
+    new_name = f"{name_without_suffix}{to_append}{path.suffix}"
+    return path.with_name(new_name)
+
+
+if not COMPILER_DIR.is_dir():
     sys.stderr.write(f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
     sys.exit(1)
 
-POLY_PASS_PATH: str = os.path.join(COMPILER_DIR, "pass", "libPolytrackerPass.so")
-assert os.path.exists(POLY_PASS_PATH)
-
-POLY_LIB_PATH: str = os.path.join(COMPILER_DIR, "lib", "libPolytracker.a")
-assert os.path.exists(POLY_LIB_PATH)
-
-ABI_LIST_PATH: str = os.path.join(COMPILER_DIR, "abi_lists", "polytracker_abilist.txt")
-assert os.path.exists(ABI_LIST_PATH)
-
-ABI_PATH: str = os.path.join(COMPILER_DIR, "abi_lists")
+POLY_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libPolytrackerPass.so")
+POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
+ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt")
+ABI_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists")
 
 is_cxx: bool = "++" in sys.argv[0]
 
-# FIXME (Carson) Ask Evan about his path stuff again? He has a pythonic way without os path joins
-CXX_DIR_PATH: str = os.getenv("CXX_LIB_PATH")
-assert CXX_DIR_PATH is not None
-assert os.path.exists(CXX_DIR_PATH)
+CXX_LIB_PATH_ENV: str = os.getenv("CXX_LIB_PATH", default="")
+if not CXX_LIB_PATH_ENV:
+    sys.stderr.write("Error: the CXX_LIB_PATH environment variable must be set")
+    sys.exit(1)
+CXX_DIR_PATH: Path = ensure_exists(Path(CXX_LIB_PATH_ENV))
 
-DFSAN_LIB_PATH: str = os.getenv("DFSAN_LIB_PATH")
-assert DFSAN_LIB_PATH is not None
-assert os.path.exists(DFSAN_LIB_PATH)
+DFSAN_LIB_PATH_ENV: str = os.getenv("DFSAN_LIB_PATH", default="")
+if not DFSAN_LIB_PATH_ENV:
+    sys.stderr.write("Error: the DFSAN_LIB_PATH_ENV environment variable must be set")
+    sys.exit(1)
+DFSAN_LIB_PATH: Path = ensure_exists(Path(DFSAN_LIB_PATH_ENV))
 
-ARTIFACT_STORE_PATH: str = os.getenv("WLLVM_ARTIFACT_STORE")
-assert ARTIFACT_STORE_PATH is not None
-assert os.path.exists(ARTIFACT_STORE_PATH)
+ARTIFACT_STORE_PATH_ENV: str = os.getenv("WLLVM_ARTIFACT_STORE", default="")
+if not ARTIFACT_STORE_PATH_ENV:
+    sys.stderr.write("Error: the WLLVM_ARTIFACT_STORE environment variable must be set")
+    sys.exit(1)
+ARTIFACT_STORE_PATH: Path = ensure_exists(Path(ARTIFACT_STORE_PATH_ENV))
 
-MANIFEST_FILE: str = f"{ARTIFACT_STORE_PATH}/manifest.db"
+MANIFEST_FILE: Path = ARTIFACT_STORE_PATH / "manifest.db"
 db_conn = sqlite3.connect(MANIFEST_FILE)
 cur = db_conn.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS manifest (target TEXT, artifact TEXT);")
 db_conn.commit()
 db_conn.close()
 
-CXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "clean_build/include/c++/v1")
-CXX_LIB_PATH = os.path.join(CXX_DIR_PATH, "clean_build/lib")
+CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
+CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
-POLYCXX_LIBS = [os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++.a"),
-                os.path.join(CXX_DIR_PATH, "poly_build/lib/libc++abi.a"),
-                POLY_LIB_PATH, "-lsqlite3", "-lm"]
+POLYCXX_LIBS: List[str] = [
+    str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
+    str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
+    str(POLY_LIB_PATH),
+    "-lsqlite3",
+    "-lm"
+]
 # TODO (Carson), double check, also maybe need -ldl?
-LINK_LIBS = [os.path.join(CXX_LIB_PATH, "libc++.a"),
-             os.path.join(CXX_LIB_PATH, "libc++abi.a"), "-lpthread"]
+LINK_LIBS = [
+    CXX_LIB_PATH / "libc++.a",
+    CXX_LIB_PATH / "libc++abi.a",
+    "-lpthread"
+]
 
 
 # Helper function, check to see if non linking options are present.
@@ -108,14 +129,14 @@ def is_building(argv) -> bool:
 
 
 # (2)
-def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None, file_id=None) -> str:
+def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, file_id=None) -> Path:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
     Optimizes it all, asserts the output file exists.
     """
-    opt_command = ["opt", "-O3", bitcode_file, "-o", bitcode_file]
-    ret = subprocess.call(opt_command)
+    opt_command = ["opt", "-O3", str(bitcode_file), "-o", str(bitcode_file)]
+    subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
     opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
@@ -123,22 +144,20 @@ def instrument_bitcode(bitcode_file: str, output_bc: str, ignore_lists=None, fil
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
-    opt_command += [bitcode_file, "-o", output_bc]
+    opt_command += [bitcode_file, "-o", str(output_bc)]
     ret = subprocess.call(opt_command)
     assert ret == 0
     opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
     for item in ignore_lists:
         opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
-    opt_command += [output_bc, "-o", output_bc]
-    ret = subprocess.call(opt_command)
-    assert ret == 0
+    opt_command += [str(output_bc), "-o", str(output_bc)]
+    subprocess.check_call(opt_command)
     # TODO (Carson)
-    opt_command = ["opt", "-O3", output_bc, "-o", output_bc]
-    ret = subprocess.call(opt_command)
+    opt_command = ["opt", "-O3", str(output_bc), "-o", str(output_bc)]
+    ret = subprocess.check_call(opt_command)
     # opt_command = ["opt", "-O2", output_bc, "-o", output_bc]
     # ret = subprocess.call(opt_command)
-    assert ret == 0
-    assert os.path.exists(output_bc)
+    assert output_bc.exists()
     return output_bc
 
 
@@ -158,12 +177,12 @@ def modify_exec_args(argv: List[str]):
     linking: bool = is_linking(argv)
     if building:
         if linking and is_cxx:
-            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}", f"-L{CXX_LIB_PATH}"])
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-L{CXX_LIB_PATH!s}"])
         elif is_cxx:
-            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH}"])
+            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}"])
 
     if not building and linking and is_cxx:
-        compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH}"])
+        compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH!s}"])
 
     for arg in argv[1:]:
         if arg == "-Wall" or arg == "-Wextra" or arg == "-Wno-unused-parameter" or arg == "-Werror":
@@ -175,25 +194,22 @@ def modify_exec_args(argv: List[str]):
         compile_command.append("-Wl,--start-group")
         compile_command.extend(LINK_LIBS)
         compile_command.append("-Wl,--end-group")
-    ret = subprocess.call(compile_command)
-    assert ret == 0
+    subprocess.check_call(compile_command)
 
 
 # (4)
-def store_artifact(file_path):
-    filename = os.path.basename(file_path)
-    artifact_file_path = os.path.join(ARTIFACT_STORE_PATH, filename)
-    if os.path.exists(artifact_file_path):
+def store_artifact(file_path: Path):
+    filename = file_path.name
+    artifact_file_path = ARTIFACT_STORE_PATH / filename
+    if artifact_file_path.exists():
         return
     # Check if its an absolute path
-    if file_path[0] != "/":
-        cwd = os.getcwd()
-        targ_path = os.path.join(cwd, file_path)
+    if not file_path.is_absolute():
+        targ_path = Path.cwd() / file_path
     else:
         targ_path = file_path
     assert os.path.exists(targ_path)
-    ret = subprocess.call(["cp", targ_path, artifact_file_path])
-    assert ret == 0
+    subprocess.check_call(["cp", str(targ_path), str(artifact_file_path)])
 
 
 def handle_non_build(argv: List[str]):
@@ -207,14 +223,13 @@ def handle_non_build(argv: List[str]):
             cc.append("--version")
             continue
         cc.append(arg)
-    result = subprocess.call(cc)
-    assert result == 0
+    subprocess.check_call(cc)
 
 
 # This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
 # First, figure out whats being built by looking for -o or -c
-# Returns the output file for convience
-def handle_cmd(argv: List[str]) -> Optional[str]:
+# Returns the output file for convenience
+def handle_cmd(argv: List[str]) -> Optional[Path]:
     # If not building, then we are not producing an object with -o or -c
     # We might just be checking something like a version. So just do whatever.
     building: bool = is_building(argv)
@@ -225,26 +240,31 @@ def handle_cmd(argv: List[str]) -> Optional[str]:
     # Build the object
     modify_exec_args(argv)
     # Store artifacts.
-    output_file: Optional[str] = None
-    for index, arg in enumerate(argv):
+    for arg, next_arg in zip(argv, argv[1:]):
         if arg == "-o":
-            output_file = argv[index + 1]
-        if arg == "-c":
-            output_file = argv[index + 1].replace(".c", ".o")
-    assert output_file is not None
+            output_file: Path = Path(next_arg)
+            break
+        elif arg == "-c":
+            output_file = Path(next_arg).with_suffix(".o")
+            break
+    else:
+        sys.stderr.write("Error: missing -o or -c argument\n\n")
+        sys.exit(1)
 
     # Look for artifacts.
-    artifacts = []
+    artifacts: List[Path] = []
     for arg in argv:
         # if its a static library, or an object.
-        if arg.endswith(".o") or arg.endswith(".a"):
+        arg = Path(arg)
+        if arg.suffix == ".o" or arg.suffix == ".a":
             artifacts.append(arg)
             store_artifact(arg)
 
     conn = sqlite3.connect(MANIFEST_FILE)
     cur = conn.cursor()
     for art in artifacts:
-        query = f"""INSERT INTO manifest (target, artifact) VALUES ("{os.path.realpath(output_file)}", "{os.path.realpath(art)}");"""
+        query = "INSERT INTO manifest (target, artifact) VALUES (\""\
+                f"{output_file.absolute()}\", \"{art.absolute()}\");"
         cur.execute(query)
     conn.commit()
     conn.close()
@@ -260,52 +280,51 @@ def do_everything(argv: List[str]):
     Recompiles executable.
     """
     output_file = handle_cmd(argv)
-    get_bc = ["get-bc", "-b", output_file]
-    ret = subprocess.call(get_bc)
-    assert ret == 0
-    bc_file = output_file + ".bc"
-    assert os.path.exists(bc_file)
-    temp_bc = output_file + "_temp.bc"
+    assert output_file.exists()
+    bc_file = output_file.with_suffix(".bc")
+    get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
+    subprocess.check_call(get_bc)
+    assert bc_file.exists()
+    temp_bc = append_to_stem(bc_file, "_instrumented")
     instrument_bitcode(bc_file, temp_bc)
-    assert os.path.exists(temp_bc)
+    assert temp_bc.exists()
 
     # Lower bitcode. Creates a .o
-    obj_file = output_file + "_temp.o"
+    obj_file = temp_bc.with_suffix(".o")
     if is_cxx:
         compiler = "gclang++"
     else:
         compiler = "gclang"
-    result = subprocess.call([compiler, "-fPIC", "-c", temp_bc, "-o", obj_file])
+    result = subprocess.call([compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
     assert result == 0
 
     # Compile into executable
-    re_comp = [
-        compiler, "-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file,
+    re_comp: List[str] = [
+        compiler, "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group", "-lc++abi"
     ]
     re_comp.extend(POLYCXX_LIBS)
-    re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
+    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
 
 
-def lower_bc(input_bitcode, output_file, libs=None):
+def lower_bc(input_bitcode: Path, output_file: Path, libs: Optional[Iterable[str]] = None):
     # Lower bitcode. Creates a .o
     if is_cxx:
-        result = subprocess.call(["gclang++", "-fPIC", "-c", input_bitcode])
+        subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
     else:
-        result = subprocess.call(["gclang", "-fPIC", "-c", input_bitcode])
-    assert result == 0
-    obj_file = input_bitcode.replace(".bc", ".o")
+        subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+    obj_file = input_bitcode.with_suffix(".o")
 
     # Compile into executable
     if is_cxx:
         re_comp = ["gclang++"]
     else:
         re_comp = ["gclang"]
-    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH}", "-g", "-o", output_file, obj_file, "-Wl,--allow-multiple-definition",
-                    "-Wl,--start-group", "-lc++abi"])
+    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
+                    "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
         if lib.endswith(".a") or lib.endswith(".o"):
@@ -317,8 +336,8 @@ def lower_bc(input_bitcode, output_file, libs=None):
     assert ret == 0
 
 
-def replay_build_instance(input_bc: str, file_id: int, ignore_lists, non_track_artifacts, bc_files):
-    output_bc = input_bc + "_done.bc"
+def replay_build_instance(input_bc: Path, file_id: int, ignore_lists, non_track_artifacts, bc_files):
+    output_bc = append_to_stem(input_bc, "_done")
     bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
     bc_files.append(os.path.realpath(bc_file))
 
@@ -345,8 +364,8 @@ def main():
     """
     )
     parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
-    parser.add_argument("--input-file", "-i", type=str, help="Path to the whole program bitcode file")
-    parser.add_argument("--output-file", "-o", type=str, help="Specify binary output path")
+    parser.add_argument("--input-file", "-i", type=Path, help="Path to the whole program bitcode file")
+    parser.add_argument("--output-file", "-o", type=Path, help="Specify binary output path")
     parser.add_argument(
         "--instrument-target", action="store_true", help="Specify to build a single source file " "with instrumentation"
     )
@@ -388,7 +407,7 @@ def main():
         if args.output_file:
             instrument_bitcode(args.input_file, args.output_file, args.lists)
         else:
-            instrument_bitcode(args.input_file, "output.bc", args.lists)
+            instrument_bitcode(args.input_file, Path("output.bc"), args.lists)
 
     # simple target.
     elif sys.argv[1] == "--instrument-target":
@@ -413,8 +432,8 @@ def main():
         if not args.rebuild_track or not args.output_file:
             print("Error! replay instrument path and output file must be specified")
             exit(1)
-        extracted_bc = args.rebuild_track + ".bc"
-        get_bc = ["get-bc", "-o", extracted_bc, "-b", args.rebuild_track]
+        extracted_bc = args.rebuild_track.with_suffix(".bc")
+        get_bc = ["get-bc", "-o", str(extracted_bc), "-b", args.rebuild_track]
         ret = subprocess.call(get_bc)
         if ret != 0:
             print("Error! Extraction failed!")
@@ -440,7 +459,7 @@ def main():
         if len(bc_files) == 0:
             print("Error! No bitcode files! Nothing to instrument")
             exit(1)
-        mega_link_output = "mega_link.bc"
+        mega_link_output = Path("mega_link.bc")
         print("LINKING")
         mega_link_args = ["llvm-link", "-only-needed"] + [bc for bc in bc_files] + ["-o", mega_link_output]
         print(mega_link_args)
