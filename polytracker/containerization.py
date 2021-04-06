@@ -268,7 +268,7 @@ class DockerContainer:
         # use the low-level APIClient so we can get streaming build status
         cli = docker.APIClient()
         with tqdm(
-            desc=f"Archiving the build directory", unit=" steps", leave=False
+            desc="Archiving the build directory", unit=" steps", leave=False
         ) as t:
             last_line = 0
             last_step = None
@@ -430,7 +430,7 @@ Either reinstall PolyTracker from source like this:
 or download the latest prebuilt Docker image for your preexisting PolyTracker install from DockerHub by running:
 
     $ polytracker docker pull
- 
+
 """
             )
             return 1
