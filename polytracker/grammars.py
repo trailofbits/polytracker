@@ -642,7 +642,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                 sub_productions.append(production_name(called_function))
                 ret = called_function.function_return
                 if ret is not None:
-                    returning_to = called_function.function_return.returning_to
+                    returning_to = ret.returning_to
                     if returning_to is not None:
                         sub_productions.append(f"<{returning_to!s}>")
                     else:
