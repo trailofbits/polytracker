@@ -1,11 +1,13 @@
 //#include "dfsan/dfsan.h"
-#include <sanitizer/dfsan_interface.h>
+#include "polytracker/taint_sources.h"
 #include "polytracker/taint.h"
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
 #include <iostream>
 #include <mutex>
+#include <pthread.h>
+#include <sanitizer/dfsan_interface.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -16,19 +18,16 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
-#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 #include <vector>
 #include <wchar.h>
-#include "polytracker/taint_sources.h"
 
 #define DEBUG_INFO
 
 #ifdef DEBUG_INFO
 #include <iostream>
 #endif
-
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
@@ -427,13 +426,14 @@ EXT_C_FUNC int __dfsw_munmap(void *addr, size_t length, dfsan_label addr_label,
   return ret;
 }
 
-EXT_C_FUNC int __dfsw__IO_putc(int __c, FILE * __fp, dfsan_label c_label,
-                               dfsan_label fp_label,
-                               dfsan_label *ret_label) {
-                                 *ret_label = 0;
-                                 return _IO_putc(__c, __fp);
-                               }
-EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t * cond, dfsan_label cond_label, dfsan_label* ret_label) {
+EXT_C_FUNC int __dfsw__IO_putc(int __c, FILE *__fp, dfsan_label c_label,
+                               dfsan_label fp_label, dfsan_label *ret_label) {
+  *ret_label = 0;
+  return _IO_putc(__c, __fp);
+}
+EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
+                                             dfsan_label cond_label,
+                                             dfsan_label *ret_label) {
   *ret_label = 0;
   return pthread_cond_broadcast(cond);
 }

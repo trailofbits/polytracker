@@ -24,4 +24,4 @@
 
 #endif
 
-void polytracker_end(const dfsan_label& end);
+void polytracker_end(const dfsan_label &end);

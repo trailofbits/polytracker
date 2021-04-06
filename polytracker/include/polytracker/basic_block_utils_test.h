@@ -9,7 +9,6 @@
 #include "polytracker/basic_block_types.h"
 #include "llvm/IR/Instructions.h"
 
-
 namespace polytracker {
 
 using llvm::BasicBlock;
