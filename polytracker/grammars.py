@@ -759,7 +759,7 @@ class ExtractGrammarCommand(Command):
             "TRACES",
             nargs="+",
             type=str,
-            help="extract a grammar from the provided PolyTracker trace databases"
+            help="extract a grammar from the provided PolyTracker trace databases",
         )
         parser.add_argument(
             "--simplify", "-s", action="store_true", help="simplify the grammar"

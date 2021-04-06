@@ -148,7 +148,9 @@ class DBBasicBlock(Base, BasicBlock):
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events: Iterable["DBTraceEvent"] = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
+    events: Iterable["DBTraceEvent"] = relationship(
+        "DBTraceEvent", order_by="asc(DBTraceEvent.event_id)"
+    )
     accessed_labels = relationship(
         "AccessedLabel",
         primaryjoin="and_(DBBasicBlock.id==remote(DBTraceEvent.block_gid), "
@@ -176,9 +178,16 @@ class DBBasicBlock(Base, BasicBlock):
         self._predecessors = set()
         next_event_queue = []
         prev_event_queue = []
-        with tqdm(desc=f"resolving neighborhood for event {self.id}", unit=" BBs", total=3, leave=False) as t:
+        with tqdm(
+            desc=f"resolving neighborhood for event {self.id}",
+            unit=" BBs",
+            total=3,
+            leave=False,
+        ) as t:
             t.update(1)
-            for event in tqdm(self.events, desc="processing", unit=" events", leave=False):
+            for event in tqdm(
+                self.events, desc="processing", unit=" events", leave=False
+            ):
                 next_event = event.next_event
                 if next_event is not None:
                     next_event_queue.append(next_event)
@@ -186,7 +195,12 @@ class DBBasicBlock(Base, BasicBlock):
                 if prev_event is not None:
                     prev_event_queue.append(prev_event)
             t.update(1)
-            with tqdm(desc="processing", unit="descendants", leave=False, total=len(next_event_queue)) as d:
+            with tqdm(
+                desc="processing",
+                unit="descendants",
+                leave=False,
+                total=len(next_event_queue),
+            ) as d:
                 while next_event_queue:
                     d.update(1)
                     next_event = next_event_queue.pop()
@@ -199,7 +213,12 @@ class DBBasicBlock(Base, BasicBlock):
                             next_event_queue.append(grandchild)
                             d.total += 1
             t.update(1)
-            with tqdm(desc="processing", unit="predecessors", leave=False, total=len(prev_event_queue)) as d:
+            with tqdm(
+                desc="processing",
+                unit="predecessors",
+                leave=False,
+                total=len(prev_event_queue),
+            ) as d:
                 while prev_event_queue:
                     d.update(1)
                     prev_event = prev_event_queue.pop()
@@ -382,7 +401,9 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
             next_event = next_event.next_event
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints((access.taint_forest_node for access in self.taint_accesses()))
+        return DBTaintForest.taints(
+            (access.taint_forest_node for access in self.taint_accesses())
+        )
 
 
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):
@@ -399,8 +420,12 @@ class DBFunctionEntry(DBTraceEvent, FunctionEntry):
     @property
     def function_return(self) -> Optional["FunctionReturn"]:
         try:
-            return Session.object_session(self).query(DBFunctionReturn)\
-                .filter(DBFunctionReturn.func_event_id == self.uid).one()
+            return (
+                Session.object_session(self)
+                .query(DBFunctionReturn)
+                .filter(DBFunctionReturn.func_event_id == self.uid)
+                .one()
+            )
         except NoResultFound:
             return None
 

@@ -21,7 +21,9 @@ from .repl import PolyTrackerREPL
 
 IS_LINUX: bool = platform.system() == "Linux"
 CAN_RUN_NATIVELY: bool = (
-    IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
+    IS_LINUX
+    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0"
+    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
 )
 PolyTrackerREPL.register_global("CAN_RUN_NATIVELY", CAN_RUN_NATIVELY)
 
@@ -457,15 +459,15 @@ class DockerRun(DockerSubcommand):
     @staticmethod
     @PolyTrackerREPL.register("docker_run", discardable=True)
     def run_on(
-            container: Optional[DockerContainer] = None,
-            args=(),
-            interactive: Optional[bool] = None,
-            notty: bool = False,
-            **kwargs
+        container: Optional[DockerContainer] = None,
+        args=(),
+        interactive: Optional[bool] = None,
+        notty: bool = False,
+        **kwargs,
     ) -> int:
         """
         Runs PolyTracker inside Docker and returns the exit code.
-        
+
         Running with no arguments will enter into an interactive Docker session,
         mounting the current working directory to `/workdir`.
         """
@@ -475,7 +477,10 @@ class DockerRun(DockerSubcommand):
             interactive = not notty
         try:
             return container.run(
-                *args, interactive=interactive, check_if_docker_out_of_date=True, **kwargs
+                *args,
+                interactive=interactive,
+                check_if_docker_out_of_date=True,
+                **kwargs,
             )
         except DockerOutOfDateError as e:
             out_of_date_error = e
@@ -493,4 +498,6 @@ class DockerRun(DockerSubcommand):
             elif option.lower() == "y" or option == "":
                 container.rebuild()
                 break
-        return container.run(*args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs)
+        return container.run(
+            *args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs
+        )
