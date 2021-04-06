@@ -31,7 +31,7 @@ class PolyBuild(Command):
 
 
 def main():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:]))
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": False}))
 
 
 def main_plus_plus():
