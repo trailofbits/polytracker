@@ -422,7 +422,7 @@ def main():
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
-        bc_file = instrument_bitcode(args.input_file, args.output_file + ".bc", args.lists)
+        bc_file = instrument_bitcode(args.input_file, args.output_file.with_suffix(".bc"), args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
 
     elif sys.argv[1] == "--compile-bitcode":
