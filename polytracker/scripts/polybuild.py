@@ -104,9 +104,9 @@ POLYCXX_LIBS: List[str] = [
     "-lm"
 ]
 # TODO (Carson), double check, also maybe need -ldl?
-LINK_LIBS = [
-    CXX_LIB_PATH / "libc++.a",
-    CXX_LIB_PATH / "libc++abi.a",
+LINK_LIBS: List[str] = [
+    str(CXX_LIB_PATH / "libc++.a"),
+    str(CXX_LIB_PATH / "libc++abi.a"),
     "-lpthread"
 ]
 
@@ -139,12 +139,12 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = ["opt", "-load", POLY_PASS_PATH, "-ptrack", f"-ignore-list={ABI_LIST_PATH}"]
+    opt_command = ["opt", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
-    opt_command += [bitcode_file, "-o", str(output_bc)]
+    opt_command += [str(bitcode_file), "-o", str(output_bc)]
     ret = subprocess.call(opt_command)
     assert ret == 0
     opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
@@ -255,10 +255,10 @@ def handle_cmd(argv: List[str]) -> Optional[Path]:
     artifacts: List[Path] = []
     for arg in argv:
         # if its a static library, or an object.
-        arg = Path(arg)
-        if arg.suffix == ".o" or arg.suffix == ".a":
-            artifacts.append(arg)
-            store_artifact(arg)
+        arg_path = Path(arg)
+        if arg_path.suffix == ".o" or arg_path.suffix == ".a":
+            artifacts.append(arg_path)
+            store_artifact(arg_path)
 
     conn = sqlite3.connect(MANIFEST_FILE)
     cur = conn.cursor()
@@ -280,6 +280,8 @@ def do_everything(argv: List[str]):
     Recompiles executable.
     """
     output_file = handle_cmd(argv)
+    if output_file is None:
+        raise ValueError("Could not determine output file")
     assert output_file.exists()
     bc_file = output_file.with_suffix(".bc")
     get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
@@ -310,7 +312,7 @@ def do_everything(argv: List[str]):
     assert ret == 0
 
 
-def lower_bc(input_bitcode: Path, output_file: Path, libs: Optional[Iterable[str]] = None):
+def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     # Lower bitcode. Creates a .o
     if is_cxx:
         subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
