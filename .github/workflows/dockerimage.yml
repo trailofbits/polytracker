@@ -27,7 +27,9 @@ jobs:
         run: git submodule update --init --recursive
       - name: C++ lint
         run: |
-          python third_party/run-clang-format/run-clang-format.py polytracker/**/*.h  polytracker/**/*.cpp
+          python third_party/run-clang-format/run-clang-format.py \
+          polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
+          polytracker/src/taint_sources/*.cpp
       - name: Python lint/typecheck 
         run: |
           # stop the build if there are Python syntax errors or undefined names
