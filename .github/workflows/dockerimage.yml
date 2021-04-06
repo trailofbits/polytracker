@@ -27,10 +27,7 @@ jobs:
         run: git submodule update --init --recursive
       - name: C++ lint
         run: |
-          python third_party/run-clang-format/run-clang-format.py \
-          polytracker/include/dfsan/*.h  polytracker/src/*/*.cpp \
-          --exclude 'polytracker/src/dfsan_rt/sanitizer_common/*' \
-          --exclude 'polytracker/src/dfsan_rt/interception/*'
+          python third_party/run-clang-format/run-clang-format.py polytracker/**/*.h  polytracker/**/*.cpp
       - name: Python lint/typecheck 
         run: |
           # stop the build if there are Python syntax errors or undefined names
