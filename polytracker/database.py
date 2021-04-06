@@ -60,7 +60,7 @@ class EdgeType(IntEnum):
     BACKWARD = 1
 
 
-class DBInput(Base, Input):
+class DBInput(Base, Input):  # type: ignore
     __tablename__ = "input"
     uid = Column("id", Integer, primary_key=True)
     stored_content = Column("content", BLOB, nullable=True)
@@ -73,7 +73,7 @@ class DBInput(Base, Input):
     events = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
 
 
-class DBFunction(Base, Function):
+class DBFunction(Base, Function):  # type: ignore
     __tablename__ = "func"
     id = Column(Integer, primary_key=True)
     name = Column(Text)
@@ -100,7 +100,7 @@ class DBFunction(Base, Function):
         )
 
     @property
-    def function_index(self) -> int:
+    def function_index(self) -> int:  # type: ignore
         return self.id
 
     def calls_to(self) -> Set["Function"]:
@@ -118,7 +118,7 @@ class DBFunction(Base, Function):
         }
 
 
-class FunctionCFGEdge(Base):
+class FunctionCFGEdge(Base):  # type: ignore
     __tablename__ = "func_cfg"
     dest_id = Column("dest", Integer, ForeignKey("func.id"))
     src_id = Column("src", Integer, ForeignKey("func.id"))
@@ -139,7 +139,7 @@ class FunctionCFGEdge(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
 
 
-class DBBasicBlock(Base, BasicBlock):
+class DBBasicBlock(Base, BasicBlock):  # type: ignore
     __tablename__ = "basic_block"
     id = Column(BigInteger, primary_key=True)
     # function_id should always be equal to (id >> 32), but we have it for convenience
@@ -163,7 +163,7 @@ class DBBasicBlock(Base, BasicBlock):
     _predecessors: Optional[Set[BasicBlock]] = None
 
     @property
-    def index_in_function(self) -> int:
+    def index_in_function(self) -> int:  # type: ignore
         return self.id & 0x0000FFFF
 
     def taints(self) -> Taints:
@@ -232,17 +232,17 @@ class DBBasicBlock(Base, BasicBlock):
                             d.total += 1
 
     @property
-    def predecessors(self) -> Set[BasicBlock]:
+    def predecessors(self) -> Set[BasicBlock]:  # type: ignore
         self._discover_neighbors()
-        return self._predecessors
+        return self._predecessors  # type: ignore
 
     @property
-    def children(self) -> Set[BasicBlock]:
+    def children(self) -> Set[BasicBlock]:  # type: ignore
         self._discover_neighbors()
-        return self._children
+        return self._children  # type: ignore
 
 
-class AccessedLabel(Base):
+class AccessedLabel(Base):  # type: ignore
     __tablename__ = "accessed_label"
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     label = Column(Integer, ForeignKey("taint_forest.label"))
@@ -259,7 +259,7 @@ class AccessedLabel(Base):
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-class DBTraceEvent(Base):
+class DBTraceEvent(Base):  # type: ignore
     __tablename__ = "events"
     event_id = Column(BigInteger)  # globally unique, globally sequential event counter
     thread_event_id = Column(
@@ -283,7 +283,7 @@ class DBTraceEvent(Base):
     _function_entry: Optional[FunctionEntry] = None
 
     @property
-    def uid(self) -> int:
+    def uid(self) -> int:  # type: ignore
         return self.event_id
 
     @property
@@ -358,9 +358,9 @@ class DBTraceEvent(Base):
         return Taints(())
 
 
-class DBTaintAccess(DBTraceEvent, TaintAccess):
+class DBTaintAccess(DBTraceEvent, TaintAccess):  # type: ignore
     __mapper_args__ = {
-        "polymorphic_identity": EventType.TAINT_ACCESS,
+        "polymorphic_identity": EventType.TAINT_ACCESS,  # type: ignore
     }
 
     accessed_label = relationship(
@@ -381,9 +381,9 @@ class DBTaintAccess(DBTraceEvent, TaintAccess):
         return DBTaintForest.taints((self.taint_forest_node,))
 
 
-class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
+class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
     __mapper_args__ = {
-        "polymorphic_identity": EventType.BLOCK_ENTER,
+        "polymorphic_identity": EventType.BLOCK_ENTER,  # type: ignore
     }
 
     @property
@@ -406,14 +406,17 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):
         )
 
 
-class DBFunctionEntry(DBTraceEvent, FunctionEntry):
-    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}
+class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}  # type: ignore
 
     @property
     def function(self) -> Function:
         if self.basic_block is None:
             # this can happen on main()
-            return self.entrypoint.function
+            entrypoint = self.entrypoint
+            if entrypoint is None:
+                raise ValueError(f"Could not determine the function associated with {self!r}")
+            return entrypoint.function
         else:
             return self.basic_block.function
 
@@ -430,8 +433,8 @@ class DBFunctionEntry(DBTraceEvent, FunctionEntry):
             return None
 
 
-class DBFunctionReturn(DBTraceEvent, FunctionReturn):
-    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}
+class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
+    __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}  # type: ignore
 
 
 class DBProgramTrace(ProgramTrace):
@@ -492,14 +495,14 @@ class DBProgramTrace(ProgramTrace):
         raise NotImplementedError()
 
 
-class PolytrackerItem(Base):
+class PolytrackerItem(Base):  # type: ignore
     __tablename__ = "polytracker"
     store_key = Column(Text)
     value = Column(Text)
     __table_args__ = (PrimaryKeyConstraint("store_key", "value"),)
 
 
-class CanonicalMap(Base):
+class CanonicalMap(Base):  # type: ignore
     __tablename__ = "canonical_map"
     input_id = Column(Integer, ForeignKey("input.id"))
     taint_label = Column(BigInteger)
@@ -510,7 +513,7 @@ class CanonicalMap(Base):
     input = relationship("DBInput")
 
 
-class TaintedChunksItem(Base):
+class TaintedChunksItem(Base):  # type: ignore
     __tablename__ = "tainted_chunks"
     input_id = Column(Integer, ForeignKey("input.id"))
     start_offset = Column(BigInteger)
@@ -518,7 +521,7 @@ class TaintedChunksItem(Base):
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
 
 
-class DBTaintForest(Base):
+class DBTaintForest(Base):  # type: ignore
     __tablename__ = "taint_forest"
     parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))

@@ -261,7 +261,7 @@ class Function:
     def __init__(self, name: str, function_index: int):
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
-        self.function_index = function_index
+        self.function_index: int = function_index
 
     @property
     def demangled_name(self) -> str:
