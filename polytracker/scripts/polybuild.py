@@ -333,7 +333,7 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
             re_comp.append(lib)
         else:
             re_comp.append(f"-l{lib}")
-    re_comp.extend([DFSAN_LIB_PATH, "-lpthread", "-ldl", "-Wl,--end-group"])
+    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
 
