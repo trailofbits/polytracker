@@ -14,13 +14,10 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install clang-format-10
+      - name: Install clang-format
         run: |
-          sudo apt install -y software-properties-common gnupg wget
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
           sudo apt-get update -y
-          sudo apt-get install -y clang-format-10 libgraphviz-dev
+          sudo apt-get install -y clang-format libgraphviz-dev
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
