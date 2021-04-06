@@ -79,7 +79,7 @@ class PolyTrackerCompleter(Completer):
 
 
 class REPLCommand:
-    def __init__(self, name: str, func: Callable[..., Any]):
+    def __init__(self, name: str, func: Callable[..., Any], discardable: bool = False):
         self._name: str = name
         self._func: Callable[..., Any] = func
         if " " in name or "\t" in name or "\n" in name:
@@ -87,6 +87,7 @@ class REPLCommand:
         elif func.__doc__ is None or func.__doc__ == "":
             raise ValueError(f"Command {name!r}/{func!r} must define a docstring for its help message")
         self._help: str = inspect.getdoc(self.func)
+        self._discardable: bool = discardable
         self.__doc__ = self.help
         try:
             inspect.getcallargs(func)
@@ -108,6 +109,10 @@ class REPLCommand:
     @property
     def help(self) -> str:
         return self._help
+
+    @property
+    def discardable(self) -> bool:
+        return self._discardable
 
     def run_bare(self):
         """called when the command is run from the REPL with no parenthesis"""
@@ -161,13 +166,13 @@ class PolyTrackerREPL:
         return cls._current_instance
 
     @classmethod
-    def register(cls, command_name: str):
+    def register(cls, command_name: str, discardable: bool = False):
         """Function decorator for registering a command with this REPL"""
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             if command_name in cls.commands:
                 raise ValueError(f"REPL command {command_name!r} is already registered to function "
                                  f"{cls.commands[command_name]!r}")
-            command = REPLCommand(name=command_name, func=func)
+            command = REPLCommand(name=command_name, func=func, discardable=discardable)
             cls.register_global(command_name, command)
             cls.commands[command_name] = command
             return func
@@ -189,6 +194,18 @@ class PolyTrackerREPL:
         traceback.print_exc(file=buffer)
         tokens = lex(buffer.getvalue(), lexer=PythonTracebackLexer())
         print_formatted_text(PygmentsTokens(tokens))
+
+    @classmethod
+    def prompt(cls, message: str, options: str = "yN", default: bool = False) -> bool:
+        while True:
+            print_formatted_text(HTML(f"<b>{message}</b> <ansigray>[{options}]</ansigray> "), end="")
+            result = input("").lower().strip()
+            if not result:
+                return default
+            elif result == "y" or result == "yes":
+                return True
+            elif result == "n" or result == "no":
+                return False
 
     def run_python(self, command):
         continued_prompt = HTML("<b>... </b>")
@@ -262,6 +279,12 @@ class PolyTrackerREPL:
             elif is_assignment or self.multi_line:
                 exec(command, self.state)
             else:
+                func_call = command[:command.find("(")].strip()
+                if func_call in self.commands and not self.commands[func_call].discardable:
+                    # we are running an expensive command but are not saving its output
+                    if not self.prompt(f"Command {func_call} is expensive. Are you sure you want to run it without "
+                                       "saving the result to a variable?"):
+                        return
                 result = eval(command, self.state)
                 if hasattr(result, "__name__") and result.__name__ == command and command in __builtins__:
                     try:
@@ -336,7 +359,7 @@ class PolyTrackerREPL:
         return 0
 
 
-PolyTrackerREPL.register("commands")(PolyTrackerREPL.commands_command)
+PolyTrackerREPL.register("commands", discardable=True)(PolyTrackerREPL.commands_command)
 
 
 class Commands(Command):

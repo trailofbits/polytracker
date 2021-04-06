@@ -23,7 +23,7 @@ from sqlalchemy import (
 from tqdm import tqdm
 
 from .polytracker import ProgramTrace
-
+from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlock,
     BasicBlockEntry,
@@ -414,7 +414,9 @@ class DBProgramTrace(ProgramTrace):
         self.session: Session = session
 
     @staticmethod
+    @PolyTrackerREPL.register("load_trace")
     def load(db_path: Union[str, Path]) -> "DBProgramTrace":
+        """loads a trace from the database emitted by an instrumented binary"""
         engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
         return DBProgramTrace(session_maker())

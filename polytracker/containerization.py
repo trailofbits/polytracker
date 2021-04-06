@@ -455,7 +455,7 @@ class DockerRun(DockerSubcommand):
         return DockerRun.run_on(self.container, args.ARGS, notty=args.notty)
 
     @staticmethod
-    @PolyTrackerREPL.register("docker_run")
+    @PolyTrackerREPL.register("docker_run", discardable=True)
     def run_on(
             container: Optional[DockerContainer] = None,
             args=(),
