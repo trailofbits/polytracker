@@ -302,7 +302,7 @@ class PolyTrackerREPL:
         longest_command = max(len(cmd_name) for cmd_name in cls.commands)
         for name, command in sorted(cls.commands.items()):
             dots = "." * (longest_command - len(name) + 1)
-            first_docstring_line = command.help[:command.help.find("\n")]
+            first_docstring_line = command.help.split("\n")[0]
             print_formatted_text(HTML(f'<b fg="ansiblue">{name}</b>{dots}<i> {first_docstring_line} </i>'))
 
     def run(self):
