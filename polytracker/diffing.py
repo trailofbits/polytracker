@@ -273,8 +273,8 @@ class TraceDiff:
             num_bytes = source.size
             return file_diff(
                 num_bytes,
-                lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),  # type: ignore
-                lambda offset: source in self._second_intervals and self._second_intervals[source].overlaps(offset),  # type: ignore
+                lambda offset: source in self._first_intervals and self._first_intervals[source].overlaps(offset),
+                lambda offset: source in self._second_intervals and self._second_intervals[source].overlaps(offset),
             )
 
     def __bool__(self):
