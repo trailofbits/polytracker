@@ -138,6 +138,46 @@ class ByteOffset(TaintedRegion):
         super().__init__(source=source, offset=offset, length=1)
 
 
+class TaintDiff:
+    def __init__(self, taints1: "Taints", taints2: "Taints"):
+        self.taints1: Taints = taints1
+        self.taints2: Taints = taints2
+        self._only_in_first: Optional[List[ByteOffset]] = None
+        self._only_in_second: Optional[List[ByteOffset]] = None
+
+    def _diff(self):
+        if self._only_in_first is not None:
+            return
+        in_first = set(self.taints1)
+        in_second = set(self.taints2)
+        self._only_in_first = sorted(in_first - in_second)
+        self._only_in_second = sorted(in_second - in_first)
+
+    @property
+    def bytes_only_in_first(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_first  # type: ignore
+
+    @property
+    def regions_only_in_first(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_first, is_sorted=True)
+
+    @property
+    def bytes_only_in_second(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_second  # type: ignore
+
+    @property
+    def regions_only_in_second(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_second, is_sorted=True)
+
+    def __bool__(self):
+        return bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)
+
+    def __eq__(self, other):
+        return isinstance(other, TaintDiff) and self.taints1 == other.taints1 and self.taints2 == other.taints2
+
+
 class Taints:
     def __init__(self, byte_offsets: Iterable[ByteOffset]):
         offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
@@ -155,10 +195,17 @@ class Taints:
         return Taints(self._offsets_by_source.get(source, ()))
 
     def regions(self) -> Iterator[TaintedRegion]:
+        return Taints.to_regions(self, is_sorted=True)
+
+    @staticmethod
+    def to_regions(offsets: Iterable[ByteOffset], is_sorted: bool = False) -> Iterator[TaintedRegion]:
+        """Converts the list of byte offsets into contiguous regions."""
         last_input: Optional[Input] = None
         last_offset: Optional[ByteOffset] = None
         region: Optional[TaintedRegion] = None
-        for offset in self:
+        if not is_sorted:
+            offsets = sorted(offsets)
+        for offset in offsets:
             if last_input is None:
                 last_input = offset.source
             elif last_input != offset.source or (last_offset is not None and last_offset.offset != offset.offset - 1):
@@ -188,6 +235,9 @@ class Taints:
                     yield region[offset:offset+len(byte_sequence)]
                 else:
                     break
+
+    def diff(self, other: "Taints") -> TaintDiff:
+        return TaintDiff(self, other)
 
     def __contains__(self, byte_sequence: Union[int, str, bytes]):
         try:
@@ -475,6 +525,7 @@ class FunctionReturn(ControlFlowEvent):
 
 class ProgramTrace(ABC):
     _cfg: Optional[DiGraph[BasicBlock]] = None
+    _func_cfg: Optional[DiGraph[Function]] = None
 
     @abstractmethod
     def __len__(self) -> int:
@@ -501,6 +552,10 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def has_function(self, name: str) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
 
@@ -510,13 +565,23 @@ class ProgramTrace(ABC):
 
     @property
     def cfg(self) -> DiGraph[BasicBlock]:
-        if self._cfg is None:
-            self._cfg = DiGraph()
+        if not hasattr(self, "_cfg") or self._cfg is None:
+            setattr(self, "_cfg", DiGraph())
             for bb in self.basic_blocks:
-                self._cfg.add_node(bb)
+                self._cfg.add_node(bb)  # type: ignore
                 for child in bb.children:
-                    self._cfg.add_edge(bb, child)
-        return self._cfg
+                    self._cfg.add_edge(bb, child)  # type: ignore
+        return self._cfg  # type: ignore
+
+    @property
+    def function_cfg(self) -> DiGraph[Function]:
+        if not hasattr(self, "_func_cfg") or self._func_cfg is None:
+            setattr(self, "_func_cfg", DiGraph())
+            for func in self.functions:
+                self._func_cfg.add_node(func)  # type: ignore
+                for child in func.calls_to():
+                    self._func_cfg.add_edge(func, child)  # type: ignore
+        return self._func_cfg  # type: ignore
 
     def cfg_roots(self) -> Iterable[BasicBlock]:
         for bb in self.basic_blocks:
@@ -647,4 +712,4 @@ class CFGTraceCommand(Subcommand[TraceCommand]):
     def run(self, args: Namespace):
         from . import PolyTrackerTrace
         db = PolyTrackerTrace.load(args.TRACE_DB)
-        db.cfg.to_dot().save("trace.dot")
+        db.function_cfg.to_dot().save("trace.dot")

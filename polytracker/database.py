@@ -467,6 +467,9 @@ class DBProgramTrace(ProgramTrace):
             pass
         raise KeyError(name)
 
+    def has_function(self, name: str) -> bool:
+        return self.session.query(DBFunction).filter(DBFunction.name.like(name)).limit(1).count() > 0
+
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
         return self.session.query(DBBasicBlock).all()
