@@ -16,7 +16,6 @@ import os
 import subprocess
 import sys
 from optparse import OptionParser
-import glob
 
 
 def defined_function_list(object):
@@ -96,7 +95,7 @@ for l in libs:
     if os.path.exists(l):
         functions += defined_function_list(l)
     else:
-        print >> sys.stderr, 'warning: library %s not found' % l
+        sys.stderr.write('warning: library %s not found\n' % l)
 
 functions = list(set(functions))
 functions.sort()
