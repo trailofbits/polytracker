@@ -102,13 +102,14 @@ class REPLCommand:
         self._func: Callable[..., Any] = func
         if " " in name or "\t" in name or "\n" in name:
             raise ValueError(f"Command name {name!r} must not contain whitespace")
-        elif func.__doc__ is None or func.__doc__ == "":
+        docstring = inspect.getdoc(self.func)
+        if docstring is None or docstring == "":
             raise ValueError(
                 f"Command {name!r}/{func!r} must define a docstring for its help message"
             )
-        self._help: str = inspect.getdoc(self.func)
+        self._help: str = docstring
         self._discardable: bool = discardable
-        self.__doc__ = self.help
+        self.__doc__ = self._help
         try:
             inspect.getcallargs(func)
             return_annotation = inspect.signature(func).return_annotation
