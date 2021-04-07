@@ -93,7 +93,7 @@ void logFunctionExit(const function_id_t &index) {
            "the return from function index "
         << curr_func_index << " to " << index;
     if (!function_stack.empty()) {
-      std::cerr << "(expected to be returning from function "
+      std::cerr << " (expected to be returning from function "
                 << function_stack.top().func_id << ")";
     }
     std::cerr << ". This is likely due to either an instrumentation error "

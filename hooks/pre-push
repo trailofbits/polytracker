@@ -51,6 +51,7 @@
 #done
 
 # We could do the following as a `pre-commit` hook, but it's expensive, so only do it pre-push:
+echo Linting Python code...
 flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics 1>/dev/null 2>/dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
@@ -73,5 +74,6 @@ EOF
   exit 1
 fi
 
+echo Type-checking Python code...
 mypy --ignore-missing-imports polytracker tests
 exit $?
