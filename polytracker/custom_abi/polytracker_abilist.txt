@@ -1990,6 +1990,7 @@ fun:execve=uninstrumented
 fun:execvp=uninstrumented
 fun:execvpe=uninstrumented
 fun:exit=uninstrumented
+fun:exit=custom
 fun:exp=uninstrumented
 fun:exp10=uninstrumented
 fun:exp10f=uninstrumented

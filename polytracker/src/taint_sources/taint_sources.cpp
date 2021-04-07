@@ -1,6 +1,7 @@
 //#include "dfsan/dfsan.h"
 #include <sanitizer/dfsan_interface.h>
 #include "polytracker/taint.h"
+#include "polytracker/polytracker.h"
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
@@ -436,4 +437,9 @@ EXT_C_FUNC int __dfsw__IO_putc(int __c, FILE * __fp, dfsan_label c_label,
 EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t * cond, dfsan_label cond_label, dfsan_label* ret_label) {
   *ret_label = 0;
   return pthread_cond_broadcast(cond);
+}
+
+EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
+  polytracker_end();
+  exit(ret_code);
 }

@@ -238,6 +238,9 @@ void polytracker_get_settings() {
 }
 
 void polytracker_end() {
+  if (done) {
+    return;
+  }
   done.store(true);
   const dfsan_label last_label = dfsan_get_label_count();
   if (!polytracker_forest_name.empty()) {
