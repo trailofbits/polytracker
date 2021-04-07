@@ -242,6 +242,11 @@ Type "help" or "commands"
 ```
 This will automatically run the instrumented binary in a Docker container, if necessary.
 
+> :warning: **If running PolyTracker inside Docker or a VM**: PolyTracker can be very slow if running in a virtualized
+> environment and either the input file or, especially, the output database are located in a directory mapped or mounted
+> from the host OS. This is particularly true when running PolyTracker in Docker from a macOS host. The solution is to
+> write the database to a path inside of the container/VM and then copy it out to the host system at the very end.
+
 ## Creating custom ignore lists from pre-built libraries 
 
 Attempting to build large software projects can be time consuming, especially older/unsupported ones.
