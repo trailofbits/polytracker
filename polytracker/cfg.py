@@ -285,7 +285,8 @@ class FunctionInfo:
         return self.demangled_name
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
+        return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, "\
+               f"input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
 
 
 class CFG(DiGraph[FunctionInfo]):

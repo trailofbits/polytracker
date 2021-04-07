@@ -19,7 +19,7 @@ using llvm::dyn_cast;
 using llvm::Function;
 using llvm::Instruction;
 using llvm::isa;
-//using llvm::TerminatorInst;
+// using llvm::TerminatorInst;
 
 namespace polytracker {
 
@@ -46,7 +46,8 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
         if (function->hasName()) {
           fname = function->getName().data();
         }
-        //Note (Carson): Changed getCalledValue() --> Operand() https://reviews.llvm.org/D78882
+        // Note (Carson): Changed getCalledValue() --> Operand()
+        // https://reviews.llvm.org/D78882
       } else if (auto v = call->getCalledOperand()->stripPointerCasts()) {
         if (v->hasName()) {
           fname = v->getName().data();

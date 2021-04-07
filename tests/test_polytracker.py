@@ -164,8 +164,8 @@ def test_control_flow(program_trace: ProgramTrace):
     assert func1 in func2.called_from()
     assert func2 in func2.called_from()
     assert len(func2.calls_to()) == 1
-    entries = defaultdict(int)
-    returns = defaultdict(int)
+    entries: Dict[str, int] = defaultdict(int)
+    returns: Dict[str, int] = defaultdict(int)
     for event in program_trace:
         if isinstance(event, BasicBlockEntry):
             assert event.entry_count() == 0

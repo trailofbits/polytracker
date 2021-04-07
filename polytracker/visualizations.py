@@ -1,10 +1,10 @@
 import math
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from PIL import Image, ImageEnhance
 from tqdm import tqdm
 
-from .taint_forest import TaintForest
+from .tracing import Input, ProgramTrace
 
 
 def file_diff(
@@ -34,29 +34,31 @@ def file_diff(
 
 
 def temporal_animation(
-    output_path: str, forest: TaintForest, aspect_ratio: float = 1.61803398875
+    output_path: str, trace: ProgramTrace, for_input: Optional[Input] = None, aspect_ratio: float = 1.61803398875
 ):
-    num_labels = forest.num_nodes
-    height = max(int(math.ceil(math.sqrt(aspect_ratio) * math.sqrt(num_labels))), 1)
-    width = max(int(math.ceil(num_labels / height)), 1)
-    while width * height < num_labels:
+    if for_input is None:
+        for_input = next(iter(trace.inputs))
+    num_bytes = for_input.size
+    height = max(int(math.ceil(math.sqrt(aspect_ratio) * math.sqrt(num_bytes))), 1)
+    width = max(int(math.ceil(num_bytes / height)), 1)
+    while width * height < num_bytes:
         height += 1
     images: List[Image] = []
-    for taints in tqdm(
-        forest.access_sequence(),
+    for access in tqdm(
+        trace.access_sequence(),
         desc="building temporal animation",
         leave=False,
         unit=" frames",
-        total=forest.num_nodes,
+        total=trace.num_accesses,
     ):
         if not images:
             image = Image.new(size=(width, height), mode="L", color=255)
         else:
             enhancer = ImageEnhance.Brightness(images[-1])
             image = enhancer.enhance(1.1)
-        for offset in taints:
-            row = offset // width
-            col = offset % width
+        for offset in access.taints():
+            row = offset.offset // width
+            col = offset.offset % width
             image.putpixel((col, row), 0)
         images.append(image)
     images[0].save(

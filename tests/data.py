@@ -33,16 +33,13 @@ def run_natively(*args, **kwargs) -> int:
         sys.stderr.write(
             f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n"
         )
-        return (
-            docker_container()  # type: ignore
-            .run(  # type: ignore
-                *args,
-                **kwargs,
-                interactive=False,
-                stdout=sys.stdout,
-                stderr=sys.stderr,
-                cwd=str(Path(__file__).parent.parent),
-            )
+        return docker_container().run(  # type: ignore  # type: ignore
+            *args,
+            **kwargs,
+            interactive=False,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            cwd=str(Path(__file__).parent.parent),
         )
 
 

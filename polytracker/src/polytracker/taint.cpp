@@ -209,7 +209,8 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   // If sanitizer debug is on, this checks that l1 != l2
   // DCHECK_NE(l1, l2);
 
-  /* These checks are also called earlier in polytracker-llvm, so we don't need to do it here:
+  /* These checks are also called earlier in polytracker-llvm, so we don't need
+   * to do it here:
    */
   // if (l1 == 0) {
   //   return l2;
@@ -218,8 +219,8 @@ unionLabels(const dfsan_label &l1, const dfsan_label &l2,
   //   return l1;
   // }
 
-  /* We don't need to explicitly check for ordering, because the caller in polytracker-llvm already
-   * guarantees that l1 < l2:
+  /* We don't need to explicitly check for ordering, because the caller in
+   * polytracker-llvm already guarantees that l1 < l2:
    */
   //  if (l1 > l2) {
   //    std::swap(l1, l2);

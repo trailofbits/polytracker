@@ -14,6 +14,7 @@ from typing import (
     Set,
     Union,
 )
+import weakref
 
 from cxxfilt import demangle
 
@@ -137,6 +138,46 @@ class ByteOffset(TaintedRegion):
         super().__init__(source=source, offset=offset, length=1)
 
 
+class TaintDiff:
+    def __init__(self, taints1: "Taints", taints2: "Taints"):
+        self.taints1: Taints = taints1
+        self.taints2: Taints = taints2
+        self._only_in_first: Optional[List[ByteOffset]] = None
+        self._only_in_second: Optional[List[ByteOffset]] = None
+
+    def _diff(self):
+        if self._only_in_first is not None:
+            return
+        in_first = set(self.taints1)
+        in_second = set(self.taints2)
+        self._only_in_first = sorted(in_first - in_second)
+        self._only_in_second = sorted(in_second - in_first)
+
+    @property
+    def bytes_only_in_first(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_first  # type: ignore
+
+    @property
+    def regions_only_in_first(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_first, is_sorted=True)
+
+    @property
+    def bytes_only_in_second(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_second  # type: ignore
+
+    @property
+    def regions_only_in_second(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_second, is_sorted=True)
+
+    def __bool__(self):
+        return bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)
+
+    def __eq__(self, other):
+        return isinstance(other, TaintDiff) and self.taints1 == other.taints1 and self.taints2 == other.taints2
+
+
 class Taints:
     def __init__(self, byte_offsets: Iterable[ByteOffset]):
         offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
@@ -154,10 +195,17 @@ class Taints:
         return Taints(self._offsets_by_source.get(source, ()))
 
     def regions(self) -> Iterator[TaintedRegion]:
+        return Taints.to_regions(self, is_sorted=True)
+
+    @staticmethod
+    def to_regions(offsets: Iterable[ByteOffset], is_sorted: bool = False) -> Iterator[TaintedRegion]:
+        """Converts the list of byte offsets into contiguous regions."""
         last_input: Optional[Input] = None
         last_offset: Optional[ByteOffset] = None
         region: Optional[TaintedRegion] = None
-        for offset in self:
+        if not is_sorted:
+            offsets = sorted(offsets)
+        for offset in offsets:
             if last_input is None:
                 last_input = offset.source
             elif last_input != offset.source or (last_offset is not None and last_offset.offset != offset.offset - 1):
@@ -188,6 +236,9 @@ class Taints:
                 else:
                     break
 
+    def diff(self, other: "Taints") -> TaintDiff:
+        return TaintDiff(self, other)
+
     def __contains__(self, byte_sequence: Union[int, str, bytes]):
         try:
             next(iter(self.find(byte_sequence)))
@@ -210,7 +261,7 @@ class Function:
     def __init__(self, name: str, function_index: int):
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
-        self.function_index = function_index
+        self.function_index: int = function_index
 
     @property
     def demangled_name(self) -> str:
@@ -368,6 +419,8 @@ class FunctionEntry(ControlFlowEvent):
                 return prev
             elif isinstance(prev, FunctionReturn):
                 prev = prev.function_entry
+                if prev is None:
+                    break
             prev = prev.previous_control_flow_event
         raise ValueError(f"Unable to determine the caller for {self}")
 
@@ -404,7 +457,8 @@ class BasicBlockEntry(ControlFlowEvent):
                 event = event.function_entry
             elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
-            event = event.previous_control_flow_event
+            if event is not None:
+                event = event.previous_control_flow_event
         return entry_count
 
     @property
@@ -463,11 +517,15 @@ class FunctionReturn(ControlFlowEvent):
 
     @property
     def returning_from(self) -> Function:
-        return self.function_entry.basic_block.function
+        entry = self.function_entry
+        if entry is None:
+            raise ValueError(f"Unable to determine the function entry object associated with function return {self!r}")
+        return entry.basic_block.function
 
 
 class ProgramTrace(ABC):
     _cfg: Optional[DiGraph[BasicBlock]] = None
+    _func_cfg: Optional[DiGraph[Function]] = None
 
     @abstractmethod
     def __len__(self) -> int:
@@ -475,7 +533,7 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def __iter__(self) -> Iterable[TraceEvent]:
+    def __iter__(self) -> Iterator[TraceEvent]:
         """Iterates over all of the events in this trace, in order"""
         raise NotImplementedError()
 
@@ -494,6 +552,24 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def has_function(self, name: str) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def access_sequence(self) -> Iterator[TaintAccess]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def num_accesses(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def inputs(self) -> Iterable[Input]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
 
@@ -503,13 +579,23 @@ class ProgramTrace(ABC):
 
     @property
     def cfg(self) -> DiGraph[BasicBlock]:
-        if self._cfg is None:
-            self._cfg = DiGraph()
+        if not hasattr(self, "_cfg") or self._cfg is None:
+            setattr(self, "_cfg", DiGraph())
             for bb in self.basic_blocks:
-                self._cfg.add_node(bb)
+                self._cfg.add_node(bb)  # type: ignore
                 for child in bb.children:
-                    self._cfg.add_edge(bb, child)
-        return self._cfg
+                    self._cfg.add_edge(bb, child)  # type: ignore
+        return self._cfg  # type: ignore
+
+    @property
+    def function_cfg(self) -> DiGraph[Function]:
+        if not hasattr(self, "_func_cfg") or self._func_cfg is None:
+            setattr(self, "_func_cfg", DiGraph())
+            for func in self.functions:
+                self._func_cfg.add_node(func)  # type: ignore
+                for child in func.calls_to():
+                    self._func_cfg.add_edge(func, child)  # type: ignore
+        return self._func_cfg  # type: ignore
 
     def cfg_roots(self) -> Iterable[BasicBlock]:
         for bb in self.basic_blocks:
@@ -585,9 +671,10 @@ class RunTraceCommand(Subcommand[TraceCommand]):
 
         if output_db_path is None:
             # use a temporary file
-            tmpdir = TemporaryDirectory()
-            output_db_path = Path(tmpdir.name) / "polytracker.db"
-            PolyTrackerREPL.current_instance().run_on_exit(tmpdir.cleanup)
+            tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
+            output_db_path = str(Path(tmpdir.name) / "polytracker.db")  # type: ignore
+        else:
+            tmpdir = None
 
         if Path(args.output_db).exists():
             PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
@@ -605,8 +692,13 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             retval = run_command(args=cmd_args, interactive=True, env=env)
         if return_trace:
             from . import PolyTrackerTrace
-            return PolyTrackerTrace.load(output_db_path)
+            trace = PolyTrackerTrace.load(output_db_path)
+            if tmpdir is not None:
+                weakref.finalize(trace, tmpdir.cleanup)
+            return trace
         else:
+            if tmpdir is not None:
+                tmpdir.cleanup()
             return retval
 
     def run(self, args: Namespace):
@@ -634,4 +726,4 @@ class CFGTraceCommand(Subcommand[TraceCommand]):
     def run(self, args: Namespace):
         from . import PolyTrackerTrace
         db = PolyTrackerTrace.load(args.TRACE_DB)
-        db.cfg.to_dot().save("trace.dot")
+        db.function_cfg.to_dot().save("trace.dot")

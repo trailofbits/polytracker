@@ -1,4 +1,4 @@
-name: Build Docker Images
+name: Tests
 
 on: push
 
@@ -14,33 +14,33 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install clang-format-10
+      - name: Install clang-format
         run: |
-          sudo apt install -y software-properties-common gnupg wget
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo add-apt-repository 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-10 main'
           sudo apt-get update -y
-          sudo apt-get install -y clang-format-10 libgraphviz-dev
-      - name: Install black and pytest
+          sudo apt-get install -y clang-format libgraphviz-dev
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install setuptools
-          python -m pip install mypy
-          python -m pip install black
-      - name: Update git submodules 
+          pip install .[dev]
+      - name: Update git submodules
         run: git submodule update --init --recursive
       - name: C++ lint
         run: |
           python third_party/run-clang-format/run-clang-format.py \
-          polytracker/include/dfsan/*.h  polytracker/src/*/*.cpp \
-          --exclude 'polytracker/src/dfsan_rt/sanitizer_common/*' \
-          --exclude 'polytracker/src/dfsan_rt/interception/*'
+          polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
+          polytracker/src/taint_sources/*.cpp
       - name: Python lint/typecheck 
         run: |
-          black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 polytracker tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # Don't enforce black for now because a bug was causing it to not reach a fixed point when reformatting
+          # black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
           mypy --python-version ${{ matrix.python-version }} --ignore-missing-imports polytracker tests
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Poly* tests 
+      - name: PolyTracker tests
         run: |
-          docker run --rm trailofbits/polytracker pytest --json=tests/test_data/polytracker_process_set.json --forest=tests/test_data/polytracker_forest.bin
+          pytest

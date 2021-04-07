@@ -312,8 +312,9 @@ void storeTaintForestDisk(const std::string &outfile,
   fclose(forest_file);
 }
 
-void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id, const dfsan_label &new_label, const dfsan_label& p1, 
-  const dfsan_label& p2) {
+void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
+                          const dfsan_label &new_label, const dfsan_label &p1,
+                          const dfsan_label &p2) {
   const char *insert = "INSERT INTO taint_forest (parent_one, parent_two, "
                        "label, input_id) VALUES (?, ?, ?, ?);";
   sqlite3_stmt *stmt;
@@ -358,6 +359,4 @@ sqlite3 *db_init(const std::string &db_path) {
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
 
-void db_fini(sqlite3 *output_db) {
-  sqlite3_close(output_db);
-}
+void db_fini(sqlite3 *output_db) { sqlite3_close(output_db); }

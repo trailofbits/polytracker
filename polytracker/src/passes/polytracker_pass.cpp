@@ -2,6 +2,7 @@
 #include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -9,7 +10,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/IR/Dominators.h"
 #include <assert.h> /* assert */
 #include <fstream>
 #include <iomanip> /* for std::setw */
@@ -26,14 +26,18 @@ static llvm::cl::opt<std::string> generate_ignore_list(
     "gen-list",
     llvm::cl::desc("When specified, generates an ignore list from bitcode"));
 
-static llvm::cl::opt<int> file_id("file-id", 
-  llvm::cl::desc("When specified, adds a file id to the function_ids in the module"));
+static llvm::cl::opt<int> file_id(
+    "file-id",
+    llvm::cl::desc(
+        "When specified, adds a file id to the function_ids in the module"));
 
 namespace polytracker {
 
-void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callback) {
+void PolyInstVisitor::logOp(llvm::Instruction *inst,
+                            llvm::FunctionCallee &callback) {
   // Should never fail
-  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() || inst->getType()->isArrayTy()) {
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() ||
+      inst->getType()->isArrayTy()) {
     return;
   }
   llvm::IRBuilder<> IRB(inst->getNextNode());
@@ -42,22 +46,19 @@ void PolyInstVisitor::logOp(llvm::Instruction* inst, llvm::FunctionCallee& callb
   if (inst->getType()->isDoubleTy() || inst->getType()->isFloatTy()) {
     llvm::Value *cast = IRB.CreateFPToSI(inst, shadow_type);
     get_taint = IRB.CreateCall(dfsan_get_label, cast);
-  }
-  else if (inst->getType()->isPointerTy()) {
+  } else if (inst->getType()->isPointerTy()) {
     llvm::Value *hail = IRB.CreateBitCast(inst, shadow_type);
     get_taint = IRB.CreateCall(dfsan_get_label, hail);
-  }
-  else if (inst->getType() == shadow_type) {
+  } else if (inst->getType() == shadow_type) {
     get_taint = inst;
   } else {
-    // Integer of a different size, extend/shrink. 
+    // Integer of a different size, extend/shrink.
     llvm::Value *mary = IRB.CreateSExtOrTrunc(inst, shadow_type);
     // llvm::Value *hail = IRB.CreateBitCast(mary, int32_ty);
     get_taint = IRB.CreateCall(dfsan_get_label, mary);
   }
   if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
-    std::cerr << "Error! cmp parent block not in block_map"
-              << std::endl;
+    std::cerr << "Error! cmp parent block not in block_map" << std::endl;
     exit(1);
   }
   uint64_t gid = block_global_map[inst->getParent()];
@@ -75,14 +76,15 @@ void PolyInstVisitor::visitCmpInst(llvm::CmpInst &CI) {
 }
 
 void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
-  logOp(&i, taint_op_log);  
+  logOp(&i, taint_op_log);
 }
 
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto called_func = ci.getCalledFunction();
   if (called_func != nullptr) {
-    if (called_func->hasName() && called_func->getName().find("polytracker") != std::string::npos) {
+    if (called_func->hasName() &&
+        called_func->getName().find("polytracker") != std::string::npos) {
       return;
     }
     if (called_func->isIntrinsic()) {
@@ -91,9 +93,8 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
     if (called_func->hasName()) {
       std::string name = called_func->getName().str();
       if (ignore_funcs.find(name) != ignore_funcs.end()) {
-          return;
+        return;
       }
-
     }
   }
   llvm::Function *caller = inst->getParent()->getParent();
@@ -119,11 +120,12 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
 
 // Pass in function, get context, get the entry block. create the DT?
 // Func, func_index, Block, block_index, split_blocks, DT.
-bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &findex,
+bool PolytrackerPass::analyzeBlock(llvm::Function *func,
+                                   const func_index_t &findex,
                                    llvm::BasicBlock *curr_bb,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
-                                    llvm::DominatorTree &DT) {
+                                   llvm::DominatorTree &DT) {
   // std::cout << "Visiting function!" << std::endl;
   // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is
   // always valid here Is the address returned by reference always the same?
@@ -147,7 +149,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &fin
   bool wasSplit = std::find(split_bbs.cbegin(), split_bbs.cend(), curr_bb) !=
                   split_bbs.cend();
   // bool wasSplit = false;
- 
+
   llvm::Value *BBType = llvm::ConstantInt::get(
       llvm::IntegerType::getInt8Ty(context),
       static_cast<uint8_t>(polytracker::getType(curr_bb, DT) |
@@ -155,9 +157,10 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func, const func_index_t &fin
                                 ? polytracker::BasicBlockType::FUNCTION_RETURN
                                 : polytracker::BasicBlockType::UNKNOWN)),
       false);
-  
-  //llvm::Value *BBType = llvm::ConstantInt::get(llvm::IntegerType::getInt8Ty(context),
-   //(uint8_t)polytracker::BasicBlockType::UNKNOWN);
+
+  // llvm::Value *BBType =
+  // llvm::ConstantInt::get(llvm::IntegerType::getInt8Ty(context),
+  //(uint8_t)polytracker::BasicBlockType::UNKNOWN);
   if (curr_bb == entry_block) {
     // this is the entrypoint basic block in a function, so make sure the
     // BB instrumentation happens after the function call instrumentation
@@ -194,7 +197,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
 
-  //llvm::removeUnreachableBlocks(*f);
+  // llvm::removeUnreachableBlocks(*f);
 
   std::vector<llvm::BasicBlock *> splitBBs = bbSplitter.analyzeFunction(*f);
   // std::vector<llvm::BasicBlock *> splitBBs;
@@ -227,11 +230,9 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
     for (auto &inst : bb) {
       if (auto bo = llvm::dyn_cast<llvm::BinaryOperator>(&inst)) {
         insts.push_back(bo);
-      }
-      else if (auto call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+      } else if (auto call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
         insts.push_back(call);
-      }
-      else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
+      } else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
         insts.push_back(cmp);
       }
       // insts.push_back(&inst);
@@ -302,8 +303,8 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   // This function is how Polytracker works with DFsan
   // dfsan_get_label is a special function that gets instrumented by dfsan and
   // changes its ABI. The return type is a dfsan_label as defined by dfsan
-  auto dfsan_get_label_ty = llvm::FunctionType::get(
-      shadow_type, shadow_type, false);
+  auto dfsan_get_label_ty =
+      llvm::FunctionType::get(shadow_type, shadow_type, false);
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 }
@@ -361,19 +362,34 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   size_t i = 0;
   int lastPercent = -1;
   for (auto func : functions) {
-    int percent = static_cast<int>(static_cast<float>(i++) * 100.0 / static_cast<float>(functions.size()) + 0.5);
+    int percent = static_cast<int>(static_cast<float>(i++) * 100.0 /
+                                       static_cast<float>(functions.size()) +
+                                   0.5);
     auto currentTime = std::chrono::system_clock::now();
-    if (percent > lastPercent || std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count() >= 5.0) {
+    if (percent > lastPercent ||
+        std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                         lastUpdateTime)
+                .count() >= 5.0) {
       lastUpdateTime = currentTime;
-      auto totalElapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+      auto totalElapsedSeconds =
+          std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                           startTime)
+              .count();
       auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
       std::cerr << '\r' << std::string(80, ' ') << '\r';
       lastPercent = percent;
-      std::cerr << "Instrumenting: " << func->getName().str() << " " << std::setfill(' ') << std::setw(3) << percent << "% |";
+      auto funcName = func->getName().str();
+      if (funcName.length() > 10) {
+        funcName = funcName.substr(0, 7) + "...";
+      }
+      std::cerr << "Instrumenting: " << funcName << " " << std::setfill(' ')
+                << std::setw(3) << percent << "% |";
       const int barWidth = 20;
-      const auto filledBars = static_cast<int>(static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 + 0.5);
+      const auto filledBars = static_cast<int>(
+          static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 +
+          0.5);
       const auto unfilledBars = barWidth - filledBars;
-      for (size_t iter=0; iter < filledBars; ++iter) {
+      for (size_t iter = 0; iter < filledBars; ++iter) {
         std::cerr << "█";
       }
       std::cerr << std::string(unfilledBars, ' ');
@@ -381,17 +397,21 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       if (functionsPerSecond == 0) {
         std::cerr << "??:??";
       } else {
-        auto remainingSeconds = static_cast<int>(static_cast<float>(functions.size() - i) / functionsPerSecond + 0.5);
+        auto remainingSeconds = static_cast<int>(
+            static_cast<float>(functions.size() - i) / functionsPerSecond +
+            0.5);
         auto remainingMinutes = remainingSeconds / 60;
         remainingSeconds %= 60;
         if (remainingMinutes >= 60) {
-            std::cerr << (remainingMinutes / 60) << ":";
-            remainingMinutes %= 60;
+          std::cerr << (remainingMinutes / 60) << ":";
+          remainingMinutes %= 60;
         }
-        std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes << ":";
+        std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes
+                  << ":";
         std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
       }
-      std::cerr << ", " << std::setprecision(4) << functionsPerSecond << " functions/s]" << std::flush;
+      std::cerr << ", " << std::setprecision(4) << functionsPerSecond
+                << " functions/s]" << std::flush;
     }
 
     if (!func || func->isDeclaration()) {

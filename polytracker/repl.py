@@ -24,9 +24,18 @@ class PolyTrackerCompleter(Completer):
         self.current_help: Optional[str] = None
 
     @staticmethod
-    def _get_completions(partial: str, options: Iterable[str], already_completed: Set[str], style: str = ""):
+    def _get_completions(
+        partial: str,
+        options: Iterable[str],
+        already_completed: Set[str],
+        style: str = "",
+    ):
         for var in options:
-            if var not in already_completed and var.startswith(partial) and var != partial:
+            if (
+                var not in already_completed
+                and var.startswith(partial)
+                and var != partial
+            ):
                 yield Completion(var, start_position=-len(partial), style=style)
                 already_completed.add(var)
 
@@ -47,8 +56,9 @@ class PolyTrackerCompleter(Completer):
         already_yielded = set()
         if partial == document.text:
             # we are at the start of the line, so complete for commands:
-            yield from PolyTrackerCompleter._get_completions(partial, PolyTrackerREPL.commands, already_yielded,
-                                                             "fg:ansiblue")
+            yield from PolyTrackerCompleter._get_completions(
+                partial, PolyTrackerREPL.commands, already_yielded, "fg:ansiblue"
+            )
         args = document.text.split(" ")
         if args[0] in PolyTrackerREPL.commands:
             # We are completing a command
@@ -58,40 +68,54 @@ class PolyTrackerCompleter(Completer):
             self.current_help = None
 
         yield from PolyTrackerCompleter._get_completions(
-            partial, (var for var in self.repl.state if var not in self.repl.builtins), already_yielded
+            partial,
+            (var for var in self.repl.state if var not in self.repl.builtins),
+            already_yielded,
         )
-        yield from PolyTrackerCompleter._get_completions(partial, self.repl.builtins, already_yielded, "fg:ansigreen")
+        yield from PolyTrackerCompleter._get_completions(
+            partial, self.repl.builtins, already_yielded, "fg:ansigreen"
+        )
         if "__builtins__" in self.repl.state:
             builtins = self.repl.state["__builtins__"]
         else:
             builtins = __builtins__
-        yield from PolyTrackerCompleter._get_completions(partial, builtins, already_yielded, "fg:ansigreen")
+        yield from PolyTrackerCompleter._get_completions(
+            partial, builtins, already_yielded, "fg:ansigreen"
+        )
         if "." in partial:
             portions = partial.split(".")
             varname = portions[-2]
             to_complete = portions[-1]
             if varname in self.repl.state:
                 attr = self.repl.state[varname]
-                yield from PolyTrackerCompleter._get_completions(
-                    to_complete, (a for a in dir(attr) if not a.startswith("_")), already_yielded
-                )
+                if not isinstance(attr, REPLCommand):
+                    yield from PolyTrackerCompleter._get_completions(
+                        to_complete,
+                        (a for a in dir(attr) if not a.startswith("_")),
+                        already_yielded,
+                    )
 
 
 class REPLCommand:
-    def __init__(self, name: str, func: Callable[..., Any]):
+    def __init__(self, name: str, func: Callable[..., Any], discardable: bool = False):
         self._name: str = name
         self._func: Callable[..., Any] = func
         if " " in name or "\t" in name or "\n" in name:
             raise ValueError(f"Command name {name!r} must not contain whitespace")
-        elif func.__doc__ is None or func.__doc__ == "":
-            raise ValueError(f"Command {name!r}/{func!r} must define a docstring for its help message")
-        self._help: str = inspect.getdoc(self.func)
-        self.__doc__ = self.help
+        docstring = inspect.getdoc(self.func)
+        if docstring is None or docstring == "":
+            raise ValueError(
+                f"Command {name!r}/{func!r} must define a docstring for its help message"
+            )
+        self._help: str = docstring
+        self._discardable: bool = discardable
+        self.__doc__ = self._help
         try:
             inspect.getcallargs(func)
             return_annotation = inspect.signature(func).return_annotation
             self._can_be_called_with_no_args: bool = (
-                    return_annotation == inspect.Signature.empty or return_annotation is None
+                return_annotation == inspect.Signature.empty
+                or return_annotation is None
             )
         except TypeError:
             self._can_be_called_with_no_args = False
@@ -107,6 +131,10 @@ class REPLCommand:
     @property
     def help(self) -> str:
         return self._help
+
+    @property
+    def discardable(self) -> bool:
+        return self._discardable
 
     def run_bare(self):
         """called when the command is run from the REPL with no parenthesis"""
@@ -160,34 +188,56 @@ class PolyTrackerREPL:
         return cls._current_instance
 
     @classmethod
-    def register(cls, command_name: str):
+    def register(cls, command_name: str, discardable: bool = False):
         """Function decorator for registering a command with this REPL"""
+
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             if command_name in cls.commands:
-                raise ValueError(f"REPL command {command_name!r} is already registered to function "
-                                 f"{cls.commands[command_name]!r}")
-            command = REPLCommand(name=command_name, func=func)
+                raise ValueError(
+                    f"REPL command {command_name!r} is already registered to function "
+                    f"{cls.commands[command_name]!r}"
+                )
+            command = REPLCommand(name=command_name, func=func, discardable=discardable)
             cls.register_global(command_name, command)
             cls.commands[command_name] = command
             return func
+
         return decorator
 
     @classmethod
     def register_global(cls, name: str, value: Any):
         if name in cls.registered_globals:
             if cls.registered_globals[name] is not value:
-                raise ValueError(f"REPL global {name!s} is already defined as {cls.registered_globals[name]!r}")
+                raise ValueError(
+                    f"REPL global {name!s} is already defined as {cls.registered_globals[name]!r}"
+                )
         cls.registered_globals[name] = value
 
     @staticmethod
     def warning(message: str):
-        print_formatted_text(HTML(f"<b><style fg=\"yellow\">Warning: </style></b> {message}"))
+        print_formatted_text(
+            HTML(f'<b><style fg="yellow">Warning: </style></b> {message}')
+        )
 
     def print_exc(self):
         buffer = StringIO()
         traceback.print_exc(file=buffer)
         tokens = lex(buffer.getvalue(), lexer=PythonTracebackLexer())
         print_formatted_text(PygmentsTokens(tokens))
+
+    @classmethod
+    def prompt(cls, message: str, options: str = "yN", default: bool = False) -> bool:
+        while True:
+            print_formatted_text(
+                HTML(f"<b>{message}</b> <ansigray>[{options}]</ansigray> "), end=""
+            )
+            result = input("").lower().strip()
+            if not result:
+                return default
+            elif result == "y" or result == "yes":
+                return True
+            elif result == "n" or result == "no":
+                return False
 
     def run_python(self, command):
         continued_prompt = HTML("<b>... </b>")
@@ -203,7 +253,11 @@ class PolyTrackerREPL:
             buffer = event.app.current_buffer
             doc = buffer.document
             cursor_pos = doc.cursor_position_col
-            if cursor_pos > 0 and cursor_pos % 4 == 0 and all(c == " " for c in doc.text[:cursor_pos]):
+            if (
+                cursor_pos > 0
+                and cursor_pos % 4 == 0
+                and all(c == " " for c in doc.text[:cursor_pos])
+            ):
                 # the user pressed BACKSPACE after an indent
                 buffer.delete_before_cursor(4)
             else:
@@ -229,7 +283,9 @@ class PolyTrackerREPL:
                 try:
                     parsed = ast.parse(command)
                     is_assignment = any(
-                        isinstance(node, ast.Assign) or isinstance(node, ast.AnnAssign) or isinstance(node, ast.AugAssign)
+                        isinstance(node, ast.Assign)
+                        or isinstance(node, ast.AnnAssign)
+                        or isinstance(node, ast.AugAssign)
                         for node in ast.walk(parsed)
                     )
                     break
@@ -249,7 +305,7 @@ class PolyTrackerREPL:
                         complete_while_typing=True,
                         auto_suggest=AutoSuggestFromHistory(),
                         completer=PolyTrackerCompleter(self),
-                        key_bindings=bindings
+                        key_bindings=bindings,
                     )
                     if len(next_line) == 0:
                         is_assignment = True
@@ -261,8 +317,23 @@ class PolyTrackerREPL:
             elif is_assignment or self.multi_line:
                 exec(command, self.state)
             else:
+                func_call = command[: command.find("(")].strip()
+                if (
+                    func_call in self.commands
+                    and not self.commands[func_call].discardable
+                ):
+                    # we are running an expensive command but are not saving its output
+                    if not self.prompt(
+                        f"Command {func_call} is expensive. Are you sure you want to run it without "
+                        "saving the result to a variable?"
+                    ):
+                        return
                 result = eval(command, self.state)
-                if hasattr(result, "__name__") and result.__name__ == command and command in __builtins__:
+                if (
+                    hasattr(result, "__name__")
+                    and result.__name__ == command
+                    and command in __builtins__
+                ):
                     try:
                         print_function_help(result)
                     except ValueError:
@@ -278,26 +349,36 @@ class PolyTrackerREPL:
         longest_command = max(len(cmd_name) for cmd_name in cls.commands)
         for name, command in sorted(cls.commands.items()):
             dots = "." * (longest_command - len(name) + 1)
-            first_docstring_line = command.help[:command.help.find("\n")]
-            print_formatted_text(HTML(f'<b fg="ansiblue">{name}</b>{dots}<i> {first_docstring_line} </i>'))
+            first_docstring_line = command.help.split("\n")[0]
+            print_formatted_text(
+                HTML(
+                    f'<b fg="ansiblue">{name}</b>{dots}<i> {first_docstring_line} </i>'
+                )
+            )
 
     def run(self):
         from . import version
 
         if PolyTrackerREPL._current_instance is not None:
-            PolyTrackerREPL.warning("More than one instance of PolyTrackerREPL is running at the same time! This can "
-                                    "result in undefined behavior.")
+            PolyTrackerREPL.warning(
+                "More than one instance of PolyTrackerREPL is running at the same time! This can "
+                "result in undefined behavior."
+            )
         else:
             PolyTrackerREPL._current_instance = self
         print_formatted_text(HTML(f"<b>PolyTracker</b> ({version()})"))
-        print_formatted_text(HTML('<u fg="ansigray">https://github.com/trailofbits/polytracker</u>'))
+        print_formatted_text(
+            HTML('<u fg="ansigray">https://github.com/trailofbits/polytracker</u>')
+        )
         print_formatted_text(
             HTML(
                 'Type "<span fg="ansigreen" bg="ansigray">help</span>" or "<span fg="ansiblue" bg="ansigray">commands</span>"'
             )
         )
         prompt = HTML("<b>&gt;&gt;&gt; </b>")
-        error_prompt = HTML('<span fg="ansired" bg="ansiwhite">!</span><b>&gt;&gt; </b>')
+        error_prompt = HTML(
+            '<span fg="ansired" bg="ansiwhite">!</span><b>&gt;&gt; </b>'
+        )
         next_prompt = prompt
         while True:
             try:
@@ -309,7 +390,7 @@ class PolyTrackerREPL:
                     completer=completer,
                     rprompt=completer.rprompt,
                     bottom_toolbar=completer.bottom_toolbar,
-                    refresh_interval=0.5
+                    refresh_interval=0.5,
                 )
                 next_prompt = prompt
             except KeyboardInterrupt:
@@ -335,7 +416,7 @@ class PolyTrackerREPL:
         return 0
 
 
-PolyTrackerREPL.register("commands")(PolyTrackerREPL.commands_command)
+PolyTrackerREPL.register("commands", discardable=True)(PolyTrackerREPL.commands_command)
 
 
 class Commands(Command):
@@ -346,4 +427,8 @@ class Commands(Command):
         longest_command = max(len(cmd_name) for cmd_name in COMMANDS)
         for command in COMMANDS.values():
             dots = "." * (longest_command - len(command.name) + 1)
-            print_formatted_text(HTML(f'<b fg="ansiblue">{command.name}</b>{dots}<i> {command.help} </i>'))
+            print_formatted_text(
+                HTML(
+                    f'<b fg="ansiblue">{command.name}</b>{dots}<i> {command.help} </i>'
+                )
+            )

@@ -109,7 +109,7 @@ setup(
         'typing_extensions~=3.7.4.2'
     ],
     extras_require={
-        "dev": ["black>=20.8b1", "mypy", "pytest"]
+        "dev": ["black>=20.8b1", "mypy", "pytest", "flake8"]
     },
     entry_points={
         'console_scripts': CONSOLE_SCRIPTS

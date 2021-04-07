@@ -263,9 +263,13 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
         elif args.extract_datalog is None:
             return 0
         trace = command.traces[0]
+        inputs = list(trace.inputs)
+        if len(inputs) != 1:
+            raise NotImplementedError("TODO: Add support for extracting DataLog grammars from traces with more than "
+                                      "one input")
+        data = inputs[0].content
         self.datalog_grammar = DatalogGrammar(trace)
         unique_bytes: Dict[int, bool] = {}
-        data = trace.inputstr
         self.datalog_fact_decls = []
         self.datalog_facts = []
         self.true_fact_decl = DatalogTrueFactDecl()

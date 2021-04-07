@@ -393,7 +393,7 @@ class MatchPossibility:
             if isinstance(seq, Terminal):
                 if not remainder.startswith(seq.terminal):
                     return None
-                remainder = remainder[len(seq.terminal) :]
+                remainder = remainder[len(seq.terminal):]
                 if assign_consumed:
                     self._consumed.append((source, seq))
                 matches += 1
@@ -414,7 +414,7 @@ class MatchPossibility:
                     remainder=remainder,
                     production=production,
                     rule=rule,
-                    after_sequence=self.sequence[matches + 1 :],
+                    after_sequence=self.sequence[matches + 1:],
                     parent=parent,
                     previous=self,
                 )
@@ -642,7 +642,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                 sub_productions.append(production_name(called_function))
                 ret = called_function.function_return
                 if ret is not None:
-                    returning_to = called_function.function_return.returning_to
+                    returning_to = ret.returning_to
                     if returning_to is not None:
                         sub_productions.append(f"<{returning_to!s}>")
                     else:
@@ -713,7 +713,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
 @PolyTrackerREPL.register("extract_grammar")
 def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
     """extract a grammar from a set of traces"""
-    trace_iter = tqdm(traces, unit=" trace", desc=f"extracting traces", leave=False)
+    trace_iter = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
     for trace in trace_iter:
         # TODO: Merge the grammars
         grammar = trace_to_grammar(trace)
@@ -759,7 +759,7 @@ class ExtractGrammarCommand(Command):
             "TRACES",
             nargs="+",
             type=str,
-            help="extract a grammar from the provided PolyTracker trace databases"
+            help="extract a grammar from the provided PolyTracker trace databases",
         )
         parser.add_argument(
             "--simplify", "-s", action="store_true", help="simplify the grammar"
