@@ -1,7 +1,7 @@
 //#include "dfsan/dfsan.h"
 #include "polytracker/taint_sources.h"
-#include "polytracker/taint.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/taint.h"
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
