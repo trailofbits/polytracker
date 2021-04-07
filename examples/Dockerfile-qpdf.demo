@@ -34,7 +34,7 @@ WORKDIR /usr/local/bin/
 RUN get-bc -b qpdf 
 
 #Instrument and build track target
-RUN ${CXX} --lower-bitcode -i qpdf.bc -o qpdf_track --libs /polytracker/the_klondike/qpdf/libqpdf/build/.libs/libqpdf.a atomic z /usr/local/lib/libjpeg.a
+RUN ${CXX} --lower-bitcode -i qpdf.bc -o qpdf_track --libs /polytracker/the_klondike/qpdf/libqpdf/build/.libs/libqpdf.a atomic z /usr/local/lib/libjpeg.a --lists libz
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
