@@ -2056,6 +2056,7 @@ fun:ffs=uninstrumented
 fun:ffsl=uninstrumented
 fun:ffsll=uninstrumented
 fun:fgetc=uninstrumented
+fun:fgetc=custom
 fun:fgetc_unlocked=uninstrumented
 fun:fgetgrent=uninstrumented
 fun:fgetgrent_r=uninstrumented
