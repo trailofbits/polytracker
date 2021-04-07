@@ -378,7 +378,11 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
       std::cerr << '\r' << std::string(80, ' ') << '\r';
       lastPercent = percent;
-      std::cerr << "Instrumenting: " << func->getName().str() << " "
+      auto funcName = func->getName().str();
+      if (funcName.length() > 10) {
+        funcName = funcName.substr(0, 7) + "...";
+      }
+      std::cerr << "Instrumenting: " << funcName << " "
                 << std::setfill(' ') << std::setw(3) << percent << "% |";
       const int barWidth = 20;
       const auto filledBars = static_cast<int>(
