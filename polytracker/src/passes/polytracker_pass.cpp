@@ -382,7 +382,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       if (funcName.length() > 10) {
         funcName = funcName.substr(0, 7) + "...";
       }
-      std::cerr << "Instrumenting: " << funcName << " " << std::setfill(' ')
+      std::cerr << "Instrumenting: " << std::setfill(' ')
                 << std::setw(3) << percent << "% |";
       const int barWidth = 20;
       const auto filledBars = static_cast<int>(
