@@ -265,12 +265,13 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
                       const event_id_t &func_event_id) {
   sqlite3_stmt *stmt;
   const char *insert =
-      "INSERT INTO accessed_label(event_id, label, access_type)"
-      "VALUES (?, ?, ?);";
+      "INSERT INTO accessed_label(event_id, label, access_type, input_id)"
+      "VALUES (?, ?, ?, ?);";
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
   sqlite3_bind_int64(stmt, 2, label);
   sqlite3_bind_int(stmt, 3, static_cast<int>(access_type));
+  sqlite3_bind_int64(stmt, 4, input_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
   storeEvent(output_db, input_id, thread_id, event_id, thread_event_id,

@@ -39,8 +39,9 @@ static constexpr const char *createTaintTable() {
   return "CREATE TABLE IF NOT EXISTS accessed_label ("
          "  event_id BIGINT,"
          "  label BIGINT,"
-         "  access_type TINYINT,"
-         "  PRIMARY KEY (event_id, label, access_type)"
+         "  access_type TINYINT,",
+         "  input_id BIGINT"
+         "  PRIMARY KEY (event_id, label, access_type, input_id)"
          ") WITHOUT ROWID;";
 }
 
