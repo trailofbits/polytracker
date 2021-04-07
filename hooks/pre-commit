@@ -48,6 +48,7 @@ fi
 # If there are whitespace errors, print the offending file names and fail.
 exec git diff-index --check --cached $against --
 
+echo Checking C/C++ formatting...
 python third_party/run-clang-format/run-clang-format.py \
           polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
           polytracker/src/taint_sources/*.cpp
