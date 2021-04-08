@@ -183,6 +183,10 @@ POLYCONFIG: Provides a path to a JSON file specifying setings
 WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
 ```
 
+## ABI Lists
+DFSan uses ABI lists to determine what functions it should automatically instrument, what functions it should ignore, and what
+custom function wrappers exist. See the [dfsan documentation](https://clang.llvm.org/docs/DataFlowSanitizer.html) for more information.
+
 ## Configuration Files 
 
 Rather than setting environment variables on every run, you can make a configuration file.

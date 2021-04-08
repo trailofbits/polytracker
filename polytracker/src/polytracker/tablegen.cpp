@@ -40,7 +40,8 @@ static constexpr const char *createTaintTable() {
          "  event_id BIGINT,"
          "  label BIGINT,"
          "  access_type TINYINT,"
-         "  PRIMARY KEY (event_id, label, access_type)"
+         "  input_id BIGINT,"
+         "  PRIMARY KEY (event_id, label, access_type, input_id)"
          ") WITHOUT ROWID;";
 }
 
