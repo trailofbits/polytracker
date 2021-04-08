@@ -12,19 +12,25 @@ PolyTracker can be used in conjunction with [PolyFile](https://github.com/trailo
 ## Quickstart
 
 PolyTracker is controlled via a Python script called `polytracker`. You can install it by running
+
 ```
 pip3 install polytracker
 ```
+
 PolyTracker requires a very particular system environment to run, so almost all users are likely to run it
 in a virtualized environment. Luckily, `polytracker` makes this easy. All you need to do is have `docker` installed,
 then run:
+
 ```
 polytracker docker pull
 ```
+
 and
+
 ```
 polytracker docker run
 ```
+
 The latter command will mount the current working directory into the PolyTracker Docker container,
 and allow you to build and run instrumented programs.
 
@@ -33,15 +39,17 @@ Docker container—has a variety of commands, both for instrumenting programs as
 resulting artifacts. For example, you can explore the dataflows in the execution, reconstruct the
 instrumented program's control flow graph, and even extract a context free grammar matching the
 inputs accepted by the program. You can explore these commands by running
+
 ```
 polytracker --help
 ```
 
-## Instrumenting a simple C/C++ program 
+## Instrumenting a simple C/C++ program
 
 The following assumes you are working inside of the Docker container.
 
-If you have a C target, you can instrument it by invoking the C compiler and passing the `--instrument-target` before your cflags 
+If you have a C target, you can instrument it by invoking the C compiler and passing the `--instrument-target` before your cflags
+
 ```
 ${CC} --instrument-target -g -o my_target my_target.c 
 ```
@@ -52,16 +60,18 @@ Repeat the same steps above for a cxx file by invoking `${CXX}` instead of `${CC
 
 PolyTracker has only been tested on x86\_64 Linux. (Notably, the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) that PolyTracker builds upon _does not_ work on macOS.)
 
-PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets. 
+PolyTracker depends on [gllvm](https://github.com/SRI-CSL/gllvm) to create whole program bitcode archives and to extract bitcode from targets.
 
-PolyTracker depends on python3.7+ 
+PolyTracker depends on python3.7+
 
 The following tools and libraries are required to run PolyTracker:
+
 * LLVM version 7 or 7.1; other later versions may work but have not been tested. The builds in the official Ubuntu Bionic repository appear to be broken; we suggest building LLVM from source or installing it from the official LLVM repositories
 
 ## Manually building the examples
 
 Check out this Git repository. From the root, build the base PolyTracker Docker image:
+
 ```
 docker build -t trailofbits/polytracker . 
 ```
@@ -69,37 +79,42 @@ docker build -t trailofbits/polytracker .
 This will create a Docker container with PolyTracker built, and the `CC` environment variable set to `polybuild`. Simply add the code to be instrumented to this container, and as long as its build process honors the `CC` environment variable, the resulting binary will be instrumented.
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run this command:
+
 ```
 docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
-`Mutool_track` will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running `mutool_track` will output `polytracker.json` which contains the information provided by the taint analysis. Its reccomended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile). 
+`Mutool_track` will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running `mutool_track` will output `polytracker.json` which contains the information provided by the taint analysis. Its recommended to use this json with [PolyFile](https://www.github.com/trailofbits/PolyFile).
 
-For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command: 
+For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command:
 
 ```
 docker build -t trailofbits/polytracker-demo -f examples/pdf/Dockerfile-poppler.demo .
 ```
 
-All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`. 
+All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84.0/build/utils`.
 
 ```
 cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf
 ```
 
-## Building PolyTracker from Source 
+## Building PolyTracker from Source
 
 The following tools are required to build PolyTracker:
+
 * [CMake](https://cmake.org)
 * [Ninja](https://ninja-build.org) (`ninja-build` on Ubuntu)
 * Python 3.7 and `pip`, for testing purposes (`apt-get -y install python3.7 python3-pip`)
 
 First, make sure that the LLVM 7 binaries have priority in your `PATH`, _e.g._,
+
 ```
 export PATH="/usr/lib/llvm-7/bin:${PATH}"
 ```
+
 Next, from the root directory of this repository, run
+
 ```
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && ninja install
@@ -124,7 +139,7 @@ git clone --recursive git://git.ghostscript.com/mupdf.git
 cd mupdf
 git submodule update --init
 make -j10 HAVE_X11=no HAVE_GLUT=no prefix=./bin install
-``` 
+```
 
 Or if you would like to build the debug version, as we do in our Dockerfile:
 
@@ -138,12 +153,11 @@ get-bc -b target
 ${CC}/{CXX} --instrument-bitcode target.bc -o target_track --libs <any libs go here> 
 ```
 
-If you aren't sure about what libraries you might need to link for a complex target, the enviornment variable `WLLVM_ARTIFACT_STORE` sets a directory that contains a mainfest that logs all build commands and artifacts used. You should be able to rebuild the target completely using information in the mantifest and the artifacts. 
+If you aren't sure about what libraries you might need to link for a complex target, the environment variable `WLLVM_ARTIFACT_STORE` sets a directory that contains a manifest that logs all build commands and artifacts used. You should be able to rebuild the target completely using information in the manifest and the artifacts.
 
+## Environment Variables
 
-## Environment Variables 
-
-PolyTracker accepts configuration paramters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
+PolyTracker accepts configuration parameters in the form of environment variables to avoid recompiling target programs. The current environment variables PolyTracker supports is: 
 
 ```
 POLYPATH: The path to the file to mark as tainted 
@@ -156,12 +170,12 @@ POLYEND: End offset to track
 
 POLYOUTPUT: Provides a path/prefix to output polytracker information too
 
-POLYCONFIG: Provides a path to a JSON file specifying setings
+POLYCONFIG: Provides a path to a JSON file specifying settings
 
-WLLVM_ARTIFACT_STORE: Provides a path to an exisiting directory to store artifact/manifest for all build targets
+WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
 ```
 
-## Configuration Files 
+## Configuration Files
 
 Rather than setting environment variables on every run, you can make a configuration file.
 
@@ -172,9 +186,9 @@ Example:
     "POLYEND": 3,
     "POLYTTL": 16
 }
-``` 
+```
 
-Polytracker will search for config files in the following way: 
+Polytracker will search for config files in the following way:
 1. If POLYCONFIG is specified, it will grab it from there
 2. Checks current directory there is a polytracker_config.json
 3. Checks the .config directory under the users home ("~/.config/polytracker/polytracker_config.json")
@@ -187,7 +201,7 @@ be thrown.
 
 The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in a future release.)
 
-The instrumented software will write its output to `polytracker_process_sets.json` and 
+The instrumented software will write its output to `polytracker_process_sets.json` and
 `polytracker_forest.bin` in the current directory.
 
 For example, with our instrumented version of MuPDF, run
@@ -198,19 +212,19 @@ On program exit, those artifacts will be created in the current directory.
 These artifacts can be inspected and manipulated by the `polytracker` tool on the host system.
 The artifacts are documented [here.](docs/ARTIFACTS.md)
 
-The optional `POLYTRACE` enviornment variable can be set to `POLYTRACE=1` to produce a basic-block
+The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
 level trace of the program. This trace data will be included in the output JSON file under the
 "`trace`" key.
 
-## Creating custom ignore lists from pre-built libraries 
+## Creating custom ignore lists from pre-built libraries
 
 Attempting to build large software projects can be time consuming, especially older/unsupported ones.
 It's even more time consuming to try and modify the build system such that it supports changes, like dfsan's/our instrumentation.
 
 There is a script located in `polytracker/scripts` that you can run on any ELF library and it will output a list of functions to ignore.
-We use this when we do not want to track information going through a specific library like libpng, or other sub components of a program. The `Dockerfile-listgen.demo` exists to build common open source libraries so we can create these lists. 
- 
-This script is a slightly tweaked version of what DataFlowSanitizer has, which focuses on ignoring system libraries. The original script can be found in `dfsan_rt`. 
+We use this when we do not want to track information going through a specific library like libpng, or other sub components of a program. The `Dockerfile-listgen.demo` exists to build common open source libraries so we can create these lists.
+
+This script is a slightly tweaked version of what DataFlowSanitizer has, which focuses on ignoring system libraries. The original script can be found in `dfsan_rt`.
 
 ## Current Status and Known Issues
 
@@ -218,16 +232,16 @@ Taints will not propagate through dynamically loaded libraries unless
 those libraries were compiled from source using PolyTracker, _or_
 there is specific support for the library calls implemented in
 PolyTracker. There _is_ currently support for propagating taint
-throught the majority of uninstrumented C standard library calls. 
+through the majority of uninstrumented C standard library calls.
 To be clear, programs that use uninstrumented functions will still run normally,
 however, operations performed by unsupported library calls will not
 propagate taint. We are currently working on adding robust support for
 C++ programs, but currently the best results will be from C programs.
 
-Snapshotting is currently deprecated and not supported in the latest version. 
+Snapshotting is currently deprecated and not supported in the latest version.
 
-If there are issues with Docker please do a system prune and build with --no-cache for both PolyTracker 
-and whatever demo you are trying to run. 
+If there are issues with Docker please do a system prune and build with --no-cache for both PolyTracker
+and whatever demo you are trying to run.
 
 The worst case performance of PolyTracker is exercised when a single
 byte in memory is simultaneously tainted by a large number of input
@@ -242,7 +256,7 @@ This research was developed by [Trail of
 Bits](https://www.trailofbits.com/) with funding from the Defense
 Advanced Research Projects Agency (DARPA) under the SafeDocs program
 as a subcontractor to [Galois](https://galois.com). It is licensed
-under the [Apache 2.0 lisense](LICENSE). © 2019, Trail of Bits.
+under the [Apache 2.0 license](LICENSE). © 2019, Trail of Bits.
 
 ## Maintainers
 [Carson Harmon](https://github.com/notBD)<br />
