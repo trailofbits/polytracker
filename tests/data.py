@@ -43,7 +43,7 @@ def run_natively(*args, **kwargs) -> int:
             # write to a different path inside the container to speed things up on macOS:
             old_polydb_path = env["POLYDB"]
             env["POLYDB"] = "/polytracker.db"
-            args = ["bash", "-c", " ".join(args + (";", "mv", "/polytracker.db", old_polydb_path))]
+            args = tuple(["bash", "-c", " ".join(args + (";", "mv", "/polytracker.db", old_polydb_path))])
         return docker_container().run(  # type: ignore
             *args,
             **kwargs,

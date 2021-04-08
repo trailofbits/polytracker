@@ -88,7 +88,7 @@ def validate_execute_target(
         db_path.unlink()
     if input_bytes is None:
         input_path = to_native_path(TEST_DATA_PATH)
-        tmp_input_file: Optional[NamedTemporaryFile] = None
+        tmp_input_file = None
     else:
         tmp_input_file = NamedTemporaryFile(dir=str(TEST_DATA_DIR), delete=False)
         tmp_input_file.write(input_bytes)
