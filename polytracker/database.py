@@ -448,7 +448,7 @@ class DBProgramTrace(ProgramTrace):
         engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
         db = DBProgramTrace(session_maker())
-        if sum(1 for _ in db.inputs) > 1:
+        if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
             raise ValueError(f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
                              "database was reused for more than one run of the instrumented binary.\nThis feature is "
                              "not yet fully implemented.\nPlease track this GitHub issue for further details and "
