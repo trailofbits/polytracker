@@ -69,20 +69,10 @@ def polytracker_version_string() -> str:
 
 
 CONSOLE_SCRIPTS = [
-    'polytracker = polytracker.__main__:main'
+    'polytracker = polytracker.__main__:main',
+    'polybuild = polytracker.build:main',
+    'polybuild++ = polytracker.build:main_plus_plus'
 ]
-
-if (
-        platform.system() != "Linux" or
-        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") == "0" or
-        os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") == ""
-):
-    # We are not installing inside the Docker container---in which polybuild can run natively---so
-    # add our special polybuild script to run it from within Docker:
-    CONSOLE_SCRIPTS.extend([
-        'polybuild = polytracker.build:main',
-        'polybuild++ = polytracker.build:main_plus_plus'
-    ])
 
 setup(
     name='polytracker',

@@ -20,9 +20,9 @@ class PolyBuild(Command):
 
     def run(self, args: argparse.Namespace):
         if getattr(args, "c++"):
-            cmd = "polybuild++"
+            cmd = "polybuild_script++"
         else:
-            cmd = "polybuild"
+            cmd = "polybuild_script"
         args = [cmd] + args.args
         if CAN_RUN_NATIVELY:
             return subprocess.call(args)  # type: ignore

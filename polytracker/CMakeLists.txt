@@ -12,8 +12,7 @@ add_subdirectory(src)
 install(DIRECTORY "./abi_lists" DESTINATION ${POLYTRACK_CXX_DIR})
 add_subdirectory(custom_abi)
 
-install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR} RENAME "polybuild")
-install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR} RENAME "polybuild++")
+install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR})
 
 macro(install_symlink filepath sympath)
     install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${filepath} ${sympath})")
@@ -21,5 +20,5 @@ macro(install_symlink filepath sympath)
 endmacro(install_symlink)
 
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
-install_symlink(../share/polytracker/bin/polybuild ${CMAKE_INSTALL_PREFIX}/bin/polybuild)
-install_symlink(../share/polytracker/bin/polybuild ${CMAKE_INSTALL_PREFIX}/bin/polybuild++)
+install_symlink(../share/polytracker/bin/polybuild.py ${CMAKE_INSTALL_PREFIX}/bin/polybuild_script)
+install_symlink(../share/polytracker/bin/polybuild.py ${CMAKE_INSTALL_PREFIX}/bin/polybuild_script++)
