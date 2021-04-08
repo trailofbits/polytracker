@@ -298,3 +298,9 @@ def test_cxx_vector(program_trace: ProgramTrace):
         byte_offset.offset == 0
         for byte_offset in program_trace.get_function("main").taints()
     )
+
+
+@pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
+def test_fgetc(program_trace: ProgramTrace):
+    for event in program_trace:
+        print(event)
