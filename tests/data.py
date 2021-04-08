@@ -30,16 +30,27 @@ def run_natively(*args, **kwargs) -> int:
     if CAN_RUN_NATIVELY:
         return subprocess.call(args, **kwargs)
     else:
+        if "env" in kwargs:
+            env = kwargs["env"]
+            del kwargs["env"]
+        else:
+            env = {}
         sys.stderr.write(
             f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n"
         )
-        return docker_container().run(  # type: ignore  # type: ignore
+        if "POLYDB" in env:
+            # write to a different path inside the container to speed things up on macOS:
+            old_polydb_path = env["POLYDB"]
+            env["POLYDB"] = "/polytracker.db"
+            args = ["bash", "-c", " ".join(args + (";", "mv", "/polytracker.db", old_polydb_path))]
+        return docker_container().run(  # type: ignore
             *args,
             **kwargs,
             interactive=False,
             stdout=sys.stdout,
             stderr=sys.stderr,
             cwd=str(Path(__file__).parent.parent),
+            env=env
         )
 
 

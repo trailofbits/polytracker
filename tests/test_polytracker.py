@@ -90,13 +90,14 @@ def validate_execute_target(
         "POLYPATH": to_native_path(TEST_DATA_PATH),
         "POLYDB": to_native_path(db_path),
         "POLYTRACE": "1",
+        "POLYFUNC": "1"
     }
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
     try:
         ret_val = run_natively(
-            *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)], env=env
+            env=env, *[to_native_path(target_bin_path), to_native_path(TEST_DATA_PATH)]
         )
     finally:
         if tmp_config.exists():
