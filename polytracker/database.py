@@ -447,7 +447,14 @@ class DBProgramTrace(ProgramTrace):
         """loads a trace from the database emitted by an instrumented binary"""
         engine = create_engine(f"sqlite:///{db_path!s}")
         session_maker = sessionmaker(bind=engine)
-        return DBProgramTrace(session_maker())
+        db = DBProgramTrace(session_maker())
+        if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
+            raise ValueError(f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
+                             "database was reused for more than one run of the instrumented binary.\nThis feature is "
+                             "not yet fully implemented.\nPlease track this GitHub issue for further details and "
+                             "progress:\n    https://github.com/trailofbits/polytracker/issues/6353\nIn the mean time, "
+                             "you should use a separate database for every instrumented run of a binary.")
+        return db
 
     def __len__(self) -> int:
         return self.session.query(DBTraceEvent).count()

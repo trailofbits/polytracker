@@ -159,7 +159,7 @@ class DockerContainer:
         if not self.exists():
             if build_if_necessary:
                 if self.dockerfile.exists():
-                    self.rebuild()
+                    self.rebuild(nocache=True)
                 else:
                     self.pull()
                 if not self.exists():
@@ -259,7 +259,7 @@ class DockerContainer:
             pass
         raise ImageNotFound(name)
 
-    def rebuild(self, nocache: bool = False):
+    def rebuild(self, nocache: bool = False, tag_as_latest: bool = True):
         if not self.dockerfile.exists():
             raise ValueError(
                 "Could not find the Dockerfile. This likely means PolyTracker was installed from PyPI "
@@ -312,6 +312,8 @@ class DockerContainer:
                                     t.update(new_line - last_line)
                                     last_line = new_line
                         t.write(line["stream"].replace("\n", "").strip())
+        if tag_as_latest:
+            cli.tag(self.name, self.image_name, "latest")
 
 
 class DockerCommand(Command):
@@ -416,6 +418,13 @@ class DockerRebuild(DockerSubcommand):
             action="store_true",
             help="do not used cached Docker state when rebuilding",
         )
+        parser.add_argument(
+            "--no-tag-latest",
+            action="store_true",
+            help=f"by default, the rebuilt image will be tagged as both trailofbits/polytracker:{polytracker_version()}"
+                 " as well as trailofbits/polytracker:latest. This option will only tag it by the version and not"
+                 " tag it as :latest."
+        )
 
     def run(self, args):
         if not self.container.dockerfile.exists():
@@ -434,7 +443,7 @@ or download the latest prebuilt Docker image for your preexisting PolyTracker in
 """
             )
             return 1
-        self.container.rebuild(nocache=args.no_cache)
+        self.container.rebuild(nocache=args.no_cache, tag_as_latest=not args.no_tag_latest)
 
 
 class DockerRun(DockerSubcommand):
@@ -496,7 +505,22 @@ class DockerRun(DockerSubcommand):
             if option.lower() == "n":
                 break
             elif option.lower() == "y" or option == "":
-                container.rebuild()
+                sys.stderr.write(
+                    f"By default, the new image will be tagged as trailofbits/polytracker:{polytracker_version()}."
+                )
+                while True:
+                    sys.stderr.write(
+                        "\nWould you like to also tag it as trailofbits/polytracker:latest? [Yn] "
+                    )
+                    sys.stderr.flush()
+                    option = input()
+                    if option.lower() == "n":
+                        tag_as_latest = False
+                        break
+                    elif option.lower() == "y" or option == "":
+                        tag_as_latest = True
+                        break
+                container.rebuild(nocache=True, tag_as_latest=tag_as_latest)
                 break
         return container.run(
             *args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs
