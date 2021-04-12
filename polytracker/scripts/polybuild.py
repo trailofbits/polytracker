@@ -139,15 +139,16 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = ["opt", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={ABI_LIST_PATH!s}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [str(bitcode_file), "-o", str(output_bc)]
+    print(opt_command)
     ret = subprocess.call(opt_command)
     assert ret == 0
-    opt_command = ["opt", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
     for item in ignore_lists:
         opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
     opt_command += [str(output_bc), "-o", str(output_bc)]
