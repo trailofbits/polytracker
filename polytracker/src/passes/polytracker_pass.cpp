@@ -33,30 +33,33 @@ static llvm::cl::opt<int> file_id(
 
 namespace polytracker {
 
+bool op_check(llvm::Value *inst) {
+  // logOp(&CI, taint_cmp_log);
+  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() ||
+      inst->getType()->isArrayTy() || inst->getType()->isDoubleTy() ||
+      inst->getType()->isFloatTy() || inst->getType()->isFloatingPointTy() ||
+      inst->getType()->isPointerTy()) {
+    return true;
+  }
+  return false;
+}
+
+// On binary ops
 void PolyInstVisitor::logOp(llvm::Instruction *inst,
                             llvm::FunctionCallee &callback) {
-  // Should never fail
-  if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() ||
-      inst->getType()->isArrayTy()) {
+  auto first_operand = inst->getOperand(0);
+  auto second_operand = inst->getOperand(1);
+  if (op_check(first_operand) || op_check(second_operand)) {
     return;
   }
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext &context = mod->getContext();
-  llvm::Value *get_taint;
-  if (inst->getType()->isDoubleTy() || inst->getType()->isFloatTy()) {
-    llvm::Value *cast = IRB.CreateFPToSI(inst, shadow_type);
-    get_taint = IRB.CreateCall(dfsan_get_label, cast);
-  } else if (inst->getType()->isPointerTy()) {
-    llvm::Value *hail = IRB.CreateBitCast(inst, shadow_type);
-    get_taint = IRB.CreateCall(dfsan_get_label, hail);
-  } else if (inst->getType() == shadow_type) {
-    get_taint = inst;
-  } else {
-    // Integer of a different size, extend/shrink.
-    llvm::Value *mary = IRB.CreateSExtOrTrunc(inst, shadow_type);
-    // llvm::Value *hail = IRB.CreateBitCast(mary, int32_ty);
-    get_taint = IRB.CreateCall(dfsan_get_label, mary);
-  }
+
+  llvm::Value *int_val =
+      IRB.CreateSExtOrTrunc(inst->getOperand(0), shadow_type);
+  llvm::Value *int_val_two =
+      IRB.CreateSExtOrTrunc(inst->getOperand(1), shadow_type);
+
   if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
     std::cerr << "Error! cmp parent block not in block_map" << std::endl;
     exit(1);
@@ -68,15 +71,16 @@ void PolyInstVisitor::logOp(llvm::Instruction *inst,
       llvm::IntegerType::getInt32Ty(context), findex, false);
   llvm::Value *BlockIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), bindex, false);
-  CallInst *Call = IRB.CreateCall(callback, {get_taint, FuncIndex, BlockIndex});
+  CallInst *Call =
+      IRB.CreateCall(callback, {int_val, int_val_two, FuncIndex, BlockIndex});
 }
 
 void PolyInstVisitor::visitCmpInst(llvm::CmpInst &CI) {
   logOp(&CI, taint_cmp_log);
 }
 
-void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &i) {
-  logOp(&i, taint_op_log);
+void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
+  logOp(&Op, taint_op_log);
 }
 
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
@@ -270,9 +274,9 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
 
   // Return type, arg types, is vararg
-  auto taint_log_fn_ty =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                              {shadow_type, shadow_type, shadow_type}, false);
+  auto taint_log_fn_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context),
+      {shadow_type, shadow_type, shadow_type, shadow_type}, false);
   taint_op_log =
       mod.getOrInsertFunction("__polytracker_log_taint_op", taint_log_fn_ty);
   taint_cmp_log =
