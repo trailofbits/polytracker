@@ -325,7 +325,12 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
   long offset = ftell(fd);
   char *ret = fgets(str, count, fd);
 #ifdef DEBUG_INFO
-  fprintf(stderr, "fgets %p, range is %ld, %ld \n", fd, offset, strlen(ret));
+  if (ret == nullptr) {
+    fprintf(stderr, "fgets %p, range is %ld, %dd \n", fd, offset, 0);
+
+  } else {
+    fprintf(stderr, "fgets %p, range is %ld, %ld \n", fd, offset, strlen(ret));
+  }
 #endif
   if (ret && isTrackingSource(fileno(fd))) {
     int len = strlen(ret);
@@ -440,6 +445,7 @@ EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
 }
 
 EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
+  std::cout << "EXITING " << std::endl;
   polytracker_end();
   exit(ret_code);
 }
