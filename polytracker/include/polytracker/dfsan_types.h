@@ -19,6 +19,14 @@
 // Copy declarations from public sanitizer/dfsan_interface.h header here.
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) dfsan_label;
 
+// From sanitizer internals
+typedef unsigned int u32;
+struct atomic_uint32_t {
+  typedef u32 Type;
+  volatile Type val_dont_use;
+};
+typedef atomic_uint32_t atomic_dfsan_label;
+
 // An unsigned int big enough to address a dfsan label:
 typedef PPCAT(PPCAT(uint, DFSAN_LABEL_BITS), _t) uint_dfsan_label_t;
 

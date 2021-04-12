@@ -4,6 +4,9 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+atomic_dfsan_label *getUnionEntry(const dfsan_label &l1, const dfsan_label &l2);
+void logUnion(const dfsan_label &l1, const dfsan_label &l2,
+              const dfsan_label &union_label, const decay_val &init_decay);
 
 void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                       int byte_end, const char *name);

@@ -9,6 +9,7 @@
 #include <sanitizer/dfsan_interface.h>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 extern decay_val taint_node_ttl;
@@ -17,6 +18,9 @@ extern decay_val taint_node_ttl;
 std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>>
     union_table;
 std::mutex union_table_lock;
+
+std::unordered_map<uint64_t, atomic_dfsan_label> new_table;
+std::mutex new_table_lock;
 
 std::unordered_map<int, std::string> fd_name_map;
 std::unordered_map<std::string, std::pair<int, int>> track_target_name_map;
@@ -123,12 +127,14 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
   new_node->decay = taint_node_ttl;
   storeCanonicalMap(output_db, input_id, new_label, file_byte_offset);
   storeTaintForestNode(output_db, input_id, new_label, 0, 0);
+  std::cout << "Created new label!: " << new_label << std::endl;
   return new_label;
 }
 
 [[nodiscard]] dfsan_label createReturnLabel(const int file_byte_offset,
                                             std::string &name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
+  std::cout << "Created ret label: " << ret_label << std::endl;
   // TODO (Carson) is this [start, end]?
   storeTaintedChunk(output_db, input_id, file_byte_offset, file_byte_offset);
   return ret_label;
@@ -166,6 +172,8 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
     if (byte_end < 0 ||
         (curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
       dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
+      std::cout << "New label: " << new_label << " curr_byte: " << curr_byte
+                << std::endl;
       dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
 
       // Log that we tainted data within this function from a taint source etc.
@@ -192,66 +200,77 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
   }
 }
 
-[[nodiscard]] static inline dfsan_label
-unionLabels(const dfsan_label &l1, const dfsan_label &l2,
-            const decay_val &init_decay) {
-  dfsan_label ret_label = dfsan_create_label(nullptr, nullptr);
-  checkMaxLabel(ret_label);
-  taint_node_t *new_node = getTaintNode(ret_label);
+void logUnion(const dfsan_label &l1, const dfsan_label &l2,
+              const dfsan_label &union_label, const decay_val &init_decay) {
+  taint_node_t *new_node = getTaintNode(union_label);
   new_node->p1 = l1;
   new_node->p2 = l2;
   new_node->decay = init_decay;
-  storeTaintForestNode(output_db, input_id, ret_label, l1, l2);
-  return ret_label;
+  storeTaintForestNode(output_db, input_id, union_label, l1, l2);
+  std::cout << "Made union label: " << union_label << std::endl;
 }
 
-[[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
-  // If sanitizer debug is on, this checks that l1 != l2
-  // DCHECK_NE(l1, l2);
-
-  /* These checks are also called earlier in polytracker-llvm, so we don't need
-   * to do it here:
-   */
-  // if (l1 == 0) {
-  //   return l2;
-  // }
-  // if (l2 == 0) {
-  //   return l1;
-  // }
-
-  /* We don't need to explicitly check for ordering, because the caller in
-   * polytracker-llvm already guarantees that l1 < l2:
-   */
-  //  if (l1 > l2) {
-  //    std::swap(l1, l2);
-  //  }
-
-  // TODO (Carson) can we remove this lock somehow?
-  const std::lock_guard<std::mutex> guard(union_table_lock);
-  // Quick union table check
-  if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
-    auto val = union_table[l1].find(l2);
-    return val->second;
+atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
+                                  const dfsan_label &l2) {
+  std::lock_guard<std::mutex> guard(new_table_lock);
+  uint64_t key = (static_cast<uint64_t>(l1) << 32) | l2;
+  if (new_table.find(key) == new_table.end()) {
+    new_table[key] = {0};
+    return &new_table[key];
   }
-
-  // Check if l2 has l1 as a parent.
-  auto l2_node = getTaintNode(l2);
-  if (l2_node->p1 == l1 || l2_node->p2 == l1) {
-    return l2;
-  }
-
-  // This calculates the average of the two decays, and then decreases it by a
-  // factor of 2.
-  const decay_val max_decay =
-      (getTaintNode(l1)->decay + getTaintNode(l2)->decay) / 4;
-  if (max_decay == 0) {
-    return 0;
-  }
-
-  dfsan_label label = unionLabels(l1, l2, max_decay);
-  (union_table[l1])[l2] = label;
-  return label;
+  return &new_table[key];
 }
+
+// [[nodiscard]] dfsan_label createUnionLabel(dfsan_label l1, dfsan_label l2) {
+//   // If sanitizer debug is on, this checks that l1 != l2
+//   // DCHECK_NE(l1, l2);
+
+//   /* These checks are also called earlier in polytracker-llvm, so we don't
+//   need
+//    * to do it here:
+//    */
+//   // if (l1 == 0) {
+//   //   return l2;
+//   // }
+//   // if (l2 == 0) {
+//   //   return l1;
+//   // }
+
+//   /* We don't need to explicitly check for ordering, because the caller in
+//    * polytracker-llvm already guarantees that l1 < l2:
+//    */
+//   //  if (l1 > l2) {
+//   //    std::swap(l1, l2);
+//   //  }
+
+//   // TODO (Carson) can we remove this lock somehow?
+//   const std::lock_guard<std::mutex> guard(union_table_lock);
+//   // Quick union table check
+//   if ((union_table[l1]).find(l2) != (union_table[l1]).end()) {
+//     auto val = union_table[l1].find(l2);
+//     std::cout << "Found a union " << val->second << std::endl;
+//     return val->second;
+//   }
+
+//   // Check if l2 has l1 as a parent.
+//   auto l2_node = getTaintNode(l2);
+//   if (l2_node->p1 == l1 || l2_node->p2 == l1) {
+//     return l2;
+//   }
+
+//   // This calculates the average of the two decays, and then decreases it by
+//   a
+//   // factor of 2.
+//   const decay_val max_decay =
+//       (getTaintNode(l1)->decay + getTaintNode(l2)->decay) / 4;
+//   if (max_decay == 0) {
+//     return 0;
+//   }
+
+//   dfsan_label label = unionLabels(l1, l2, max_decay);
+//   (union_table[l1])[l2] = label;
+//   return label;
+// }
 
 [[nodiscard]] bool taintData(const int &fd, const char *mem, int offset,
                              int len) {
