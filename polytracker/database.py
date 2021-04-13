@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
+from sqlalchemy.orm.query import Query
 from sqlalchemy import (
     BigInteger,
     BLOB,
@@ -58,6 +59,17 @@ class EventType(IntEnum):
 class EdgeType(IntEnum):
     FORWARD = 0
     BACKWARD = 1
+
+
+def stream_results(query: Query, window_size: int = 1000) -> Iterator:
+    start = 0
+    while True:
+        stop = start + window_size
+        results = query.slice(start, stop).all()
+        if len(results) == 0:
+            break
+        yield from results
+        start += window_size
 
 
 class DBInput(Base, Input):  # type: ignore
@@ -460,13 +472,13 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        return iter(
-            self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()).all()
+        return stream_results(
+            self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc())
         )
 
     @property
     def functions(self) -> Iterable[Function]:
-        return self.session.query(DBFunction).all()
+        return self.session.query(DBFunction)
 
     def get_function(self, name: str) -> Function:
         try:
@@ -482,10 +494,12 @@ class DBProgramTrace(ProgramTrace):
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        return self.session.query(DBBasicBlock).all()
+        return self.session.query(DBBasicBlock)
 
     def access_sequence(self) -> Iterator[TaintAccess]:
-        yield from self.session.query(DBTaintAccess).order_by(DBTaintAccess.event_id.asc()).all()
+        yield from stream_results(
+            self.session.query(DBTaintAccess).order_by(DBTaintAccess.event_id.asc())
+        )
 
     @property
     def num_accesses(self) -> int:
@@ -493,7 +507,7 @@ class DBProgramTrace(ProgramTrace):
 
     @property
     def inputs(self) -> Iterable[Input]:
-        return self.session.query(DBInput).all()
+        return self.session.query(DBInput)
 
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
