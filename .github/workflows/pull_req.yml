@@ -1,15 +1,17 @@
+name: Integration Tests
+
 on: pull_request
 
 jobs:
+  # TODO: Consider building the base image as a separate job and caching the result
   integration_tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        example: [mupdf,poppler,qpdf]
     steps:
       - uses: actions/checkout@v2
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Build the mupdf demo Docker image
-        run: docker build examples --file examples/Dockerfile-mupdf.demo --tag trailofbits/polytracker-demo-mupdf
-      - name: Build the poppler demo Docker image
-        run: docker build examples --file examples/Dockerfile-poppler.demo --tag trailofbits/polytracker-demo-poppler
-      - name: Build the qpdf demo Docker image
-        run: docker build examples --file examples/Dockerfile-qpdf.demo --tag trailofbits/polytracker-demo-qpdf
+      - name: Build the example Docker image
+        run: docker build --no-cache examples --file examples/Dockerfile-${{ matrix.example }}.demo --tag trailofbits/polytracker-demo-${{ matrix.example }}
