@@ -314,33 +314,43 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def next_event(self) -> Optional["TraceEvent"]:
-        session = Session.object_session(self)
-        try:
-            return (
-                session.query(DBTraceEvent)
-                .filter(
-                    DBTraceEvent.thread_event_id == self.thread_event_id + 1,
-                    DBTraceEvent.thread_id == self.thread_id,
+        if not hasattr(self, "_next_event"):
+            session = Session.object_session(self)
+            try:
+                setattr(
+                    self,
+                    "_next_event",
+                    session.query(DBTraceEvent)
+                    .filter(
+                        DBTraceEvent.thread_event_id == self.thread_event_id + 1,
+                        DBTraceEvent.thread_id == self.thread_id,
+                    )
+                    .one()
                 )
-                .one()
-            )
-        except NoResultFound:
-            return None
+                setattr(self._next_event, "_prev_event", self)
+            except NoResultFound:
+                setattr(self, "_next_event", None)
+        return self._next_event
 
     @property
     def previous_event(self) -> Optional["TraceEvent"]:
-        session = Session.object_session(self)
-        try:
-            return (
-                session.query(DBTraceEvent)
-                .filter(
-                    DBTraceEvent.thread_event_id == self.thread_event_id - 1,
-                    DBTraceEvent.thread_id == self.thread_id,
+        if not hasattr(self, "_prev_event"):
+            session = Session.object_session(self)
+            try:
+                setattr(
+                    self,
+                    "_prev_event",
+                    session.query(DBTraceEvent)
+                    .filter(
+                        DBTraceEvent.thread_event_id == self.thread_event_id - 1,
+                        DBTraceEvent.thread_id == self.thread_id,
+                    )
+                    .one()
                 )
-                .one()
-            )
-        except NoResultFound:
-            return None
+                setattr(self._prev_event, "_next_event", self)
+            except NoResultFound:
+                setattr(self, "_prev_event", None)
+        return self._prev_event
 
     @property
     def next_global_event(self) -> Optional["TraceEvent"]:
