@@ -14,6 +14,6 @@ RUN make install
 WORKDIR bin
 
 RUN get-bc -b opj_decompress
-RUN get-bc -b libopenjp2.a 
+RUN get-bc -b libopenjp2.a
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN ${CC} --instrument-bitcode -f exec.bc -o opj_decompress_track --libs z m rt pthread libopenjp2.a
+RUN ${CC} --lower-bitcode -i exec.bc -o opj_decompress_track --libs z m rt pthread libopenjp2.a

@@ -1,22 +1,29 @@
-import json
-from abc import ABCMeta
-from typing import Any, BinaryIO, cast, Dict, IO, Iterable, List, Optional, Protocol, Set, Union
+from abc import ABC, abstractmethod
+from argparse import ArgumentParser, Namespace, REMAINDER
+from collections import defaultdict
+from enum import IntFlag
+from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
+from typing import (
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Union,
+)
+import weakref
 
-from tqdm import tqdm
+from cxxfilt import demangle
 
-from .bitmap import Bitmap, BitmapValue
-from polytracker.cfg import DiGraph
-
-
-class TraceEventConstructor(Protocol):
-    def __call__(self, **kwargs) -> "TraceEvent":
-        ...
+from .cfg import DiGraph
+from .plugins import Command, Subcommand
+from .repl import PolyTrackerREPL
 
 
-EVENTS_BY_TYPE: Dict[str, TraceEventConstructor] = {}
-
-
-class BasicBlockType(Bitmap):
+class BasicBlockType(IntFlag):
     """
     Basic block types
 
@@ -24,37 +31,261 @@ class BasicBlockType(Bitmap):
 
     """
 
-    UNKNOWN = BitmapValue(0)
+    UNKNOWN = 0
     """We don't know what kind of BB this is"""
-    STANDARD = BitmapValue(1)
+    STANDARD = 1
     """A standard, unremarkable BB"""
-    CONDITIONAL = BitmapValue(2)
+    CONDITIONAL = 2
     """Any BB that contains a conditional branch"""
-    LOOP_ENTRY = BitmapValue(6)
+    LOOP_ENTRY = 6
     """A BB that is an entrypoint into a loop"""
-    LOOP_EXIT = BitmapValue(10)
+    LOOP_EXIT = 10
     """A BB that is an exit to a loop"""
-    FUNCTION_ENTRY = BitmapValue(16)
+    FUNCTION_ENTRY = 16
     """A BB that is the first inside of its function"""
-    FUNCTION_EXIT = BitmapValue(32)
+    FUNCTION_EXIT = 32
     """A BB that exits a function (i.e., it contains a return instruction)"""
-    FUNCTION_RETURN = BitmapValue(64)
+    FUNCTION_RETURN = 64
     """A BB that is executed immediately after a CallInst returns"""
-    FUNCTION_CALL = BitmapValue(128)
+    FUNCTION_CALL = 128
     """A BB that contains a CallInst"""
+
+
+class Input:
+    def __init__(
+            self,
+            uid: int,
+            path: str,
+            size: int,
+            track_start: int = 0,
+            track_end: Optional[int] = None,
+            content: Optional[bytes] = None
+    ):
+        self.uid: int = uid
+        self.path: str = path
+        self.size: int = size
+        self.track_start: int = track_start
+        if track_end is None:
+            self.track_end: int = size
+        else:
+            self.track_end = track_end
+        self.stored_content: Optional[bytes] = content
+
+    @property
+    def content(self) -> bytes:
+        if self.stored_content is not None:
+            return self.stored_content
+        elif not Path(self.path).exists():
+            raise ValueError(f"Input {self.uid} did not have its content stored to the database (the instrumented "
+                             f"binary was likely run with POLYSAVEINPUT=0) and the associated path {self.path!r} "
+                             "does not exist!")
+        with open(self.path, "rb") as f:
+            self.stored_content = f.read()
+        return self.stored_content
+
+    def __hash__(self):
+        return self.uid
+
+    def __eq__(self, other):
+        return isinstance(other, Input) and self.uid == other.uid and self.path == other.path
+
+
+class TaintedRegion:
+    def __init__(self, source: Input, offset: int, length: int):
+        self.source: Input = source
+        self.offset: int = offset
+        self.length: int = length
+
+    @property
+    def value(self) -> bytes:
+        return self.source.content[self.offset:self.offset+self.length]
+
+    def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
+        if isinstance(index_or_slice, slice):
+            if index_or_slice.step is not None and index_or_slice.step != 1:
+                raise ValueError("TaintedRegion only supports slices with step == 1")
+            start = slice.start
+            if start < 0:
+                start = max(self.length + start, 0)
+            stop = slice.stop
+            if stop < 0:
+                stop = self.length + stop
+            if start >= stop or start >= self.length or stop <= 0:
+                return TaintedRegion(source=self.source, offset=self.offset, length=0)
+            return TaintedRegion(source=self.source, offset=self.offset+start, length=stop-start)
+        elif index_or_slice < 0 or index_or_slice >= self.length:
+            raise IndexError(index_or_slice)
+        else:
+            return ByteOffset(source=self.source, offset=self.offset + index_or_slice)
+
+    def __bytes__(self):
+        return self.value
+
+    def __hash__(self):
+        return hash((self.source, self.offset))
+
+    def __eq__(self, other):
+        return isinstance(other, TaintedRegion) and self.source == other.source and self.offset == other.offset and \
+               self.length == other.length
+
+    def __lt__(self, other):
+        return isinstance(other, TaintedRegion) and \
+               (self.source.uid, self.offset, self.length) < (other.source.uid, other.offset, other.length)
+
+
+class ByteOffset(TaintedRegion):
+    def __init__(self, source: Input, offset: int):
+        super().__init__(source=source, offset=offset, length=1)
+
+
+class TaintDiff:
+    def __init__(self, taints1: "Taints", taints2: "Taints"):
+        self.taints1: Taints = taints1
+        self.taints2: Taints = taints2
+        self._only_in_first: Optional[List[ByteOffset]] = None
+        self._only_in_second: Optional[List[ByteOffset]] = None
+
+    def _diff(self):
+        if self._only_in_first is not None:
+            return
+        in_first = set(self.taints1)
+        in_second = set(self.taints2)
+        self._only_in_first = sorted(in_first - in_second)
+        self._only_in_second = sorted(in_second - in_first)
+
+    @property
+    def bytes_only_in_first(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_first  # type: ignore
+
+    @property
+    def regions_only_in_first(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_first, is_sorted=True)
+
+    @property
+    def bytes_only_in_second(self) -> List[ByteOffset]:
+        self._diff()
+        return self._only_in_second  # type: ignore
+
+    @property
+    def regions_only_in_second(self) -> Iterator[TaintedRegion]:
+        yield from Taints.to_regions(self.bytes_only_in_second, is_sorted=True)
+
+    def __bool__(self):
+        return bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)
+
+    def __eq__(self, other):
+        return isinstance(other, TaintDiff) and self.taints1 == other.taints1 and self.taints2 == other.taints2
+
+
+class Taints:
+    def __init__(self, byte_offsets: Iterable[ByteOffset]):
+        offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
+        for offset in byte_offsets:
+            offsets_by_source[offset.source].add(offset)
+        self._offsets_by_source: Dict[Input, List[ByteOffset]] = {
+            source: sorted(offsets)
+            for source, offsets in offsets_by_source.items()
+        }
+
+    def sources(self) -> Set[Input]:
+        return set(self._offsets_by_source.keys())
+
+    def from_source(self, source: Input) -> "Taints":
+        return Taints(self._offsets_by_source.get(source, ()))
+
+    def regions(self) -> Iterator[TaintedRegion]:
+        return Taints.to_regions(self, is_sorted=True)
+
+    @staticmethod
+    def to_regions(offsets: Iterable[ByteOffset], is_sorted: bool = False) -> Iterator[TaintedRegion]:
+        """Converts the list of byte offsets into contiguous regions."""
+        last_input: Optional[Input] = None
+        last_offset: Optional[ByteOffset] = None
+        region: Optional[TaintedRegion] = None
+        if not is_sorted:
+            offsets = sorted(offsets)
+        for offset in offsets:
+            if last_input is None:
+                last_input = offset.source
+            elif last_input != offset.source or (last_offset is not None and last_offset.offset != offset.offset - 1):
+                if region is not None:
+                    yield region
+                region = None
+            last_offset = offset
+            if region is None:
+                region = TaintedRegion(source=offset.source, offset=offset.offset, length=offset.length)
+            else:
+                region.length += offset.length
+        if region is not None:
+            yield region
+
+    def find(self, byte_sequence: Union[int, str, bytes]) -> Iterator[TaintedRegion]:
+        """Finds the start of any matching tainted byte sequence in this set of taints"""
+        if isinstance(byte_sequence, str):
+            byte_sequence = byte_sequence.encode("utf-8")
+        elif isinstance(byte_sequence, int):
+            byte_sequence = bytes([byte_sequence])
+        for region in self.regions():
+            offset = 0
+            while True:
+                content = region.value
+                offset = content.find(byte_sequence, offset)
+                if offset >= 0:
+                    yield region[offset:offset+len(byte_sequence)]
+                else:
+                    break
+
+    def diff(self, other: "Taints") -> TaintDiff:
+        return TaintDiff(self, other)
+
+    def __contains__(self, byte_sequence: Union[int, str, bytes]):
+        try:
+            next(iter(self.find(byte_sequence)))
+            return True
+        except StopIteration:
+            return False
+
+    def __len__(self):
+        return sum(map(len, self._offsets_by_source.values()))
+
+    def __iter__(self) -> Iterator[ByteOffset]:
+        for offsets in self._offsets_by_source.values():
+            yield from offsets
+
+    def __bool__(self):
+        return bool(len(self))
 
 
 class Function:
     def __init__(self, name: str, function_index: int):
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
-        self.function_index = function_index
+        self.function_index: int = function_index
+
+    @property
+    def demangled_name(self) -> str:
+        return demangle(self.name)
+
+    @abstractmethod
+    def taints(self) -> Taints:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def calls_to(self) -> Set["Function"]:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def called_from(self) -> Set["Function"]:
+        raise NotImplementedError()
 
     def __hash__(self):
         return self.function_index
 
     def __eq__(self, other):
-        return isinstance(other, Function) and self.function_index == other.function_index
+        return (
+            isinstance(other, Function) and self.function_index == other.function_index
+        )
 
     def __str__(self):
         return self.name
@@ -68,7 +299,11 @@ class BasicBlock:
         self.predecessors: Set[BasicBlock] = set()
         function.basic_blocks.append(self)
 
-    def is_loop_entry(self, trace: "PolyTrackerTrace") -> bool:
+    @abstractmethod
+    def taints(self) -> Taints:
+        raise NotImplementedError()
+
+    def is_loop_entry(self, trace: "ProgramTrace") -> bool:
         predecessors = set(p for p in self.predecessors if self.function == p.function)
         if len(predecessors) < 2:
             return False
@@ -78,9 +313,11 @@ class BasicBlock:
             return False
         return any(p not in dominators for p in predecessors)
 
-    def is_conditional(self, trace: "PolyTrackerTrace") -> bool:
+    def is_conditional(self, trace: "ProgramTrace") -> bool:
         # we are a conditional if we have at least two children in the same function and we are not a loop entry
-        return sum(1 for c in self.children if c.function == self.function) >= 2 and not self.is_loop_entry(trace)
+        return sum(
+            1 for c in self.children if c.function == self.function
+        ) >= 2 and not self.is_loop_entry(trace)
 
     def __hash__(self):
         return hash((self.function, self.index_in_function))
@@ -96,82 +333,65 @@ class BasicBlock:
         return f"{self.function!s}@{self.index_in_function}"
 
 
-class FunctionInvocation:
-    def __init__(self, function: Function, call: "FunctionCall", ret: "FunctionReturn"):
-        self.function: Function = function
-        self.call: FunctionCall = call
-        self.ret: FunctionReturn = ret
-
-
-class TraceEventMeta(ABCMeta):
-    def __init__(cls, name, bases, clsdict):
-        if len(cls.mro()) > 2 and not cls.__abstractmethods__ and hasattr(cls, "event_type"):
-            if cls.event_type in EVENTS_BY_TYPE:
-                raise ValueError(
-                    f"Class {cls.__name__} cannot register with event type {cls.event_type} because "
-                    f"that type is already used by {EVENTS_BY_TYPE[cls.event_type].__name__}"
-                )
-            EVENTS_BY_TYPE[cls.event_type] = cls
-        super().__init__(name, bases, clsdict)
-
-
-class TraceEvent(metaclass=TraceEventMeta):
-    event_type: str = "TraceEvent"
-
-    def __init__(self, uid: int, previous_uid: Optional[int] = None, next_uid: Optional[int] = None):
+class TraceEvent:
+    def __init__(self, uid: int):
         self.uid: int = uid
-        self.previous_uid: Optional[int] = previous_uid
-        self.next_uid: Optional[int] = next_uid
-        self._trace: Optional[PolyTrackerTrace] = None
 
     @property
-    def has_trace(self) -> bool:
-        return self._trace is not None
+    @abstractmethod
+    def basic_block(self) -> BasicBlock:
+        raise NotImplementedError()
 
     @property
-    def trace(self) -> "PolyTrackerTrace":
-        if self._trace is None:
-            raise RuntimeError(
-                f"The trace for event {self!r} has not been set!" "Did you call `.trace` before the entire trace was loaded?"
-            )
-        return self._trace
+    def function(self) -> Function:
+        return self.basic_block.function
 
-    @trace.setter
-    def trace(self, pttrace: "PolyTrackerTrace"):
-        if self._trace is not None:
-            raise ValueError(
-                f"Cannot assign event {self} to trace {pttrace} because " "it is already assigned to trace {self._trace}"
-            )
-        self._trace = pttrace
-
-    def initialized(self):
-        """Callback for when all events in a PolyTrackerTrace are ready for use"""
-        pass
+    @abstractmethod
+    def taints(self) -> Taints:
+        raise NotImplementedError()
 
     @property
-    def previous(self) -> Optional["TraceEvent"]:
-        if self.previous_uid is None:
-            return None
-        else:
-            return self.trace[self.previous_uid]
+    @abstractmethod
+    def previous_event(self) -> Optional["TraceEvent"]:
+        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def next_event(self) -> Optional["TraceEvent"]:
-        if self.next_uid is None:
-            return None
-        else:
-            return self.trace[self.next_uid]
+        raise NotImplementedError()
 
-    @staticmethod
-    def parse(json_obj: Dict[str, Any]) -> "TraceEvent":
-        if "type" not in json_obj:
-            raise KeyError('The JSON object must contain a key "type" for the event type')
-        elif json_obj["type"] not in EVENTS_BY_TYPE:
-            raise ValueError(f"Unknown event type {json_obj['type']}; valid types are {list(EVENTS_BY_TYPE.keys())!r}")
-        event_type: str = json_obj["type"]
-        arguments: Dict[str, Any] = json_obj.copy()
-        del arguments["type"]
-        return EVENTS_BY_TYPE[event_type](**arguments)
+    @property
+    def next_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        next_event = self.next_event
+        while next_event is not None:
+            if isinstance(next_event, ControlFlowEvent):
+                return next_event
+            next_event = next_event.next_event
+        return None
+
+    @property
+    def previous_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        previous_event = self.previous_event
+        while previous_event is not None:
+            if isinstance(previous_event, ControlFlowEvent):
+                return previous_event
+            previous_event = previous_event.previous_event
+        return None
+
+    @property
+    @abstractmethod
+    def next_global_event(self) -> Optional["TraceEvent"]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def previous_global_event(self) -> Optional["TraceEvent"]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def function_entry(self) -> Optional["FunctionEntry"]:
+        raise NotImplementedError()
 
     def __eq__(self, other):
         return isinstance(other, TraceEvent) and other.uid == self.uid
@@ -183,308 +403,199 @@ class TraceEvent(metaclass=TraceEventMeta):
         return self.uid
 
 
-class FunctionCall(TraceEvent):
-    event_type = "FunctionCall"
+class ControlFlowEvent(TraceEvent):
+    pass
 
-    def __init__(
-        self,
-        uid: int,
-        name: str,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        return_uid: Optional[int] = None,
-        consumes_bytes: bool = True,
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
-        self.name = name
-        self.function_return: Optional[FunctionReturn] = None
-        self.entrypoint: Optional[BasicBlockEntry] = None
-        self.consumes_bytes: bool = consumes_bytes
-        self.return_uid: Optional[int] = return_uid
 
-    @TraceEvent.trace.setter  # type: ignore
-    def trace(self, pttrace: "PolyTrackerTrace"):
-        TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if self.return_uid is not None and self.function_return is None:
-            self.function_return = self.trace[self.return_uid]
-        try:
-            self.caller.called_function = self
-        except TypeError as e:
-            pass
+class FunctionEntry(ControlFlowEvent):
+    def __init__(self, uid: int):
+        super().__init__(uid=uid)
 
     @property
     def caller(self) -> "BasicBlockEntry":
-        prev = self.previous
-        if isinstance(prev, FunctionReturn) and prev.function_call is not None:
-            try:
-                return prev.function_call.caller
-            except TypeError:
-                pass
-        if not isinstance(prev, BasicBlockEntry):
-            raise TypeError(f"The previous event to {self} was expected to be a BasicBlockEntry but was in fact {prev}")
-        return prev
+        prev = self.previous_control_flow_event
+        while prev is not None:
+            if isinstance(prev, BasicBlockEntry):
+                return prev
+            elif isinstance(prev, FunctionReturn):
+                prev = prev.function_entry
+                if prev is None:
+                    break
+            prev = prev.previous_control_flow_event
+        raise ValueError(f"Unable to determine the caller for {self}")
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        if self.function_return is not None:
-            return self.function_return.returning_to
-        else:
-            return self.next_event
+    def entrypoint(self) -> Optional["BasicBlockEntry"]:
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            if next_event.function_entry != self:
+                raise ValueError(f"Unexpected basic block: {next_event}")
+            return next_event
+        return None
+
+    @property
+    @abstractmethod
+    def function_return(self) -> Optional["FunctionReturn"]:
+        raise NotImplementedError()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.name!r})"
+        return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
-class BasicBlockEntry(TraceEvent):
-    event_type = "BasicBlockEntry"
+class TaintAccess(TraceEvent):
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
 
-    def __init__(
-        self,
-        uid: int,
-        function_index: int,
-        bb_index: int,
-        global_index: int,
-        function_call_uid: Optional[int] = None,
-        function_name: Optional[str] = None,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        entry_count: int = 1,
-        consumed: Iterable[int] = (),
-        types: Iterable[str] = (),
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
-        if entry_count < 1:
-            raise ValueError("entry_count must be a natural number")
-        self.entry_count: int = entry_count
-        self._function_name: Optional[str] = function_name
-        self.function_call_uid: Optional[int] = function_call_uid
-        """The UID of the function containing this basic block"""
-        self.function_index: int = function_index
-        self.bb_index: int = bb_index
-        self.global_index: int = global_index
-        self.consumed: List[int] = sorted(consumed)
-        self.called_function: Optional[FunctionCall] = None
-        """The function this basic block calls"""
-        self.types: List[str] = list(types)
-        self.bb_type: BasicBlockType = cast(BasicBlockType, BasicBlockType.UNKNOWN)
-        for ty in types:
-            bb_type = BasicBlockType.get(ty.upper())
-            if bb_type is None:
-                raise ValueError(f"Unknown basic block type: {ty!r} in basic block entry {uid}")
-            self.bb_type |= bb_type
-        self.children: List[BasicBlockEntry] = []
+
+class BasicBlockEntry(ControlFlowEvent):
+    def entry_count(self) -> int:
+        """Calculates the number of times this basic block has been entered in the current stack frame"""
+        entry_count = 0
+        event = self.previous_control_flow_event
+        while event is not None and event != self.function_entry:
+            if isinstance(event, FunctionReturn):
+                event = event.function_entry
+            elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
+                entry_count += 1
+            if event is not None:
+                event = event.previous_control_flow_event
+        return entry_count
 
     @property
-    def containing_function(self) -> Optional[FunctionCall]:
-        if self.function_call_uid is not None:
-            try:
-                return self.trace[self.function_call_uid]
-            except KeyError:
-                return None
-        else:
-            return None
+    def called_function(self) -> Optional[FunctionEntry]:
+        """
+        Returns the function entry event called from this basic block, or None if this basic block does not call
+        a function
 
-    @property
-    def function_name(self) -> str:
-        if self._function_name is None:
-            func = self.containing_function
-            if func is None:
-                raise ValueError(f"The function name of {self!r} is not known!")
-            self._function_name = func.name
-        return self._function_name
+        """
+        next_event = self.previous_control_flow_event
+        if isinstance(next_event, FunctionEntry):
+            return next_event
+        return None
 
-    @TraceEvent.trace.setter  # type: ignore
-    def trace(self, pttrace: "PolyTrackerTrace"):
-        TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if BasicBlockType.FUNCTION_ENTRY in self.bb_type and isinstance(self.previous, FunctionCall):  # type: ignore
-            self.previous.entrypoint = self
-        if isinstance(self.previous, BasicBlockEntry):
-            self.previous.children.append(self)
+    def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
+        """Finds the next basic block in this function"""
+        next_event = self.next_control_flow_event
+        while next_event is not None:
+            if isinstance(next_event, BasicBlockEntry):
+                if next_event.function_entry == self.function_entry:
+                    return next_event
+                else:
+                    break
+            elif isinstance(next_event, FunctionEntry):
+                next_event = next_event.function_return
+                if next_event is None:
+                    break
+                next_event = next_event.next_control_flow_event
+            else:
+                break
+        return None
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
-        start_offset: Optional[int] = None
-        last_offset: Optional[int] = None
-        for offset in self.consumed:
-            if start_offset is None:
-                start_offset = last_offset = offset
-            elif start_offset + 1 != offset:
-                # this is not a contiguous byte sequence
-                # so yield the previous token
-                yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
-                start_offset = last_offset = offset
-            else:
-                # this is a contiguous byte sequence, so update its end
-                last_offset = offset
-        if start_offset is not None:
-            yield self.trace.inputstr[start_offset : last_offset + 1]  # type: ignore
-
-    @property
-    def basic_block(self) -> BasicBlock:
-        return self.trace.get_basic_block(self)
+        return tuple(r.value for r in self.taints().regions())
 
     def __str__(self):
-        return f"{self.basic_block!s}#{self.entry_count}"
+        return f"{self.basic_block!s}#{self.entry_count()}"
 
 
-class FunctionReturn(TraceEvent):
-    event_type = "FunctionReturn"
-
-    def __init__(
-        self,
-        uid: int,
-        name: str,
-        previous_uid: Optional[int] = None,
-        next_uid: Optional[int] = None,
-        call_event_uid: Optional[int] = None,
-        returning_to_uid: Optional[int] = None,
-    ):
-        super().__init__(uid=uid, previous_uid=previous_uid, next_uid=next_uid)
-        self.function_name: str = name
-        self.returning_to_uid: Optional[int] = returning_to_uid
-        self.call_event_uid: Optional[int] = call_event_uid
-        self._returning_to: Optional[BasicBlockEntry] = None
-        self._function_call: Optional[Union[FunctionCall, ValueError]] = None
+class FunctionReturn(ControlFlowEvent):
+    def __init__(self, uid: int):
+        super().__init__(uid=uid)
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}({self.uid!r}, {self.previous_uid!r}, {self.function_name!r}, "
-            f"{self.returning_to_uid!r})"
+            f"{self.__class__.__name__}({self.uid!r})"
         )
 
     @property
-    def returning_to(self) -> Optional[TraceEvent]:
-        if self._returning_to is None:
-            if self.returning_to_uid is None:
-                return self.next_event
-            self._returning_to = self.trace[self.returning_to_uid]
-        return self._returning_to
-
-    @TraceEvent.trace.setter  # type: ignore
-    def trace(self, pttrace: "PolyTrackerTrace"):
-        TraceEvent.trace.fset(self, pttrace)  # type: ignore
-        if self.function_call.function_return is None:
-            self.function_call.function_return = self
-        elif self.function_call.function_return is not self:
-            raise ValueError(
-                f"Function call {self.function_call} was expected to return to {self}, "
-                f"but instead returns to {self.function_call.function_return}"
-            )
+    def returning_to(self) -> Optional[BasicBlockEntry]:
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, BasicBlockEntry):
+            return next_event
+        return None
 
     @property
-    def function_call(self) -> FunctionCall:
-        if self._function_call is None:
-            if self.call_event_uid is not None:
-                fc = self.trace[self.call_event_uid]
-                if isinstance(fc, FunctionCall):
-                    self._function_call = fc
-                    return fc
-                else:
-                    self._function_call = ValueError(
-                        f"Function return {self!r} was associated with "
-                        f"function call uid {self.call_event_uid}, but this was "
-                        f"not a function call: {fc!r}"
-                    )
-                    raise self._function_call
-            prev: Optional[TraceEvent] = self.previous
-            subcalls = 0
-            while prev is not None:
-                if isinstance(prev, FunctionCall):
-                    if subcalls == 0:
-                        break
-                    else:
-                        subcalls -= 1
-                elif isinstance(prev, FunctionReturn):
-                    if prev._function_call is not None:
-                        if isinstance(prev._function_call, FunctionCall):
-                            prev = prev._function_call.caller.previous
-                        else:
-                            break
-                    else:
-                        subcalls += 1
-                prev = prev.previous  # type: ignore
-            if isinstance(prev, FunctionCall):
-                self._function_call = prev
-            else:
-                self._function_call = ValueError(f"Could not find the function call associated with return {self}")
-        if isinstance(self._function_call, ValueError):
-            raise self._function_call
-        return self._function_call  # type: ignore
+    def returning_from(self) -> Function:
+        entry = self.function_entry
+        if entry is None:
+            raise ValueError(f"Unable to determine the function entry object associated with function return {self!r}")
+        return entry.basic_block.function
 
 
-class PolyTrackerTrace:
-    def __init__(self, events: List[TraceEvent], inputstr: bytes):
-        self.events: List[TraceEvent] = sorted(events)
-        self.events_by_uid: Dict[int, TraceEvent] = {
-            event.uid: event for event in tqdm(events, leave=False, unit=" events", desc="building UID map")
-        }
-        self.entrypoint: Optional[BasicBlockEntry] = None
-        for event in tqdm(self.events, unit=" events", leave=False, desc="initializing trace events"):
-            if event.has_trace:
-                raise ValueError(f"Event {event} is already associated with trace {event.trace}")
-            event.trace = self
-            if self.entrypoint is None and isinstance(event, BasicBlockEntry):
-                self.entrypoint = event
-        self._functions_by_idx: Optional[Dict[int, Function]] = None
-        self._basic_blocks_by_idx: Optional[Dict[int, BasicBlock]] = None
-        self.inputstr: bytes = inputstr
-        self._cfg: Optional[DiGraph[BasicBlockEntry]] = None
+class ProgramTrace(ABC):
+    _cfg: Optional[DiGraph[BasicBlock]] = None
+    _func_cfg: Optional[DiGraph[Function]] = None
 
-    def __len__(self):
-        return len(self.events)
+    @abstractmethod
+    def __len__(self) -> int:
+        """Returns the total number of events in this trace"""
+        raise NotImplementedError()
 
-    def __iter__(self) -> Iterable[TraceEvent]:
-        return iter(self.events)
+    @abstractmethod
+    def __iter__(self) -> Iterator[TraceEvent]:
+        """Iterates over all of the events in this trace, in order"""
+        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def functions(self) -> Iterable[Function]:
-        if self._functions_by_idx is None:
-            _ = self.basic_blocks  # this populates the function mapping
-        return self._functions_by_idx.values()  # type: ignore
+        raise NotImplementedError()
 
     @property
+    @abstractmethod
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        if self._basic_blocks_by_idx is None:
-            self._basic_blocks_by_idx = {}
-            self._functions_by_idx = {}
-            last_bb: Optional[BasicBlock] = None
-            for event in self.events:
-                if isinstance(event, BasicBlockEntry):
-                    if event.function_index in self._functions_by_idx:
-                        function = self._functions_by_idx[event.function_index]
-                    else:
-                        function = Function(name=event.function_name, function_index=event.function_index)
-                        self._functions_by_idx[event.function_index] = function
-                    if event.global_index in self._basic_blocks_by_idx:
-                        new_bb = self._basic_blocks_by_idx[event.global_index]
-                    else:
-                        new_bb = BasicBlock(function=function, index_in_function=event.bb_index)
-                        self._basic_blocks_by_idx[event.global_index] = new_bb
-                    if last_bb is not None:
-                        new_bb.predecessors.add(last_bb)
-                        last_bb.children.add(new_bb)
-                    last_bb = new_bb
-        return self._basic_blocks_by_idx.values()
+        raise NotImplementedError()
 
-    def get_basic_block(self, entry: BasicBlockEntry) -> BasicBlock:
-        _ = self.basic_blocks
-        return self._basic_blocks_by_idx[entry.global_index]  # type: ignore
+    @abstractmethod
+    def get_function(self, name: str) -> Function:
+        raise NotImplementedError()
 
+    @abstractmethod
+    def has_function(self, name: str) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def access_sequence(self) -> Iterator[TaintAccess]:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def num_accesses(self) -> int:
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def inputs(self) -> Iterable[Input]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
-        return self.events_by_uid[uid]
+        raise NotImplementedError()
 
+    @abstractmethod
     def __contains__(self, uid: int):
-        return uid in self.events_by_uid
+        raise NotImplementedError()
 
     @property
     def cfg(self) -> DiGraph[BasicBlock]:
-        if self._cfg is None:
-            self._cfg = DiGraph()
+        if not hasattr(self, "_cfg") or self._cfg is None:
+            setattr(self, "_cfg", DiGraph())
             for bb in self.basic_blocks:
-                self._cfg.add_node(bb)
+                self._cfg.add_node(bb)  # type: ignore
                 for child in bb.children:
-                    self._cfg.add_edge(bb, child)
-        return self._cfg
+                    self._cfg.add_edge(bb, child)  # type: ignore
+        return self._cfg  # type: ignore
+
+    @property
+    def function_cfg(self) -> DiGraph[Function]:
+        if not hasattr(self, "_func_cfg") or self._func_cfg is None:
+            setattr(self, "_func_cfg", DiGraph())
+            for func in self.functions:
+                self._func_cfg.add_node(func)  # type: ignore
+                for child in func.calls_to():
+                    self._func_cfg.add_edge(func, child)  # type: ignore
+        return self._func_cfg  # type: ignore
 
     def cfg_roots(self) -> Iterable[BasicBlock]:
         for bb in self.basic_blocks:
@@ -506,26 +617,113 @@ class PolyTrackerTrace:
         except StopIteration:
             return True
 
+
+class TraceCommand(Command):
+    name = "trace"
+    help = "commands related to tracing"
+    parser: ArgumentParser
+
+    def __init_arguments__(self, parser: ArgumentParser):
+        self.parser = parser
+
+    def run(self, args: Namespace):
+        self.parser.print_help()
+
+
+class RunTraceCommand(Subcommand[TraceCommand]):
+    name = "run"
+    help = "run an instrumented binary"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("--no-bb-trace", action="store_true", help="do not trace at the basic block level")
+        parser.add_argument("--output-db", "-o", type=str, default="polytracker.db",
+                            help="path to the output database (default is polytracker.db)")
+        parser.add_argument("INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run")
+        parser.add_argument("INPUT_FILE", type=str, help="the file to track")
+        parser.add_argument("args", nargs=REMAINDER)
+
     @staticmethod
-    def parse(trace_file: IO, input_file: Optional[BinaryIO] = None) -> "PolyTrackerTrace":
-        try:
-            data = json.load(trace_file)
-        except json.decoder.JSONDecodeError as de:
-            raise ValueError(f"Error parsing PolyTracker JSON file {trace_file.name}", de)
-        if "trace" not in data:
-            raise ValueError(f"File {trace_file.name} was not recorded with POLYTRACE=1!")
-        trace = data["trace"]
+    @PolyTrackerREPL.register("run_trace")
+    def run_trace(
+            instrumented_binary_path: str,
+            input_file_path: str,
+            no_bb_trace: bool = False,
+            output_db_path: Optional[str] = None,
+            args=(),
+            return_trace: bool = True
+    ) -> Union[ProgramTrace, int]:
+        """
+        Runs an instrumented binary and returns the resulting trace
 
-        events = [TraceEvent.parse(event) for event in tqdm(trace, leave=False, unit=" events", desc="loading trace")]
+        Args:
+            instrumented_binary_path: path to the instrumented binary
+            input_file_path: input file to track
+            no_bb_trace: if True, only functions will be traced and not basic blocks
+            output_db_path: path to save the output database
+            args: additional arguments to pass the binary
+            return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
 
-        if "inputstr" not in data:
-            if input_file is None:
-                raise ValueError(
-                    "Either the input trace must include the 'inputstr' field, or an `input_file` argument" "must be provided"
-                )
-            else:
-                inputstr: bytes = input_file.read()
+        Returns: The program trace or the instrumented binary's exit code
+
+        """
+        can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
+
+        if output_db_path is None:
+            # use a temporary file
+            tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
+            output_db_path = str(Path(tmpdir.name) / "polytracker.db")  # type: ignore
         else:
-            inputstr = bytes(trace["inputstr"])
+            tmpdir = None
 
-        return PolyTrackerTrace(events=events, inputstr=inputstr)
+        if Path(args.output_db).exists():
+            PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
+
+        cmd_args = [instrumented_binary_path] + args.args + [input_file_path]
+        env = {
+            "POLYPATH": input_file_path,
+            "POLYTRACE": ["1", "0"][no_bb_trace],
+            "POLYDB": output_db_path
+        }
+        if can_run_natively:
+            retval = subprocess.call(cmd_args, env=env)  # type: ignore
+        else:
+            run_command = PolyTrackerREPL.commands["docker_run"]
+            retval = run_command(args=cmd_args, interactive=True, env=env)
+        if return_trace:
+            from . import PolyTrackerTrace
+            trace = PolyTrackerTrace.load(output_db_path)
+            if tmpdir is not None:
+                weakref.finalize(trace, tmpdir.cleanup)
+            return trace
+        else:
+            if tmpdir is not None:
+                tmpdir.cleanup()
+            return retval
+
+    def run(self, args: Namespace):
+        retval = RunTraceCommand.run_trace(
+            instrumented_binary_path=args.INSTRUMENTED_BINARY,
+            input_file_path=args.INPUT_FILE,
+            no_bb_trace=args.no_bb_trace,
+            output_db_path=args.output_db,
+            args=args.args,
+            return_trace=False
+        )
+        if retval == 0:
+            print(f"Trace saved to {args.output_db}")
+        return retval
+
+
+class CFGTraceCommand(Subcommand[TraceCommand]):
+    name = "cfg"
+    help = "export a trace as an annotated cfg"
+    parent_type = TraceCommand
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
+
+    def run(self, args: Namespace):
+        from . import PolyTrackerTrace
+        db = PolyTrackerTrace.load(args.TRACE_DB)
+        db.function_cfg.to_dot().save("trace.dot")

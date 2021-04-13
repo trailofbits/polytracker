@@ -1,18 +1,18 @@
 import argparse
 import logging
+import sys
 from argparse import Namespace
 from pathlib import Path
 
 from .plugins import add_command_subparsers, Command
 
-# the following line imports modules so their commands can register themselves
-from . import containerization, datalog, grammars, polytracker
+from . import polytracker
 
 logger = logging.getLogger("polytracker")
 
 TEST_DIR = Path(__file__).parent.parent / "tests"
 
-if (TEST_DIR / "test_polytracker.py").exists():
+if __name__ == "__main__" and (TEST_DIR / "test_polytracker.py").exists():
     import pytest
 
     class TestCommand(Command):
@@ -29,7 +29,12 @@ def main():
         "execution, and process the resulting traces."
     )
 
-    parser.add_argument("--version", "-v", action="store_true", help="print PolyTracker's version and exit")
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="store_true",
+        help="print PolyTracker's version and exit",
+    )
 
     add_command_subparsers(parser)
 
@@ -40,9 +45,13 @@ def main():
             print(polytracker.version())
             return 0
 
-        # TODO: Once we implement a REPL, instead of printing help, enter the REPL here
-        parser.print_help()
-        return 1
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            from .repl import PolyTrackerREPL
+
+            return PolyTrackerREPL().run()
+        else:
+            parser.print_help()
+            return 1
 
     retval = args.func(args)
     if retval is None:
@@ -52,8 +61,8 @@ def main():
             retval = 0
         else:
             retval = 1
-    return retval
+    exit(retval)
 
 
 if __name__ == "__main__":
-    exit(main())
+    main()

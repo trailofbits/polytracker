@@ -1,19 +1,12 @@
 import json
-import os
-import platform
 import subprocess
 import sys
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Optional, Union
 
 
-from polytracker.containerization import DockerContainer
-
-
-IS_LINUX: bool = platform.system() == "Linux"
-CAN_RUN_NATIVELY: bool = (
-    IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
-)
+from polytracker.containerization import CAN_RUN_NATIVELY, DockerContainer
 
 
 _DOCKER: Optional[DockerContainer] = None
@@ -38,13 +31,27 @@ def run_natively(*args, **kwargs) -> int:
     if CAN_RUN_NATIVELY:
         return subprocess.call(args, **kwargs)
     else:
-        sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
-        return (
-            docker_container()  # type: ignore
-            .run(  # type: ignore
-                *args, **kwargs, interactive=False, stdout=sys.stdout, stderr=sys.stderr, cwd=str(Path(__file__).parent.parent)
-            )
-            .returncode
+        if "env" in kwargs:
+            env = kwargs["env"]
+            del kwargs["env"]
+        else:
+            env = {}
+        sys.stderr.write(
+            f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n"
+        )
+        if "POLYDB" in env:
+            # write to a different path inside the container to speed things up on macOS:
+            old_polydb_path = env["POLYDB"]
+            env["POLYDB"] = "/polytracker.db"
+            args = tuple(["bash", "-c", " ".join(args + (";", "mv", "/polytracker.db", old_polydb_path))])
+        return docker_container().run(  # type: ignore
+            *args,
+            **kwargs,
+            interactive=False,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            cwd=str(Path(__file__).parent.parent),
+            env=env
         )
 
 
@@ -83,8 +90,11 @@ def canonical_mapping() -> Dict[int, int]:
     pset: Dict[str, Any] = process_set()
     if "canonical_mapping" not in pset:
         raise ValueError(
-            f'Expected to find a "canonical_mapping" key in {PROCESS_SET_PATH!s}. ' "Perhaps it is using a newer JSON schema?"
+            f'Expected to find a "canonical_mapping" key in {PROCESS_SET_PATH!s}. '
+            "Perhaps it is using a newer JSON schema?"
         )
     elif len(pset["canonical_mapping"]) != 1:
-        raise ValueError(f"{PROCESS_SET_PATH!s} was expected to have only one source, but found {pset.keys()!r}")
+        raise ValueError(
+            f"{PROCESS_SET_PATH!s} was expected to have only one source, but found {pset.keys()!r}"
+        )
     return dict(next(iter(pset["canonical_mapping"].values())))

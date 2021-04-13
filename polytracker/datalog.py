@@ -1,7 +1,12 @@
 from argparse import ArgumentParser, Namespace
 from typing import List, Dict, Union
 
-from .grammars import ExtractGrammarCommand, Terminal, PolyTrackerTrace, trace_to_grammar
+from .grammars import (
+    ExtractGrammarCommand,
+    Terminal,
+    ProgramTrace,
+    trace_to_grammar,
+)
 from .plugins import CommandExtension
 
 import re
@@ -140,12 +145,16 @@ class DatalogRuleList:
                     start_term += 1
                     continue
 
-                self.rules.append(DatalogRule(term, chr(start_term), chr(start_term + 1)))
+                self.rules.append(
+                    DatalogRule(term, chr(start_term), chr(start_term + 1))
+                )
                 start_term += 1
             # If its a terminal, we must make sure the name matches that of the fact.
             elif isinstance(term, Terminal):
                 for val in term.terminal:
-                    self.rules.append(DatalogRule(str(val), chr(start_term), chr(start_term + 1)))
+                    self.rules.append(
+                        DatalogRule(str(val), chr(start_term), chr(start_term + 1))
+                    )
                     start_term += 1
             else:
                 print(f"WARNING term is not string/terminal: {term}")
@@ -170,7 +179,7 @@ class DatalogClause:
 class DatalogGrammar:
     RULE_START = "a"
 
-    def __init__(self, trace: PolyTrackerTrace):
+    def __init__(self, trace: ProgramTrace):
         self.trace = trace
         self.clause_decls: List[DatalogRuleDecl] = []
         self.output_decls: List[DatalogOutputDecl] = []
@@ -196,24 +205,35 @@ class DatalogGrammar:
             # There might be no rules anyway :)
             if len(grammar.productions[prod_name].rules) == 0:
                 self.clauses.append(
-                    DatalogClause(DatalogRule(prod_name), DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)))
+                    DatalogClause(
+                        DatalogRule(prod_name),
+                        DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)),
+                    )
                 )
                 continue
             for rule in grammar.productions[prod_name].rules:
                 # Might be an empty tuple
                 if len(rule.sequence) == 0:
                     self.clauses.append(
-                        DatalogClause(DatalogRule(prod_name), DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)))
+                        DatalogClause(
+                            DatalogRule(prod_name),
+                            DatalogRuleList([TRUE_FACT_NAME], ord(self.RULE_START)),
+                        )
                     )
                 else:
                     self.clauses.append(
-                        DatalogClause(DatalogRule(prod_name), DatalogRuleList(rule.sequence, ord(self.RULE_START)))
+                        DatalogClause(
+                            DatalogRule(prod_name),
+                            DatalogRuleList(rule.sequence, ord(self.RULE_START)),
+                        )
                     )
 
     @property
     def val(self) -> str:
         return "\n".join(
-            [x.val for x in self.clause_decls] + [x.val for x in self.output_decls] + [x.val for x in self.clauses]
+            [x.val for x in self.clause_decls]
+            + [x.val for x in self.output_decls]
+            + [x.val for x in self.clauses]
         )
 
 
@@ -228,16 +248,28 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
 
     def __init_arguments__(self, parser: ArgumentParser):
         parser.add_argument(
-            "--extract-datalog", "-d", type=str, default=None, help="path to which to optionally save a datalog grammar"
+            "--extract-datalog",
+            "-d",
+            type=str,
+            default=None,
+            help="path to which to optionally save a datalog grammar",
         )
 
     def run(self, command: ExtractGrammarCommand, args: Namespace):
         if len(command.traces) > 1:
-            raise NotImplementedError("TODO: Add support for generating DataLog grammars from multiple traces")
+            raise NotImplementedError(
+                "TODO: Add support for generating DataLog grammars from multiple traces"
+            )
+        elif args.extract_datalog is None:
+            return 0
         trace = command.traces[0]
+        inputs = list(trace.inputs)
+        if len(inputs) != 1:
+            raise NotImplementedError("TODO: Add support for extracting DataLog grammars from traces with more than "
+                                      "one input")
+        data = inputs[0].content
         self.datalog_grammar = DatalogGrammar(trace)
         unique_bytes: Dict[int, bool] = {}
-        data = trace.inputstr
         self.datalog_fact_decls = []
         self.datalog_facts = []
         self.true_fact_decl = DatalogTrueFactDecl()
@@ -250,6 +282,7 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
                 self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
                 unique_bytes[byte] = True
             self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
+        return 0
 
     def __str__(self):
         facts = "\n".join(

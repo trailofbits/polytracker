@@ -10,7 +10,9 @@ def pytest_configure(config):
 
 def pytest_addoption(parser):
     parser.addoption("--json", action="store", default=None, help="Path to JSON file")
-    parser.addoption("--forest", action="store", default=None, help="Path to forest file")
+    parser.addoption(
+        "--forest", action="store", default=None, help="Path to forest file"
+    )
 
 
 @pytest.fixture
