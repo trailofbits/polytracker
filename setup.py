@@ -23,6 +23,7 @@ if sys.platform == "darwin":
 
 SETUP_DIR = os.path.dirname(os.path.realpath(__file__))
 POLYTRACKER_HEADER = os.path.join(SETUP_DIR, 'polytracker', 'include', 'polytracker', 'polytracker.h')
+README_PATH = os.path.join(SETUP_DIR, "README.md")
 
 if not os.path.exists(POLYTRACKER_HEADER):
     sys.stderr.write(f"Error loading polytracker.h!\nIt was expected to be here:\n{POLYTRACKER_HEADER}\n\n")
@@ -74,9 +75,13 @@ CONSOLE_SCRIPTS = [
     'polybuild++ = polytracker.build:main_plus_plus'
 ]
 
+with open(README_PATH, "r") as readme:
+    README = readme.read()
+
 setup(
     name='polytracker',
-    description='API and Library for operating and interacting with PolyTracker',
+    description='An LLVM-based instrumentation tool for universal taint tracking, dataflow analysis, and tracing.',
+    long_description=README,
     url='https://github.com/trailofbits/polytracker',
     author='Trail of Bits',
     version=polytracker_version_string(),
