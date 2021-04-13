@@ -1,4 +1,5 @@
-FROM trailofbits/polytracker-llvm
+FROM trailofbits/polytracker-llvm:b75b84ed4ce03bc4250c32063d08a1cbd8a05e02
+
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
 
@@ -12,11 +13,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       libsqlite3-dev                                  \
       vim                                             \
       gdb                                             \
-			sqlite3                                   
+      sqlite3
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
-RUN python3 -m pip install pip
-RUN python3 -m pip install pytest
+RUN python3 -m pip install pip && python3 -m pip install pytest
 
 COPY . /polytracker
 WORKDIR /polytracker
