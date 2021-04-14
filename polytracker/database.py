@@ -465,11 +465,20 @@ class DBProgramTrace(ProgramTrace):
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace")
-    def load(db_path: Union[str, Path]) -> "DBProgramTrace":
+    def load(db_path: Union[str, Path], read_only: bool = True) -> "DBProgramTrace":
         """loads a trace from the database emitted by an instrumented binary"""
         engine = create_engine(f"sqlite:///{db_path!s}")
-        session_maker = sessionmaker(bind=engine)
-        db = DBProgramTrace(session_maker())
+        if read_only:
+            session_maker = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+        else:
+            session_maker = sessionmaker(bind=engine)
+        session = session_maker()
+        if read_only:
+            def abort_read_only(*_, **__):
+                raise ValueError(f"Database {db_path} was loaded as read only! To write to the database, make sure "
+                                 "PolyTrackerTrace.load is called with the `read_only` argument set to True.")
+            session.flush = abort_read_only
+        db = DBProgramTrace(session)
         if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
             raise ValueError(f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
                              "database was reused for more than one run of the instrumented binary.\nThis feature is "
