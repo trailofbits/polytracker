@@ -83,6 +83,14 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   curr_func_index = func_id;
 }
 
+std::string funcName(const function_id_t &index) {
+  auto funcName = getFuncName(output_db, index);
+  if (!funcName.empty()) {
+    funcName += "`" + funcName + "` ";
+  }
+  return funcName + std::string("index ") + std::to_string(index);
+}
+
 void logFunctionExit(const function_id_t &index) {
   if (UNLIKELY(!is_init)) {
     return;
@@ -90,11 +98,11 @@ void logFunctionExit(const function_id_t &index) {
                       function_stack.top().func_id != curr_func_index)) {
     std::cerr
         << "Warning: Could not resolve the function entry associated with "
-           "the return from function index "
-        << curr_func_index << " to " << index;
+           "the return from function "
+        << funcName(curr_func_index) << " to " << funcName(index);
     if (!function_stack.empty()) {
       std::cerr << " (expected to be returning from function "
-                << function_stack.top().func_id << ")";
+                << funcName(function_stack.top().func_id) << ")";
     }
     std::cerr << ". This is likely due to either an instrumentation error "
               << "or non-standard control-flow in the instrumented program.\n";
