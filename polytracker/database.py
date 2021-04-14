@@ -672,6 +672,7 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
                     taints.add(ByteOffset(source=node.source, offset=file_offset))
                 else:
                     parent1, parent2 = node.parent_one, node.parent_two
+                    assert parent1 is not None and parent2 is not None
                     if parent1 not in history:
                         history.add(parent1)
                         node_stack.append(parent1)
