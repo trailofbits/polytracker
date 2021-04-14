@@ -309,8 +309,9 @@ def test_fgetc(program_trace: ProgramTrace):
         print(event)
 
 
-@pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
+@pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n12345F78\n")
 def test_taint_forest(program_trace: ProgramTrace):
+    had_taint_union = False
     for taint_node in tqdm(
             program_trace.taint_forest.nodes(),
             leave=False,
@@ -323,3 +324,5 @@ def test_taint_forest(program_trace: ProgramTrace):
         else:
             assert taint_node.parent_one is not None
             assert taint_node.parent_two is not None
+            had_taint_union = True
+    assert had_taint_union
