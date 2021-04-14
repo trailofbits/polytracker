@@ -86,7 +86,7 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
 std::string funcName(const function_id_t &index) {
   auto funcName = getFuncName(output_db, index);
   if (!funcName.empty()) {
-    funcName += "`" + funcName + "` ";
+    funcName = "`" + funcName + "` ";
   }
   return funcName + std::string("index ") + std::to_string(index);
 }
