@@ -58,7 +58,7 @@ class LRUCache(Generic[R, V], MutableMapping):
         self._items: OrderedDict[R, V] = OrderedDict()
         self.max_size: Optional[int] = max_size
 
-    def get(self, k: R, default: A = NO_DEFAULT) -> Union[V, A]:
+    def get(self, k: R, default: A = NO_DEFAULT) -> Union[V, A]:  # type: ignore
         try:
             return self[k]
         except KeyError:
