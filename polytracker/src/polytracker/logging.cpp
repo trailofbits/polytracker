@@ -3,6 +3,7 @@
 #include "polytracker/output.h"
 #include <atomic>
 #include <chrono>
+#include <cxxabi.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -86,6 +87,12 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
 std::string funcName(const function_id_t &index) {
   auto funcName = getFuncName(output_db, index);
   if (!funcName.empty()) {
+    int status;
+    auto demangled =
+        abi::__cxa_demangle(funcName.c_str(), nullptr, nullptr, &status);
+    if (status == 0) {
+      funcName = demangled;
+    }
     funcName = "`" + funcName + "` ";
   }
   return funcName + std::string("index ") + std::to_string(index);

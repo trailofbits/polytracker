@@ -15,6 +15,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       gdb                                             \
       sqlite3
 
+# For some reason, cxxabi.h alone is installed in the wrong subdirectory:
+RUN if [ ! -f "/cxx_libs/poly_build/include/c++/v1/cxxabi.h" ]; then \
+      ln -s /cxx_libs/poly_build/include/c++/v1/include/c++/v1/cxxabi.h /cxx_libs/poly_build/include/c++/v1/ \
+      ln -s /cxx_libs/poly_build/include/c++/v1/include/c++/v1/__cxxabi_config.h /cxx_libs/poly_build/include/c++/v1/; \
+    fi
+
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
 RUN python3 -m pip install pip && python3 -m pip install pytest
 
