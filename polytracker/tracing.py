@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace, REMAINDER
 from collections import defaultdict
 from enum import IntFlag
+from os.path import commonpath
 from pathlib import Path
 import subprocess
 from tempfile import TemporaryDirectory
@@ -606,6 +607,16 @@ class TraceCommand(Command):
         self.parser.print_help()
 
 
+def common_parent_directory(*paths: Union[Path, str]) -> Path:
+    """Returns the deepest parent directory common to every path in paths"""
+    p = []
+    for path in paths:
+        if not isinstance(path, Path):
+            path = Path(path)
+        p.append(path.absolute())
+    return Path(commonpath(p))
+
+
 class RunTraceCommand(Subcommand[TraceCommand]):
     name = "run"
     help = "run an instrumented binary"
@@ -622,10 +633,10 @@ class RunTraceCommand(Subcommand[TraceCommand]):
     @staticmethod
     @PolyTrackerREPL.register("run_trace")
     def run_trace(
-            instrumented_binary_path: str,
-            input_file_path: str,
+            instrumented_binary_path: Union[str, Path],
+            input_file_path: Union[str, Path],
             no_bb_trace: bool = False,
-            output_db_path: Optional[str] = None,
+            output_db_path: Optional[Union[str, Path]] = None,
             args=(),
             return_trace: bool = True
     ) -> Union[ProgramTrace, int]:
@@ -648,24 +659,45 @@ class RunTraceCommand(Subcommand[TraceCommand]):
         if output_db_path is None:
             # use a temporary file
             tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
-            output_db_path = str(Path(tmpdir.name) / "polytracker.db")  # type: ignore
+            output_db_path = Path(tmpdir.name) / "polytracker.db"  # type: ignore
         else:
+            if not isinstance(output_db_path, Path):
+                output_db_path = Path(output_db_path)
             tmpdir = None
 
-        if Path(args.output_db).exists():
-            PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
+        if not isinstance(instrumented_binary_path, Path):
+            instrumented_binary_path = Path(instrumented_binary_path)
 
-        cmd_args = [instrumented_binary_path] + args.args + [input_file_path]
+        if not isinstance(input_file_path, Path):
+            input_file_path = Path(input_file_path)
+
+        if output_db_path.exists():
+            PolyTrackerREPL.warning(f"<style fg=\"gray\">{output_db_path}</style> already exists")
+
+        if can_run_natively:
+            kwargs = {}
+            instrumented_binary_path = str(instrumented_binary_path)
+        else:
+            cwd = common_parent_directory(input_file_path, output_db_path, instrumented_binary_path)
+            kwargs = {"cwd": str(cwd)}
+
+            input_file_path = input_file_path.absolute().relative_to(cwd)
+            output_db_path = output_db_path.absolute().relative_to(cwd)
+            instrumented_binary_path = str(instrumented_binary_path.absolute().relative_to(cwd))
+            if not instrumented_binary_path.startswith("."):
+                instrumented_binary_path = f"./{instrumented_binary_path}"
+
+        cmd_args = [instrumented_binary_path] + list(args) + [str(input_file_path)]
         env = {
-            "POLYPATH": input_file_path,
+            "POLYPATH": str(input_file_path),
             "POLYTRACE": ["1", "0"][no_bb_trace],
-            "POLYDB": output_db_path
+            "POLYDB": str(output_db_path)
         }
         if can_run_natively:
             retval = subprocess.call(cmd_args, env=env)  # type: ignore
         else:
             run_command = PolyTrackerREPL.commands["docker_run"]
-            retval = run_command(args=cmd_args, interactive=True, env=env)
+            retval = run_command(args=cmd_args, interactive=True, env=env, **kwargs)
         if return_trace:
             from . import PolyTrackerTrace
             trace = PolyTrackerTrace.load(output_db_path)
