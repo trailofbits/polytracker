@@ -540,8 +540,7 @@ class DBProgramTrace(ProgramTrace):
             yield event
 
     def has_event(self, uid: int) -> bool:
-        if uid in self.event_cache:
-            return True
+        return uid in self.event_cache
 
     def get_event(self, uid: int) -> TraceEvent:
         try:
@@ -558,8 +557,7 @@ class DBProgramTrace(ProgramTrace):
         raise KeyError(uid)
 
     def has_thread_event(self, thread_event_id: int, thread_id: int) -> bool:
-        if (thread_id, thread_event_id) in self.thread_event_cache:
-            return True
+        return (thread_id, thread_event_id) in self.thread_event_cache
 
     def get_thread_event(self, thread_event_id: int, thread_id: int) -> TraceEvent:
         try:
