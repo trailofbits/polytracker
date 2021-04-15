@@ -582,7 +582,7 @@ class DBProgramTrace(ProgramTrace):
 
     @property
     def functions(self) -> Iterable[Function]:
-        return self.session.query(DBFunction)
+        return self.session.query(DBFunction).all()
 
     def get_function(self, name: str) -> Function:
         try:
@@ -598,7 +598,7 @@ class DBProgramTrace(ProgramTrace):
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        return self.session.query(DBBasicBlock)
+        return self.session.query(DBBasicBlock).all()
 
     def access_sequence(self) -> Iterator[TaintAccess]:
         yield from stream_results(
