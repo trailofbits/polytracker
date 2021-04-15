@@ -676,10 +676,10 @@ class RunTraceCommand(Subcommand[TraceCommand]):
         else:
             tmpdir = None
 
-        if Path(args.output_db).exists():
-            PolyTrackerREPL.warning(f"<style fg=\"gray\">{args.output.db}</style> already exists")
+        if Path(output_db_path).exists():
+            PolyTrackerREPL.warning(f"<style fg=\"gray\">{output_db_path}</style> already exists")
 
-        cmd_args = [instrumented_binary_path] + args.args + [input_file_path]
+        cmd_args = [instrumented_binary_path] + list(args) + [input_file_path]
         env = {
             "POLYPATH": input_file_path,
             "POLYTRACE": ["1", "0"][no_bb_trace],
