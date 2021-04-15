@@ -1,6 +1,6 @@
 from enum import IntEnum, IntFlag
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Union
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -23,6 +23,7 @@ from sqlalchemy import (
 
 from tqdm import tqdm
 
+from .cache import LRUCache
 from .polytracker import ProgramTrace
 from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest, TaintForestNode
@@ -294,6 +295,7 @@ class DBTraceEvent(Base):  # type: ignore
 
     _queried_for_entry: bool = False
     _function_entry: Optional[FunctionEntry] = None
+    trace: Optional["DBProgramTrace"] = None
 
     @property
     def uid(self) -> int:  # type: ignore
@@ -302,20 +304,37 @@ class DBTraceEvent(Base):  # type: ignore
     @property
     def function_entry(self) -> Optional[FunctionEntry]:
         if not self._queried_for_entry:
-            try:
-                self._function_entry = (
-                    Session.object_session(self)
-                    .query(DBFunctionEntry)
-                    .filter(DBFunctionEntry.event_id == self.func_event_id)
-                    .one()
-                )
-            except NoResultFound:
-                self._function_entry = None
+            self._queried_for_entry = True
+            if self.trace is not None:
+                try:
+                    entry = self.trace.get_event(self.func_event_id)
+                    if isinstance(entry, FunctionEntry):
+                        self._function_entry = entry
+                    else:
+                        self._function_entry = None
+                except KeyError:
+                    self._function_entry = None
+            else:
+                try:
+                    self._function_entry = (
+                        Session.object_session(self)
+                        .query(DBFunctionEntry)
+                        .filter(DBFunctionEntry.event_id == self.func_event_id)
+                        .one()
+                    )
+                except NoResultFound:
+                    self._function_entry = None
         return self._function_entry
 
     @property
     def next_event(self) -> Optional["TraceEvent"]:
-        if not hasattr(self, "_next_event"):
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_thread_event(thread_event_id=self.thread_event_id + 1, thread_id=self.thread_id)
+            except KeyError:
+                return None
+        elif not hasattr(self, "_next_event"):
             session = Session.object_session(self)
             try:
                 setattr(
@@ -335,7 +354,13 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def previous_event(self) -> Optional["TraceEvent"]:
-        if not hasattr(self, "_prev_event"):
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_thread_event(thread_event_id=self.thread_event_id - 1, thread_id=self.thread_id)
+            except KeyError:
+                return None
+        elif not hasattr(self, "_prev_event"):
             session = Session.object_session(self)
             try:
                 setattr(
@@ -355,6 +380,12 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def next_global_event(self) -> Optional["TraceEvent"]:
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_event(self.event_id + 1)
+            except KeyError:
+                return None
         session = Session.object_session(self)
         try:
             return (
@@ -367,6 +398,12 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def previous_global_event(self) -> Optional["TraceEvent"]:
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_event(self.event_id - 1)
+            except KeyError:
+                return None
         session = Session.object_session(self)
         try:
             return (
@@ -461,8 +498,10 @@ class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
 
 
 class DBProgramTrace(ProgramTrace):
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
         self.session: Session = session
+        self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
+        self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace")
@@ -492,9 +531,52 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        return stream_results(
+        for event in stream_results(
             self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc())
-        )
+        ):
+            event.trace = self
+            self.event_cache[event.event_id] = event
+            self.thread_event_cache[(event.thread_id, event.thread_event_id)] = event
+            yield event
+
+    def has_event(self, uid: int) -> bool:
+        if uid in self.event_cache:
+            return True
+
+    def get_event(self, uid: int) -> TraceEvent:
+        try:
+            return self.event_cache[uid]
+        except KeyError:
+            pass
+        try:
+            event = self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).one()
+            event.trace = self
+            self.event_cache[uid] = event
+            return event
+        except NoResultFound:
+            pass
+        raise KeyError(uid)
+
+    def has_thread_event(self, thread_event_id: int, thread_id: int) -> bool:
+        if (thread_id, thread_event_id) in self.thread_event_cache:
+            return True
+
+    def get_thread_event(self, thread_event_id: int, thread_id: int) -> TraceEvent:
+        try:
+            return self.thread_event_cache[(thread_id, thread_event_id)]
+        except KeyError:
+            pass
+        try:
+            event = self.session.query(DBTraceEvent).filter(
+                DBTraceEvent.thread_event_id == thread_event_id,
+                DBTraceEvent.thread_id == thread_id
+            ).one()
+            event.trace = self
+            self.thread_event_cache[(thread_id, thread_event_id)] = event
+            return event
+        except NoResultFound:
+            pass
+        raise KeyError((thread_event_id, thread_id))
 
     @property
     def taint_forest(self) -> TaintForest:

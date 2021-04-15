@@ -511,6 +511,14 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     @abstractmethod
+    def has_event(self, uid: int) -> bool:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_event(self, uid: int) -> TraceEvent:
+        raise NotImplementedError()
+
+    @abstractmethod
     def get_function(self, name: str) -> Function:
         raise NotImplementedError()
 
