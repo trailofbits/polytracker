@@ -536,7 +536,7 @@ class FunctionInvocation(TraceEvent):
         return self.function_entry.next_global_event
 
     @property
-    def previous_global_event(self) -> Optional["TraceEvent"]:
+    def previous_global_event(self) -> Optional[TraceEvent]:
         return self.function_entry.previous_global_event
 
     @property
@@ -544,7 +544,7 @@ class FunctionInvocation(TraceEvent):
         return self.function_entry.function_return
 
     @property
-    def function_entry(self) -> Optional["FunctionEntry"]:
+    def function_entry(self) -> FunctionEntry:
         return self._function_entry
 
     def calls(self) -> Iterator["FunctionInvocation"]:
