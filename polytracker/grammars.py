@@ -1,23 +1,27 @@
+from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
+import itertools
 from logging import getLogger
 from typing import (
     Any,
     cast,
     Dict,
+    FrozenSet,
     Iterable,
     Iterator,
     List,
     Optional,
     Set,
     Tuple,
+    TypeVar,
     Union,
 )
 
 # TODO remove
 import graphviz
 import networkx as nx
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from . import PolyTrackerTrace
 from .cfg import DiGraph
@@ -35,7 +39,6 @@ from .plugins import Command
 from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
-    FunctionEntry,
     FunctionInvocation,
     ProgramTrace,
     TraceEvent,
@@ -1089,7 +1092,8 @@ def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
                 production.add(rule)
         else:
             prod = Production(grammar, prod_name, rule)
-            if prod_name == "<START>" or isinstance(node.value, FunctionCall):
+            if prod_name == "<START>":  # or isinstance(node.value, FunctionCall):
+                # TODO: Re-implement the `or isinstance...` above
                 # do not allow the START production or function calls to be simplified out of the grammar
                 prod.removable = False
 
