@@ -622,6 +622,9 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     grammar = Grammar()
 
     entrypoint = trace.entrypoint
+    if entrypoint is None:
+        grammar.start = Production(grammar, "<START>")
+        return grammar
     func_stack: List[FunctionInvocation] = [entrypoint]
 
     num_funcs = trace.num_function_calls()
@@ -698,88 +701,6 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                                 production.add(rule)
                     else:
                         Production(grammar, bb_prod_name, *rules)
-
-    return grammar
-
-    for event in tqdm(
-        trace, unit=" productions", leave=False, desc="extracting a base grammar"
-    ):
-        if isinstance(event, BasicBlockEntry):
-            # Add a production rule for this BB
-            prod_name = production_name(event)
-
-            sub_productions: List[Union[Terminal, str]] = [
-                Terminal(token) for token in event.consumed_tokens
-            ]
-
-            called_function = event.called_function
-
-            if called_function is not None:
-                sub_productions.append(production_name(called_function))
-                ret = called_function.function_return
-                if ret is not None:
-                    returning_to = ret.returning_to
-                    if returning_to is not None:
-                        sub_productions.append(f"<{returning_to!s}>")
-                    else:
-                        # TODO: Print warning
-                        pass
-                        # breakpoint()
-                else:
-                    # TODO: Print warning
-                    pass
-                    # breakpoint()
-
-            next_bb = event.next_basic_block_in_function()
-            if next_bb is not None:
-                rules = [Rule(grammar, *(sub_productions + [f"<{next_bb!s}>"]))]
-            else:
-                rules = [Rule(grammar, *sub_productions)]
-
-            if prod_name in grammar:
-                production = grammar[prod_name]
-                for rule in rules:
-                    if rule not in production:
-                        production.add(rule)
-            else:
-                Production(grammar, prod_name, *rules)
-
-        elif isinstance(event, FunctionEntry):
-            prod_name = production_name(event)
-            if event.entrypoint is None:
-                if prod_name not in grammar:
-                    _ = Production(grammar, prod_name)
-            else:
-                rule = Rule(grammar, production_name(event.entrypoint))
-                if prod_name in grammar:
-                    production = grammar[prod_name]
-                    if rule not in production:
-                        production.add(rule)
-                else:
-                    _ = Production(grammar, prod_name, rule)
-
-            if grammar.start is None:
-                grammar.start = Production(
-                    grammar, "<START>", Rule.load(grammar, prod_name)
-                )
-
-        # elif isinstance(event, FunctionReturn):
-        #     next_event = event.returning_to
-        #     if next_event is not None and not isinstance(next_event, BasicBlockEntry):
-        #         # sometimes instrumentation errors can cause functions to return directly into another call
-        #         call_name = production_name(event.function_call)
-        #         next_event_name = production_name(next_event)
-        #         if call_name in grammar:
-        #             production = grammar[call_name]
-        #             if not production.rules:
-        #                 production.add(Rule(grammar, next_event_name))
-        #             else:
-        #                 for rule in production.rules:
-        #                     if next_event_name not in rule.sequence:
-        #                         rule.sequence = rule.sequence + (next_event_name,)
-        #             grammar.used_by[next_event_name].add(call_name)
-        #         else:
-        #             _ = Production(grammar, call_name, Rule(grammar, next_event_name))
 
     grammar.verify()
 

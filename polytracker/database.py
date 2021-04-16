@@ -457,7 +457,7 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         return (self.func_gid >> 32) & 0xFFFF
 
     @property
-    def called_function(self) -> Optional["DBFunctionInvocation"]:
+    def called_function(self) -> Optional["FunctionInvocation"]:
         if self.trace is None:
             return super().called_function
         next_event = self.next_control_flow_event
@@ -476,7 +476,7 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
             (access.taint_forest_node for access in self.taint_accesses())
         )
 
-    def next_basic_block_in_function(self) -> Optional["DBBasicBlockEntry"]:
+    def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
         if self.trace is None:
             return super().next_basic_block_in_function()
         try:
@@ -489,6 +489,12 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
             return None
 
     def next_taint_access(self) -> Optional[DBTaintAccess]:
+        if self.trace is None:
+            next_event = self.next_event
+            if isinstance(next_event, DBTaintAccess):
+                return next_event
+            else:
+                return None
         try:
             return self.trace.session.query(DBTaintAccess).filter(
                 DBTaintAccess.thread_id == self.thread_id,
@@ -504,7 +510,7 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         next_bb = self.next_basic_block_in_function()
         if next_bb is None:
             return None
-        next_taint_access = next_bb.next_taint_access()
+        next_taint_access = next_bb.next_taint_access()  # type: ignore
         if next_taint_access is None:
             return None
         prev_event = next_taint_access.previous_control_flow_event

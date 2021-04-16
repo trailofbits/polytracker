@@ -324,6 +324,7 @@ def test_fgetc(program_trace: ProgramTrace):
     for _ in program_trace:
         pass
     entrypoint = program_trace.entrypoint
+    assert entrypoint is not None
     assert entrypoint.touched_taint
     tainted_regions = list(entrypoint.taints().regions())
     assert len(tainted_regions) == 1
