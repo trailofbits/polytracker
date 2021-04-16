@@ -508,6 +508,20 @@ class DBFunctionInvocation(FunctionInvocation):
                 self._called_by = DBFunctionInvocation(caller.function_entry, self.trace)  # type: ignore
         return self._called_by
 
+    @property
+    def touched_taint(self) -> bool:
+        query = self.trace.session.query(AccessedLabel).join(DBTraceEvent).filter(
+            DBTraceEvent.thread_id == self.function_entry.thread_id,
+            DBTraceEvent.thread_event_id > self.function_entry.thread_event_id
+        )
+        ret = self.function_return
+        if ret is not None:
+            query = query.filter(DBTraceEvent.thread_event_id < ret.thread_event_id)
+        try:
+            return query.limit(1).count() > 0
+        except NoResultFound:
+            return False
+
     def calls(self) -> Iterator["DBFunctionInvocation"]:
         event = self.function_return
         thread_id = self.function_entry.thread_id

@@ -207,15 +207,19 @@ def test_control_flow(program_trace: ProgramTrace):
     # check function invocation reconstruction:
     assert program_trace.entrypoint is not None
     assert program_trace.entrypoint.function == main
+    assert not program_trace.entrypoint.touched_taint
     called_from_main = list(program_trace.entrypoint.calls())
     assert len(called_from_main) == 1
     assert called_from_main[0].function == func1
+    assert not called_from_main[0].touched_taint
     called_from_func1 = list(called_from_main[0].calls())
     assert len(called_from_func1) == 1
     assert called_from_func1[0].function == func2
+    assert not called_from_func1[0].touched_taint
     called_from_func2 = list(called_from_func1[0].calls())
     assert len(called_from_func2) == 1
     assert called_from_func2[0].function == func2
+    assert not called_from_func2[0].touched_taint
     # our instrumentation doesn't currently emit a function return event for main, but that might change in the future
     # so for now just ignore main
 
@@ -317,8 +321,9 @@ def test_cxx_vector(program_trace: ProgramTrace):
 
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
 def test_fgetc(program_trace: ProgramTrace):
-    for event in program_trace:
-        print(event)
+    for _ in program_trace:
+        pass
+    assert program_trace.entrypoint.touched_taint
 
 
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
