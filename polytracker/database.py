@@ -260,13 +260,12 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
 
 class AccessedLabel(Base):  # type: ignore
     __tablename__ = "accessed_label"
+    access_id = Column(Integer, primary_key=True)
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     label = Column(Integer, ForeignKey("taint_forest.label"))
     access_type = Column(SmallInteger, SQLEnum(ByteAccessType))
 
     event = relationship("DBTaintAccess", uselist=False)
-
-    __table_args__ = (PrimaryKeyConstraint("event_id", "label", "access_type"),)
 
     def __lt__(self, other):
         return hasattr(other, "label") and self.label < other.label

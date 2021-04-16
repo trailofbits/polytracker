@@ -37,12 +37,12 @@ static constexpr const char *createBlockTable() {
 
 static constexpr const char *createTaintTable() {
   return "CREATE TABLE IF NOT EXISTS accessed_label ("
+         "  access_id INTEGER PRIMARY KEY,"
          "  event_id BIGINT,"
          "  label BIGINT,"
          "  access_type TINYINT,"
-         "  input_id BIGINT,"
-         "  PRIMARY KEY (event_id, label, access_type, input_id)"
-         ") WITHOUT ROWID;";
+         "  input_id BIGINT"
+         ");";
 }
 
 static constexpr const char *createPolytrackerTable() {
