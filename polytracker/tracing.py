@@ -449,19 +449,19 @@ class BasicBlockEntry(ControlFlowEvent):
         return entry_count
 
     @property
-    def called_function(self) -> Optional[FunctionEntry]:
+    def called_function(self) -> Optional["FunctionInvocation"]:
         """
-        Returns the function entry event called from this basic block, or None if this basic block does not call
-        a function
+        Returns the function invocation called from this basic block, or None if this basic block does not call a
+        function
 
         """
-        next_event = self.previous_control_flow_event
+        next_event = self.next_control_flow_event
         if isinstance(next_event, FunctionEntry):
-            return next_event
+            return FunctionInvocation(next_event)
         return None
 
     def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
-        """Finds the next basic block in this function"""
+        """Finds the next basic block in this function in the trace"""
         next_event = self.next_control_flow_event
         while next_event is not None:
             if isinstance(next_event, BasicBlockEntry):
@@ -476,6 +476,15 @@ class BasicBlockEntry(ControlFlowEvent):
                 next_event = next_event.next_control_flow_event
             else:
                 break
+        return None
+
+    def next_basic_block_in_function_that_touched_taint(self) -> Optional["BasicBlockEntry"]:
+        """Finds the next basic block in this function in the trace that touched taint"""
+        bb = self.next_basic_block_in_function()
+        while bb is not None and not bb.touched_taint:
+            bb = bb.next_basic_block_in_function()
+        if bb is not None and bb.touched_taint:
+            return bb
         return None
 
     @property
@@ -575,10 +584,21 @@ class FunctionInvocation(TraceEvent):
             yield next_event
             next_event = next_event.next_control_flow_event
 
+    def basic_blocks(self) -> Iterator[BasicBlockEntry]:
+        """
+        Yields all of the basic blocks executed in this function,
+        not including any basic blocks inside called functions
+
+        """
+        entry = self.function_entry.entrypoint
+        while entry is not None:
+            yield entry
+            entry = entry.next_basic_block_in_function()
+
     def taints(self) -> Taints:
         """Returns all taints operated on by this function or any functions called by this function"""
         if not hasattr(self, "_taints"):
-            setattr(self, "_taints", Taints(itertools.chain(iter(event.taints()) for event in self)))  # type: ignore
+            setattr(self, "_taints", Taints(itertools.chain(event.taints() for event in self)))  # type: ignore
         return getattr(self, "_taints")
 
     def __str__(self):
@@ -655,6 +675,12 @@ class ProgramTrace(ABC):
 
     def function_trace(self) -> Iterator[FunctionEntry]:
         return iter(event for event in self if isinstance(event, FunctionEntry))
+
+    def num_function_calls(self) -> int:
+        return sum(1 for _ in self.function_trace())
+
+    def num_basic_block_entries(self) -> int:
+        return sum(1 for event in self if isinstance(event, BasicBlockEntry))
 
     def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
         """Returns the next function entry, or None if none exists"""

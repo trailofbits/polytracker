@@ -456,6 +456,15 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
     def function_index(self) -> int:
         return (self.func_gid >> 32) & 0xFFFF
 
+    @property
+    def called_function(self) -> Optional["DBFunctionInvocation"]:
+        if self.trace is None:
+            return super().called_function
+        next_event = self.next_control_flow_event
+        if isinstance(next_event, FunctionEntry):
+            return DBFunctionInvocation(next_event, self.trace)  # type: ignore
+        return None
+
     def taint_accesses(self) -> Iterator[DBTaintAccess]:
         next_event = self.next_event
         while isinstance(next_event, DBTaintAccess):
@@ -466,6 +475,43 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         return DBTaintForestNode.taints(
             (access.taint_forest_node for access in self.taint_accesses())
         )
+
+    def next_basic_block_in_function(self) -> Optional["DBBasicBlockEntry"]:
+        if self.trace is None:
+            return super().next_basic_block_in_function()
+        try:
+            return self.trace.session.query(DBBasicBlockEntry).filter(
+                DBBasicBlockEntry.thread_id == self.thread_id,
+                DBBasicBlockEntry.func_event_id == self.func_event_id,
+                DBBasicBlockEntry.thread_event_id > self.thread_event_id
+            ).order_by(DBBasicBlockEntry.thread_event_id.asc()).limit(1).one()
+        except NoResultFound:
+            return None
+
+    def next_taint_access(self) -> Optional[DBTaintAccess]:
+        try:
+            return self.trace.session.query(DBTaintAccess).filter(
+                DBTaintAccess.thread_id == self.thread_id,
+                DBTaintAccess.thread_event_id > self.thread_event_id,
+                DBTaintAccess.func_event_id == self.func_event_id
+            ).order_by(DBTaintAccess.thread_event_id.asc()).limit(1).one()
+        except NoResultFound:
+            return None
+
+    def next_basic_block_in_function_that_touched_taint(self) -> Optional["BasicBlockEntry"]:
+        if self.trace is None:
+            return super().next_basic_block_in_function()
+        next_bb = self.next_basic_block_in_function()
+        if next_bb is None:
+            return None
+        next_taint_access = next_bb.next_taint_access()
+        if next_taint_access is None:
+            return None
+        prev_event = next_taint_access.previous_control_flow_event
+        if isinstance(prev_event, BasicBlockEntry) and prev_event != self:
+            return prev_event
+        else:
+            return None
 
 
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
@@ -568,6 +614,11 @@ class DBFunctionInvocation(FunctionInvocation):
                 break
         return reversed(ret)
 
+    def basic_blocks(self) -> Iterator[BasicBlockEntry]:
+        return self.trace.session.query(DBBasicBlockEntry).filter(
+            DBBasicBlockEntry.func_event_id == self.function_entry.event_id,
+        ).order_by(DBBasicBlockEntry.thread_event_id.asc()).all()
+
 
 class DBProgramTrace(ProgramTrace):
     def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
@@ -582,7 +633,7 @@ class DBProgramTrace(ProgramTrace):
         def strong_ref_object(sess, instance):
             if isinstance(instance, DBTraceEvent):
                 self.event_cache[instance.event_id] = instance
-                self.thread_event_cache[(instance.thread_id, instance.event_id)] = instance
+                self.thread_event_cache[(instance.thread_id, instance.thread_event_id)] = instance
                 instance.trace = self
 
         @event.listens_for(session, "persistent_to_detached")
@@ -591,7 +642,7 @@ class DBProgramTrace(ProgramTrace):
         def deref_object(sess, instance):
             if isinstance(instance, DBTraceEvent):
                 del self.event_cache[instance.uid]
-                del self.thread_event_cache[(instance.thread_id, instance.event_id)]
+                del self.thread_event_cache[(instance.thread_id, instance.thread_event_id)]
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace")
@@ -626,6 +677,12 @@ class DBProgramTrace(ProgramTrace):
 
     def function_trace(self) -> Iterator[DBFunctionEntry]:
         yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
+
+    def num_function_calls(self) -> int:
+        return self.session.query(DBFunctionEntry).count()
+
+    def num_basic_block_entries(self) -> int:
+        return self.session.query(DBBasicBlockEntry).count()
 
     def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
         try:

@@ -28,7 +28,7 @@ from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
     FunctionEntry,
-    FunctionReturn,
+    FunctionInvocation,
     ProgramTrace,
     TraceEvent,
 )
@@ -612,18 +612,94 @@ class Grammar:
 def production_name(event: TraceEvent) -> str:
     if isinstance(event, BasicBlockEntry):
         return f"<{event!s}>"
-    elif isinstance(event, FunctionEntry):
-        return f"<{event.function.name}>"
-    elif isinstance(event, FunctionReturn):
-        return f"<{event.function.name}>"
     else:
-        raise ValueError(f"Unhandled event: {event!r}")
+        return f"<{event.function.name}>"
 
 
 def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     # trace.simplify()
 
     grammar = Grammar()
+
+    entrypoint = trace.entrypoint
+    func_stack: List[FunctionInvocation] = [entrypoint]
+
+    num_funcs = trace.num_function_calls()
+
+    with tqdm(unit=" productions", leave=False, desc="extracting a base grammar", total=num_funcs) as t:
+        while func_stack:
+            func = func_stack.pop()
+            t.update(1)
+            prod_name = production_name(func)
+
+            if grammar.start is None and func is entrypoint:
+                grammar.start = Production(
+                    grammar, "<START>", Rule.load(grammar, prod_name)
+                )
+
+            if not func.touched_taint:
+                # do not expand the function if it didn't touch taint
+                _ = Production(grammar, prod_name)
+                t.write(f"skipping {func.function.demangled_name} because it didn't touch taint")
+                t.update(sum(1 for _ in func.calls()))
+                continue
+            elif func.function_entry.entrypoint is None:
+                _ = Production(grammar, prod_name)
+            else:
+                rule = Rule(grammar, production_name(func.function_entry.entrypoint))
+                if prod_name in grammar:
+                    production = grammar[prod_name]
+                    if rule not in production:
+                        production.add(rule)
+                else:
+                    _ = Production(grammar, prod_name, rule)
+
+                bbs: List[Optional[BasicBlockEntry]] = list(func.basic_blocks())
+                for bb, next_bb in tqdm(
+                        zip(bbs, bbs[1:] + [None]), leave=False, unit=" basic blocks",
+                        desc=func.function.demangled_name,
+                        delay=1.0,
+                        total=len(bbs)
+                ):
+                    sub_productions: List[Union[Terminal, str]] = [
+                        Terminal(token) for token in bb.consumed_tokens
+                    ]
+
+                    called_function = bb.called_function
+
+                    if called_function is not None:
+                        func_stack.append(called_function)
+                        sub_productions.append(production_name(called_function))
+                        ret = called_function.function_return
+                        if ret is not None:
+                            returning_to = ret.returning_to
+                            if returning_to is not None:
+                                sub_productions.append(f"<{returning_to!s}>")
+                            else:
+                                # TODO: Print warning
+                                pass
+                                # breakpoint()
+                        else:
+                            # TODO: Print warning
+                            pass
+                            # breakpoint()
+
+                    if next_bb is not None:
+                        rules = [Rule(grammar, *(sub_productions + [f"<{next_bb!s}>"]))]
+                    else:
+                        rules = [Rule(grammar, *sub_productions)]
+
+                    bb_prod_name = production_name(bb)
+
+                    if bb_prod_name in grammar:
+                        production = grammar[bb_prod_name]
+                        for rule in rules:
+                            if rule not in production:
+                                production.add(rule)
+                    else:
+                        Production(grammar, bb_prod_name, *rules)
+
+    return grammar
 
     for event in tqdm(
         trace, unit=" productions", leave=False, desc="extracting a base grammar"
