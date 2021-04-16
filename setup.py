@@ -82,6 +82,7 @@ setup(
     name='polytracker',
     description='An LLVM-based instrumentation tool for universal taint tracking, dataflow analysis, and tracing.',
     long_description=README,
+    long_description_content_type="text/markdown",
     url='https://github.com/trailofbits/polytracker',
     author='Trail of Bits',
     version=polytracker_version_string(),
