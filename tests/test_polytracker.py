@@ -323,7 +323,17 @@ def test_cxx_vector(program_trace: ProgramTrace):
 def test_fgetc(program_trace: ProgramTrace):
     for _ in program_trace:
         pass
-    assert program_trace.entrypoint.touched_taint
+    entrypoint = program_trace.entrypoint
+    assert entrypoint.touched_taint
+    tainted_regions = list(entrypoint.taints().regions())
+    assert len(tainted_regions) == 1
+    assert tainted_regions[0].value == b"ABCDEFGH"
+    called_by_main = list(entrypoint.calls())
+    assert len(called_by_main) == 8
+    for i, called in enumerate(called_by_main):
+        regions = list(called.taints().regions())
+        assert len(regions) == 1
+        assert regions[0].value == b"ABCDEFGH"[i:i+1]
 
 
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")

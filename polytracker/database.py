@@ -522,6 +522,21 @@ class DBFunctionInvocation(FunctionInvocation):
         except NoResultFound:
             return False
 
+    def taint_accesses(self) -> Iterator[DBTaintAccess]:
+        query = self.trace.session.query(DBTaintAccess).join(AccessedLabel).filter(
+            DBTaintAccess.thread_id == self.function_entry.thread_id,
+            DBTaintAccess.thread_event_id > self.function_entry.thread_event_id
+        )
+        ret = self.function_return
+        if ret is not None:
+            query = query.filter(DBTaintAccess.thread_event_id < ret.thread_event_id)
+        return stream_results(query.order_by(DBTaintAccess.event_id.asc()))
+
+    def taints(self) -> Taints:
+        return DBTaintForestNode.taints(
+            (access.taint_forest_node for access in self.taint_accesses())
+        )
+
     def calls(self) -> Iterator["DBFunctionInvocation"]:
         event = self.function_return
         thread_id = self.function_entry.thread_id
