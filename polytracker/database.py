@@ -13,6 +13,7 @@ from sqlalchemy import (
     Column,
     create_engine,
     Enum as SQLEnum,
+    event,
     ForeignKey,
     Integer,
     PrimaryKeyConstraint,
@@ -296,7 +297,7 @@ class DBTraceEvent(Base):  # type: ignore
 
     _queried_for_entry: bool = False
     _function_entry: Optional[FunctionEntry] = None
-    trace: Optional["DBProgramTrace"] = None
+    trace: Optional["DBProgramTrace"]
 
     @property
     def uid(self) -> int:  # type: ignore
@@ -574,6 +575,24 @@ class DBProgramTrace(ProgramTrace):
         self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
         self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
 
+        @event.listens_for(session, "pending_to_persistent")
+        @event.listens_for(session, "deleted_to_persistent")
+        @event.listens_for(session, "detached_to_persistent")
+        @event.listens_for(session, "loaded_as_persistent")
+        def strong_ref_object(sess, instance):
+            if isinstance(instance, DBTraceEvent):
+                self.event_cache[instance.event_id] = instance
+                self.thread_event_cache[(instance.thread_id, instance.event_id)] = instance
+                instance.trace = self
+
+        @event.listens_for(session, "persistent_to_detached")
+        @event.listens_for(session, "persistent_to_deleted")
+        @event.listens_for(session, "persistent_to_transient")
+        def deref_object(sess, instance):
+            if isinstance(instance, DBTraceEvent):
+                del self.event_cache[instance.uid]
+                del self.thread_event_cache[(instance.thread_id, instance.event_id)]
+
     @staticmethod
     @PolyTrackerREPL.register("load_trace")
     def load(db_path: Union[str, Path], read_only: bool = True) -> "DBProgramTrace":
@@ -584,6 +603,7 @@ class DBProgramTrace(ProgramTrace):
         else:
             session_maker = sessionmaker(bind=engine)
         session = session_maker()
+
         if read_only:
             def abort_read_only(*_, **__):
                 raise ValueError(f"Database {db_path} was loaded as read only! To write to the database, make sure "
@@ -602,22 +622,10 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        for event in stream_results(
-            self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc())
-        ):
-            event.trace = self
-            self.event_cache[event.event_id] = event
-            self.thread_event_cache[(event.thread_id, event.thread_event_id)] = event
-            yield event
+        yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
 
     def function_trace(self) -> Iterator[DBFunctionEntry]:
-        for function_entry in stream_results(
-            self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc())
-        ):
-            function_entry.trace = self
-            self.event_cache[function_entry.event_id] = function_entry
-            self.thread_event_cache[(function_entry.thread_id, function_entry.thread_event_id)] = function_entry
-            yield function_entry
+        yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
 
     def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
         try:
@@ -649,10 +657,7 @@ class DBProgramTrace(ProgramTrace):
         except KeyError:
             pass
         try:
-            event = self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).limit(1).one()
-            event.trace = self
-            self.event_cache[uid] = event
-            return event
+            return self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).limit(1).one()
         except NoResultFound:
             pass
         raise KeyError(uid)
@@ -666,13 +671,10 @@ class DBProgramTrace(ProgramTrace):
         except KeyError:
             pass
         try:
-            event = self.session.query(DBTraceEvent).filter(
+            return self.session.query(DBTraceEvent).filter(
                 DBTraceEvent.thread_event_id == thread_event_id,
                 DBTraceEvent.thread_id == thread_id
             ).limit(1).one()
-            event.trace = self
-            self.thread_event_cache[(thread_id, thread_event_id)] = event
-            return event
         except NoResultFound:
             pass
         raise KeyError((thread_event_id, thread_id))
