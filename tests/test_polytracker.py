@@ -205,6 +205,7 @@ def test_control_flow(program_trace: ProgramTrace):
     assert returns["func1"] == 1
     assert returns["func2"] == 6
     # check function invocation reconstruction:
+    assert program_trace.entrypoint is not None
     assert program_trace.entrypoint.function == main
     called_from_main = list(program_trace.entrypoint.calls())
     assert len(called_from_main) == 1
