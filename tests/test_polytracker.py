@@ -3,6 +3,8 @@ import os
 import pytest
 from shutil import copyfile
 
+from tqdm import tqdm
+
 from polytracker import (
     BasicBlockEntry,
     FunctionEntry,
@@ -10,6 +12,7 @@ from polytracker import (
     PolyTrackerTrace,
     ProgramTrace,
 )
+from polytracker.database import DBTaintForestNode
 
 from .data import *
 
@@ -304,3 +307,22 @@ def test_cxx_vector(program_trace: ProgramTrace):
 def test_fgetc(program_trace: ProgramTrace):
     for event in program_trace:
         print(event)
+
+
+@pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
+def test_taint_forest(program_trace: ProgramTrace):
+    had_taint_union = False
+    for taint_node in tqdm(
+            program_trace.taint_forest.nodes(),
+            leave=False,
+            desc="validating",
+            unit=" taint nodes"
+    ):
+        if taint_node.is_canonical():
+            assert taint_node.parent_one is None
+            assert taint_node.parent_two is None
+        else:
+            assert taint_node.parent_one is not None
+            assert taint_node.parent_two is not None
+            had_taint_union = True
+    assert had_taint_union

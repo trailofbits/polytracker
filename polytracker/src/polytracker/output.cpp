@@ -233,6 +233,28 @@ void storeFunc(sqlite3 *output_db, const char *fname,
   sqlite3_finalize(stmt);
 }
 
+std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId) {
+  const char *fetchQuery = "SELECT name FROM func WHERE id = ?;";
+  sqlite3_stmt *stmt;
+  auto rc = sqlite3_prepare_v2(outputDb, fetchQuery, -1, &stmt, 0);
+  if (rc == SQLITE_OK) {
+    sqlite3_bind_int64(stmt, 1, funcId);
+  } else {
+    fprintf(stderr, "Failed to execute statement: %s\n",
+            sqlite3_errmsg(outputDb));
+    return "";
+  }
+  int step = sqlite3_step(stmt);
+  if (step == SQLITE_ROW) {
+    auto fName = std::string(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    sqlite3_finalize(stmt);
+    return fName;
+  }
+  sqlite3_finalize(stmt);
+  return "";
+}
+
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const int &thread_id, const event_id_t &event_id,
                 const event_id_t &thread_event_id, EventType event_type,

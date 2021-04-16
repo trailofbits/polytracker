@@ -1,6 +1,6 @@
 from enum import IntEnum, IntFlag
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Union
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -23,8 +23,10 @@ from sqlalchemy import (
 
 from tqdm import tqdm
 
+from .cache import LRUCache
 from .polytracker import ProgramTrace
 from .repl import PolyTrackerREPL
+from .taint_forest import TaintForest, TaintForestNode
 from .tracing import (
     BasicBlock,
     BasicBlockEntry,
@@ -61,7 +63,7 @@ class EdgeType(IntEnum):
     BACKWARD = 1
 
 
-def stream_results(query: Query, window_size: int = 1000) -> Iterator:
+def stream_results(query: Query, window_size: int = 10000) -> Iterator:
     start = 0
     while True:
         stop = start + window_size
@@ -107,7 +109,7 @@ class DBFunction(Base, Function):  # type: ignore
     )
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints(
+        return DBTaintForestNode.taints(
             (label.event.taint_forest_node for label in self.accessed_labels)
         )
 
@@ -145,7 +147,7 @@ class FunctionCFGEdge(Base):  # type: ignore
     src = relationship(
         "DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges"
     )
-    input = relationship("DBInput")
+    source = relationship("DBInput")
     event = relationship("DBTraceEvent")
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "dest", "src"),)
@@ -179,7 +181,7 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
         return self.id & 0x0000FFFF
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints(
+        return DBTaintForestNode.taints(
             (label.taint_forest_node for label in self.accessed_labels)
         )
 
@@ -268,7 +270,7 @@ class AccessedLabel(Base):  # type: ignore
         return hasattr(other, "label") and self.label < other.label
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints((self.taint_forest_node,))
+        return DBTaintForestNode.taints((self.taint_forest_node,))
 
 
 class DBTraceEvent(Base):  # type: ignore
@@ -293,6 +295,7 @@ class DBTraceEvent(Base):  # type: ignore
 
     _queried_for_entry: bool = False
     _function_entry: Optional[FunctionEntry] = None
+    trace: Optional["DBProgramTrace"] = None
 
     @property
     def uid(self) -> int:  # type: ignore
@@ -301,20 +304,37 @@ class DBTraceEvent(Base):  # type: ignore
     @property
     def function_entry(self) -> Optional[FunctionEntry]:
         if not self._queried_for_entry:
-            try:
-                self._function_entry = (
-                    Session.object_session(self)
-                    .query(DBFunctionEntry)
-                    .filter(DBFunctionEntry.event_id == self.func_event_id)
-                    .one()
-                )
-            except NoResultFound:
-                self._function_entry = None
+            self._queried_for_entry = True
+            if self.trace is not None:
+                try:
+                    entry = self.trace.get_event(self.func_event_id)
+                    if isinstance(entry, FunctionEntry):
+                        self._function_entry = entry
+                    else:
+                        self._function_entry = None
+                except KeyError:
+                    self._function_entry = None
+            else:
+                try:
+                    self._function_entry = (
+                        Session.object_session(self)
+                        .query(DBFunctionEntry)
+                        .filter(DBFunctionEntry.event_id == self.func_event_id)
+                        .one()
+                    )
+                except NoResultFound:
+                    self._function_entry = None
         return self._function_entry
 
     @property
     def next_event(self) -> Optional["TraceEvent"]:
-        if not hasattr(self, "_next_event"):
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_thread_event(thread_event_id=self.thread_event_id + 1, thread_id=self.thread_id)
+            except KeyError:
+                return None
+        elif not hasattr(self, "_next_event"):
             session = Session.object_session(self)
             try:
                 setattr(
@@ -334,7 +354,13 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def previous_event(self) -> Optional["TraceEvent"]:
-        if not hasattr(self, "_prev_event"):
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_thread_event(thread_event_id=self.thread_event_id - 1, thread_id=self.thread_id)
+            except KeyError:
+                return None
+        elif not hasattr(self, "_prev_event"):
             session = Session.object_session(self)
             try:
                 setattr(
@@ -354,6 +380,12 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def next_global_event(self) -> Optional["TraceEvent"]:
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_event(self.event_id + 1)
+            except KeyError:
+                return None
         session = Session.object_session(self)
         try:
             return (
@@ -366,6 +398,12 @@ class DBTraceEvent(Base):  # type: ignore
 
     @property
     def previous_global_event(self) -> Optional["TraceEvent"]:
+        if self.trace is not None:
+            # Use the LRU event cache in the trace:
+            try:
+                return self.trace.get_event(self.event_id - 1)
+            except KeyError:
+                return None
         session = Session.object_session(self)
         try:
             return (
@@ -391,16 +429,16 @@ class DBTaintAccess(DBTraceEvent, TaintAccess):  # type: ignore
         uselist=False,
     )
     taint_forest_node = relationship(
-        "DBTaintForest",
+        "DBTaintForestNode",
         primaryjoin="and_(DBTaintAccess.event_id==remote(AccessedLabel.event_id), "
-        "AccessedLabel.label==foreign(DBTaintForest.label), "
-        "DBTaintForest.input_id==DBTaintAccess.input_id)",
+        "AccessedLabel.label==foreign(DBTaintForestNode.label), "
+        "DBTaintForestNode.input_id==DBTaintAccess.input_id)",
         viewonly=True,
         uselist=False,
     )
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints((self.taint_forest_node,))
+        return DBTaintForestNode.taints((self.taint_forest_node,))
 
 
 class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
@@ -423,7 +461,7 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
             next_event = next_event.next_event
 
     def taints(self) -> Taints:
-        return DBTaintForest.taints(
+        return DBTaintForestNode.taints(
             (access.taint_forest_node for access in self.taint_accesses())
         )
 
@@ -460,8 +498,10 @@ class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
 
 
 class DBProgramTrace(ProgramTrace):
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
         self.session: Session = session
+        self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
+        self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace")
@@ -491,13 +531,58 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        return stream_results(
+        for event in stream_results(
             self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc())
-        )
+        ):
+            event.trace = self
+            self.event_cache[event.event_id] = event
+            self.thread_event_cache[(event.thread_id, event.thread_event_id)] = event
+            yield event
+
+    def has_event(self, uid: int) -> bool:
+        return uid in self.event_cache
+
+    def get_event(self, uid: int) -> TraceEvent:
+        try:
+            return self.event_cache[uid]
+        except KeyError:
+            pass
+        try:
+            event = self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).one()
+            event.trace = self
+            self.event_cache[uid] = event
+            return event
+        except NoResultFound:
+            pass
+        raise KeyError(uid)
+
+    def has_thread_event(self, thread_event_id: int, thread_id: int) -> bool:
+        return (thread_id, thread_event_id) in self.thread_event_cache
+
+    def get_thread_event(self, thread_event_id: int, thread_id: int) -> TraceEvent:
+        try:
+            return self.thread_event_cache[(thread_id, thread_event_id)]
+        except KeyError:
+            pass
+        try:
+            event = self.session.query(DBTraceEvent).filter(
+                DBTraceEvent.thread_event_id == thread_event_id,
+                DBTraceEvent.thread_id == thread_id
+            ).one()
+            event.trace = self
+            self.thread_event_cache[(thread_id, thread_event_id)] = event
+            return event
+        except NoResultFound:
+            pass
+        raise KeyError((thread_event_id, thread_id))
+
+    @property
+    def taint_forest(self) -> TaintForest:
+        return DBTaintForest(self)
 
     @property
     def functions(self) -> Iterable[Function]:
-        return self.session.query(DBFunction)
+        return self.session.query(DBFunction).all()
 
     def get_function(self, name: str) -> Function:
         try:
@@ -513,7 +598,7 @@ class DBProgramTrace(ProgramTrace):
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        return self.session.query(DBBasicBlock)
+        return self.session.query(DBBasicBlock).all()
 
     def access_sequence(self) -> Iterator[TaintAccess]:
         yield from stream_results(
@@ -550,7 +635,7 @@ class CanonicalMap(Base):  # type: ignore
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "taint_label", "file_offset"),)
 
-    input = relationship("DBInput")
+    source = relationship("DBInput")
 
 
 class TaintedChunksItem(Base):  # type: ignore
@@ -561,7 +646,7 @@ class TaintedChunksItem(Base):  # type: ignore
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
 
 
-class DBTaintForest(Base):  # type: ignore
+class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     __tablename__ = "taint_forest"
     parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
@@ -570,13 +655,7 @@ class DBTaintForest(Base):  # type: ignore
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
-    parent_one = relationship(
-        "DBTaintForest", foreign_keys=[parent_one_id, input_id], uselist=False
-    )
-    parent_two = relationship(
-        "DBTaintForest", foreign_keys=[parent_two_id, input_id], uselist=False
-    )
-    input = relationship("DBInput")
+    source = relationship("DBInput")
     accessed_labels = relationship("AccessedLabel", foreign_keys=[label, input_id])
 
     def __hash__(self):
@@ -584,22 +663,58 @@ class DBTaintForest(Base):  # type: ignore
 
     def __eq__(self, other):
         return (
-            isinstance(other, DBTaintForest)
+            isinstance(other, DBTaintForestNode)
             and self.input_id == other.input_id
             and self.label == other.label
         )
 
     def __lt__(self, other):
-        return isinstance(other, DBTaintForest) and self.label < other.label
+        return isinstance(other, DBTaintForestNode) and self.label < other.label
 
     def __str__(self):
         return f"I{self.input_id}L{self.label}"
 
+    def is_canonical(self) -> bool:
+        assert (self.parent_one_id > 0 and self.parent_two_id > 0) or (self.parent_one_id == self.parent_two_id == 0)
+        return self.parent_one_id == 0
+
+    @property
+    def parent_one(self) -> Optional["DBTaintForestNode"]:
+        if not hasattr(self, "_parent_one"):
+            try:
+                setattr(
+                    self,
+                    "_parent_one",
+                    Session.object_session(self).query(DBTaintForestNode).filter(
+                        DBTaintForestNode.label == self.parent_one_id,
+                        DBTaintForestNode.input_id == self.input_id
+                    ).one()
+                )
+            except NoResultFound:
+                setattr(self, "_parent_one", None)
+        return self._parent_one
+
+    @property
+    def parent_two(self) -> Optional["DBTaintForestNode"]:
+        if not hasattr(self, "_parent_two"):
+            try:
+                setattr(
+                    self,
+                    "_parent_two",
+                    Session.object_session(self).query(DBTaintForestNode).filter(
+                        DBTaintForestNode.label == self.parent_two_id,
+                        DBTaintForestNode.input_id == self.input_id
+                    ).one()
+                )
+            except NoResultFound:
+                setattr(self, "_parent_two", None)
+        return self._parent_two
+
     @staticmethod
-    def taints(labels: Iterable["DBTaintForest"]) -> Taints:
+    def taints(labels: Iterable["DBTaintForestNode"]) -> Taints:
         # reverse the labels to reduce the likelihood of reproducing work
-        history: Set[DBTaintForest] = set(labels)
-        node_stack: List[DBTaintForest] = sorted(list(set(history)), reverse=True)
+        history: Set[DBTaintForestNode] = set(labels)
+        node_stack: List[DBTaintForestNode] = sorted(list(set(history)), reverse=True)
         taints: Set[ByteOffset] = set()
         if len(node_stack) < 10:
             labels_str = ", ".join(map(str, node_stack))
@@ -634,9 +749,10 @@ class DBTaintForest(Base):  # type: ignore
                         raise ValueError(
                             f"Taint label {node.label} is not in the canonical mapping!"
                         )
-                    taints.add(ByteOffset(source=node.input, offset=file_offset))
+                    taints.add(ByteOffset(source=node.source, offset=file_offset))
                 else:
                     parent1, parent2 = node.parent_one, node.parent_two
+                    assert parent1 is not None and parent2 is not None
                     if parent1 not in history:
                         history.add(parent1)
                         node_stack.append(parent1)
@@ -646,3 +762,14 @@ class DBTaintForest(Base):  # type: ignore
                         node_stack.append(parent2)
                         t.total += parent2.label
         return Taints(taints)
+
+
+class DBTaintForest(TaintForest):
+    def __init__(self, trace: DBProgramTrace):
+        self.trace: DBProgramTrace = trace
+
+    def nodes(self) -> Iterator[TaintForestNode]:
+        yield from stream_results(self.trace.session.query(DBTaintForestNode).order_by(DBTaintForestNode.label.desc()))
+
+    def __len__(self):
+        return self.trace.session.query(DBTaintForestNode).count()

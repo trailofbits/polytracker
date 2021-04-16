@@ -1,9 +1,10 @@
 from collections import OrderedDict
 from collections.abc import MutableSet as AbstractMutableSet, MutableMapping
-from typing import Callable, Generic, Optional, TypeVar, Iterator
+from typing import Callable, Generic, Iterator, Optional, Tuple, TypeVar, Union
 
 R = TypeVar("R")
 V = TypeVar("V")
+A = TypeVar("A")
 
 
 class Memoized(Generic[R]):
@@ -49,10 +50,22 @@ class OrderedSet(Generic[R], AbstractMutableSet):  # type: ignore
         return f"{{{', '.join(str(item) for item in self)}}}"
 
 
+NO_DEFAULT = object()
+
+
 class LRUCache(Generic[R, V], MutableMapping):
-    def __init__(self, max_size: Optional[int] = None):
+    def __init__(self, max_size: Optional[int] = 30000000):
         self._items: OrderedDict[R, V] = OrderedDict()
         self.max_size: Optional[int] = max_size
+
+    def get(self, k: R, default: A = NO_DEFAULT) -> Union[V, A]:  # type: ignore
+        try:
+            return self[k]
+        except KeyError:
+            if default is NO_DEFAULT:
+                raise
+            else:
+                return default
 
     def __getitem__(self, k: R) -> V:
         ret = self._items[k]
@@ -71,6 +84,13 @@ class LRUCache(Generic[R, V], MutableMapping):
         return len(self._items)
 
     def __iter__(self) -> Iterator[R]:
-        for key in self._items:
+        yielded = set()
+        while True:
+            for key in self._items:
+                if id(key) not in yielded:
+                    break
+            else:
+                break
             self._items.move_to_end(key, last=True)
             yield key
+            yielded.add(id(key))

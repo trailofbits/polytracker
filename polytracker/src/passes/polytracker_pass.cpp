@@ -373,7 +373,8 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     if (percent > lastPercent ||
         std::chrono::duration_cast<std::chrono::seconds>(currentTime -
                                                          lastUpdateTime)
-                .count() >= 5.0) {
+                .count() >= 5.0 ||
+        i >= functions.size()) {
       lastUpdateTime = currentTime;
       auto totalElapsedSeconds =
           std::chrono::duration_cast<std::chrono::seconds>(currentTime -
