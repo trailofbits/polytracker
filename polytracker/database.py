@@ -470,17 +470,6 @@ class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}  # type: ignore
 
     @property
-    def function(self) -> Function:
-        if self.basic_block is None:
-            # this can happen on main()
-            entrypoint = self.entrypoint
-            if entrypoint is None:
-                raise ValueError(f"Could not determine the function associated with {self!r}")
-            return entrypoint.function
-        else:
-            return self.basic_block.function
-
-    @property
     def function_return(self) -> Optional["FunctionReturn"]:
         try:
             return (
@@ -538,6 +527,29 @@ class DBProgramTrace(ProgramTrace):
             self.event_cache[event.event_id] = event
             self.thread_event_cache[(event.thread_id, event.thread_event_id)] = event
             yield event
+
+    def function_trace(self) -> Iterator[FunctionEntry]:
+        for function_entry in stream_results(
+            self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc())
+        ):
+            function_entry.trace = self
+            self.event_cache[function_entry.event_id] = function_entry
+            self.thread_event_cache[(function_entry.thread_id, function_entry.thread_event_id)] = function_entry
+            yield function_entry
+
+    def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
+        try:
+            if after is None:
+                return self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()).limit(1).one()
+            elif isinstance(after, DBFunctionEntry):
+                return self.session.query(DBFunctionEntry).filter(
+                    DBFunctionEntry.thread_event_id > after.thread_event_id,
+                    DBFunctionEntry.thread_id == after.thread_id
+                ).order_by(DBFunctionEntry.thread_event_id.asc()).limit(1).one()
+            else:
+                return super().next_function_entry(after)
+        except NoResultFound:
+            return None
 
     def has_event(self, uid: int) -> bool:
         return uid in self.event_cache

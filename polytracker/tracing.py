@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace, REMAINDER
 from collections import defaultdict
 from enum import IntFlag
+import itertools
 from os.path import commonpath
 from pathlib import Path
 import subprocess
@@ -315,6 +316,10 @@ class TraceEvent:
         raise NotImplementedError()
 
     @property
+    def touched_taint(self) -> bool:
+        return bool(self.taints())
+
+    @property
     @abstractmethod
     def previous_event(self) -> Optional["TraceEvent"]:
         raise NotImplementedError()
@@ -376,7 +381,7 @@ class FunctionEntry(ControlFlowEvent):
         super().__init__(uid=uid)
 
     @property
-    def caller(self) -> "BasicBlockEntry":
+    def caller(self) -> Optional["BasicBlockEntry"]:
         prev = self.previous_control_flow_event
         while prev is not None:
             if isinstance(prev, BasicBlockEntry):
@@ -386,7 +391,7 @@ class FunctionEntry(ControlFlowEvent):
                 if prev is None:
                     break
             prev = prev.previous_control_flow_event
-        raise ValueError(f"Unable to determine the caller for {self}")
+        return None
 
     @property
     def entrypoint(self) -> Optional["BasicBlockEntry"]:
@@ -396,6 +401,24 @@ class FunctionEntry(ControlFlowEvent):
                 raise ValueError(f"Unexpected basic block: {next_event}")
             return next_event
         return None
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """
+        Returns the entrypoint of this function
+        For the basic block that called into this function, use `self.caller`
+
+        """
+        if self.entrypoint is None:
+            raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
+        return self.entrypoint.basic_block
+
+    @property
+    def function(self) -> Function:
+        """Returns the function that was entered"""
+        if self.entrypoint is None:
+            raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
+        return self.entrypoint.function
 
     @property
     @abstractmethod
@@ -487,6 +510,90 @@ class FunctionReturn(ControlFlowEvent):
         return entry.basic_block.function
 
 
+class FunctionInvocation(TraceEvent):
+    def __init__(self, function_entry: FunctionEntry):
+        super().__init__(function_entry.uid)
+        self._function_entry: FunctionEntry = function_entry
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        return self.function_entry.basic_block
+
+    @property
+    def function(self) -> Function:
+        return self.function_entry.function
+
+    @property
+    def previous_event(self) -> Optional["TraceEvent"]:
+        return self.function_entry.previous_event
+
+    @property
+    def next_event(self) -> Optional["TraceEvent"]:
+        return self.function_entry.next_event
+
+    @property
+    def next_global_event(self) -> Optional["TraceEvent"]:
+        return self.function_entry.next_global_event
+
+    @property
+    def previous_global_event(self) -> Optional["TraceEvent"]:
+        return self.function_entry.previous_global_event
+
+    @property
+    def function_return(self) -> Optional[FunctionReturn]:
+        return self.function_entry.function_return
+
+    @property
+    def function_entry(self) -> Optional["FunctionEntry"]:
+        return self._function_entry
+
+    def calls(self) -> Iterator["FunctionInvocation"]:
+        """Yields all of the functions called inside of this invocation, in order"""
+        next_event = self.function_entry.next_control_flow_event
+        return_event = self.function_return
+        while next_event is not None and next_event != return_event:
+            if isinstance(next_event, FunctionEntry):
+                yield FunctionInvocation(next_event)
+                next_event = next_event.function_return
+                if next_event is None:
+                    return
+            next_event = next_event.next_control_flow_event
+
+    def __eq__(self, other):
+        return isinstance(other, FunctionInvocation) and other.uid == self.uid
+
+    def __iter__(self) -> Iterator[ControlFlowEvent]:
+        """
+        Iterates all of the control flow events that took place during this function invocation, including all events
+        generated from calls to other functions from within this invocation
+
+        """
+        if self.function_return is None:
+            return
+        next_event = self.function_entry.next_control_flow_event
+        while next_event is not None and not next_event == self.function_return:
+            yield next_event
+            next_event = next_event.next_control_flow_event
+
+    def taints(self) -> Taints:
+        """Returns all taints operated on by this function or any functions called by this function"""
+        if not hasattr(self, "_taints"):
+            setattr(self, "_taints", Taints(itertools.chain(iter(event.taints()) for event in self)))  # type: ignore
+        return getattr(self, "_taints")
+
+    def __str__(self):
+        s = str(self.function)
+        caller = self.function_entry.caller
+        if caller is not None:
+            s = f"{s} called from {caller!s}"
+        return_event = self.function_return
+        if return_event is not None:
+            returning_to = return_event.returning_to
+            if returning_to is not None:
+                s = f"{s} returning to {returning_to!s}"
+        return s
+
+
 class ProgramTrace(ABC):
     _cfg: Optional[DiGraph[BasicBlock]] = None
     _func_cfg: Optional[DiGraph[Function]] = None
@@ -545,6 +652,33 @@ class ProgramTrace(ABC):
     @abstractmethod
     def taint_forest(self) -> TaintForest:
         raise NotImplementedError()
+
+    def function_trace(self) -> Iterator[FunctionEntry]:
+        return iter(event for event in self if isinstance(event, FunctionEntry))
+
+    def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
+        """Returns the next function entry, or None if none exists"""
+        if after is None:
+            try:
+                return next(iter(self.function_trace()))
+            except StopIteration:
+                return None
+        function_return = after.function_return
+        if function_return is None:
+            next_event = after.next_control_flow_event
+        else:
+            next_event = function_return.returning_to
+        while next_event is not None:
+            if isinstance(next_event, FunctionEntry):
+                return next_event
+        return None
+
+    @property
+    def entrypoint(self) -> Optional[FunctionInvocation]:
+        try:
+            return FunctionInvocation(next(iter(self.function_trace())))
+        except StopIteration:
+            return None
 
     @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
