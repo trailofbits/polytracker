@@ -521,7 +521,7 @@ class DBFunctionInvocation(FunctionInvocation):
             except NoResultFound:
                 return iter(())
         # work backwards from our function_return, since returns have back-pointers to their associated function_entry:
-        ret = []
+        ret: List[DBFunctionInvocation] = []
         while event is not None:
             # find the last function return before event:
             try:
@@ -531,7 +531,8 @@ class DBFunctionInvocation(FunctionInvocation):
                     DBFunctionReturn.thread_id == thread_id
                 ).order_by(DBFunctionReturn.thread_event_id.desc()).limit(1).one()
                 event = func_return.function_entry
-                ret.append(DBFunctionInvocation(event, self.trace))
+                if event is not None:
+                    ret.append(DBFunctionInvocation(event, self.trace))
             except NoResultFound:
                 # there are no more function returns in this invocation
                 break
