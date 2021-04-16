@@ -204,6 +204,17 @@ def test_control_flow(program_trace: ProgramTrace):
     assert entries["func2"] == 6
     assert returns["func1"] == 1
     assert returns["func2"] == 6
+    # check function invocation reconstruction:
+    assert program_trace.entrypoint.function == main
+    called_from_main = list(program_trace.entrypoint.calls())
+    assert len(called_from_main) == 1
+    assert called_from_main[0].function == func1
+    called_from_func1 = list(called_from_main[0].calls())
+    assert len(called_from_func1) == 1
+    assert called_from_func1[0].function == func2
+    called_from_func2 = list(called_from_func1[0].calls())
+    assert len(called_from_func2) == 1
+    assert called_from_func2[0].function == func2
     # our instrumentation doesn't currently emit a function return event for main, but that might change in the future
     # so for now just ignore main
 

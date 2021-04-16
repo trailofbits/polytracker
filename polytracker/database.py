@@ -34,6 +34,7 @@ from .tracing import (
     ByteOffset,
     Function,
     FunctionEntry,
+    FunctionInvocation,
     FunctionReturn,
     Input,
     TaintAccess,
@@ -486,6 +487,57 @@ class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_RET}  # type: ignore
 
 
+class DBFunctionInvocation(FunctionInvocation):
+    def __init__(self, function_entry: DBFunctionEntry, trace: "DBProgramTrace"):
+        super().__init__(function_entry)
+        self.trace: DBProgramTrace = trace
+        self._called_by: Optional[FunctionInvocation] = None
+
+    @property
+    def function_entry(self) -> DBFunctionEntry:
+        return super().function_entry  # type: ignore
+
+    @property
+    def function_return(self) -> Optional[DBFunctionReturn]:
+        return super().function_return  # type: ignore
+
+    def called_by(self) -> Optional[FunctionInvocation]:
+        if self._called_by is None:
+            caller = self.function_entry.caller
+            if caller is not None and caller.function_entry is not None:
+                self._called_by = DBFunctionInvocation(caller.function_entry, self.trace)  # type: ignore
+        return self._called_by
+
+    def calls(self) -> Iterator["DBFunctionInvocation"]:
+        event = self.function_return
+        thread_id = self.function_entry.thread_id
+        # are we the entrypoint (i.e., main)? If so, we probably don't have a function return, so use the last event:
+        if event is None and self == self.trace.entrypoint:
+            try:
+                event = self.trace.session.query(DBTraceEvent).filter(
+                    DBTraceEvent.thread_event_id > self.function_entry.thread_event_id,
+                    DBTraceEvent.thread_id == thread_id
+                ).order_by(DBTraceEvent.thread_event_id.desc()).limit(1).one()
+            except NoResultFound:
+                return iter(())
+        # work backwards from our function_return, since returns have back-pointers to their associated function_entry:
+        ret = []
+        while event is not None:
+            # find the last function return before event:
+            try:
+                func_return = self.trace.session.query(DBFunctionReturn).filter(
+                    DBFunctionReturn.thread_event_id < event.thread_event_id,
+                    DBFunctionReturn.thread_event_id > self.function_entry.thread_event_id,
+                    DBFunctionReturn.thread_id == thread_id
+                ).order_by(DBFunctionReturn.thread_event_id.desc()).limit(1).one()
+                event = func_return.function_entry
+                ret.append(DBFunctionInvocation(event, self.trace))
+            except NoResultFound:
+                # there are no more function returns in this invocation
+                break
+        return reversed(ret)
+
+
 class DBProgramTrace(ProgramTrace):
     def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
         self.session: Session = session
@@ -528,7 +580,7 @@ class DBProgramTrace(ProgramTrace):
             self.thread_event_cache[(event.thread_id, event.thread_event_id)] = event
             yield event
 
-    def function_trace(self) -> Iterator[FunctionEntry]:
+    def function_trace(self) -> Iterator[DBFunctionEntry]:
         for function_entry in stream_results(
             self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc())
         ):
@@ -551,6 +603,13 @@ class DBProgramTrace(ProgramTrace):
         except NoResultFound:
             return None
 
+    @property
+    def entrypoint(self) -> Optional[DBFunctionInvocation]:
+        try:
+            return DBFunctionInvocation(next(iter(self.function_trace())), trace=self)
+        except StopIteration:
+            return None
+
     def has_event(self, uid: int) -> bool:
         return uid in self.event_cache
 
@@ -560,7 +619,7 @@ class DBProgramTrace(ProgramTrace):
         except KeyError:
             pass
         try:
-            event = self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).one()
+            event = self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).limit(1).one()
             event.trace = self
             self.event_cache[uid] = event
             return event
@@ -580,7 +639,7 @@ class DBProgramTrace(ProgramTrace):
             event = self.session.query(DBTraceEvent).filter(
                 DBTraceEvent.thread_event_id == thread_event_id,
                 DBTraceEvent.thread_id == thread_id
-            ).one()
+            ).limit(1).one()
             event.trace = self
             self.thread_event_cache[(thread_id, thread_event_id)] = event
             return event
