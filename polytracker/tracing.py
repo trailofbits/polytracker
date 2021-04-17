@@ -429,7 +429,7 @@ class FunctionEntry(ControlFlowEvent):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
-class TaintAccess(TraceEvent):
+class TaintAccess:
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r})"
 

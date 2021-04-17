@@ -57,7 +57,6 @@ class EventType(IntEnum):
     FUNC_ENTER = 0
     FUNC_RET = 1
     BLOCK_ENTER = 2
-    TAINT_ACCESS = 3
 
 
 class EdgeType(IntEnum):
