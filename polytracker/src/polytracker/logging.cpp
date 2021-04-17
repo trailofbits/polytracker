@@ -72,7 +72,7 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
                    this_event_id, EdgeType::FORWARD);
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
-  function_stack.push({this_event_id, func_id});
+  function_stack.push({this_event_id, func_id, {}});
   curr_func_index = func_id;
 }
 
@@ -123,9 +123,11 @@ void logBBEntry(const char *fname, const function_id_t &findex,
   // blocks
   storeBlock(output_db, findex, bindex, btype);
   last_bb_event_id = event_id++;
-  storeEvent(output_db, input_id, thread_id, last_bb_event_id,
-             thread_event_id++, EventType::BLOCK_ENTER, findex, bindex,
-             function_stack.empty() ? last_bb_event_id
-                                    : function_stack.top().func_event_id);
+  auto entryCount = function_stack.top().bb_entry_count[bindex]++;
+  storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
+                  thread_event_id++, findex, bindex,
+                  function_stack.empty() ? last_bb_event_id
+                                         : function_stack.top().func_event_id,
+                  entryCount);
   curr_block_index = bindex;
 }

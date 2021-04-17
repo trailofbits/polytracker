@@ -6,6 +6,7 @@
 typedef uint32_t input_id_t;
 typedef uint32_t function_id_t;
 typedef uint32_t block_id_t;
+typedef uint32_t block_entry_count_t;
 typedef uint64_t global_id_t;
 typedef uint64_t event_id_t;
 
@@ -46,6 +47,13 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const event_id_t &thread_event_id, EventType event_type,
                 const function_id_t &findex, const block_id_t &bindex,
                 const event_id_t &func_event_id);
+
+void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
+                     const int &thread_id, const event_id_t &event_id,
+                     const event_id_t &thread_event_id,
+                     const function_id_t &findex, const block_id_t &bindex,
+                     const event_id_t &func_event_id,
+                     const block_entry_count_t entry_count);
 
 void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
                        const dfsan_label &label, const uint64_t &file_offset);
