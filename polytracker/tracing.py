@@ -429,9 +429,34 @@ class FunctionEntry(ControlFlowEvent):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
+class ByteAccessType(IntFlag):
+    UNKNOWN_ACCESS = 0
+    INPUT_ACCESS = 1
+    CMP_ACCESS = 2
+    READ_ACCESS = 4
+
+
 class TaintAccess:
+    def __init__(self, access_id: int, event: TraceEvent, label: int, access_type: ByteAccessType):
+        self.access_id: int = access_id
+        self.event: TraceEvent = event
+        self.label: int = label
+        self.access_type: ByteAccessType = access_type
+
+    def taints(self) -> Taints:
+        raise NotImplementedError()
+
+    def __lt__(self, other):
+        return hasattr(other, "access_id") and self.access_id < other.access_id
+
+    def __hash__(self):
+        return self.access_id
+
+    def __eq__(self, other):
+        return isinstance(other, DBTaintAccess) and self.access_id == other.access_id
+
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
+        return f"{self.__class__.__name__}({self.access_id!r}, {self.event!r}, {self.label}, {self.access_type!r})"
 
 
 class BasicBlockEntry(ControlFlowEvent):
