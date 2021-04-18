@@ -453,7 +453,7 @@ class TaintAccess:
         return self.access_id
 
     def __eq__(self, other):
-        return isinstance(other, DBTaintAccess) and self.access_id == other.access_id
+        return isinstance(other, TaintAccess) and self.access_id == other.access_id
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.access_id!r}, {self.event!r}, {self.label}, {self.access_type!r})"
