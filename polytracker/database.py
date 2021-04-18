@@ -420,7 +420,7 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
         )
 
 
-class BlockEntries(Base):
+class BlockEntries(Base):  # type: ignore
     __tablename__ = "block_entries"
     event_id: int = Column(BigInteger,  ForeignKey("events.event_id"), primary_key=True)
     entry_count: int = Column(BigInteger)
