@@ -415,7 +415,9 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
             return None
 
     def taints(self) -> Taints:
-        return Taints(())
+        return DBTaintForestNode.taints(
+            (access.taint_forest_node for access in self.accessed_labels)
+        )
 
 
 class BlockEntries(Base):
@@ -452,17 +454,6 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         if isinstance(next_event, FunctionEntry):
             return DBFunctionInvocation(next_event, self.trace)  # type: ignore
         return None
-
-    def taint_accesses(self) -> Iterator[DBTaintAccess]:
-        next_event = self.next_event
-        while isinstance(next_event, DBTaintAccess):
-            yield next_event
-            next_event = next_event.next_event
-
-    def taints(self) -> Taints:
-        return DBTaintForestNode.taints(
-            (access.taint_forest_node for access in self.taint_accesses())
-        )
 
     def next_basic_block_in_function(self) -> Optional["BasicBlockEntry"]:
         if self.trace is None:
