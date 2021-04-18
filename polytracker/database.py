@@ -418,10 +418,23 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
         return Taints(())
 
 
+class BlockEntries(Base):
+    __tablename__ = "block_entries"
+    event_id: int = Column(BigInteger,  ForeignKey("events.event_id"), primary_key=True)
+    entry_count: int = Column(BigInteger)
+
+    entry: "DBBasicBlockEntry" = relationship("DBBasicBlockEntry")
+
+
 class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
     __mapper_args__ = {
         "polymorphic_identity": EventType.BLOCK_ENTER,  # type: ignore
     }
+
+    block_entries: BlockEntries = relationship("BlockEntries")
+
+    def entry_count(self) -> int:
+        return self.block_entries.entry_count
 
     @property
     def bb_index(self) -> int:
