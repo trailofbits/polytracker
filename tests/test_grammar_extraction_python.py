@@ -1,6 +1,6 @@
 from abc import ABC
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Union, Iterable, Iterator
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import pytest
 
@@ -22,6 +22,22 @@ class Counter:
         ret = self.n
         self.increment()
         return ret
+
+
+class BasicBlockMock(BasicBlock):
+    def taints(self) -> Taints:
+        raise NotImplementedError("TODO: Implement this function when needed")
+
+
+class FunctionMock(Function):
+    def taints(self) -> Taints:
+        raise NotImplementedError("TODO: Implement this function when needed")
+
+    def calls_to(self) -> Set["Function"]:
+        raise NotImplementedError("TODO: Implement this function when needed")
+
+    def called_from(self) -> Set["Function"]:
+        raise NotImplementedError("TODO: Implement this function when needed")
 
 
 class TracedEvent(ABC, TraceEvent):
@@ -72,7 +88,7 @@ class TracedBasicBlockEntry(TracedEvent, BasicBlockEntry):
         f_name = self.function.name
         bbs = tracer.bbs[f_name]
         if bb_name not in bbs:
-            bbs[bb_name] = BasicBlock(self.function, len(bbs))
+            bbs[bb_name] = BasicBlockMock(self.function, len(bbs))
         self._basic_block: BasicBlock = bbs[bb_name]
 
     @property
@@ -88,7 +104,7 @@ class TracedBasicBlockEntry(TracedEvent, BasicBlockEntry):
 class TracedFunctionEntry(TracedEvent, FunctionEntry):
     def __init__(self, tracer: "Tracer", func_name: str):
         if func_name not in tracer.functions_by_name:
-            func = Function(func_name, len(tracer.functions_by_name))
+            func: Function = FunctionMock(func_name, len(tracer.functions_by_name))
             tracer.functions_by_name[func_name] = func
         else:
             func = tracer.functions_by_name[func_name]
@@ -154,7 +170,7 @@ class Tracer(ProgramTrace):
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        bbs = []
+        bbs: List[BasicBlock] = []
         for blocks in self.bbs.values():
             bbs.extend(blocks.values())
         return bbs
