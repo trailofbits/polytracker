@@ -1231,7 +1231,7 @@ def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)
         if simplify:
-            grammar = grammar.simplify()
+            grammar.simplify()
         return grammar
     return Grammar()
 
