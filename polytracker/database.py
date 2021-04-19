@@ -425,7 +425,7 @@ class BlockEntries(Base):  # type: ignore
     event_id: int = Column(BigInteger,  ForeignKey("events.event_id"), primary_key=True)
     entry_count: int = Column(BigInteger)
 
-    entry: "DBBasicBlockEntry" = relationship("DBBasicBlockEntry")
+    entry: "DBBasicBlockEntry" = relationship("DBBasicBlockEntry", uselist=False)
 
 
 class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
@@ -433,7 +433,7 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         "polymorphic_identity": EventType.BLOCK_ENTER,  # type: ignore
     }
 
-    block_entries: BlockEntries = relationship("BlockEntries")
+    block_entries: BlockEntries = relationship("BlockEntries", uselist=False)
 
     def entry_count(self) -> int:
         return self.block_entries.entry_count
