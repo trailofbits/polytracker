@@ -28,6 +28,9 @@ class BasicBlockMock(BasicBlock):
     def taints(self) -> Taints:
         raise NotImplementedError("TODO: Implement this function when needed")
 
+    def entries(self) -> Iterator["BasicBlockEntry"]:
+        raise NotImplementedError("TODO: Implement this function when needed")
+
 
 class FunctionMock(Function):
     def taints(self) -> Taints:
