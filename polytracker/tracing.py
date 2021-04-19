@@ -14,6 +14,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     Union,
 )
 import weakref
@@ -21,7 +22,7 @@ import weakref
 from cxxfilt import demangle
 
 from .cfg import DiGraph
-from .inputs import Input
+from .inputs import Input, InputProperties
 from .plugins import Command, Subcommand
 from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest
@@ -544,7 +545,7 @@ class FunctionReturn(ControlFlowEvent):
         return entry.basic_block.function
 
 
-class FunctionInvocation(TraceEvent):
+class FunctionInvocation(ControlFlowEvent):
     def __init__(self, function_entry: FunctionEntry):
         super().__init__(function_entry.uid)
         self._function_entry: FunctionEntry = function_entry
@@ -596,18 +597,17 @@ class FunctionInvocation(TraceEvent):
     def __eq__(self, other):
         return isinstance(other, FunctionInvocation) and other.uid == self.uid
 
-    def __iter__(self) -> Iterator[ControlFlowEvent]:
+    def __iter__(self) -> Iterator[Union[BasicBlockEntry, "FunctionInvocation"]]:
         """
-        Iterates all of the control flow events that took place during this function invocation, including all events
-        generated from calls to other functions from within this invocation
+        Iterates all of the basic block entries that took place during this function invocation.
+        Any functions that are called from this function are yielded as a FunctionInvocation.
 
         """
-        if self.function_return is None:
-            return
-        next_event = self.function_entry.next_control_flow_event
-        while next_event is not None and not next_event == self.function_return:
-            yield next_event
-            next_event = next_event.next_control_flow_event
+        for bb in self.basic_blocks():
+            yield bb
+            func = bb.called_function
+            if func is not None:
+                yield func
 
     def basic_blocks(self) -> Iterator[BasicBlockEntry]:
         """
@@ -692,6 +692,29 @@ class ProgramTrace(ABC):
     @abstractmethod
     def inputs(self) -> Iterable[Input]:
         raise NotImplementedError()
+
+    def input_properties(self, source: Input) -> InputProperties:
+        first_usages: List[Optional[int]] = [None] * source.size
+        file_seeks: List[Tuple[int, int, int]] = []
+        last_offset: Optional[int] = None
+        for i, taint_access in enumerate(self.access_sequence()):
+            for offset in taint_access.taints():
+                if not offset.source == source:
+                    continue
+                if first_usages[offset.offset] is None:
+                    first_usages[offset.offset] = i
+                if last_offset is not None:
+                    if offset.offset < last_offset:
+                        file_seeks.append((i - 1, last_offset, offset.offset))
+                last_offset = offset.offset
+        unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
+        out_of_order = [
+            previous_offset + 1
+            for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
+            if previous > first_used  # type: ignore
+        ]
+        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order,
+                               file_seeks=file_seeks)
 
     @property
     @abstractmethod

@@ -967,6 +967,7 @@ class Grammar:
                     )
 
     def simplify(self) -> bool:
+        modified = False
         with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
             for prod in tqdm(
                     list(self.productions.values()),
@@ -982,6 +983,7 @@ class Grammar:
                     for user in list(prod.used_by):
                         user.replace_sub_production(prod.name, prod.first_rule())  # type: ignore
                     self.remove(prod)
+                    modified = True
                     # print(f"replaced {prod} with {prod.first_rule()}")
                     # self.verify(test_disconnection=False)
                     status.update(1)
@@ -998,7 +1000,8 @@ class Grammar:
                     # print(f"removed {prod} because it was empty")
                     # self.verify(test_disconnection=False)
                     status.update(1)
-        return
+                    modified = True
+        return modified
         modified = False
         modified_last_pass = True
         with tqdm(
@@ -1193,63 +1196,38 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
     return grammar
 
 
-class TraceProperties:
-    def __init__(
-        self, unused_byte_offsets: List[int], out_of_order_byte_offsets: List[int], file_seeks: List[Tuple[int, int, int]]
-    ):
-        self.unused_byte_offsets: List[int] = unused_byte_offsets
-        self.file_seeks: List[Tuple[int, int, int]] = file_seeks
-        self.out_of_order_byte_offsets: List[int] = out_of_order_byte_offsets
-
-    def __bool__(self):
-        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets and not self.file_seeks
-
-
-def check_trace(trace: PolyTrackerTrace) -> TraceProperties:
-    # check if the trace has taint data for all input bytes:
-    first_usages: List[Optional[int]] = [None] * len(trace.inputstr)
-    file_seeks: List[Tuple[int, int, int]] = []
-    last_offset = None
-    for i, (offset, _) in enumerate(trace.consumed_bytes()):
-        if first_usages[offset] is None:
-            first_usages[offset] = i
-        if last_offset is not None:
-            if offset < last_offset:
-                file_seeks.append((i - 1, last_offset, offset))
-        last_offset = offset
-    unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
-    out_of_order = [
-        previous_offset + 1
-        for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
-        if previous > first_used  # type: ignore
-    ]
-    return TraceProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order, file_seeks=file_seeks)
-
-
 @PolyTrackerREPL.register("extract_grammar")
-def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
+def extract(traces: Iterable[ProgramTrace]) -> Grammar:
     """extract a grammar from a set of traces"""
-    trace_iter = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
+    trace_iter: Iterable[ProgramTrace] = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
     for trace in trace_iter:
-        properties = check_trace(trace)
+        inputs = list(trace.inputs)
+        if len(inputs) == 0:
+            raise ValueError(f"Trace {trace} did not load any taints")
+        source = inputs[0]
+        if len(inputs) > 1:
+            log.warning(f"Trace {trace} operated on multiple inputs; using {source}")
+        properties = trace.input_properties(source)
         if properties.unused_byte_offsets:
-            print(
+            log.warning(
                 "Warning: The following byte offsets were never recorded as being read in the trace: "
-                f"        {[(offset, trace.inputstr[offset:offset+1]) for offset in properties.unused_byte_offsets]!r}"
+                f"        {[(offset, source.content[offset:offset+1]) for offset in properties.unused_byte_offsets]!r}"
             )
         if properties.out_of_order_byte_offsets:
-            print(
+            log.warning(
                 "Warning: The trace read the following bytes out of order (implying that the trace is of a parser that "
                 f"is not a pure recursive descent parser): {', '.join(map(str, properties.out_of_order_byte_offsets))}"
             )
         if properties.file_seeks:
             # this should only ever happen if properties.out_of_order_byte_offsets is also populated
             seeks = [f"⎆{i}:⎗{from_offset}→{to_offset}⎘" for i, from_offset, to_offset in properties.file_seeks]
-            print(f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}")
+            log.info(
+                f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}"
+            )
         tree = trace_to_non_generalized_tree(trace)
         match_before = tree.matches()
         tree.simplify()
-        assert match_before == tree.matches() == trace.inputstr
+        assert match_before == tree.matches() == source.content
         # TODO: Merge the grammars
         grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
         return grammar
@@ -1317,5 +1295,7 @@ class ExtractGrammarCommand(Command):
         except ValueError as e:
             log.error(f"{e!s}\n\n")
             exit(1)
-        self.grammar = extract(self.traces, args.simplify)
+        self.grammar = extract(self.traces)
+        if args.simplify:
+            self.grammar.simplify()
         print(str(self.grammar))

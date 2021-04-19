@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
+from logging import getLogger
 from typing import Dict, Generic, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
 
 from .cfg import DAG
-from .tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
+from .tracing import BasicBlockEntry, FunctionInvocation, FunctionReturn, ProgramTrace, TraceEvent
+
+
+log = getLogger(__file__)
 
 
 V = TypeVar("V")
@@ -228,46 +232,41 @@ N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
 
 
 def trace_to_tree(
-    trace: PolyTrackerTrace, node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]], include_terminals: bool = True  # type: ignore
+        trace: ProgramTrace,
+        node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],
+        include_terminals: bool = True
 ) -> N:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
 
-    root = node_type(Start())
+    root: N = node_type(Start())
 
-    nodes_by_event: Dict[TraceEvent, N] = {}
+    entrypoint_node = node_type(trace.entrypoint)
+    root.children.append(entrypoint_node)
+    function_stack: List[Tuple[FunctionInvocation, N]] = [
+        (trace.entrypoint, entrypoint_node)
+    ]
 
-    for event in tqdm(trace, unit=" events", leave=False, desc="extracting a parse tree"):
-        if isinstance(event, BasicBlockEntry):
-            node: N = node_type(event)
-            nodes_by_event[event] = node
-            prev_event = event.previous
-            parent = None
-            if prev_event is not None:
-                if isinstance(prev_event, FunctionReturn):
-                    if prev_event.function_call is not None and prev_event.function_call.caller is not None:
-                        parent = nodes_by_event[prev_event.function_call.caller]
+    with tqdm(unit=" functions", leave=False, desc="extracting a parse tree", total=1) as t:
+        while function_stack:
+            function, node = function_stack.pop()
+            t.update(1)
+            for event in function:
+                if isinstance(event, BasicBlockEntry):
+                    child_node = node_type(event)
+                    node.children.append(child_node)
+                    if include_terminals:
+                        for token in event.taints().regions():
+                            node.children.append(node_type(Terminal(token.value)))
+                elif isinstance(event, FunctionInvocation):
+                    if not event.touched_taint:
+                        log.debug(f"skipping call to {event.function.demangled_name} because it did not touch taint")
+                        continue
+                    child_node = node_type(event)
+                    node.children.append(child_node)
+                    function_stack.append((event, child_node))
                 else:
-                    parent = nodes_by_event[prev_event]
-            if parent is None:
-                parent = root
-            parent.children.append(node)
-            if include_terminals:
-                for token in event.last_consumed_tokens:
-                    node.children.append(node_type(Terminal(token)))
-        elif isinstance(event, FunctionCall):
-            node = node_type(event)
-            nodes_by_event[event] = node
-            try:
-                if event.caller is not None:
-                    parent = nodes_by_event[event.caller]
-                else:
-                    parent = root
-            except TypeError:
-                # This will be raised by event.caller if the caller cannot be determined
-                # (e.g., if this is the first function in the trace)
-                parent = root
-            parent.children.append(node)
+                    raise NotImplementedError(f"Unexpected/unhandled trace event: {event!r}")
 
     return root
 
@@ -480,7 +479,7 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
             yield Interval(start_offset, last_offset + 1, self.value.uid)  # type: ignore
 
 
-def trace_to_non_generalized_tree(trace: PolyTrackerTrace) -> NonGeneralizedParseTree:
+def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTree:
     tree = trace_to_tree(trace, NonGeneralizedParseTree, False)
 
     for node in tqdm(
