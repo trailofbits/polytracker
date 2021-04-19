@@ -1,7 +1,8 @@
 from collections import defaultdict
 import os
 import pytest
-from shutil import copyfile
+from shutil import copyfile, rmtree
+from tempfile import NamedTemporaryFile
 
 from tqdm import tqdm
 
@@ -12,7 +13,6 @@ from polytracker import (
     PolyTrackerTrace,
     ProgramTrace,
 )
-from polytracker.database import DBTaintForestNode
 
 from .data import *
 
@@ -25,12 +25,12 @@ This runs before any test is executed
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_targets():
-    if not BIN_DIR.exists():
-        BIN_DIR.mkdir()
-    if not TEST_RESULTS_DIR.exists():
-        TEST_RESULTS_DIR.mkdir()
-    if not BITCODE_DIR.exists():
-        BITCODE_DIR.mkdir()
+    if BUILD_DIR.exists():
+        rmtree(BUILD_DIR)
+    BUILD_DIR.mkdir()
+    if TEST_RESULTS_DIR.exists():
+        rmtree(TEST_RESULTS_DIR)
+    TEST_RESULTS_DIR.mkdir()
 
 
 def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
@@ -59,9 +59,10 @@ def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
 
 def polyclang_compile_target(target_name: str) -> int:
     source_path = TESTS_DIR / target_name
-    bin_path = BIN_DIR / f"{target_name}.bin"
-    if not is_out_of_date(bin_path, source_path):
-        # the bin is newer than both our last build of PolyTracker and its source code, so we are good
+    bin_path = BUILD_DIR / f"{target_name}.bin"
+    if bin_path.exists() and not is_out_of_date(bin_path, source_path):
+        # we `rm -rf`'d the whole bin directory in setup_targets,
+        # so if the binary is already here, it means we built it already this run
         return 0
     if target_name.endswith(".cpp"):
         build_cmd: str = "polybuild++"
@@ -83,7 +84,7 @@ def polyclang_compile_target(target_name: str) -> int:
 def validate_execute_target(
     target_name: str, config_path: Optional[Union[str, Path]], input_bytes: Optional[bytes] = None
 ) -> ProgramTrace:
-    target_bin_path = BIN_DIR / f"{target_name}.bin"
+    target_bin_path = BUILD_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
     db_path = TEST_RESULTS_DIR / f"{target_name}.db"

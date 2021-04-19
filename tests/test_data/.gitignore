@@ -1,2 +1,2 @@
-bin/*
-bitcode/*
+build/*
+test_results/*
