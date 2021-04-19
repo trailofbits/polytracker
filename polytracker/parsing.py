@@ -233,7 +233,7 @@ N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
 
 def trace_to_tree(
         trace: ProgramTrace,
-        node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],
+        node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],  # type: ignore
         include_terminals: bool = True
 ) -> N:
     if trace.entrypoint is None:
@@ -462,25 +462,17 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
     def _consumed_intervals(self) -> Iterator[Interval]:
         if not isinstance(self.value, BasicBlockEntry):
             return
-        start_offset: Optional[int] = None
-        last_offset: Optional[int] = None
-        for offset in sorted(self.value.consumed):
-            if start_offset is None:
-                start_offset = last_offset = offset
-            elif start_offset + 1 != offset:
-                # this is not a contiguous byte sequence
-                # so yield the previous token
-                yield Interval(start_offset, last_offset + 1, self.value.uid)  # type: ignore
-                start_offset = last_offset = offset
-            else:
-                # this is a contiguous byte sequence, so update its end
-                last_offset = offset
-        if start_offset is not None:
-            yield Interval(start_offset, last_offset + 1, self.value.uid)  # type: ignore
+        for region in self.value.taints().regions():
+            yield Interval(region.offset, region.offset + region.length, self.value.uid)
 
 
 def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTree:
     tree = trace_to_tree(trace, NonGeneralizedParseTree, False)
+
+    inputs = list(trace.inputs)
+    if len(inputs) != 1:
+        raise ValueError(f"Trace {trace!r} must have exactly one input; found {len(inputs)}")
+    inputstr = inputs[0].content
 
     for node in tqdm(
         tree.postorder_traversal(),
@@ -490,7 +482,7 @@ def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTre
         unit=" nodes",
     ):
         if isinstance(node.value, Start):
-            node.intervals[0 : len(trace.inputstr)] = 0
+            node.intervals[0: len(inputstr)] = 0
         node.bottom_up_pass()
 
     for node in tqdm(
@@ -508,19 +500,19 @@ def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTre
             if child.begin_offset >= child.end_offset:
                 continue
             if last_end < child.begin_offset:
-                terminal = NonGeneralizedParseTree(Terminal(trace.inputstr[last_end : child.begin_offset]))
+                terminal = NonGeneralizedParseTree(Terminal(inputstr[last_end: child.begin_offset]))
                 terminal.intervals.addi(last_end, child.begin_offset)
                 new_children.append(terminal)
             new_children.append(child)
             last_end = child.end_offset
         if last_end < node_end:
-            terminal = NonGeneralizedParseTree(Terminal(trace.inputstr[last_end:node_end]))
+            terminal = NonGeneralizedParseTree(Terminal(inputstr[last_end:node_end]))
             terminal.intervals.addi(last_end, node_end)
             new_children.append(terminal)
         assert new_children
         node.children = new_children
 
     if __debug__:
-        tree.verify(trace.inputstr)
+        tree.verify(inputstr)
 
     return tree

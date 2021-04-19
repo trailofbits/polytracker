@@ -216,6 +216,7 @@ class Taints:
         return sum(map(len, self._offsets_by_source.values()))
 
     def __iter__(self) -> Iterator[ByteOffset]:
+        """Iterates over all of the byte offsets in this taint set in increasing order grouped by source"""
         for offsets in self._offsets_by_source.values():
             yield from offsets
 
