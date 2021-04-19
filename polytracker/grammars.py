@@ -1297,5 +1297,5 @@ class ExtractGrammarCommand(Command):
             exit(1)
         self.grammar = extract(self.traces)
         if args.simplify:
-            self.grammar.simplify()
+            self.grammar.simplify()  # type: ignore
         print(str(self.grammar))
