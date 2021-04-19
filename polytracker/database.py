@@ -539,7 +539,7 @@ class DBFunctionInvocation(FunctionInvocation):
     @property
     def touched_taint(self) -> bool:
         try:
-            return bool(Session.object_session(self).query(FunctionEntries).filter(
+            return bool(self.trace.session.query(FunctionEntries).filter(
                 FunctionEntries.event_id == self.function_entry.event_id
             ).one().touched_taint)
         except NoResultFound:

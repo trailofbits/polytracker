@@ -737,6 +737,9 @@ class ProgramTrace(ABC):
     def num_function_calls(self) -> int:
         return sum(1 for _ in self.function_trace())
 
+    def num_function_calls_that_touched_taint(self) -> int:
+        return sum(1 for func in self.function_trace() if func.touched_taint)
+
     def num_basic_block_entries(self) -> int:
         return sum(1 for event in self if isinstance(event, BasicBlockEntry))
 

@@ -247,26 +247,30 @@ def trace_to_tree(
         (trace.entrypoint, entrypoint_node)
     ]
 
-    with tqdm(unit=" functions", leave=False, desc="extracting a parse tree", total=1) as t:
+    with tqdm(
+            unit=" functions",
+            leave=False,
+            desc="extracting a parse tree",
+            total=trace.num_function_calls_that_touched_taint()
+    ) as t:
         while function_stack:
             function, node = function_stack.pop()
             t.update(1)
-            for event in function:
-                if isinstance(event, BasicBlockEntry):
-                    child_node = node_type(event)
-                    node.children.append(child_node)
-                    if include_terminals:
-                        for token in event.taints().regions():
-                            node.children.append(node_type(Terminal(token.value)))
-                elif isinstance(event, FunctionInvocation):
-                    if not event.touched_taint:
-                        log.debug(f"skipping call to {event.function.demangled_name} because it did not touch taint")
+            for bb in tqdm(function.basic_blocks(), unit=" basic blocks", leave=False,
+                           desc=function.function.demangled_name, delay=1.0):
+                child_node = node_type(bb)
+                node.children.append(child_node)
+                if include_terminals:
+                    for token in bb.taints().regions():
+                        node.children.append(node_type(Terminal(token.value)))
+                func = bb.called_function
+                if func is not None:
+                    if not func.touched_taint:
+                        log.debug(f"skipping call to {func.function.demangled_name} because it did not touch taint")
                         continue
-                    child_node = node_type(event)
+                    child_node = node_type(func)
                     node.children.append(child_node)
-                    function_stack.append((event, child_node))
-                else:
-                    raise NotImplementedError(f"Unexpected/unhandled trace event: {event!r}")
+                    function_stack.append((func, child_node))
 
     return root
 
