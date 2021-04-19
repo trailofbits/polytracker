@@ -1197,7 +1197,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
 
 
 @PolyTrackerREPL.register("extract_grammar")
-def extract(traces: Iterable[ProgramTrace]) -> Grammar:
+def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
     """extract a grammar from a set of traces"""
     trace_iter: Iterable[ProgramTrace] = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
     for trace in trace_iter:
@@ -1229,7 +1229,9 @@ def extract(traces: Iterable[ProgramTrace]) -> Grammar:
         tree.simplify()
         assert match_before == tree.matches() == source.content
         # TODO: Merge the grammars
-        grammar = parse_tree_to_grammar(tree)  # trace_to_grammar(trace)
+        grammar = parse_tree_to_grammar(tree)
+        if simplify:
+            grammar = grammar.simplify()
         return grammar
     return Grammar()
 
@@ -1295,7 +1297,5 @@ class ExtractGrammarCommand(Command):
         except ValueError as e:
             log.error(f"{e!s}\n\n")
             exit(1)
-        self.grammar = extract(self.traces)
-        if args.simplify:
-            self.grammar.simplify()  # type: ignore
+        self.grammar = extract(self.traces, args.simplify)
         print(str(self.grammar))
