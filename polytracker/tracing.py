@@ -267,6 +267,10 @@ class BasicBlock:
         function.basic_blocks.append(self)
 
     @abstractmethod
+    def entries(self) -> Iterator["BasicBlockEntry"]:
+        raise NotImplementedError()
+
+    @abstractmethod
     def taints(self) -> Taints:
         raise NotImplementedError()
 

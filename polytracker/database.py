@@ -166,6 +166,12 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
     _predecessors: Optional[Set[BasicBlock]] = None
 
     @property
+    def entries(self) -> Iterator[BasicBlockEntry]:
+        return stream_results(Session.object_session(self).query(DBBasicBlockEntry).filter(
+            DBBasicBlockEntry.block_gid == self.id
+        ).order_by(DBBasicBlockEntry.event_id.asc()))
+
+    @property
     def index_in_function(self) -> int:  # type: ignore
         return self.id & 0x0000FFFF
 
