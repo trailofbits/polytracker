@@ -3,8 +3,6 @@ import pytest
 from polytracker import ProgramTrace
 from polytracker.grammars import extract
 
-from .test_polytracker import program_trace
-
 
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
 def test_extract(program_trace: ProgramTrace):
