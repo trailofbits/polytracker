@@ -1,11 +1,14 @@
+from abc import ABC
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Union, Iterable, Iterator
 
 import pytest
 
+from polytracker import BasicBlock, ByteOffset, Function, TaintForest, TaintAccess, Taints
 from polytracker.grammars import Grammar, parse_tree_to_grammar
+from polytracker.inputs import Input
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
-from polytracker.tracing import BasicBlockEntry, FunctionCall, FunctionReturn, PolyTrackerTrace, TraceEvent
+from polytracker.tracing import BasicBlockEntry, FunctionEntry, FunctionReturn, ProgramTrace, TraceEvent
 
 
 class Counter:
@@ -21,18 +24,173 @@ class Counter:
         return ret
 
 
-E = TypeVar("E", bound=TraceEvent)
+class TracedEvent(ABC, TraceEvent):
+    def __init__(self, tracer: "Tracer"):
+        super().__init__(len(tracer.events))
+        tracer.events[self.uid] = self
+        self.tracer: Tracer = tracer
+        entry = tracer.call_stack[-1]
+        f_name = entry.function.name
+        self._function: Function = tracer.functions_by_name[f_name]
+        self._function_entry: TracedFunctionEntry = entry
+
+    @property
+    def function(self) -> Function:
+        return self._function
+
+    @property
+    def previous_event(self) -> Optional["TraceEvent"]:
+        if self.uid == 0:
+            return None
+        return self.tracer.events[self.uid - 1]
+
+    @property
+    def next_event(self) -> Optional["TraceEvent"]:
+        if self.uid >= len(self.tracer.events) - 1:
+            return None
+        return self.tracer.events[self.uid + 1]
+
+    @property
+    def next_global_event(self) -> Optional["TraceEvent"]:
+        return self.next_event
+
+    @property
+    def previous_global_event(self) -> Optional["TraceEvent"]:
+        return self.previous_event
+
+    @property
+    def function_entry(self) -> Optional["TracedFunctionEntry"]:
+        return self._function_entry
 
 
-class Tracer:
+class TracedBasicBlockEntry(TracedEvent, BasicBlockEntry):
+    def __init__(self, tracer: "Tracer", bb_name: str):
+        super().__init__(tracer)
+        self.name: str = bb_name
+        self.consumed: List[int] = []
+        tracer.bb_stack[-1].append(self)
+        f_name = self.function.name
+        bbs = tracer.bbs[f_name]
+        if bb_name not in bbs:
+            bbs[bb_name] = BasicBlock(self.function, len(bbs))
+        self._basic_block: BasicBlock = bbs[bb_name]
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        return self._basic_block
+
+    def taints(self) -> Taints:
+        return Taints((
+            ByteOffset(source=self.tracer.source, offset=i) for i in self.consumed
+        ))
+
+
+class TracedFunctionEntry(TracedEvent, FunctionEntry):
+    def __init__(self, tracer: "Tracer", func_name: str):
+        if func_name not in tracer.functions_by_name:
+            func = Function(func_name, len(tracer.functions_by_name))
+            tracer.functions_by_name[func_name] = func
+        else:
+            func = tracer.functions_by_name[func_name]
+        self._function: Function = func
+        tracer.call_stack.append(self)
+        super().__init__(tracer)
+        self.name: str = func_name
+        self._function_return: Optional[FunctionReturn] = None
+        tracer.bb_stack.append([])
+
+    @property
+    def function_return(self) -> Optional[FunctionReturn]:
+        return self._function_return
+
+    @function_return.setter
+    def function_return(self, new_value: FunctionReturn):
+        if self._function_return is not None and new_value is not self._function_return:
+            raise ValueError(f"{self!r} is already set to return to {self._function_return!r}, not {new_value!r}")
+        self._function_return = new_value
+
+    def taints(self) -> Taints:
+        return Taints(())
+
+
+class TracedFunctionReturn(TracedEvent, FunctionReturn):
+    def __init__(self, tracer: "Tracer"):
+        super().__init__(tracer)
+        self._basic_block: BasicBlock = tracer.current_bb.basic_block
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        return self._basic_block
+
+    def taints(self) -> Taints:
+        return Taints(())
+
+
+class Tracer(ProgramTrace):
     def __init__(self, inputstr: bytes):
-        self.call_stack: List[FunctionCall] = []
-        self.bb_stack: List[List[Tuple[str, BasicBlockEntry]]] = []
-        self.events: List[TraceEvent] = []
-        self.functions: Dict[str, int] = {}
-        self.bbs: Dict[str, Dict[str, int]] = defaultdict(dict)
+        self.source: Input = Input(
+            uid=1,
+            path="test.data",
+            size=len(inputstr),
+            content=inputstr
+        )
+        self.call_stack: List[TracedFunctionEntry] = []
+        self.bb_stack: List[List[TracedBasicBlockEntry]] = []
+        self.events: Dict[int, TraceEvent] = {}
+        self.functions_by_name: Dict[str, Function] = {}
+        self.bbs: Dict[str, Dict[str, BasicBlock]] = defaultdict(dict)
         self.inputstr: bytes = inputstr
         self.input_offset: int = 0
+
+    def __len__(self) -> int:
+        return len(self.events)
+
+    def __iter__(self) -> Iterator[TraceEvent]:
+        return iter(self.events.values())
+
+    @property
+    def functions(self) -> Iterable[Function]:
+        return self.functions_by_name.values()
+
+    @property
+    def basic_blocks(self) -> Iterable[BasicBlock]:
+        bbs = []
+        for blocks in self.bbs.values():
+            bbs.extend(blocks.values())
+        return bbs
+
+    def has_event(self, uid: int) -> bool:
+        return uid in self.events
+
+    def get_event(self, uid: int) -> TraceEvent:
+        return self.events[uid]
+
+    def get_function(self, name: str) -> Function:
+        return self.functions_by_name[name]
+
+    def has_function(self, name: str) -> bool:
+        return name in self.functions_by_name
+
+    def access_sequence(self) -> Iterator[TaintAccess]:
+        raise NotImplementedError("TODO: Implement this later if we need it")
+
+    @property
+    def num_accesses(self) -> int:
+        return sum(len(bb.consumed) for bb in self.events if isinstance(bb, TracedBasicBlockEntry))
+
+    @property
+    def inputs(self) -> Iterable[Input]:
+        return self.source,
+
+    @property
+    def taint_forest(self) -> TaintForest:
+        raise NotImplementedError()
+
+    def __getitem__(self, uid: int) -> TraceEvent:
+        return self.events[uid]
+
+    def __contains__(self, uid: int):
+        return uid in self.events
 
     @property
     def last_event(self) -> Optional[TraceEvent]:
@@ -42,15 +200,15 @@ class Tracer:
             return None
 
     @property
-    def current_bb(self) -> BasicBlockEntry:
-        return self.bb_stack[-1][-1][1]
+    def current_bb(self) -> TracedBasicBlockEntry:
+        return self.bb_stack[-1][-1]
 
     @property
     def current_bb_name(self) -> str:
-        return self.bb_stack[-1][-1][0]
+        return self.bb_stack[-1][-1].name
 
     def peek(self, num_bytes: int) -> bytes:
-        bytes_read = self.inputstr[self.input_offset : self.input_offset + num_bytes]
+        bytes_read = self.inputstr[self.input_offset: self.input_offset + num_bytes]
         self.current_bb.consumed.extend(range(self.input_offset, self.input_offset + len(bytes_read)))
         return bytes_read
 
@@ -62,69 +220,21 @@ class Tracer:
     def seek(self, input_offset: int):
         self.input_offset = input_offset
 
-    def emplace(self, event_type: Type[E], **kwargs) -> E:
-        uid = len(self.events)
-        if uid > 0:
-            event: E = event_type(uid=uid, previous_uid=uid - 1, **kwargs)
-            self.events[uid - 1].next_uid = uid
-        else:
-            event = event_type(uid=uid, **kwargs)
-        self.events.append(event)
-        return event
-
-    def function_call(self, name: str) -> FunctionCall:
-        c = self.emplace(FunctionCall, name=name)
-        if name not in self.functions:
-            self.functions[name] = len(self.functions)
-        self.call_stack.append(c)
-        self.bb_stack.append([])
-        return c
-
-    def _call_event_uid(self) -> Optional[int]:
-        if not self.call_stack:
-            return None
-        else:
-            return self.call_stack[-1].uid
-
-    def _returning_to_uid(self) -> Optional[int]:
-        if not self.call_stack or self.call_stack[-1].previous_uid is None:
-            return None
-        else:
-            return self.call_stack[-1].previous_uid
+    def function_call(self, name: str) -> TracedFunctionEntry:
+        return TracedFunctionEntry(self, name)
 
     def function_return(self, name) -> FunctionReturn:
-        f = self.emplace(
-            FunctionReturn, name=name, call_event_uid=self._call_event_uid(), returning_to_uid=self._returning_to_uid()
-        )
+        f = TracedFunctionReturn(self)
         if self.call_stack:
-            self.call_stack[-1].return_uid = f.uid
+            self.call_stack[-1].function_return = f
             self.call_stack.pop()
             self.bb_stack[-1].pop()
             if self.call_stack:
                 self.bb_entry(f"{self.current_bb_name}_after_call_to_{name}")
         return f
 
-    def bb_entry(self, name: str) -> BasicBlockEntry:
-        f_name = self.call_stack[-1].name
-        f_index = self.functions[f_name]
-        bbs = self.bbs[f_name]
-        if name not in bbs:
-            bbs[name] = len(bbs)
-        bb_index = bbs[name]
-        entry_count = sum(1 for _, bb in self.bb_stack[-1] if bb_index == bb.bb_index) + 1
-        bb = self.emplace(
-            BasicBlockEntry,
-            function_index=f_index,
-            bb_index=bb_index,
-            entry_count=entry_count,
-            global_index=(f_index << 32) | bb_index,
-            function_call_uid=self.call_stack[-1].uid,
-        )
-        self.bb_stack[-1].append((name, bb))
-        return bb
-
-    def to_trace(self) -> PolyTrackerTrace:
-        return PolyTrackerTrace(self.events, inputstr=self.inputstr)
+    def bb_entry(self, name: str) -> TracedBasicBlockEntry:
+        return TracedBasicBlockEntry(self, name)
 
 
 def traced(func):
@@ -231,16 +341,16 @@ def parse_parens(tracer: Tracer) -> List[Union[int, str]]:
     return ret
 
 
-def make_trace(inputstr: bytes) -> Tuple[List[Union[int, str]], PolyTrackerTrace]:
+def make_trace(inputstr: bytes) -> Tuple[List[Union[int, str]], Tracer]:
     tracer = Tracer(inputstr)
     result = parse_parens(tracer)
-    return result, tracer.to_trace()
+    return result, tracer
 
 
 class GrammarTestCase:
-    def __init__(self, input_string: bytes, trace: PolyTrackerTrace):
+    def __init__(self, input_string: bytes, trace: Tracer):
         self.input_string: bytes = input_string
-        self.trace: PolyTrackerTrace = trace
+        self.trace: Tracer = trace
         self._tree: Optional[NonGeneralizedParseTree] = None
         self._grammar: Optional[Grammar] = None
         self._simplified_grammar: Optional[Grammar] = None
