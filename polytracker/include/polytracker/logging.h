@@ -1,7 +1,7 @@
 #ifndef POLYTRACKER_LOGGING
 #define POLYTRACKER_LOGGING
-#include <stack>
 #include <unordered_map>
+#include <vector>
 
 #include "dfsan_types.h"
 #include "polytracker/output.h"
@@ -22,9 +22,10 @@ struct FunctionStackFrame {
   event_id_t func_event_id;
   function_id_t func_id;
   std::unordered_map<block_id_t, block_entry_count_t> bb_entry_count;
+  bool touched_taint;
 };
 
-using FunctionStack = std::stack<FunctionStackFrame>;
+using FunctionStack = std::vector<FunctionStackFrame>;
 
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
