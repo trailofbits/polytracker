@@ -14,8 +14,9 @@ WORKDIR /polytracker/the_klondike/jq
 
 RUN git submodule update --init
 RUN autoreconf -fi
-RUN ./configure --with-oniguruma=builtin --disable-valgrind --enable-all-static --prefix=/usr/local
-RUN make -j`nproc`
+RUN ./configure --with-oniguruma=builtin --disable-valgrind --enable-all-static --prefix=/usr/local \
+    CFLAGS="-DNDEBUG" LDFLAGS=-all-static
+RUN make LDFLAGS=-all-static -j`nproc`
 # && make check
 RUN get-bc -b jq && ${CC} --lower-bitcode -i jq.bc -o jq_track --libs m && mv jq_track /usr/local/bin/jq
 
