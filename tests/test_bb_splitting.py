@@ -4,8 +4,6 @@ from typing import Dict, Set
 
 from polytracker import BasicBlock, BasicBlockEntry, FunctionReturn, ProgramTrace
 
-from .test_polytracker import program_trace
-
 
 @pytest.mark.program_trace("test_bb_splitting.c")
 def test_bb_splitting(program_trace: ProgramTrace):
