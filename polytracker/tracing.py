@@ -531,6 +531,11 @@ class FunctionReturn(ControlFlowEvent):
         )
 
     @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return super().basic_block
+
+    @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
         next_event = self.next_control_flow_event
         if isinstance(next_event, BasicBlockEntry):
@@ -623,7 +628,7 @@ class FunctionInvocation(ControlFlowEvent):
     def taints(self) -> Taints:
         """Returns all taints operated on by this function or any functions called by this function"""
         if not hasattr(self, "_taints"):
-            setattr(self, "_taints", Taints(itertools.chain(event.taints() for event in self)))  # type: ignore
+            setattr(self, "_taints", Taints(itertools.chain(*(event.taints() for event in self))))
         return getattr(self, "_taints")
 
     def __str__(self):
