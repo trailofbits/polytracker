@@ -174,13 +174,8 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
 
       // Log that we tainted data within this function from a taint source etc.
       // logOperation(new_label);
-      const auto this_event_id = event_id++;
-      storeTaintAccess(output_db, new_label, this_event_id, thread_event_id++,
-                       curr_func_index, curr_block_index, input_id, thread_id,
-                       ByteAccessType::READ_ACCESS,
-                       function_stack.empty()
-                           ? this_event_id
-                           : function_stack.top().func_event_id);
+      storeTaintAccess(output_db, new_label, input_id,
+                       ByteAccessType::READ_ACCESS);
       if (taint_offset_start == -1) {
         taint_offset_start = curr_byte_num;
         taint_offset_end = curr_byte_num;

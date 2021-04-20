@@ -117,14 +117,32 @@ from polytracker import PolyTrackerTrace
 trace = PolyTrackerTrace.load("polytracker.db")
 
 for event in trace:
+    # this prints every single event in the trace, in order
     print(event)
 
 for function in trace.functions:
+    # this returns a function object for every function observed
+    # (this is different than a function invocation, which we describe below)
     print(function.demangled_name)
 
 main_func = trace.get_function("main")
 for taint in main_func.taints().regions():
+    # this iterates over every taint touched by the main function aggregated across all invocations of main
     print(f"source={taint.source}, offset={taint.offset}, length={taint.length}, value={taint.value}")
+```
+Individual function invocations in the trace can also be enumerated:
+```python
+entrypoint = trace.entrypoint
+# entrypoint is a function invocation object associated with a single invocation of the entrypoint of the trace (main)
+print(f"Entrypoint is: {entrypoint!s}")
+for called_function in entrypoint.calls():
+    # called_function is another function invocation object
+    # associated with a function called from entrypoint
+    print(str(called_function))
+    for region in called_function.taints().regions():
+        # this will iterate over every tainted region operated on by called_function,
+        # including any functions called to from called_function
+        print(f"\t{region.value}")
 ```
 
 You can also run an instrumented binary directly from the REPL:

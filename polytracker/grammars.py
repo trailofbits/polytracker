@@ -28,7 +28,7 @@ from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
     FunctionEntry,
-    FunctionReturn,
+    FunctionInvocation,
     ProgramTrace,
     TraceEvent,
 )
@@ -612,12 +612,8 @@ class Grammar:
 def production_name(event: TraceEvent) -> str:
     if isinstance(event, BasicBlockEntry):
         return f"<{event!s}>"
-    elif isinstance(event, FunctionEntry):
-        return f"<{event.function.name}>"
-    elif isinstance(event, FunctionReturn):
-        return f"<{event.function.name}>"
     else:
-        raise ValueError(f"Unhandled event: {event!r}")
+        return f"<{event.function.name}>"
 
 
 def trace_to_grammar(trace: ProgramTrace) -> Grammar:
@@ -625,56 +621,35 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
 
     grammar = Grammar()
 
-    for event in tqdm(
-        trace, unit=" productions", leave=False, desc="extracting a base grammar"
-    ):
-        if isinstance(event, BasicBlockEntry):
-            # Add a production rule for this BB
-            prod_name = production_name(event)
+    entrypoint = trace.entrypoint
+    if entrypoint is None:
+        grammar.start = Production(grammar, "<START>")
+        return grammar
+    func_stack: List[FunctionInvocation] = [entrypoint]
 
-            sub_productions: List[Union[Terminal, str]] = [
-                Terminal(token) for token in event.consumed_tokens
-            ]
+    num_funcs = trace.num_function_calls()
 
-            called_function = event.called_function
+    with tqdm(unit=" productions", leave=False, desc="extracting a base grammar", total=num_funcs) as t:
+        while func_stack:
+            func = func_stack.pop()
+            t.update(1)
+            prod_name = production_name(func)
 
-            if called_function is not None:
-                sub_productions.append(production_name(called_function))
-                ret = called_function.function_return
-                if ret is not None:
-                    returning_to = ret.returning_to
-                    if returning_to is not None:
-                        sub_productions.append(f"<{returning_to!s}>")
-                    else:
-                        # TODO: Print warning
-                        pass
-                        # breakpoint()
-                else:
-                    # TODO: Print warning
-                    pass
-                    # breakpoint()
+            if grammar.start is None and func is entrypoint:
+                grammar.start = Production(
+                    grammar, "<START>", Rule.load(grammar, prod_name)
+                )
 
-            next_bb = event.next_basic_block_in_function()
-            if next_bb is not None:
-                rules = [Rule(grammar, *(sub_productions + [f"<{next_bb!s}>"]))]
+            if not func.touched_taint:
+                # do not expand the function if it didn't touch taint
+                _ = Production(grammar, prod_name)
+                t.write(f"skipping {func.function.demangled_name} because it didn't touch taint")
+                t.update(sum(1 for _ in func.calls()))
+                continue
+            elif func.function_entry.entrypoint is None:
+                _ = Production(grammar, prod_name)
             else:
-                rules = [Rule(grammar, *sub_productions)]
-
-            if prod_name in grammar:
-                production = grammar[prod_name]
-                for rule in rules:
-                    if rule not in production:
-                        production.add(rule)
-            else:
-                Production(grammar, prod_name, *rules)
-
-        elif isinstance(event, FunctionEntry):
-            prod_name = production_name(event)
-            if event.entrypoint is None:
-                if prod_name not in grammar:
-                    _ = Production(grammar, prod_name)
-            else:
-                rule = Rule(grammar, production_name(event.entrypoint))
+                rule = Rule(grammar, production_name(func.function_entry.entrypoint))
                 if prod_name in grammar:
                     production = grammar[prod_name]
                     if rule not in production:
@@ -682,28 +657,50 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
                 else:
                     _ = Production(grammar, prod_name, rule)
 
-            if grammar.start is None:
-                grammar.start = Production(
-                    grammar, "<START>", Rule.load(grammar, prod_name)
-                )
+                bbs: List[Optional[BasicBlockEntry]] = list(func.basic_blocks())
+                for bb, next_bb in tqdm(
+                        zip(bbs, bbs[1:] + [None]), leave=False, unit=" basic blocks",
+                        desc=func.function.demangled_name,
+                        delay=1.0,
+                        total=len(bbs)
+                ):
+                    sub_productions: List[Union[Terminal, str]] = [
+                        Terminal(token) for token in bb.consumed_tokens
+                    ]
 
-        # elif isinstance(event, FunctionReturn):
-        #     next_event = event.returning_to
-        #     if next_event is not None and not isinstance(next_event, BasicBlockEntry):
-        #         # sometimes instrumentation errors can cause functions to return directly into another call
-        #         call_name = production_name(event.function_call)
-        #         next_event_name = production_name(next_event)
-        #         if call_name in grammar:
-        #             production = grammar[call_name]
-        #             if not production.rules:
-        #                 production.add(Rule(grammar, next_event_name))
-        #             else:
-        #                 for rule in production.rules:
-        #                     if next_event_name not in rule.sequence:
-        #                         rule.sequence = rule.sequence + (next_event_name,)
-        #             grammar.used_by[next_event_name].add(call_name)
-        #         else:
-        #             _ = Production(grammar, call_name, Rule(grammar, next_event_name))
+                    called_function = bb.called_function
+
+                    if called_function is not None:
+                        func_stack.append(called_function)
+                        sub_productions.append(production_name(called_function))
+                        ret = called_function.function_return
+                        if ret is not None:
+                            returning_to = ret.returning_to
+                            if returning_to is not None:
+                                sub_productions.append(f"<{returning_to!s}>")
+                            else:
+                                # TODO: Print warning
+                                pass
+                                # breakpoint()
+                        else:
+                            # TODO: Print warning
+                            pass
+                            # breakpoint()
+
+                    if next_bb is not None:
+                        rules = [Rule(grammar, *(sub_productions + [f"<{next_bb!s}>"]))]
+                    else:
+                        rules = [Rule(grammar, *sub_productions)]
+
+                    bb_prod_name = production_name(bb)
+
+                    if bb_prod_name in grammar:
+                        production = grammar[bb_prod_name]
+                        for rule in rules:
+                            if rule not in production:
+                                production.add(rule)
+                    else:
+                        Production(grammar, bb_prod_name, *rules)
 
     grammar.verify()
 
