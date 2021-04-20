@@ -20,6 +20,7 @@ thread_local function_id_t curr_func_index = -1;
 thread_local FunctionStack function_stack;
 thread_local int thread_id = -1;
 thread_local event_id_t thread_event_id = 0;
+thread_local event_id_t last_bb_event_id = 0;
 std::atomic<event_id_t> event_id = 0;
 std::atomic<size_t> last_thread_id{0};
 static bool is_init = false;
@@ -41,20 +42,12 @@ static void assignThreadID() {
 
 void logCompare(const dfsan_label &label, const function_id_t &findex,
                 const block_id_t &bindex) {
-  const auto this_event_id = event_id++;
-  storeTaintAccess(output_db, label, this_event_id, thread_event_id++, findex,
-                   bindex, input_id, thread_id, ByteAccessType::CMP_ACCESS,
-                   function_stack.empty() ? this_event_id
-                                          : function_stack.top().func_event_id);
+  storeTaintAccess(output_db, label, input_id, ByteAccessType::CMP_ACCESS);
 }
 
 void logOperation(const dfsan_label &label, const function_id_t &findex,
                   const block_id_t &bindex) {
-  const auto this_event_id = event_id++;
-  storeTaintAccess(output_db, label, event_id++, thread_event_id++, findex,
-                   bindex, input_id, thread_id, ByteAccessType::INPUT_ACCESS,
-                   function_stack.empty() ? this_event_id
-                                          : function_stack.top().func_event_id);
+  storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
 }
 
 void logFunctionEntry(const char *fname, const function_id_t &func_id) {
@@ -79,7 +72,7 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id) {
                    this_event_id, EdgeType::FORWARD);
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
-  function_stack.push({this_event_id, func_id});
+  function_stack.push({this_event_id, func_id, {}});
   curr_func_index = func_id;
 }
 
@@ -129,10 +122,12 @@ void logBBEntry(const char *fname, const function_id_t &findex,
   // NOTE (Carson) we could memoize this to prevent repeated calls for loop
   // blocks
   storeBlock(output_db, findex, bindex, btype);
-  const auto this_event_id = event_id++;
-  storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
-             EventType::BLOCK_ENTER, findex, bindex,
-             function_stack.empty() ? this_event_id
-                                    : function_stack.top().func_event_id);
+  last_bb_event_id = event_id++;
+  auto entryCount = function_stack.top().bb_entry_count[bindex]++;
+  storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
+                  thread_event_id++, findex, bindex,
+                  function_stack.empty() ? last_bb_event_id
+                                         : function_stack.top().func_event_id,
+                  entryCount);
   curr_block_index = bindex;
 }

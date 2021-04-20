@@ -6,6 +6,7 @@
 typedef uint32_t input_id_t;
 typedef uint32_t function_id_t;
 typedef uint32_t block_id_t;
+typedef uint32_t block_entry_count_t;
 typedef uint64_t global_id_t;
 typedef uint64_t event_id_t;
 
@@ -17,12 +18,7 @@ enum class ByteAccessType : uint8_t {
   READ_ACCESS = 4
 };
 
-enum EventType : uint8_t {
-  FUNC_ENTER = 0,
-  FUNC_RET = 1,
-  BLOCK_ENTER = 2,
-  TAINT_ACCESS = 3
-};
+enum EventType : uint8_t { FUNC_ENTER = 0, FUNC_RET = 1, BLOCK_ENTER = 2 };
 
 enum EdgeType : uint8_t { FORWARD = 0, BACKWARD = 1 };
 
@@ -33,12 +29,8 @@ input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
                          const int &trace_level);
 void sql_exec(sqlite3 *output_db, const char *cmd);
 void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
-                      const event_id_t &event_id,
-                      const event_id_t &thread_event_id,
-                      const function_id_t &findex, const block_id_t &bindex,
-                      const input_id_t &input_id, const int &thread_id,
-                      const ByteAccessType &access_type,
-                      const event_id_t &func_event_id);
+                      const input_id_t &input_id,
+                      const ByteAccessType &access_type);
 
 void storeFunc(sqlite3 *output_db, const char *fname,
                const function_id_t &func_id);
@@ -55,6 +47,13 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const event_id_t &thread_event_id, EventType event_type,
                 const function_id_t &findex, const block_id_t &bindex,
                 const event_id_t &func_event_id);
+
+void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
+                     const int &thread_id, const event_id_t &event_id,
+                     const event_id_t &thread_event_id,
+                     const function_id_t &findex, const block_id_t &bindex,
+                     const event_id_t &func_event_id,
+                     const block_entry_count_t entry_count);
 
 void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
                        const dfsan_label &label, const uint64_t &file_offset);

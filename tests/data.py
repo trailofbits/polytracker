@@ -1,9 +1,7 @@
-import json
 import subprocess
 import sys
 from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
 
 from polytracker.containerization import CAN_RUN_NATIVELY, DockerContainer
@@ -65,36 +63,7 @@ def generate_bad_path() -> Path:
 TESTS_DIR: Path = Path(__file__).parent
 TEST_DATA_DIR: Path = TESTS_DIR / "test_data"
 BAD_PATH: Path = generate_bad_path()
-BAD_FOREST_PATH: Path = TEST_DATA_DIR / "bad_forest.bin"
 CONFIG_DIR: Path = TESTS_DIR / "configs"
-GOOD_FOREST_PATH: Path = TEST_DATA_DIR / "polytracker_forest.bin"
-PROCESS_SET_PATH: Path = TEST_DATA_DIR / "polytracker_process_set.json"
 TEST_DATA_PATH: Path = TEST_DATA_DIR / "test_data.txt"
-BIN_DIR: Path = TEST_DATA_DIR / "bin"
-TEST_RESULTS_DIR = BIN_DIR / "test_results"
-BITCODE_DIR = TEST_DATA_DIR / "bitcode"
-
-
-__PROCESS_SET: Optional[Dict[str, Any]] = None
-
-
-def process_set() -> Dict[str, Any]:
-    global __PROCESS_SET
-    if __PROCESS_SET is None:
-        with open(PROCESS_SET_PATH, "r") as f:
-            __PROCESS_SET = json.load(f)
-    return __PROCESS_SET
-
-
-def canonical_mapping() -> Dict[int, int]:
-    pset: Dict[str, Any] = process_set()
-    if "canonical_mapping" not in pset:
-        raise ValueError(
-            f'Expected to find a "canonical_mapping" key in {PROCESS_SET_PATH!s}. '
-            "Perhaps it is using a newer JSON schema?"
-        )
-    elif len(pset["canonical_mapping"]) != 1:
-        raise ValueError(
-            f"{PROCESS_SET_PATH!s} was expected to have only one source, but found {pset.keys()!r}"
-        )
-    return dict(next(iter(pset["canonical_mapping"].values())))
+BUILD_DIR: Path = TEST_DATA_DIR / "build"
+TEST_RESULTS_DIR = TEST_DATA_DIR / "test_results"
