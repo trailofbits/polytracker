@@ -164,39 +164,6 @@ input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
   sqlite3_finalize(stmt);
   return get_input_id(output_db);
 }
-/*
-const input_id_t storeNewInput(sqlite3 *output_db) {
-  auto name_target_map = getInitialSources();
-  if (name_target_map.size() == 0) {
-    return 0;
-  }
-  if (name_target_map.size() > 1) {
-    std::cout << "More than once taint source detected!" << std::endl;
-    std::cout << "This is currently broken, exiting!" << std::endl;
-    exit(1);
-  }
-  sqlite3_stmt *stmt;
-  const char *insert =
-      "INSERT INTO input(path, track_start, track_end, size, trace_level)"
-      "VALUES(?, ?, ?, ?, ?);";
-  sql_prep(output_db, insert, -1, &stmt, NULL);
-  for (const auto &pair : name_target_map) {
-    sqlite3_bind_text(stmt, 1, pair.first.c_str(), pair.first.length(),
-                      SQLITE_STATIC);
-    sqlite3_bind_int64(stmt, 2, pair.second.first);
-    sqlite3_bind_int64(stmt, 3, pair.second.second);
-    sqlite3_bind_int64(stmt, 4, [](const std::string &filename) {
-      std::ifstream file(filename.c_str(), std::ios::binary | std::ios::ate);
-      return file.tellg();
-    }(pair.first));
-    sqlite3_bind_int(stmt, 5, polytracker_trace);
-    sql_step(output_db, stmt);
-    sqlite3_reset(stmt);
-  }
-  sqlite3_finalize(stmt);
-  return get_input_id(output_db);
-}
-*/
 
 void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
                        const dfsan_label &label, const uint64_t &file_offset) {

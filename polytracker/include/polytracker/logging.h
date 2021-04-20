@@ -17,7 +17,8 @@ void logFunctionEntry(const char *fname, const function_id_t &func_id);
 void logFunctionExit(const function_id_t &index);
 void logBBEntry(const char *fname, const function_id_t &findex,
                 const block_id_t &bindex, const uint8_t &btype);
-
+void logFuncCall(const char *targ_name, const function_id_t &target_id,
+                 const function_id_t &func_id, const EdgeType &edge_type);
 struct FunctionStackFrame {
   event_id_t func_event_id;
   function_id_t func_id;

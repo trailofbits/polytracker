@@ -50,6 +50,15 @@ void logOperation(const dfsan_label &label, const function_id_t &findex,
   storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
 }
 
+void logFuncCall(const char *targ_name, const function_id_t &target_id,
+                 const function_id_t &func_id, const EdgeType &edge_type) {
+  const auto this_event_id = event_id++;
+  storeFuncCFGEdge(output_db, input_id, thread_id, target_id, func_id,
+                   this_event_id, edge_type);
+  storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
+             EventType::FUNC_CALL, func_id, 0, this_event_id);
+}
+
 void logFunctionEntry(const char *fname, const function_id_t &func_id) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one

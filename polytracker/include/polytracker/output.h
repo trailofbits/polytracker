@@ -18,9 +18,19 @@ enum class ByteAccessType : uint8_t {
   READ_ACCESS = 4
 };
 
-enum EventType : uint8_t { FUNC_ENTER = 0, FUNC_RET = 1, BLOCK_ENTER = 2 };
+enum EventType : uint8_t {
+  FUNC_ENTER = 0,
+  FUNC_RET = 1,
+  BLOCK_ENTER = 2,
+  FUNC_CALL = 3
+};
 
-enum EdgeType : uint8_t { FORWARD = 0, BACKWARD = 1 };
+enum EdgeType : uint8_t {
+  FORWARD = 0,
+  BACKWARD = 1,
+  FORWARD_UNINST = 2,
+  BACKWARD_UNINST = 3
+};
 
 sqlite3 *db_init(const std::string &db_path);
 void db_fini(sqlite3 *output_db);
