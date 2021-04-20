@@ -98,9 +98,28 @@ void logFunctionExit(const function_id_t &index) {
     if (!function_stack.empty()) {
       std::cerr << " (expected to be returning from function "
                 << funcName(function_stack.back().func_id) << ")";
+      // if uninstrumented code calls into instrumented code, we'll get a
+      // function entry event but no associated function exit. So see if we can
+      // clean up the function stack:
+      while (!function_stack.empty() &&
+             function_stack.back().func_id != curr_func_index) {
+        const auto current_function_event = function_stack.back().func_event_id;
+        const auto func_index = function_stack.back().func_id;
+        const auto this_event_id = event_id++;
+        function_stack.pop_back();
+        storeEvent(output_db, input_id, thread_id, this_event_id,
+                   thread_event_id++, EventType::FUNC_RET, func_index, 0,
+                   current_function_event);
+      }
+      if (!function_stack.empty()) {
+        // we were able to clean up the function stack
+        logFunctionExit(index);
+      }
     }
     std::cerr << ". This is likely due to either an instrumentation error "
-              << "or non-standard control-flow in the instrumented program.\n";
+              << "or non-standard control-flow in the instrumented program "
+                 "(e.g., if uninstrumented code calls into "
+              << "instrumented code.\n";
   } else {
     const auto current_function_event = function_stack.back().func_event_id;
     const auto this_event_id = event_id++;
