@@ -1,0 +1,17 @@
+polytracker.visualizations
+==========================
+
+.. automodule:: polytracker.visualizations
+
+visualizations functions
+------------------------
+
+file_diff
+*********
+
+.. autofunction:: file_diff
+
+temporal_animation
+******************
+
+.. autofunction:: temporal_animation

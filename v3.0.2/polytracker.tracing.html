@@ -1,0 +1,1303 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.tracing &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.tracing.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.visualizations" href="polytracker.visualizations.html" />
+    <link rel="prev" title="polytracker.taint_forest" href="polytracker.taint_forest.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.tracing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#tracing-classes">tracing classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#basicblock">BasicBlock</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#basicblockentry">BasicBlockEntry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#basicblocktype">BasicBlockType</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#byteoffset">ByteOffset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cfgtracecommand">CFGTraceCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#controlflowevent">ControlFlowEvent</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#function">Function</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#functionentry">FunctionEntry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#functionreturn">FunctionReturn</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#programtrace">ProgramTrace</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#runtracecommand">RunTraceCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#taintaccess">TaintAccess</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#taintdiff">TaintDiff</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#taintedregion">TaintedRegion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#taints">Taints</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tracecommand">TraceCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#traceevent">TraceEvent</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#tracing-functions">tracing functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#common-parent-directory">common_parent_directory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.tracing</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.tracing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.tracing">
+<span id="polytracker-tracing"></span><h1>polytracker.tracing<a class="headerlink" href="#module-polytracker.tracing" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tracing-classes">
+<h2>tracing classes<a class="headerlink" href="#tracing-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="basicblock">
+<h3>BasicBlock<a class="headerlink" href="#basicblock" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.BasicBlock">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">BasicBlock</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">function</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function">polytracker.tracing.Function</a></span></em>, <em class="sig-param"><span class="n">index_in_function</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.BasicBlock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlock.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">function</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function">polytracker.tracing.Function</a></span></em>, <em class="sig-param"><span class="n">index_in_function</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.BasicBlock.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlock.is_conditional">
+<code class="sig-name descname">is_conditional</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">trace</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace">polytracker.tracing.ProgramTrace</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.tracing.BasicBlock.is_conditional" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlock.is_loop_entry">
+<code class="sig-name descname">is_loop_entry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">trace</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace">polytracker.tracing.ProgramTrace</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.tracing.BasicBlock.is_loop_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlock.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.BasicBlock.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="basicblockentry">
+<h3>BasicBlockEntry<a class="headerlink" href="#basicblockentry" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.BasicBlockEntry">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">BasicBlockEntry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.called_function">
+<em class="property">property </em><code class="sig-name descname">called_function</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.called_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the function entry event called from this basic block, or None if this basic block does not call
+a function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.consumed_tokens">
+<em class="property">property </em><code class="sig-name descname">consumed_tokens</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.consumed_tokens" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.entry_count">
+<code class="sig-name descname">entry_count</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.entry_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the number of times this basic block has been entered in the current stack frame</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.next_basic_block_in_function">
+<code class="sig-name descname">next_basic_block_in_function</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.BasicBlockEntry" title="polytracker.tracing.BasicBlockEntry">polytracker.tracing.BasicBlockEntry</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.next_basic_block_in_function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the next basic block in this function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.BasicBlockEntry.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.BasicBlockEntry.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="basicblocktype">
+<h3>BasicBlockType<a class="headerlink" href="#basicblocktype" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.BasicBlockType">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">BasicBlockType</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.BasicBlockType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.IntFlag" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">enum.IntFlag</span></code></a></p>
+<p>Basic block types</p>
+<p>This should be kept in parity with the enum in /polytracker/include/polytracker/basic_block_types.h</p>
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.CONDITIONAL">
+<code class="sig-name descname">CONDITIONAL</code><em class="property"> = 2</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.CONDITIONAL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Any BB that contains a conditional branch</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.FUNCTION_CALL">
+<code class="sig-name descname">FUNCTION_CALL</code><em class="property"> = 128</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.FUNCTION_CALL" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that contains a CallInst</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.FUNCTION_ENTRY">
+<code class="sig-name descname">FUNCTION_ENTRY</code><em class="property"> = 16</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.FUNCTION_ENTRY" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that is the first inside of its function</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.FUNCTION_EXIT">
+<code class="sig-name descname">FUNCTION_EXIT</code><em class="property"> = 32</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.FUNCTION_EXIT" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that exits a function (i.e., it contains a return instruction)</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.FUNCTION_RETURN">
+<code class="sig-name descname">FUNCTION_RETURN</code><em class="property"> = 64</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.FUNCTION_RETURN" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that is executed immediately after a CallInst returns</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.LOOP_ENTRY">
+<code class="sig-name descname">LOOP_ENTRY</code><em class="property"> = 6</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.LOOP_ENTRY" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that is an entrypoint into a loop</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.LOOP_EXIT">
+<code class="sig-name descname">LOOP_EXIT</code><em class="property"> = 10</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.LOOP_EXIT" title="Permalink to this definition">¶</a></dt>
+<dd><p>A BB that is an exit to a loop</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.STANDARD">
+<code class="sig-name descname">STANDARD</code><em class="property"> = 1</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.STANDARD" title="Permalink to this definition">¶</a></dt>
+<dd><p>A standard, unremarkable BB</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.BasicBlockType.UNKNOWN">
+<code class="sig-name descname">UNKNOWN</code><em class="property"> = 0</em><a class="headerlink" href="#polytracker.tracing.BasicBlockType.UNKNOWN" title="Permalink to this definition">¶</a></dt>
+<dd><p>We don’t know what kind of BB this is</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="byteoffset">
+<h3>ByteOffset<a class="headerlink" href="#byteoffset" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.ByteOffset">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">ByteOffset</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a></span></em>, <em class="sig-param"><span class="n">offset</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ByteOffset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.TaintedRegion" title="polytracker.tracing.TaintedRegion"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TaintedRegion</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.ByteOffset.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a></span></em>, <em class="sig-param"><span class="n">offset</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ByteOffset.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ByteOffset.value">
+<em class="property">property </em><code class="sig-name descname">value</code><a class="headerlink" href="#polytracker.tracing.ByteOffset.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="cfgtracecommand">
+<h3>CFGTraceCommand<a class="headerlink" href="#cfgtracecommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.CFGTraceCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">CFGTraceCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Subcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.CFGTraceCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.CFGTraceCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'export a trace as an annotated cfg'</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'cfg'</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.CFGTraceCommand.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.tracing.TraceCommand" title="polytracker.tracing.TraceCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">TraceCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.CFGTraceCommand.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.CFGTraceCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="controlflowevent">
+<h3>ControlFlowEvent<a class="headerlink" href="#controlflowevent" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.ControlFlowEvent">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">ControlFlowEvent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TraceEvent</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ControlFlowEvent.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.ControlFlowEvent.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="function">
+<h3>Function<a class="headerlink" href="#function" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.Function">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">Function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">function_index</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.Function" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.Function.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">function_index</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.Function.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Function.called_from">
+<em class="property">abstract </em><code class="sig-name descname">called_from</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function">polytracker.tracing.Function</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Function.called_from" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Function.calls_to">
+<em class="property">abstract </em><code class="sig-name descname">calls_to</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function">polytracker.tracing.Function</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Function.calls_to" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Function.demangled_name">
+<em class="property">property </em><code class="sig-name descname">demangled_name</code><a class="headerlink" href="#polytracker.tracing.Function.demangled_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Function.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.Function.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="functionentry">
+<h3>FunctionEntry<a class="headerlink" href="#functionentry" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.FunctionEntry">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">FunctionEntry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.FunctionEntry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.FunctionEntry.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.caller">
+<em class="property">property </em><code class="sig-name descname">caller</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.caller" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.entrypoint">
+<em class="property">property </em><code class="sig-name descname">entrypoint</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.entrypoint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.function_return">
+<em class="property">abstract property </em><code class="sig-name descname">function_return</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.function_return" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.FunctionEntry.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionEntry.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.FunctionEntry.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="functionreturn">
+<h3>FunctionReturn<a class="headerlink" href="#functionreturn" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.FunctionReturn">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">FunctionReturn</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.FunctionReturn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.FunctionReturn.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.returning_from">
+<em class="property">property </em><code class="sig-name descname">returning_from</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.returning_from" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.returning_to">
+<em class="property">property </em><code class="sig-name descname">returning_to</code><a class="headerlink" href="#polytracker.tracing.FunctionReturn.returning_to" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.FunctionReturn.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.FunctionReturn.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="programtrace">
+<h3>ProgramTrace<a class="headerlink" href="#programtrace" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.ProgramTrace">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">ProgramTrace</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.__iter__">
+<em class="property">abstract </em><code class="sig-name descname">__iter__</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent">polytracker.tracing.TraceEvent</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates over all of the events in this trace, in order</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.__len__">
+<em class="property">abstract </em><code class="sig-name descname">__len__</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.__len__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the total number of events in this trace</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.access_sequence">
+<em class="property">abstract </em><code class="sig-name descname">access_sequence</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.TaintAccess" title="polytracker.tracing.TaintAccess">polytracker.tracing.TaintAccess</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.access_sequence" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.basic_blocks">
+<em class="property">abstract property </em><code class="sig-name descname">basic_blocks</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.basic_blocks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.cfg">
+<em class="property">property </em><code class="sig-name descname">cfg</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.cfg" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.cfg_roots">
+<code class="sig-name descname">cfg_roots</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Iterable<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.BasicBlock" title="polytracker.tracing.BasicBlock">polytracker.tracing.BasicBlock</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.cfg_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.function_cfg">
+<em class="property">property </em><code class="sig-name descname">function_cfg</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.function_cfg" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.functions">
+<em class="property">abstract property </em><code class="sig-name descname">functions</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.functions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.get_event">
+<em class="property">abstract </em><code class="sig-name descname">get_event</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent">polytracker.tracing.TraceEvent</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.get_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.get_function">
+<em class="property">abstract </em><code class="sig-name descname">get_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function">polytracker.tracing.Function</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.get_function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.has_event">
+<em class="property">abstract </em><code class="sig-name descname">has_event</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.has_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.has_function">
+<em class="property">abstract </em><code class="sig-name descname">has_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.has_function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.inputs">
+<em class="property">abstract property </em><code class="sig-name descname">inputs</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.inputs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.is_cfg_connected">
+<code class="sig-name descname">is_cfg_connected</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.is_cfg_connected" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.num_accesses">
+<em class="property">abstract property </em><code class="sig-name descname">num_accesses</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.num_accesses" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.ProgramTrace.taint_forest">
+<em class="property">abstract property </em><code class="sig-name descname">taint_forest</code><a class="headerlink" href="#polytracker.tracing.ProgramTrace.taint_forest" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="runtracecommand">
+<h3>RunTraceCommand<a class="headerlink" href="#runtracecommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.RunTraceCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">RunTraceCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.RunTraceCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Subcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.RunTraceCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.RunTraceCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'run an instrumented binary'</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'run'</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.RunTraceCommand.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.tracing.TraceCommand" title="polytracker.tracing.TraceCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">TraceCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.RunTraceCommand.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.RunTraceCommand.run_trace">
+<em class="property">static </em><code class="sig-name descname">run_trace</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instrumented_binary_path</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">input_file_path</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">no_bb_trace</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">output_db_path</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="n">return_trace</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span> &#x2192; Union<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace">polytracker.tracing.ProgramTrace</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.run_trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs an instrumented binary and returns the resulting trace</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instrumented_binary_path</strong> – path to the instrumented binary</p></li>
+<li><p><strong>input_file_path</strong> – input file to track</p></li>
+<li><p><strong>no_bb_trace</strong> – if True, only functions will be traced and not basic blocks</p></li>
+<li><p><strong>output_db_path</strong> – path to save the output database</p></li>
+<li><p><strong>args</strong> – additional arguments to pass the binary</p></li>
+<li><p><strong>return_trace</strong> – if True (the default), return the resulting ProgramTrace. If False, just return the exit code.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns: The program trace or the instrumented binary’s exit code</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.RunTraceCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.RunTraceCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="taintaccess">
+<h3>TaintAccess<a class="headerlink" href="#taintaccess" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.TaintAccess">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">TaintAccess</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintAccess" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TraceEvent</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintAccess.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.TaintAccess.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintAccess.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.TaintAccess.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="taintdiff">
+<h3>TaintDiff<a class="headerlink" href="#taintdiff" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.TaintDiff">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">TaintDiff</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">taints1</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a></span></em>, <em class="sig-param"><span class="n">taints2</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintDiff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.TaintDiff.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">taints1</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a></span></em>, <em class="sig-param"><span class="n">taints2</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintDiff.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintDiff.bytes_only_in_first">
+<em class="property">property </em><code class="sig-name descname">bytes_only_in_first</code><a class="headerlink" href="#polytracker.tracing.TaintDiff.bytes_only_in_first" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintDiff.bytes_only_in_second">
+<em class="property">property </em><code class="sig-name descname">bytes_only_in_second</code><a class="headerlink" href="#polytracker.tracing.TaintDiff.bytes_only_in_second" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintDiff.regions_only_in_first">
+<em class="property">property </em><code class="sig-name descname">regions_only_in_first</code><a class="headerlink" href="#polytracker.tracing.TaintDiff.regions_only_in_first" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintDiff.regions_only_in_second">
+<em class="property">property </em><code class="sig-name descname">regions_only_in_second</code><a class="headerlink" href="#polytracker.tracing.TaintDiff.regions_only_in_second" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="taintedregion">
+<h3>TaintedRegion<a class="headerlink" href="#taintedregion" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.TaintedRegion">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">TaintedRegion</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a></span></em>, <em class="sig-param"><span class="n">offset</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">length</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintedRegion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.TaintedRegion.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a></span></em>, <em class="sig-param"><span class="n">offset</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em>, <em class="sig-param"><span class="n">length</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintedRegion.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TaintedRegion.value">
+<em class="property">property </em><code class="sig-name descname">value</code><a class="headerlink" href="#polytracker.tracing.TaintedRegion.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="taints">
+<h3>Taints<a class="headerlink" href="#taints" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.Taints">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">Taints</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">byte_offsets</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.ByteOffset" title="polytracker.tracing.ByteOffset">polytracker.tracing.ByteOffset</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.Taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">byte_offsets</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.ByteOffset" title="polytracker.tracing.ByteOffset">polytracker.tracing.ByteOffset</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.Taints.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.diff">
+<code class="sig-name descname">diff</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.TaintDiff" title="polytracker.tracing.TaintDiff">polytracker.tracing.TaintDiff</a><a class="headerlink" href="#polytracker.tracing.Taints.diff" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.find">
+<code class="sig-name descname">find</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">byte_sequence</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.TaintedRegion" title="polytracker.tracing.TaintedRegion">polytracker.tracing.TaintedRegion</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Taints.find" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the start of any matching tainted byte sequence in this set of taints</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.from_source">
+<code class="sig-name descname">from_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.Taints.from_source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.regions">
+<code class="sig-name descname">regions</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.TaintedRegion" title="polytracker.tracing.TaintedRegion">polytracker.tracing.TaintedRegion</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Taints.regions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.sources">
+<code class="sig-name descname">sources</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Set<span class="p">[</span><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input">polytracker.inputs.Input</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Taints.sources" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.Taints.to_regions">
+<em class="property">static </em><code class="sig-name descname">to_regions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">offsets</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.ByteOffset" title="polytracker.tracing.ByteOffset">polytracker.tracing.ByteOffset</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">is_sorted</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; Iterator<span class="p">[</span><a class="reference internal" href="#polytracker.tracing.TaintedRegion" title="polytracker.tracing.TaintedRegion">polytracker.tracing.TaintedRegion</a><span class="p">]</span><a class="headerlink" href="#polytracker.tracing.Taints.to_regions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts the list of byte offsets into contiguous regions.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="tracecommand">
+<h3>TraceCommand<a class="headerlink" href="#tracecommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.TraceCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">TraceCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Command</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.TraceCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.tracing.TraceCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'commands related to tracing'</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'trace'</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.parser">
+<code class="sig-name descname">parser</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceCommand.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = [&lt;class 'polytracker.tracing.RunTraceCommand'&gt;, &lt;class 'polytracker.tracing.CFGTraceCommand'&gt;]</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.tracing.TraceCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.tracing.TraceCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="traceevent">
+<h3>TraceEvent<a class="headerlink" href="#traceevent" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.tracing.TraceEvent">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">TraceEvent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.basic_block">
+<em class="property">abstract property </em><code class="sig-name descname">basic_block</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.function">
+<em class="property">property </em><code class="sig-name descname">function</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.function" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.function_entry">
+<em class="property">abstract property </em><code class="sig-name descname">function_entry</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.next_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">next_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.next_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.next_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.next_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">next_global_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.previous_control_flow_event">
+<em class="property">property </em><code class="sig-name descname">previous_control_flow_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.previous_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.previous_global_event">
+<em class="property">abstract property </em><code class="sig-name descname">previous_global_event</code><a class="headerlink" href="#polytracker.tracing.TraceEvent.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.tracing.TraceEvent.taints">
+<em class="property">abstract </em><code class="sig-name descname">taints</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints">polytracker.tracing.Taints</a><a class="headerlink" href="#polytracker.tracing.TraceEvent.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="tracing-functions">
+<h2>tracing functions<a class="headerlink" href="#tracing-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="common-parent-directory">
+<h3>common_parent_directory<a class="headerlink" href="#common-parent-directory" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.tracing.common_parent_directory">
+<code class="sig-prename descclassname">polytracker.tracing.</code><code class="sig-name descname">common_parent_directory</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">paths</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><a class="headerlink" href="#polytracker.tracing.common_parent_directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the deepest parent directory common to every path in paths</p>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.visualizations.html" class="btn btn-neutral float-right" title="polytracker.visualizations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.taint_forest.html" class="btn btn-neutral float-left" title="polytracker.taint_forest" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

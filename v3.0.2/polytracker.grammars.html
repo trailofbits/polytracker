@@ -1,0 +1,685 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.grammars &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.grammars.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.inputs" href="polytracker.inputs.html" />
+    <link rel="prev" title="polytracker.diffing" href="polytracker.diffing.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.grammars</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#grammars-classes">grammars classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#corruptedgrammarerror">CorruptedGrammarError</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#disconnectedgrammarerror">DisconnectedGrammarError</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#extractgrammarcommand">ExtractGrammarCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#grammar">Grammar</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#grammarerror">GrammarError</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#matchpossibility">MatchPossibility</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#missingproductionerror">MissingProductionError</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parsetree">ParseTree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#production">Production</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#rule">Rule</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#terminal">Terminal</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#grammars-functions">grammars functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#extract">extract</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#production-name">production_name</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#to-dot">to_dot</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#trace-to-grammar">trace_to_grammar</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.grammars</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.grammars.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.grammars">
+<span id="polytracker-grammars"></span><h1>polytracker.grammars<a class="headerlink" href="#module-polytracker.grammars" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="grammars-classes">
+<h2>grammars classes<a class="headerlink" href="#grammars-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="corruptedgrammarerror">
+<h3>CorruptedGrammarError<a class="headerlink" href="#corruptedgrammarerror" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.CorruptedGrammarError">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">CorruptedGrammarError</code><a class="headerlink" href="#polytracker.grammars.CorruptedGrammarError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.grammars.GrammarError" title="polytracker.grammars.GrammarError"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.grammars.GrammarError</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.CorruptedGrammarError.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.CorruptedGrammarError.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.CorruptedGrammarError.args">
+<code class="sig-name descname">args</code><a class="headerlink" href="#polytracker.grammars.CorruptedGrammarError.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.CorruptedGrammarError.with_traceback">
+<code class="sig-name descname">with_traceback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.CorruptedGrammarError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="disconnectedgrammarerror">
+<h3>DisconnectedGrammarError<a class="headerlink" href="#disconnectedgrammarerror" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.DisconnectedGrammarError">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">DisconnectedGrammarError</code><a class="headerlink" href="#polytracker.grammars.DisconnectedGrammarError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.grammars.GrammarError" title="polytracker.grammars.GrammarError"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.grammars.GrammarError</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.DisconnectedGrammarError.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.DisconnectedGrammarError.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.DisconnectedGrammarError.args">
+<code class="sig-name descname">args</code><a class="headerlink" href="#polytracker.grammars.DisconnectedGrammarError.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.DisconnectedGrammarError.with_traceback">
+<code class="sig-name descname">with_traceback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.DisconnectedGrammarError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="extractgrammarcommand">
+<h3>ExtractGrammarCommand<a class="headerlink" href="#extractgrammarcommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.ExtractGrammarCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">ExtractGrammarCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Command</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.ExtractGrammarCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = [&lt;class 'polytracker.datalog.ExtractDatalogCommand'&gt;]</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.ExtractGrammarCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'extract a grammar from one or more program traces'</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'grammar'</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.ExtractGrammarCommand.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.ExtractGrammarCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="grammar">
+<h3>Grammar<a class="headerlink" href="#grammar" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.Grammar">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">Grammar</code><a class="headerlink" href="#polytracker.grammars.Grammar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Grammar.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.dependency_graph">
+<code class="sig-name descname">dependency_graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DiGraph" title="polytracker.cfg.DiGraph">polytracker.cfg.DiGraph</a><span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><span class="p">]</span><a class="headerlink" href="#polytracker.grammars.Grammar.dependency_graph" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_grammar</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span>Any<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Grammar.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.match">
+<code class="sig-name descname">match</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sentence</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">start</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.grammars.ParseTree" title="polytracker.grammars.ParseTree">polytracker.grammars.ParseTree</a><a class="headerlink" href="#polytracker.grammars.Grammar.match" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.remove">
+<code class="sig-name descname">remove</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">production</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.grammars.Grammar.remove" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.simplify">
+<code class="sig-name descname">simplify</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.grammars.Grammar.simplify" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Grammar.verify">
+<code class="sig-name descname">verify</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">test_disconnection</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Grammar.verify" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="grammarerror">
+<h3>GrammarError<a class="headerlink" href="#grammarerror" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.GrammarError">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">GrammarError</code><a class="headerlink" href="#polytracker.grammars.GrammarError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.GrammarError.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.GrammarError.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.GrammarError.args">
+<code class="sig-name descname">args</code><a class="headerlink" href="#polytracker.grammars.GrammarError.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.GrammarError.with_traceback">
+<code class="sig-name descname">with_traceback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.GrammarError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="matchpossibility">
+<h3>MatchPossibility<a class="headerlink" href="#matchpossibility" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.MatchPossibility">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">MatchPossibility</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="n">remainder</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a></span></em>, <em class="sig-param"><span class="n">production</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a></span></em>, <em class="sig-param"><span class="n">rule</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a></span></em>, <em class="sig-param"><span class="n">after_sequence</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>Tuple<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">, </span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">()</span></em>, <em class="sig-param"><span class="n">previous</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.MatchPossibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.MatchPossibility.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="n">remainder</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a></span></em>, <em class="sig-param"><span class="n">production</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a></span></em>, <em class="sig-param"><span class="n">rule</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a></span></em>, <em class="sig-param"><span class="n">after_sequence</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>Tuple<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">, </span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">()</span></em>, <em class="sig-param"><span class="n">previous</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">MatchPossibility</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.MatchPossibility.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.MatchPossibility.consumed">
+<em class="property">property </em><code class="sig-name descname">consumed</code><a class="headerlink" href="#polytracker.grammars.MatchPossibility.consumed" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.MatchPossibility.expand">
+<code class="sig-name descname">expand</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span>List<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.MatchPossibility" title="polytracker.grammars.MatchPossibility">polytracker.grammars.MatchPossibility</a><span class="p">]</span><span class="p">]</span><a class="headerlink" href="#polytracker.grammars.MatchPossibility.expand" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="missingproductionerror">
+<h3>MissingProductionError<a class="headerlink" href="#missingproductionerror" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.MissingProductionError">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">MissingProductionError</code><a class="headerlink" href="#polytracker.grammars.MissingProductionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.grammars.CorruptedGrammarError" title="polytracker.grammars.CorruptedGrammarError"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.grammars.CorruptedGrammarError</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.MissingProductionError.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.MissingProductionError.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.grammars.MissingProductionError.args">
+<code class="sig-name descname">args</code><a class="headerlink" href="#polytracker.grammars.MissingProductionError.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.MissingProductionError.with_traceback">
+<code class="sig-name descname">with_traceback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.MissingProductionError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="parsetree">
+<h3>ParseTree<a class="headerlink" href="#parsetree" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.ParseTree">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">ParseTree</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">production_or_terminal</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ParseTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.ParseTree.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">production_or_terminal</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ParseTree.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="production">
+<h3>Production<a class="headerlink" href="#production" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.Production">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">Production</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">rules</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Production" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.Production.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">rules</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Production.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production._propagate_terminals">
+<code class="sig-name descname">_propagate_terminals</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Production._propagate_terminals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates if this production can produce a terminal.
+If a rule calls another terminal whose _can_produce_terminal member is None, assume that it is False</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rule</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.grammars.Production.add" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.can_produce_terminal">
+<em class="property">property </em><code class="sig-name descname">can_produce_terminal</code><a class="headerlink" href="#polytracker.grammars.Production.can_produce_terminal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.first_rule">
+<code class="sig-name descname">first_rule</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a><span class="p">]</span><a class="headerlink" href="#polytracker.grammars.Production.first_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.load">
+<em class="property">static </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">rules</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production">polytracker.grammars.Production</a><a class="headerlink" href="#polytracker.grammars.Production.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.remove_sub_production">
+<code class="sig-name descname">remove_sub_production</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Production.remove_sub_production" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.replace_sub_production">
+<code class="sig-name descname">replace_sub_production</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">to_replace</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">replace_with</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Production.replace_sub_production" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Production.used_by">
+<em class="property">property </em><code class="sig-name descname">used_by</code><a class="headerlink" href="#polytracker.grammars.Production.used_by" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="rule">
+<h3>Rule<a class="headerlink" href="#rule" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.Rule">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">Rule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">sequence</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">sequence</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Rule.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.can_produce_terminal">
+<em class="property">property </em><code class="sig-name descname">can_produce_terminal</code><a class="headerlink" href="#polytracker.grammars.Rule.can_produce_terminal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.combine_terminals">
+<em class="property">static </em><code class="sig-name descname">combine_terminals</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sequence</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span>Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Tuple<span class="p">[</span>Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span><span class="p">, </span><span class="p">…</span><span class="p">]</span><a class="headerlink" href="#polytracker.grammars.Rule.combine_terminals" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.load">
+<em class="property">static </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">grammar</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a></span></em>, <em class="sig-param"><span class="o">*</span><span class="n">sequence</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference internal" href="#polytracker.grammars.Terminal" title="polytracker.grammars.Terminal">polytracker.grammars.Terminal</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">polytracker.grammars.Rule</a><a class="headerlink" href="#polytracker.grammars.Rule.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.remove_sub_production">
+<code class="sig-name descname">remove_sub_production</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">prod_name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.grammars.Rule.remove_sub_production" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.grammars.Rule.replace_sub_production">
+<code class="sig-name descname">replace_sub_production</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">to_replace</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">replace_with</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule">Rule</a><span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.grammars.Rule.replace_sub_production" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="terminal">
+<h3>Terminal<a class="headerlink" href="#terminal" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.grammars.Terminal">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">Terminal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">terminal</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Terminal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.grammars.Terminal.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">terminal</span><span class="p">:</span> <span class="n">Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.9)">bytes</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.Terminal.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="grammars-functions">
+<h2>grammars functions<a class="headerlink" href="#grammars-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="extract">
+<h3>extract<a class="headerlink" href="#extract" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.grammars.extract">
+<code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">extract</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">traces</span><span class="p">:</span> <span class="n">Iterable<span class="p">[</span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace">polytracker.tracing.ProgramTrace</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">simplify</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a><a class="headerlink" href="#polytracker.grammars.extract" title="Permalink to this definition">¶</a></dt>
+<dd><p>extract a grammar from a set of traces</p>
+</dd></dl>
+
+</div>
+<div class="section" id="production-name">
+<h3>production_name<a class="headerlink" href="#production-name" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.grammars.production_name">
+<code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">production_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">event</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent">polytracker.tracing.TraceEvent</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><a class="headerlink" href="#polytracker.grammars.production_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="to-dot">
+<h3>to_dot<a class="headerlink" href="#to-dot" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.grammars.to_dot">
+<code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">to_dot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">graph</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DiGraph" title="polytracker.cfg.DiGraph">polytracker.cfg.DiGraph</a></span></em>, <em class="sig-param"><span class="n">comment</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; graphviz.dot.Digraph<a class="headerlink" href="#polytracker.grammars.to_dot" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>comment</strong> – comment for the graph</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Graphviz DiGraph</p>
+</dd>
+</dl>
+<p>This function creates a dot object which can be saved to disk and converted to PDF
+its a visualization of the chain fragment, useful for visualizing a reorg.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="trace-to-grammar">
+<h3>trace_to_grammar<a class="headerlink" href="#trace-to-grammar" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.grammars.trace_to_grammar">
+<code class="sig-prename descclassname">polytracker.grammars.</code><code class="sig-name descname">trace_to_grammar</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">trace</span><span class="p">:</span> <span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace">polytracker.tracing.ProgramTrace</a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.grammars.Grammar" title="polytracker.grammars.Grammar">polytracker.grammars.Grammar</a><a class="headerlink" href="#polytracker.grammars.trace_to_grammar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.inputs.html" class="btn btn-neutral float-right" title="polytracker.inputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.diffing.html" class="btn btn-neutral float-left" title="polytracker.diffing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

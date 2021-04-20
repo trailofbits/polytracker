@@ -1,0 +1,16 @@
+polytracker.inputs
+==================
+
+.. automodule:: polytracker.inputs
+
+inputs classes
+--------------
+
+Input
+*****
+
+.. autoclass:: Input
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

@@ -1,0 +1,168 @@
+polytracker.tracing
+===================
+
+.. automodule:: polytracker.tracing
+
+tracing classes
+---------------
+
+BasicBlock
+**********
+
+.. autoclass:: BasicBlock
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+BasicBlockEntry
+***************
+
+.. autoclass:: BasicBlockEntry
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+BasicBlockType
+**************
+
+.. autoclass:: BasicBlockType
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ByteOffset
+**********
+
+.. autoclass:: ByteOffset
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CFGTraceCommand
+***************
+
+.. autoclass:: CFGTraceCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ControlFlowEvent
+****************
+
+.. autoclass:: ControlFlowEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Function
+********
+
+.. autoclass:: Function
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+FunctionEntry
+*************
+
+.. autoclass:: FunctionEntry
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+FunctionReturn
+**************
+
+.. autoclass:: FunctionReturn
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ProgramTrace
+************
+
+.. autoclass:: ProgramTrace
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+RunTraceCommand
+***************
+
+.. autoclass:: RunTraceCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintAccess
+***********
+
+.. autoclass:: TaintAccess
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintDiff
+*********
+
+.. autoclass:: TaintDiff
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintedRegion
+*************
+
+.. autoclass:: TaintedRegion
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Taints
+******
+
+.. autoclass:: Taints
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TraceCommand
+************
+
+.. autoclass:: TraceCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TraceEvent
+**********
+
+.. autoclass:: TraceEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+tracing functions
+-----------------
+
+common_parent_directory
+***********************
+
+.. autofunction:: common_parent_directory

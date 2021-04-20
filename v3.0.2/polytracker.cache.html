@@ -1,0 +1,428 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.cache &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.cache.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.cfg" href="polytracker.cfg.html" />
+    <link rel="prev" title="polytracker.build" href="polytracker.build.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.cache</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cache-classes">cache classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lrucache">LRUCache</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#memoized">Memoized</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#orderedset">OrderedSet</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cache-functions">cache functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#memoize">memoize</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.cache</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.cache.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.cache">
+<span id="polytracker-cache"></span><h1>polytracker.cache<a class="headerlink" href="#module-polytracker.cache" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="cache-classes">
+<h2>cache classes<a class="headerlink" href="#cache-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="lrucache">
+<h3>LRUCache<a class="headerlink" href="#lrucache" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.cache.LRUCache">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.cache.</code><code class="sig-name descname">LRUCache</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_size</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">30000000</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableMapping</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_size</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">30000000</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.clear">
+<code class="sig-name descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; None.  Remove all items from D.<a class="headerlink" href="#polytracker.cache.LRUCache.clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.get">
+<code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">k</em><span class="optional">[</span>, <em class="sig-param">d</em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; D[k] if k in D, else d.  d defaults to None.<a class="headerlink" href="#polytracker.cache.LRUCache.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.items">
+<code class="sig-name descname">items</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; a set-like object providing a view on D’s items<a class="headerlink" href="#polytracker.cache.LRUCache.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.keys">
+<code class="sig-name descname">keys</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; a set-like object providing a view on D’s keys<a class="headerlink" href="#polytracker.cache.LRUCache.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.pop">
+<code class="sig-name descname">pop</code><span class="sig-paren">(</span><em class="sig-param">k</em><span class="optional">[</span>, <em class="sig-param">d</em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; v, remove specified key and return the corresponding value.<a class="headerlink" href="#polytracker.cache.LRUCache.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>If key is not found, d is returned if given, otherwise KeyError is raised.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.popitem">
+<code class="sig-name descname">popitem</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; (k, v), remove and return some (key, value) pair<a class="headerlink" href="#polytracker.cache.LRUCache.popitem" title="Permalink to this definition">¶</a></dt>
+<dd><p>as a 2-tuple; but raise KeyError if D is empty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.setdefault">
+<code class="sig-name descname">setdefault</code><span class="sig-paren">(</span><em class="sig-param">k</em><span class="optional">[</span>, <em class="sig-param">d</em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; D.get(k,d), also set D[k]=d if k not in D<a class="headerlink" href="#polytracker.cache.LRUCache.setdefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param">E</em>, <span class="optional">]</span><em class="sig-param">**F</em><span class="sig-paren">)</span> &#x2192; None.  Update D from mapping/iterable E and F.<a class="headerlink" href="#polytracker.cache.LRUCache.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>If E present and has a .keys() method, does:     for k in E: D[k] = E[k]
+If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v
+In either case, this is followed by: for k, v in F.items(): D[k] = v</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.LRUCache.values">
+<code class="sig-name descname">values</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; an object providing a view on D’s values<a class="headerlink" href="#polytracker.cache.LRUCache.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="memoized">
+<h3>Memoized<a class="headerlink" href="#memoized" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.cache.Memoized">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.cache.</code><code class="sig-name descname">Memoized</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span><span class="p">:</span> <span class="n">Callable<span class="p">[</span><span class="p">[</span><span class="p">…</span><span class="p">]</span><span class="p">, </span>R<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.cache.Memoized.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span><span class="p">:</span> <span class="n">Callable<span class="p">[</span><span class="p">[</span><span class="p">…</span><span class="p">]</span><span class="p">, </span>R<span class="p">]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="orderedset">
+<h3>OrderedSet<a class="headerlink" href="#orderedset" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.cache.OrderedSet">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.cache.</code><code class="sig-name descname">OrderedSet</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">items</span><span class="p">:</span> <span class="n">R</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableSet" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableSet</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">items</span><span class="p">:</span> <span class="n">R</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet._from_iterable">
+<em class="property">classmethod </em><code class="sig-name descname">_from_iterable</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">it</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._from_iterable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance of the class from any iterable input.</p>
+<p>Must override this method if the class constructor signature
+does not accept an iterable for an input.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet._hash">
+<code class="sig-name descname">_hash</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._hash" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the hash value of a set.</p>
+<p>Note that we don’t define __hash__: not all sets are hashable.
+But if you define a hashable set type, its __hash__ should
+call this function.</p>
+<p>This must be compatible __eq__.</p>
+<p>All sets ought to compare equal if they contain the same
+elements, regardless of how they are implemented, and
+regardless of the order of the elements; so there’s not much
+freedom for __eq__ or __hash__.  We match the algorithm used
+by the built-in frozenset type.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.add">
+<code class="sig-name descname">add</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span><span class="p">:</span> <span class="n">R</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an element.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.clear">
+<code class="sig-name descname">clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is slow (creates N new iterators!) but effective.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.discard">
+<code class="sig-name descname">discard</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">item</span><span class="p">:</span> <span class="n">R</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.discard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove an element.  Do not raise an exception if absent.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.isdisjoint">
+<code class="sig-name descname">isdisjoint</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.isdisjoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if two sets have a null intersection.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.pop">
+<code class="sig-name descname">pop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the popped value.  Raise KeyError if empty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.cache.OrderedSet.remove">
+<code class="sig-name descname">remove</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove an element. If not a member, raise a KeyError.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="cache-functions">
+<h2>cache functions<a class="headerlink" href="#cache-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="memoize">
+<h3>memoize<a class="headerlink" href="#memoize" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.cache.memoize">
+<code class="sig-prename descclassname">polytracker.cache.</code><code class="sig-name descname">memoize</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">func</span><span class="p">:</span> <span class="n">Callable<span class="p">[</span><span class="p">[</span><span class="p">…</span><span class="p">]</span><span class="p">, </span>R<span class="p">]</span></span></em><span class="sig-paren">)</span> &#x2192; Callable<span class="p">[</span><span class="p">[</span><span class="p">…</span><span class="p">]</span><span class="p">, </span>R<span class="p">]</span><a class="headerlink" href="#polytracker.cache.memoize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.cfg.html" class="btn btn-neutral float-right" title="polytracker.cfg" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.build.html" class="btn btn-neutral float-left" title="polytracker.build" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

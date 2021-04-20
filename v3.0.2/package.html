@@ -1,0 +1,490 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PolyTracker API &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/package.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker" href="polytracker.html" />
+    <link rel="prev" title="PolyTracker Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PolyTracker API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>PolyTracker API</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/package.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="polytracker-api">
+<h1>PolyTracker API<a class="headerlink" href="#polytracker-api" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.build.html">polytracker.build</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html#build-classes">build classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.build.html#polybuild">PolyBuild</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html#build-functions">build functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.build.html#main">main</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.build.html#main-plus-plus">main_plus_plus</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html#cache-classes">cache classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cache.html#lrucache">LRUCache</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cache.html#memoized">Memoized</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cache.html#orderedset">OrderedSet</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html#cache-functions">cache functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cache.html#memoize">memoize</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html#cfg-classes">cfg classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#cfg">CFG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#dag">DAG</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#digraph">DiGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#functioninfo">FunctionInfo</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html#cfg-functions">cfg functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#non-disjoint-union-all">non_disjoint_union_all</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html#containerization-classes">containerization classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockercommand">DockerCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockercontainer">DockerContainer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockerexists">DockerExists</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockeroutofdateerror">DockerOutOfDateError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockerpull">DockerPull</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockerrebuild">DockerRebuild</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockerrun">DockerRun</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockersubcommand">DockerSubcommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.containerization.html#dockerfile">Dockerfile</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.database.html">polytracker.database</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html#database-classes">database classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#accessedlabel">AccessedLabel</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#byteaccesstype">ByteAccessType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#canonicalmap">CanonicalMap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbbasicblock">DBBasicBlock</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbbasicblockentry">DBBasicBlockEntry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbfunction">DBFunction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbfunctionentry">DBFunctionEntry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbfunctionreturn">DBFunctionReturn</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbinput">DBInput</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbprogramtrace">DBProgramTrace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbtaintaccess">DBTaintAccess</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbtaintforest">DBTaintForest</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbtaintforestnode">DBTaintForestNode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#dbtraceevent">DBTraceEvent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#edgetype">EdgeType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#eventtype">EventType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#functioncfgedge">FunctionCFGEdge</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#polytrackeritem">PolytrackerItem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#taintedchunksitem">TaintedChunksItem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html#database-functions">database functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#stream-results">stream_results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html#datalog-classes">datalog classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogclause">DatalogClause</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogfact">DatalogFact</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogfactdecl">DatalogFactDecl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#dataloggrammar">DatalogGrammar</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogoutputdecl">DatalogOutputDecl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogrule">DatalogRule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogruledecl">DatalogRuleDecl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogrulelist">DatalogRuleList</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogtruefact">DatalogTrueFact</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalogtruefactdecl">DatalogTrueFactDecl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#extractdatalogcommand">ExtractDatalogCommand</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html#datalog-functions">datalog functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#datalog-repl-match">datalog_repl_match</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.datalog.html#get-valid-datalog-name">get_valid_datalog_name</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html#diffing-classes">diffing classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.diffing.html#controlflowdiff">ControlFlowDiff</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.diffing.html#temporalvisualization">TemporalVisualization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.diffing.html#tracediff">TraceDiff</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.diffing.html#tracediffcommand">TraceDiffCommand</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html#diffing-functions">diffing functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.diffing.html#print-file-context">print_file_context</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html#grammars-classes">grammars classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#corruptedgrammarerror">CorruptedGrammarError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#disconnectedgrammarerror">DisconnectedGrammarError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#extractgrammarcommand">ExtractGrammarCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#grammar">Grammar</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#grammarerror">GrammarError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#matchpossibility">MatchPossibility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#missingproductionerror">MissingProductionError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#parsetree">ParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#production">Production</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#rule">Rule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#terminal">Terminal</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html#grammars-functions">grammars functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#extract">extract</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#production-name">production_name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#to-dot">to_dot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#trace-to-grammar">trace_to_grammar</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html#inputs-classes">inputs classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.inputs.html#input">Input</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html#plugins-classes">plugins classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#abstractcommand">AbstractCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#command">Command</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#commandextension">CommandExtension</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#commandextensionmeta">CommandExtensionMeta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#plugin">Plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#pluginmeta">PluginMeta</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#subcommand">Subcommand</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html#plugins-functions">plugins functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.plugins.html#add-command-subparsers">add_command_subparsers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html#polytracker-functions">polytracker functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.polytracker.html#version">version</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html#repl-classes">repl classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.repl.html#commands">Commands</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.repl.html#polytrackercompleter">PolyTrackerCompleter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.repl.html#polytrackerrepl">PolyTrackerREPL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.repl.html#replcommand">REPLCommand</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html#repl-functions">repl functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.repl.html#print-function-help">print_function_help</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html#taint-forest-classes">taint_forest classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.taint_forest.html#taintforest">TaintForest</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.taint_forest.html#taintforestnode">TaintForestNode</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html#tracing-classes">tracing classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#basicblock">BasicBlock</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#basicblockentry">BasicBlockEntry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#basicblocktype">BasicBlockType</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#byteoffset">ByteOffset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#cfgtracecommand">CFGTraceCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#controlflowevent">ControlFlowEvent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#function">Function</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#functionentry">FunctionEntry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#functionreturn">FunctionReturn</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#programtrace">ProgramTrace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#runtracecommand">RunTraceCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#taintaccess">TaintAccess</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#taintdiff">TaintDiff</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#taintedregion">TaintedRegion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#taints">Taints</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#tracecommand">TraceCommand</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#traceevent">TraceEvent</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html#tracing-functions">tracing functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.tracing.html#common-parent-directory">common_parent_directory</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html#visualizations-functions">visualizations functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.visualizations.html#file-diff">file_diff</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.visualizations.html#temporal-animation">temporal_animation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html#visualizations-functions">visualizations functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.visualizations.html#file-diff">file_diff</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.visualizations.html#temporal-animation">temporal_animation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.html" class="btn btn-neutral float-right" title="polytracker" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="PolyTracker Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

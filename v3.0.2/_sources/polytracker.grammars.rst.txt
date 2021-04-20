@@ -1,0 +1,129 @@
+polytracker.grammars
+====================
+
+.. automodule:: polytracker.grammars
+
+grammars classes
+----------------
+
+CorruptedGrammarError
+*********************
+
+.. autoclass:: CorruptedGrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DisconnectedGrammarError
+************************
+
+.. autoclass:: DisconnectedGrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ExtractGrammarCommand
+*********************
+
+.. autoclass:: ExtractGrammarCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Grammar
+*******
+
+.. autoclass:: Grammar
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+GrammarError
+************
+
+.. autoclass:: GrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+MatchPossibility
+****************
+
+.. autoclass:: MatchPossibility
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+MissingProductionError
+**********************
+
+.. autoclass:: MissingProductionError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ParseTree
+*********
+
+.. autoclass:: ParseTree
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Production
+**********
+
+.. autoclass:: Production
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Rule
+****
+
+.. autoclass:: Rule
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Terminal
+********
+
+.. autoclass:: Terminal
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+grammars functions
+------------------
+
+extract
+*******
+
+.. autofunction:: extract
+
+production_name
+***************
+
+.. autofunction:: production_name
+
+to_dot
+******
+
+.. autofunction:: to_dot
+
+trace_to_grammar
+****************
+
+.. autofunction:: trace_to_grammar

@@ -1,0 +1,669 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.plugins &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.plugins.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.polytracker" href="polytracker.polytracker.html" />
+    <link rel="prev" title="polytracker.inputs" href="polytracker.inputs.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.plugins</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#plugins-classes">plugins classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#abstractcommand">AbstractCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#command">Command</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#commandextension">CommandExtension</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#commandextensionmeta">CommandExtensionMeta</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#plugin">Plugin</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pluginmeta">PluginMeta</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#subcommand">Subcommand</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#plugins-functions">plugins functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#add-command-subparsers">add_command_subparsers</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.plugins</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.plugins.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.plugins">
+<span id="polytracker-plugins"></span><h1>polytracker.plugins<a class="headerlink" href="#module-polytracker.plugins" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="plugins-classes">
+<h2>plugins classes<a class="headerlink" href="#plugins-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="abstractcommand">
+<h3>AbstractCommand<a class="headerlink" href="#abstractcommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.AbstractCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">AbstractCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.AbstractCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Plugin</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.AbstractCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.AbstractCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.AbstractCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.plugins.AbstractCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.AbstractCommand.run">
+<em class="property">abstract </em><code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.AbstractCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.AbstractCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.AbstractCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="command">
+<h3>Command<a class="headerlink" href="#command" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.Command">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">Command</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.plugins.AbstractCommand" title="polytracker.plugins.AbstractCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.AbstractCommand</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.Command.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Command.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Command.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Command.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.plugins.Command.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.Command.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.Command.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.plugins.Command.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.plugins.Command.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Command.run">
+<em class="property">abstract </em><code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Command.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Command.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Command.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Command.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="commandextension">
+<h3>CommandExtension<a class="headerlink" href="#commandextension" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.CommandExtension">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">CommandExtension</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Plugin</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtension.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtension.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtension.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.plugins.CommandExtension.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.CommandExtension.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.CommandExtension.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.CommandExtension.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.plugins.CommandExtension.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtension.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.plugins.CommandExtension.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.CommandExtension.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.plugins.CommandExtension.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtension.run">
+<em class="property">abstract </em><code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">command</span><span class="p">:</span> <span class="n">C</span></em>, <em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtension.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="commandextensionmeta">
+<h3>CommandExtensionMeta<a class="headerlink" href="#commandextensionmeta" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.CommandExtensionMeta">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">CommandExtensionMeta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">bases</span></em>, <em class="sig-param"><span class="n">namespace</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.plugins.PluginMeta" title="polytracker.plugins.PluginMeta"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.PluginMeta</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">bases</span></em>, <em class="sig-param"><span class="n">clsdict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.__instancecheck__">
+<code class="sig-name descname">__instancecheck__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.__instancecheck__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override for isinstance(instance, cls).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.__subclasscheck__">
+<code class="sig-name descname">__subclasscheck__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">subclass</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.__subclasscheck__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override for issubclass(subclass, cls).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta._abc_caches_clear">
+<code class="sig-name descname">_abc_caches_clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta._abc_caches_clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the caches (for debugging or testing).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta._abc_registry_clear">
+<code class="sig-name descname">_abc_registry_clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta._abc_registry_clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the registry (for debugging or testing).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta._dump_registry">
+<code class="sig-name descname">_dump_registry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">file</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta._dump_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Debug helper to print the ABC registry.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.mro">
+<code class="sig-name descname">mro</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.mro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a type’s method resolution order.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.parent_command_type">
+<em class="property">property </em><code class="sig-name descname">parent_command_type</code><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.parent_command_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.CommandExtensionMeta.parent_type">
+<code class="sig-name descname">parent_type</code><em class="property">: Optional<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.CommandExtensionMeta.register">
+<code class="sig-name descname">register</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">subclass</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.CommandExtensionMeta.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a virtual subclass of an ABC.</p>
+<p>Returns the subclass, to allow usage as a class decorator.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="plugin">
+<h3>Plugin<a class="headerlink" href="#plugin" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.Plugin">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">Plugin</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Plugin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.Plugin.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Plugin.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Plugin.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.plugins.Plugin.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Plugin.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.Plugin.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Plugin.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.plugins.Plugin.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="pluginmeta">
+<h3>PluginMeta<a class="headerlink" href="#pluginmeta" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.PluginMeta">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">PluginMeta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">bases</span></em>, <em class="sig-param"><span class="n">namespace</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABCMeta" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABCMeta</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">bases</span></em>, <em class="sig-param"><span class="n">clsdict</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta.__instancecheck__">
+<code class="sig-name descname">__instancecheck__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">instance</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta.__instancecheck__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override for isinstance(instance, cls).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta.__subclasscheck__">
+<code class="sig-name descname">__subclasscheck__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">subclass</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta.__subclasscheck__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override for issubclass(subclass, cls).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta._abc_caches_clear">
+<code class="sig-name descname">_abc_caches_clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta._abc_caches_clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the caches (for debugging or testing).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta._abc_registry_clear">
+<code class="sig-name descname">_abc_registry_clear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta._abc_registry_clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear the registry (for debugging or testing).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta._dump_registry">
+<code class="sig-name descname">_dump_registry</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">file</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta._dump_registry" title="Permalink to this definition">¶</a></dt>
+<dd><p>Debug helper to print the ABC registry.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta.mro">
+<code class="sig-name descname">mro</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta.mro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a type’s method resolution order.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.PluginMeta.parent_type">
+<code class="sig-name descname">parent_type</code><em class="property">: Optional<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.PluginMeta.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.PluginMeta.register">
+<code class="sig-name descname">register</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">subclass</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.PluginMeta.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a virtual subclass of an ABC.</p>
+<p>Returns the subclass, to allow usage as a class decorator.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="subcommand">
+<h3>Subcommand<a class="headerlink" href="#subcommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.plugins.Subcommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">Subcommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Subcommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">typing.Generic</span></code></a>, <a class="reference internal" href="#polytracker.plugins.AbstractCommand" title="polytracker.plugins.AbstractCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.AbstractCommand</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.plugins.Subcommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Subcommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Subcommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Subcommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.plugins.Subcommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.Subcommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.plugins.Subcommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.plugins.Subcommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Subcommand.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.plugins.Subcommand.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.plugins.Subcommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.plugins.Subcommand.run">
+<em class="property">abstract </em><code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.Subcommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Subcommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.plugins.Subcommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.plugins.Subcommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="plugins-functions">
+<h2>plugins functions<a class="headerlink" href="#plugins-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="add-command-subparsers">
+<h3>add_command_subparsers<a class="headerlink" href="#add-command-subparsers" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.plugins.add_command_subparsers">
+<code class="sig-prename descclassname">polytracker.plugins.</code><code class="sig-name descname">add_command_subparsers</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.plugins.add_command_subparsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.polytracker.html" class="btn btn-neutral float-right" title="polytracker.polytracker" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.inputs.html" class="btn btn-neutral float-left" title="polytracker.inputs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

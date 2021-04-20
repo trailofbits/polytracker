@@ -1,0 +1,846 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.containerization &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.containerization.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.database" href="polytracker.database.html" />
+    <link rel="prev" title="polytracker.cfg" href="polytracker.cfg.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.containerization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#containerization-classes">containerization classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#dockercommand">DockerCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockercontainer">DockerContainer</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockerexists">DockerExists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockeroutofdateerror">DockerOutOfDateError</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockerpull">DockerPull</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockerrebuild">DockerRebuild</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockerrun">DockerRun</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockersubcommand">DockerSubcommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dockerfile">Dockerfile</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.polytracker.html">polytracker.polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.containerization</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.containerization.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.containerization">
+<span id="polytracker-containerization"></span><h1>polytracker.containerization<a class="headerlink" href="#module-polytracker.containerization" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="containerization-classes">
+<h2>containerization classes<a class="headerlink" href="#containerization-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dockercommand">
+<h3>DockerCommand<a class="headerlink" href="#dockercommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerCommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerCommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Command</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerCommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.container">
+<code class="sig-name descname">container</code><em class="property">: <a class="reference internal" href="#polytracker.containerization.DockerContainer" title="polytracker.containerization.DockerContainer">polytracker.containerization.DockerContainer</a></em><a class="headerlink" href="#polytracker.containerization.DockerCommand.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerCommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerCommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'commands for seamlessly running PolyTracker in a Docker container'</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'docker'</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerCommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.parser">
+<code class="sig-name descname">parser</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></em><a class="headerlink" href="#polytracker.containerization.DockerCommand.parser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerCommand.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerCommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = [&lt;class 'polytracker.containerization.DockerExists'&gt;, &lt;class 'polytracker.containerization.DockerPull'&gt;, &lt;class 'polytracker.containerization.DockerRebuild'&gt;, &lt;class 'polytracker.containerization.DockerRun'&gt;]</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerCommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerCommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockercontainer">
+<h3>DockerContainer<a class="headerlink" href="#dockercontainer" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerContainer">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerContainer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">image_name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span> <span class="o">=</span> <span class="default_value">'trailofbits/polytracker'</span></em>, <em class="sig-param"><span class="n">tag</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerContainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">image_name</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span> <span class="o">=</span> <span class="default_value">'trailofbits/polytracker'</span></em>, <em class="sig-param"><span class="n">tag</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerContainer.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.client">
+<em class="property">property </em><code class="sig-name descname">client</code><a class="headerlink" href="#polytracker.containerization.DockerContainer.client" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.exists">
+<code class="sig-name descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span>docker.models.images.Image<span class="p">]</span><a class="headerlink" href="#polytracker.containerization.DockerContainer.exists" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.last_build_time">
+<code class="sig-name descname">last_build_time</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">]</span><a class="headerlink" href="#polytracker.containerization.DockerContainer.last_build_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the last time this image was rebuilt as the number of seconds since the UNIX epoch,
+or None if the container has not yet been built</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.name">
+<em class="property">property </em><code class="sig-name descname">name</code><a class="headerlink" href="#polytracker.containerization.DockerContainer.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.out_of_date_sources">
+<code class="sig-name descname">out_of_date_sources</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span><a class="headerlink" href="#polytracker.containerization.DockerContainer.out_of_date_sources" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the PolyTracker source files that were modified after this container was built</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.pull">
+<code class="sig-name descname">pull</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">latest</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em><span class="sig-paren">)</span> &#x2192; docker.models.images.Image<a class="headerlink" href="#polytracker.containerization.DockerContainer.pull" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.rebuild">
+<code class="sig-name descname">rebuild</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">nocache</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="n">tag_as_latest</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerContainer.rebuild" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerContainer.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">build_if_necessary</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">check_if_docker_out_of_date</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">remove</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">interactive</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">True</span></em>, <em class="sig-param"><span class="n">mounts</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>Iterable<span class="p">[</span>Tuple<span class="p">[</span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span><span class="p">, </span>Union<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><span class="p">]</span><span class="p">]</span><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">env</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>Dict<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a><span class="p">]</span><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stdin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stdout</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">stderr</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cwd</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><a class="headerlink" href="#polytracker.containerization.DockerContainer.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockerexists">
+<h3>DockerExists<a class="headerlink" href="#dockerexists" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerExists">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerExists</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerExists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.containerization.DockerSubcommand" title="polytracker.containerization.DockerSubcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.containerization.DockerSubcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerExists.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerExists.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerExists.container">
+<em class="property">property </em><code class="sig-name descname">container</code><a class="headerlink" href="#polytracker.containerization.DockerExists.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerExists.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerExists.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerExists.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'checks whether the Docker container already exists'</em><a class="headerlink" href="#polytracker.containerization.DockerExists.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'exists'</em><a class="headerlink" href="#polytracker.containerization.DockerExists.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerExists.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerExists.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.containerization.DockerExists.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerExists.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.containerization.DockerExists.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.containerization.DockerCommand" title="polytracker.containerization.DockerCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerExists.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerExists.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerExists.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerExists.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerExists.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockeroutofdateerror">
+<h3>DockerOutOfDateError<a class="headerlink" href="#dockeroutofdateerror" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerOutOfDateError">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerOutOfDateError</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">container</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.containerization.DockerContainer" title="polytracker.containerization.DockerContainer">polytracker.containerization.DockerContainer</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerOutOfDateError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<p>An error when the docker image is older than the PolyTracker source code</p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerOutOfDateError.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">message</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">container</span><span class="p">:</span> <span class="n"><a class="reference internal" href="#polytracker.containerization.DockerContainer" title="polytracker.containerization.DockerContainer">polytracker.containerization.DockerContainer</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerOutOfDateError.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerOutOfDateError.args">
+<code class="sig-name descname">args</code><a class="headerlink" href="#polytracker.containerization.DockerOutOfDateError.args" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerOutOfDateError.with_traceback">
+<code class="sig-name descname">with_traceback</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerOutOfDateError.with_traceback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockerpull">
+<h3>DockerPull<a class="headerlink" href="#dockerpull" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerPull">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerPull</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerPull" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.containerization.DockerSubcommand" title="polytracker.containerization.DockerSubcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.containerization.DockerSubcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerPull.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerPull.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerPull.container">
+<em class="property">property </em><code class="sig-name descname">container</code><a class="headerlink" href="#polytracker.containerization.DockerPull.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerPull.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerPull.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerPull.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'pulls the latest PolyTracker Docker image from DockerHub'</em><a class="headerlink" href="#polytracker.containerization.DockerPull.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'pull'</em><a class="headerlink" href="#polytracker.containerization.DockerPull.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerPull.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerPull.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.containerization.DockerPull.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerPull.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.containerization.DockerPull.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.containerization.DockerCommand" title="polytracker.containerization.DockerCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerPull.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerPull.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerPull.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerPull.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerPull.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockerrebuild">
+<h3>DockerRebuild<a class="headerlink" href="#dockerrebuild" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerRebuild">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerRebuild</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRebuild" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.containerization.DockerSubcommand" title="polytracker.containerization.DockerSubcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.containerization.DockerSubcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRebuild.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRebuild.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRebuild.container">
+<em class="property">property </em><code class="sig-name descname">container</code><a class="headerlink" href="#polytracker.containerization.DockerRebuild.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRebuild.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerRebuild.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'rebuilds the Docker container'</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'rebuild'</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRebuild.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.containerization.DockerRebuild.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.containerization.DockerRebuild.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.containerization.DockerCommand" title="polytracker.containerization.DockerCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRebuild.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRebuild.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRebuild.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRebuild.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockerrun">
+<h3>DockerRun<a class="headerlink" href="#dockerrun" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerRun">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerRun</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.containerization.DockerSubcommand" title="polytracker.containerization.DockerSubcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.containerization.DockerSubcommand</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRun.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.container">
+<em class="property">property </em><code class="sig-name descname">container</code><a class="headerlink" href="#polytracker.containerization.DockerRun.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRun.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerRun.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'runs the Docker container'</em><a class="headerlink" href="#polytracker.containerization.DockerRun.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><em class="property"> = 'run'</em><a class="headerlink" href="#polytracker.containerization.DockerRun.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerRun.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.containerization.DockerRun.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerRun.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.containerization.DockerRun.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.containerization.DockerCommand" title="polytracker.containerization.DockerCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.run">
+<code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerRun.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerRun.run_on">
+<em class="property">static </em><code class="sig-name descname">run_on</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">container</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="#polytracker.containerization.DockerContainer" title="polytracker.containerization.DockerContainer">polytracker.containerization.DockerContainer</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">args</span><span class="o">=</span><span class="default_value">()</span></em>, <em class="sig-param"><span class="n">interactive</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">notty</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></span> <span class="o">=</span> <span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><a class="headerlink" href="#polytracker.containerization.DockerRun.run_on" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs PolyTracker inside Docker and returns the exit code.</p>
+<p>Running with no arguments will enter into an interactive Docker session,
+mounting the current working directory to <cite>/workdir</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRun.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerRun.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerRun.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockersubcommand">
+<h3>DockerSubcommand<a class="headerlink" href="#dockersubcommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.DockerSubcommand">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">DockerSubcommand</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerSubcommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Subcommand</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.DockerSubcommand.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">argument_parser</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a></span></em>, <em class="sig-param"><span class="n">parent</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerSubcommand.container">
+<em class="property">property </em><code class="sig-name descname">container</code><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.container" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.extension_types">
+<code class="sig-name descname">extension_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension">polytracker.plugins.CommandExtension</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerSubcommand.full_name">
+<em class="property">property </em><code class="sig-name descname">full_name</code><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.help">
+<code class="sig-name descname">help</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.name">
+<code class="sig-name descname">name</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.parent">
+<code class="sig-name descname">parent</code><em class="property">: Optional<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin">polytracker.plugins.Plugin</a><span class="p">]</span></em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerSubcommand.parent_command">
+<em class="property">property </em><code class="sig-name descname">parent_command</code><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.parent_command" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.parent_parsers">
+<code class="sig-name descname">parent_parsers</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)">argparse.ArgumentParser</a><span class="p">, </span><span class="p">…</span><span class="p">]</span></em><em class="property"> = ()</em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.parent_type">
+<code class="sig-name descname">parent_type</code><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.parent_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="#polytracker.containerization.DockerCommand" title="polytracker.containerization.DockerCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerCommand</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.DockerSubcommand.run">
+<em class="property">abstract </em><code class="sig-name descname">run</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">args</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.9)">argparse.Namespace</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.subcommand_types">
+<code class="sig-name descname">subcommand_types</code><em class="property">: Optional<span class="p">[</span>List<span class="p">[</span>Type<span class="p">[</span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand">polytracker.plugins.Subcommand</a><span class="p">]</span><span class="p">]</span><span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.containerization.DockerSubcommand.subparser">
+<code class="sig-name descname">subparser</code><em class="property">: Optional<span class="p">[</span>Any<span class="p">]</span></em><em class="property"> = None</em><a class="headerlink" href="#polytracker.containerization.DockerSubcommand.subparser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="dockerfile">
+<h3>Dockerfile<a class="headerlink" href="#dockerfile" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.containerization.Dockerfile">
+<em class="property">class </em><code class="sig-prename descclassname">polytracker.containerization.</code><code class="sig-name descname">Dockerfile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.Dockerfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.containerization.Dockerfile.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.containerization.Dockerfile.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.Dockerfile.__len__">
+<code class="sig-name descname">__len__</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><a class="headerlink" href="#polytracker.containerization.Dockerfile.__len__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of lines in the file</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.Dockerfile.dir">
+<code class="sig-name descname">dir</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)">pathlib.Path</a><a class="headerlink" href="#polytracker.containerization.Dockerfile.dir" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.Dockerfile.exists">
+<code class="sig-name descname">exists</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a><a class="headerlink" href="#polytracker.containerization.Dockerfile.exists" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.containerization.Dockerfile.get_line">
+<code class="sig-name descname">get_line</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">step_command</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a></span></em>, <em class="sig-param"><span class="n">starting_line</span><span class="p">:</span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></span> <span class="o">=</span> <span class="default_value">0</span></em><span class="sig-paren">)</span> &#x2192; Optional<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a><span class="p">]</span><a class="headerlink" href="#polytracker.containerization.Dockerfile.get_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the line number of the associated step command</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.database.html" class="btn btn-neutral float-right" title="polytracker.database" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.cfg.html" class="btn btn-neutral float-left" title="polytracker.cfg" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+polytracker.taint_forest
+========================
+
+.. automodule:: polytracker.taint_forest
+
+taint_forest classes
+--------------------
+
+TaintForest
+***********
+
+.. autoclass:: TaintForest
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintForestNode
+***************
+
+.. autoclass:: TaintForestNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

@@ -1,0 +1,29 @@
+polytracker.build
+=================
+
+.. automodule:: polytracker.build
+
+build classes
+-------------
+
+PolyBuild
+*********
+
+.. autoclass:: PolyBuild
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+build functions
+---------------
+
+main
+****
+
+.. autofunction:: main
+
+main_plus_plus
+**************
+
+.. autofunction:: main_plus_plus
