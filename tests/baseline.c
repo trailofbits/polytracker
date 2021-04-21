@@ -1,6 +1,6 @@
-#include <sanitizer/dfsan_interface.h>
 #include <assert.h>
-#include <stdio.h> 
+#include <sanitizer/dfsan_interface.h>
+#include <stdio.h>
 
 int main(void) {
   int i = 1;
@@ -18,11 +18,10 @@ int main(void) {
   dfsan_label ij_label = dfsan_get_label(i + j);
   printf("%d\n", ij_label);
   if (k == j) {
-		printf("Equal!\n");		
-	}
-	else {
-		printf("Not equal\n");
-	}
+    printf("Equal!\n");
+  } else {
+    printf("Not equal\n");
+  }
 
   return 0;
 }

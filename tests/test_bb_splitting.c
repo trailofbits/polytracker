@@ -1,17 +1,12 @@
-__attribute__((noinline))
-void func2() {}
-__attribute__((noinline))
-void func3() {}
-__attribute__((noinline))
-void func4() {}
-__attribute__((noinline))
-void func5() {}
+__attribute__((noinline)) void func2() {}
+__attribute__((noinline)) void func3() {}
+__attribute__((noinline)) void func4() {}
+__attribute__((noinline)) void func5() {}
 
-__attribute__((noinline))
-void func1(volatile int* choice) {
+__attribute__((noinline)) void func1(volatile int *choice) {
   func2();
-  if(*choice) {
-    for(int i=0; i<*choice; ++i) {
+  if (*choice) {
+    for (int i = 0; i < *choice; ++i) {
       func3();
     }
   } else {

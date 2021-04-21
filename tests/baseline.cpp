@@ -1,16 +1,15 @@
-#include <sanitizer/dfsan_interface.h>
 #include <assert.h>
-#include <stdio.h> 
-#include <vector>
 #include <iostream>
+#include <sanitizer/dfsan_interface.h>
+#include <stdio.h>
+#include <vector>
 
 void foo(dfsan_label test, dfsan_label test2) {
-	if (test == test2) {
-		std::cout << "Equal" << std::endl;
-	}
-	else {
-		std::cout << "not equal" << std::endl;
-	}
+  if (test == test2) {
+    std::cout << "Equal" << std::endl;
+  } else {
+    std::cout << "not equal" << std::endl;
+  }
 }
 
 int main(void) {
@@ -29,17 +28,16 @@ int main(void) {
   dfsan_label ij_label = dfsan_get_label(i + j);
   printf("%d\n", ij_label);
   if (k == j) {
-		printf("Equal!\n");		
-	}
-	else {
-		printf("Not equal\n");
-	}
+    printf("Equal!\n");
+  } else {
+    printf("Not equal\n");
+  }
 
   std::vector<dfsan_label> testme;
   testme.push_back(i);
   std::cout << testme[0] << std::endl;
   if (testme[0] == 3) {
-	  std::cout << "Its three!" << std::endl;
+    std::cout << "Its three!" << std::endl;
   }
   dfsan_label test_label = dfsan_get_label(testme[0]);
   std::cout << "test_label: " << test_label << std::endl;

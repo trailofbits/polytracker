@@ -1,7 +1,7 @@
-#include <sanitizer/dfsan_interface.h>
 #include <assert.h>
-#include <stdio.h> 
-#include <iostream> 
+#include <iostream>
+#include <sanitizer/dfsan_interface.h>
+#include <stdio.h>
 
 int main(void) {
   int i = 1;
@@ -31,12 +31,11 @@ int main(void) {
   assert(dfsan_has_label(ijk_label, k_label));
   std::cout << "ijk label " << ijk_label << std::endl;
 
-	if (k == j) {
-		printf("Equal!\n");		
-	}
-	else {
-		printf("Not equal\n");
-	}
+  if (k == j) {
+    printf("Equal!\n");
+  } else {
+    printf("Not equal\n");
+  }
 
   return 0;
 }
