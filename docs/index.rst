@@ -8,7 +8,12 @@ that instruments programs to track which bytes of an input file are operated on 
 database containing the data-flow information, as well as a runtime trace. PolyTracker also provides a Python library
 for interacting with and analyzing its output, as well as an interactive Python REPL.
 
+This documentation is primarily targeted toward developers wishing to integrate with the Python post-processing API.
+For general usage instructions and documentation on how to compile an isntrumented program, see the `general README`_
+on the `GitHub page`_.
+
 .. _GitHub page: https://github.com/trailofbits/polytracker
+.. _general README: https://github.com/trailofbits/polytracker/blob/master/README.md
 
 .. toctree::
    :maxdepth: 4
