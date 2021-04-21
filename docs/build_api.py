@@ -62,7 +62,7 @@ def process_module(module):
 
 
 for name, obj in inspect.getmembers(polytracker, inspect.ismodule):
-    if obj.__name__.startswith('polytracker'):
+    if obj.__name__.startswith('polytracker') and not obj.__name__ == "polytracker.polytracker" and obj not in MODULES:
         MODULES.append(obj)
 
 MODULES = [polytracker] + sorted(MODULES, key=lambda m: m.__name__)
@@ -72,7 +72,7 @@ for m in MODULES:
 
 with open(os.path.join(DOCS_PATH, "package.rst"), 'w') as f:
     f.write("""PolyTracker API
--------------
+---------------
 
 .. toctree::
    :maxdepth: 4
