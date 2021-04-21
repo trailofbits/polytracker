@@ -8,7 +8,7 @@ from .polytracker import *
 # All of the classes in SUBMODULES_TO_SUBSUME should really be in the top-level `polytracker` module.
 # They are separated into submodules solely for making the Python file sizes more manageable.
 # So the following code loops over those submodules and reassigns all of the classes to the top-level module.
-SUBMODULES_TO_SUBSUME = (polytracker,)
+SUBMODULES_TO_SUBSUME = (polytracker,)  # type: ignore
 for module_to_subsume in SUBMODULES_TO_SUBSUME:
     for name, obj in getmembers(module_to_subsume):
         if hasattr(obj, "__module__") and obj.__module__ == module_to_subsume.__name__:
