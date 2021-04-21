@@ -1,5 +1,5 @@
 PolyTracker Documentation
-=======================
+=========================
 
 PolyTracker is a tool originally created for the Automated Lexical Annotation and Navigation of Parsers, a backronym
 devised solely for the purpose of referring to it as The ALAN Parsers Project. However, it has evolved into a general
