@@ -44,7 +44,34 @@ bool op_check(llvm::Value *inst) {
   return false;
 }
 
-// On binary ops
+llvm::Value *PolyInstVisitor::convertType(llvm::Type *base_type,
+                                          llvm::Value *val,
+                                          llvm::IRBuilder<> &IRB) {
+  if (base_type->isIntegerTy()) {
+    llvm::Value *int_val = IRB.CreateSExtOrTrunc(val, shadow_type);
+    return int_val;
+  }
+  if (base_type->isPointerTy()) {
+    llvm::Value *int_val = IRB.CreateBitOrPointerCast(val, shadow_type);
+    return int_val;
+  }
+  std::cerr << "ERROR: Unknown type for conversion" << std::endl;
+  return nullptr;
+}
+
+void PolyInstVisitor::logNOp(llvm::Instruction *inst,
+                             llvm::FunctionCallee &callback) {
+  for (auto curr_op = inst->op_begin(); curr_op != inst->op_end(); curr_op++) {
+    if (op_check(curr_op->get())) {
+      continue;
+    }
+    llvm::IRBuilder<> IRB(inst->getNextNode());
+    llvm::Value *op_val =
+        convertType(curr_op->get()->getType(), curr_op->get(), IRB);
+  }
+}
+
+// Log taint for every op
 void PolyInstVisitor::logOp(llvm::Instruction *inst,
                             llvm::FunctionCallee &callback) {
   auto first_operand = inst->getOperand(0);
@@ -81,6 +108,14 @@ void PolyInstVisitor::visitCmpInst(llvm::CmpInst &CI) {
 
 void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
   logOp(&Op, taint_op_log);
+}
+
+void PolyInstVisitor::visitLoadInst(llvm::LoadInst &Op) {
+  // logOp(&Op, taint_op_log);
+}
+
+void PolyInstVisitor::visitStoreInst(llvm::StoreInst &Op) {
+  // logOp(&Op, taint_op_log);
 }
 
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {

@@ -5,6 +5,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/Pass.h"
 #include <unordered_map>
@@ -44,11 +45,16 @@ struct PolytrackerPass : public llvm::ModulePass {
 
 struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   void logOp(llvm::Instruction *inst, llvm::FunctionCallee &callback);
+  llvm::Value *convertType(llvm::Type *base_type, llvm::Value *val,
+                           llvm::IRBuilder<> &IRB);
+  void logNOp(llvm::Instruction *inst, llvm::FunctionCallee &callback);
   // Visitor instructions
   // Special case for comparisons, just good to know
   void visitCmpInst(llvm::CmpInst &CI);
   // Handles basically all math operations
   void visitBinaryOperator(llvm::BinaryOperator &I);
+  void visitLoadInst(llvm::LoadInst &Op);
+  void visitStoreInst(llvm::StoreInst &Op);
   // This is how control flow is handled, we instrument after the call to denote
   // entering a func
   void visitCallInst(llvm::CallInst &ci);
