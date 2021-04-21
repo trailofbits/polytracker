@@ -12,7 +12,7 @@ logger = logging.getLogger("polytracker")
 
 TEST_DIR = Path(__file__).parent.parent / "tests"
 
-if __name__ == "__main__" and (TEST_DIR / "test_polytracker.py").exists():
+if __name__ == "polytracker.__main__" and (TEST_DIR / "test_polytracker.py").exists():
     import pytest
 
     class TestCommand(Command):
