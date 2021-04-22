@@ -250,15 +250,11 @@ void storeFuncCall(sqlite3 *output_db, const input_id_t &input_id,
                    const int &thread_id, const event_id_t &event_id,
                    const event_id_t &thread_event_id, const char *target_name) {
   sqlite3_stmt *stmt;
-  const char *insert = "INSERT OR IGNORE into call_events(event_id, name, "
-                       "input_id, thread_id, thread_event_id)"
-                       "VALUES (?, ?, ?, ?, ?)";
+  const char *insert = "INSERT OR IGNORE into call_events(event_id, name) "
+                       "VALUES (?, ?)";
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int64(stmt, 1, event_id);
   sqlite3_bind_text(stmt, 2, target_name, strlen(target_name), SQLITE_STATIC);
-  sqlite3_bind_int64(stmt, 3, input_id);
-  sqlite3_bind_int(stmt, 4, thread_id);
-  sqlite3_bind_int64(stmt, 5, thread_event_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
 }
