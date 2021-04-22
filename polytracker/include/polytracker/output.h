@@ -76,4 +76,8 @@ void storeTaintForestDisk(const std::string &outfile,
 void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
                           const dfsan_label &new_label, const dfsan_label &p1,
                           const dfsan_label &p2);
+
+void storeFuncCall(sqlite3 *output_db, const input_id_t &input_id,
+                   const int &thread_id, const event_id_t &event_id,
+                   const event_id_t &thread_event_id, const char *target_name);
 #endif
