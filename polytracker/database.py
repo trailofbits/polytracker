@@ -462,7 +462,7 @@ class DBUninstrumentedFunctionCall(DBTraceEvent, UninstrumentedFunctionCall):  #
     _call = relationship("FunctionCall")
 
     def called_function(self) -> Function:
-        return self.trace.uninstrumented_functions[self._call.name]
+        return self.trace.uninstrumented_functions[self._call.name]  # type: ignore
 
 
 class BlockEntries(Base):  # type: ignore
