@@ -449,3 +449,9 @@ EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
   polytracker_end();
   exit(ret_code);
 }
+
+EXT_C_FUNC int __dfsw_pthread_once(pthread_once_t *once_control,
+                                   void (*init_routine)(void), dfsan_label l1,
+                                   dfsan_label l2, dfsan_label *ret_label) {
+  return pthread_once(once_control, init_routine);
+}
