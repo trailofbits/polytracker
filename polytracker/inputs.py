@@ -1,8 +1,11 @@
+"""A module for modeling taint sources like input files"""
+
 from pathlib import Path
 from typing import Optional
 
 
 class Input:
+    """A source of taint"""
     def __init__(
             self,
             uid: int,
@@ -12,6 +15,16 @@ class Input:
             track_end: Optional[int] = None,
             content: Optional[bytes] = None
     ):
+        """Initializes a taint source.
+
+        Args:
+            uid: A unique ID for the input (unique per trace).
+            path: The path to the input when the trace was run.
+            size: The number of bytes read from the input.
+            track_start: The byte offset of the source where tracing started.
+            track_end: The byte offset of the source where tracing ended. (Defaults to the end of the input.)
+            content: The original bytes of the input.
+        """
         self.uid: int = uid
         self.path: str = path
         self.size: int = size
@@ -24,6 +37,14 @@ class Input:
 
     @property
     def content(self) -> bytes:
+        """The original bytes of the input, if available.
+
+        Raises:
+            ValueError: If the input did not have its content stored to the database (*e.g.*, if the instrumented binary
+                        was run with ``POLYSAVEINPUT=0``) and :attr:`self.path`
+                        does not exist.
+
+        """
         if self.stored_content is not None:
             return self.stored_content
         elif not Path(self.path).exists():

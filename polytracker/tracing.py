@@ -1,3 +1,11 @@
+"""A module defining the abstract classes used for represenging a program trace.
+
+The implementation of these classes that actually loads the SQLite database emitted by the PolyTracker instrumentation
+is in :mod:`polytracker.database`. For example, :class:`polytracker.database.DBProgramTrace` is mapped to
+:class:`polytracker.PolyTrackerTrace`.
+
+"""
+
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace, REMAINDER
 from collections import defaultdict
@@ -31,7 +39,8 @@ class BasicBlockType(IntFlag):
     """
     Basic block types
 
-    This should be kept in parity with the enum in /polytracker/include/polytracker/basic_block_types.h
+    This should be kept in parity with the enum in
+    `/polytracker/include/polytracker/basic_block_types.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/basic_block_types.h>`_
 
     """
 
@@ -55,17 +64,48 @@ class BasicBlockType(IntFlag):
     """A BB that contains a CallInst"""
 
 
+class ByteAccessType(IntFlag):
+    """Bitfield enum defining the context in which taints were accessed.
+
+    This should be kept in parity with the enum in
+    `/polytracker/include/polytracker/output.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/output.h>`_
+
+    """
+    UNKNOWN_ACCESS = 0
+    INPUT_ACCESS = 1
+    CMP_ACCESS = 2
+    READ_ACCESS = 4
+
+
 class TaintedRegion:
+    """Base class representing a tainted region of code"""
     def __init__(self, source: Input, offset: int, length: int):
+        """Initializes a tainted region.
+
+        Args:
+            source: The input that tainted this region.
+            offset: The byte offset of the input in which this region starts.
+            length: The number of bytes in this region.
+
+        """
         self.source: Input = source
         self.offset: int = offset
         self.length: int = length
 
     @property
     def value(self) -> bytes:
+        """The actual bytes from the input file associated with this region.
+
+        Raises:
+            ValueError: If the input did not have its content stored to the database (*e.g.*, if the instrumented binary
+                        was run with ``POLYSAVEINPUT=0``) and :attr:`self.source.path <polytracker.inputs.Input.path>`
+                        does not exist.
+
+        """
         return self.source.content[self.offset:self.offset+self.length]
 
     def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
+        """Gets a :class:`ByteOffset` or sliced :class:`TaintedRegion` from this region"""
         if isinstance(index_or_slice, slice):
             if index_or_slice.step is not None and index_or_slice.step != 1:
                 raise ValueError("TaintedRegion only supports slices with step == 1")
@@ -84,6 +124,7 @@ class TaintedRegion:
             return ByteOffset(source=self.source, offset=self.offset + index_or_slice)
 
     def __bytes__(self):
+        """Equivalent to :attr:`self.value`"""
         return self.value
 
     def __hash__(self):
@@ -99,12 +140,21 @@ class TaintedRegion:
 
 
 class ByteOffset(TaintedRegion):
+    """A :class:`TaintedRegion` of length 1."""
     def __init__(self, source: Input, offset: int):
         super().__init__(source=source, offset=offset, length=1)
 
 
 class TaintDiff:
+    """A diff of two sets of taints."""
     def __init__(self, taints1: "Taints", taints2: "Taints"):
+        """Initializes a taint diff.
+
+        Args:
+            taints1: the first set of taints to compare.
+            taints2: the second set of taints to compare.
+
+        """
         self.taints1: Taints = taints1
         self.taints2: Taints = taints2
         self._only_in_first: Optional[List[ByteOffset]] = None
@@ -120,23 +170,28 @@ class TaintDiff:
 
     @property
     def bytes_only_in_first(self) -> List[ByteOffset]:
+        """Returns a list of all of the tainted byte offsets only in the first set of taints."""
         self._diff()
         return self._only_in_first  # type: ignore
 
     @property
     def regions_only_in_first(self) -> Iterator[TaintedRegion]:
+        """Returns a list of all of the tainted byte regions only in the first set of taints."""
         yield from Taints.to_regions(self.bytes_only_in_first, is_sorted=True)
 
     @property
     def bytes_only_in_second(self) -> List[ByteOffset]:
+        """Returns a list of all of the tainted byte offsets only in the second set of taints."""
         self._diff()
         return self._only_in_second  # type: ignore
 
     @property
     def regions_only_in_second(self) -> Iterator[TaintedRegion]:
+        """Returns a list of all of the tainted byte regions only in the second set of taints."""
         yield from Taints.to_regions(self.bytes_only_in_second, is_sorted=True)
 
     def __bool__(self):
+        """Equivalent to ``bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)``"""
         return bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)
 
     def __eq__(self, other):
@@ -144,7 +199,14 @@ class TaintDiff:
 
 
 class Taints:
+    """A class for representing a collection of tainted regions"""
     def __init__(self, byte_offsets: Iterable[ByteOffset]):
+        """Initializes a taint collection.
+
+        Args:
+            byte_offsets: The tainted byte offsets to include in this collection.
+
+        """
         offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
         for offset in byte_offsets:
             offsets_by_source[offset.source].add(offset)
@@ -154,12 +216,28 @@ class Taints:
         }
 
     def sources(self) -> Set[Input]:
+        """Returns the set of sources from which this collection of taints originates."""
         return set(self._offsets_by_source.keys())
 
     def from_source(self, source: Input) -> "Taints":
+        """Returns a subset of the taints in this collection that come from a specific source"""
         return Taints(self._offsets_by_source.get(source, ()))
 
     def regions(self) -> Iterator[TaintedRegion]:
+        """Iterates over all of the contiguous regions of taint in this collection.
+
+        The regions are yielded in increasing order of offset.
+
+        .. caution::
+
+            The regions *will not* be grouped by source! Regions from different sources will be intermixed. Use
+            :meth:`Taints.from_source` if you want to differentiate regions by source.
+
+        This is equivalent to::
+
+            return Taints.to_regions(self, is_sorted=True)
+
+        """
         return Taints.to_regions(self, is_sorted=True)
 
     @staticmethod
@@ -186,7 +264,15 @@ class Taints:
             yield region
 
     def find(self, byte_sequence: Union[int, str, bytes]) -> Iterator[TaintedRegion]:
-        """Finds the start of any matching tainted byte sequence in this set of taints"""
+        """Yields all matching tainted subsequences in this collection.
+
+        Args:
+            byte_sequence: The individual byte (``int``), string (``str``), or byte sequence (``bytes``) to find
+
+        Returns:
+            All matching regions in this collection.
+
+        """
         if isinstance(byte_sequence, str):
             byte_sequence = byte_sequence.encode("utf-8")
         elif isinstance(byte_sequence, int):
@@ -202,9 +288,33 @@ class Taints:
                     break
 
     def diff(self, other: "Taints") -> TaintDiff:
+        """Diffs this taint collection with another collection.
+
+        This is equivalent to::
+
+            TaintDiff(self, other)
+
+        Args:
+            other: The other collection against which to compare.
+
+        Returns:
+            The diff of the two taint collections.
+
+        """
         return TaintDiff(self, other)
 
     def __contains__(self, byte_sequence: Union[int, str, bytes]):
+        """Checks whether this taint collection contains at least one matching byte sequence.
+
+        This is equivalent to::
+
+            try:
+                next(iter(self.find(byte_sequence)))
+                return True
+            except StopIteration:
+                return False
+
+        """
         try:
             next(iter(self.find(byte_sequence)))
             return True
@@ -212,36 +322,75 @@ class Taints:
             return False
 
     def __len__(self):
+        """The total number of tainted bytes in this collection."""
         return sum(map(len, self._offsets_by_source.values()))
 
     def __iter__(self) -> Iterator[ByteOffset]:
+        """Iterates over all of the individual byte offsets in this collection, grouped by source.
+
+        .. note::
+
+            The byte offsets are guaranteed to be yielded in increasing order of byte offset per source, but the order
+            of sources is arbitrary.
+
+        """
         for offsets in self._offsets_by_source.values():
             yield from offsets
 
     def __bool__(self):
+        """Returns whether this taint collection has at least one tainted byte.
+
+        This is equivalent to::
+
+            bool(len(self))
+
+        """
         return bool(len(self))
 
 
 class Function:
+    """A class representing a function inside of an instrumented program.
+
+    .. note::
+
+        This is a static function instance, *not* a function that is observed during a runtime trace.
+
+        For runtime trace events, see :class:`FunctionInvocation`, :class:`FunctionEntry`, and :class:`FunctionReturn`.
+
+    """
+
     def __init__(self, name: str, function_index: int):
+        """Initializes a Function.
+
+        Args:
+            name: The name of the function
+            function_index: A unique ID for the function.
+
+        """
         self.name: str = name
         self.basic_blocks: List[BasicBlock] = []
+        """A list of :class:`basic blocks <BasicBlock>` contained in this function."""
         self.function_index: int = function_index
 
     @property
     def demangled_name(self) -> str:
+        """The demangled name of this function."""
         return demangle(self.name)
 
     @abstractmethod
     def taints(self) -> Taints:
+        """Returns all taints operated on by this function across all invocations of the function in a trace."""
         raise NotImplementedError()
 
     @abstractmethod
     def calls_to(self) -> Set["Function"]:
+        """Returns the set of functions to which this function calls, potentially including itself (if recursive)."""
         raise NotImplementedError()
 
     @abstractmethod
     def called_from(self) -> Set["Function"]:
+        """Returns the set of functions from which this function is called, potentially including itself
+        (if recursive)"""
         raise NotImplementedError()
 
     def __hash__(self):
@@ -257,22 +406,50 @@ class Function:
 
 
 class BasicBlock:
+    """A class representing a basic block in an instrumented program.
+
+        .. note::
+
+            This is a static basic block instance, *not* a basic block that is observed during a runtime trace.
+
+            For runtime trace events, see :class:`BasicBlockEntry`.
+
+    """
+
     def __init__(self, function: Function, index_in_function: int):
+        """Initializes a basic block.
+
+        .. caution::
+
+            This constructor will call::
+
+                function.basic_blocks.append(self)
+
+        Args:
+            function: The function in which this basic block is contained.
+            index_in_function: An ID for the basic block, unique among all basic blocks in :attr:`function`.
+
+        """
         self.function: Function = function
         self.index_in_function: int = index_in_function
         self.children: Set[BasicBlock] = set()
+        """All basic blocks to which this block can jump."""
         self.predecessors: Set[BasicBlock] = set()
+        """All basic blocks that precede this basic block."""
         function.basic_blocks.append(self)
 
     @abstractmethod
     def entries(self) -> Iterator["BasicBlockEntry"]:
+        """Yields all trace events associated with entering this basic block."""
         raise NotImplementedError()
 
     @abstractmethod
     def taints(self) -> Taints:
+        """Returns the set of all taints operated on by this basic block across an entire trace."""
         raise NotImplementedError()
 
     def is_loop_entry(self, trace: "ProgramTrace") -> bool:
+        """Calculates whether this basic block is an entry to a loop."""
         predecessors = set(p for p in self.predecessors if self.function == p.function)
         if len(predecessors) < 2:
             return False
@@ -283,6 +460,7 @@ class BasicBlock:
         return any(p not in dominators for p in predecessors)
 
     def is_conditional(self, trace: "ProgramTrace") -> bool:
+        """Returns whether this basic block contains a conditional branch."""
         # we are a conditional if we have at least two children in the same function and we are not a loop entry
         return sum(
             1 for c in self.children if c.function == self.function
@@ -303,38 +481,68 @@ class BasicBlock:
 
 
 class TraceEvent:
+    """An abstract base class for all trace events.
+
+    .. note::
+
+        This class *should ideally* extend off of :class:`collections.abc.ABC`. The reason why it *does not* is because
+        it is extended through multiple inheritance in :mod:`polytracker.database` along with a SQLAlchemy base class,
+        and SQLAlchemy does not play well with ``ABCMeta``.
+
+    """
+
     def __init__(self, uid: int):
+        """Initializes a trace event.
+
+        Args:
+            uid: An identifier for this event that is unique across the entire trace.
+        """
         self.uid: int = uid
 
     @property
     @abstractmethod
     def basic_block(self) -> BasicBlock:
+        """The basic block that was executing during which this event took place."""
         raise NotImplementedError()
 
     @property
     def function(self) -> Function:
+        """The function that was executing during which this event took place."""
         return self.basic_block.function
 
     @abstractmethod
     def taints(self) -> Taints:
+        """The set of taints operated on during this event."""
         raise NotImplementedError()
 
     @property
     def touched_taint(self) -> bool:
+        """Whether or not this event touched taint."""
         return bool(self.taints())
 
     @property
     @abstractmethod
     def previous_event(self) -> Optional["TraceEvent"]:
+        """The previous event in the trace that occurred in the same thread, if one exists.
+
+        For the previous event from *any* thread, see :meth:`TraceEvent.previous_global_event`.
+
+        """
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def next_event(self) -> Optional["TraceEvent"]:
+        """The next event in the trace that occurred in the same thread, if one exists.
+
+        For the next event from *any* thread, see :meth:`TraceEvent.next_global_event`.
+
+        """
         raise NotImplementedError()
 
     @property
     def next_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        """The next control flow event in the trace that occurred in the same thread, if one exists."""
         next_event = self.next_event
         while next_event is not None:
             if isinstance(next_event, ControlFlowEvent):
@@ -344,6 +552,7 @@ class TraceEvent:
 
     @property
     def previous_control_flow_event(self) -> Optional["ControlFlowEvent"]:
+        """The previous control flow event in the trace that occurred in the same thread, if one exists."""
         previous_event = self.previous_event
         while previous_event is not None:
             if isinstance(previous_event, ControlFlowEvent):
@@ -354,16 +563,19 @@ class TraceEvent:
     @property
     @abstractmethod
     def next_global_event(self) -> Optional["TraceEvent"]:
+        """The next event that occurred in the trace, regardless of thread, if one exists."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def previous_global_event(self) -> Optional["TraceEvent"]:
+        """The previous event that occurred in the trace, regardless of thread, if one exists."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def function_entry(self) -> Optional["FunctionEntry"]:
+        """The function entry event associated with the stack frame in which this event occurred, if one exists."""
         raise NotImplementedError()
 
     def __eq__(self, other):
@@ -377,15 +589,16 @@ class TraceEvent:
 
 
 class ControlFlowEvent(TraceEvent):
+    """An abstract base class for events that have to do with control flow."""
     pass
 
 
 class FunctionEntry(ControlFlowEvent):
-    def __init__(self, uid: int):
-        super().__init__(uid=uid)
+    """An abstract class representing the entry into a function."""
 
     @property
     def caller(self) -> Optional["BasicBlockEntry"]:
+        """The :class:`BasicBlockEntry` event associated with the basic block that called this function."""
         prev = self.previous_control_flow_event
         while prev is not None:
             if isinstance(prev, BasicBlockEntry):
@@ -399,6 +612,7 @@ class FunctionEntry(ControlFlowEvent):
 
     @property
     def entrypoint(self) -> Optional["BasicBlockEntry"]:
+        """Returns the :class:`BasicBlockEntry` event associated with the first basic block entered in this function."""
         next_event = self.next_control_flow_event
         if isinstance(next_event, BasicBlockEntry):
             if next_event.function_entry != self:
@@ -408,9 +622,9 @@ class FunctionEntry(ControlFlowEvent):
 
     @property
     def basic_block(self) -> BasicBlock:
-        """
-        Returns the entrypoint of this function
-        For the basic block that called into this function, use `self.caller`
+        """Returns the entrypoint of this function.
+
+        For the basic block that called into this function, use :meth:`FunctionEntry.caller`
 
         """
         if self.entrypoint is None:
@@ -427,27 +641,32 @@ class FunctionEntry(ControlFlowEvent):
     @property
     @abstractmethod
     def function_return(self) -> Optional["FunctionReturn"]:
+        """The :class:`FunctionReturn` event that returned from this function."""
         raise NotImplementedError()
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r}, {self.function.name!r})"
 
 
-class ByteAccessType(IntFlag):
-    UNKNOWN_ACCESS = 0
-    INPUT_ACCESS = 1
-    CMP_ACCESS = 2
-    READ_ACCESS = 4
-
-
 class TaintAccess:
+    """An abstract class for representing a taint access event."""
+
     def __init__(self, access_id: int, event: TraceEvent, label: int, access_type: ByteAccessType):
+        """Initializes a taint access.
+
+        Args:
+            access_id: A unique, incrementally assigned identifier for this access.
+            event: The trace event associated with this access.
+            label: The taint label accessed.
+            access_type: The type of access.
+        """
         self.access_id: int = access_id
         self.event: TraceEvent = event
         self.label: int = label
         self.access_type: ByteAccessType = access_type
 
     def taints(self) -> Taints:
+        """Returns the collection of taints associated with this access"""
         raise NotImplementedError()
 
     def __lt__(self, other):
@@ -464,8 +683,10 @@ class TaintAccess:
 
 
 class BasicBlockEntry(ControlFlowEvent):
+    """A trace event associated with entering a basic block."""
+
     def entry_count(self) -> int:
-        """Calculates the number of times this basic block has been entered in the current stack frame"""
+        """Calculates the number of times this basic block has been entered in the current stack frame."""
         entry_count = 0
         event = self.previous_control_flow_event
         while event is not None and event != self.function_entry:
@@ -479,11 +700,7 @@ class BasicBlockEntry(ControlFlowEvent):
 
     @property
     def called_function(self) -> Optional["FunctionInvocation"]:
-        """
-        Returns the function invocation called from this basic block, or None if this basic block does not call a
-        function
-
-        """
+        """The function invocation called from this basic block, or None if this basic block does not call a function"""
         next_event = self.next_control_flow_event
         if isinstance(next_event, FunctionEntry):
             return FunctionInvocation(next_event)
@@ -518,6 +735,13 @@ class BasicBlockEntry(ControlFlowEvent):
 
     @property
     def consumed_tokens(self) -> Iterable[bytes]:
+        """The collection of tokens consumed during this basic block event.
+
+        This is equivalent to::
+
+            tuple(r.value for r in self.taints().regions())
+
+        """
         return tuple(r.value for r in self.taints().regions())
 
     def __str__(self):
@@ -525,6 +749,15 @@ class BasicBlockEntry(ControlFlowEvent):
 
 
 class FunctionReturn(ControlFlowEvent):
+    """A trace event associated with returning from a function.
+
+    .. caution::
+
+        The function associated with this event is the function *to which* we are returning, *not* the function
+        *from which* we are returning. Use :meth:`FunctionReturn.returning_from` to get the latter.
+
+    """
+
     def __init__(self, uid: int):
         super().__init__(uid=uid)
 
@@ -535,6 +768,7 @@ class FunctionReturn(ControlFlowEvent):
 
     @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
+        """The basic block to which the function returned."""
         next_event = self.next_control_flow_event
         if isinstance(next_event, BasicBlockEntry):
             return next_event
@@ -542,6 +776,7 @@ class FunctionReturn(ControlFlowEvent):
 
     @property
     def returning_from(self) -> Function:
+        """The function from which we are returning."""
         entry = self.function_entry
         if entry is None:
             raise ValueError(f"Unable to determine the function entry object associated with function return {self!r}")
@@ -549,12 +784,32 @@ class FunctionReturn(ControlFlowEvent):
 
 
 class FunctionInvocation(TraceEvent):
+    """A conglomerated trace event representing an entire function invocation.
+
+    This includes associating a :class:`FunctionEntry` with its :class:`FunctionReturn` event, and allows for reasoning
+    about any sub-invocations (*i.e.*, other functions called from within this function).
+
+    """
+
     def __init__(self, function_entry: FunctionEntry):
+        """Initializes a function invocation.
+
+        Args:
+            function_entry: The function entry event that initiated this invocation.
+
+        """
         super().__init__(function_entry.uid)
         self._function_entry: FunctionEntry = function_entry
 
     @property
     def basic_block(self) -> BasicBlock:
+        """The basic block that called to this function.
+
+        This is equivalent to::
+
+            self.function_entry.basic_block
+
+        """
         return self.function_entry.basic_block
 
     @property
@@ -601,9 +856,8 @@ class FunctionInvocation(TraceEvent):
         return isinstance(other, FunctionInvocation) and other.uid == self.uid
 
     def __iter__(self) -> Iterator[ControlFlowEvent]:
-        """
-        Iterates all of the control flow events that took place during this function invocation, including all events
-        generated from calls to other functions from within this invocation
+        """Iterates over all of the control flow events that took place during this function invocation,
+        including all events generated from calls to other functions from within this invocation.
 
         """
         if self.function_return is None:
@@ -614,9 +868,8 @@ class FunctionInvocation(TraceEvent):
             next_event = next_event.next_control_flow_event
 
     def basic_blocks(self) -> Iterator[BasicBlockEntry]:
-        """
-        Yields all of the basic blocks executed in this function,
-        not including any basic blocks inside called functions
+        """Yields all of the basic blocks executed in this function,
+        not including any basic blocks inside called functions.
 
         """
         entry = self.function_entry.entrypoint
@@ -625,7 +878,7 @@ class FunctionInvocation(TraceEvent):
             entry = entry.next_basic_block_in_function()
 
     def taints(self) -> Taints:
-        """Returns all taints operated on by this function or any functions called by this function"""
+        """Returns all taints operated on by this function or any functions called by this function."""
         if not hasattr(self, "_taints"):
             setattr(self, "_taints", Taints(itertools.chain(event.taints() for event in self)))  # type: ignore
         return getattr(self, "_taints")
@@ -644,6 +897,13 @@ class FunctionInvocation(TraceEvent):
 
 
 class ProgramTrace(ABC):
+    """An abstract class for representing a program trace.
+
+    For a concrete implementation that loads a database produced from a PolyTracker instrumented binary, see
+    :class:`polytracker.database.DBProgramTrace`.
+
+    """
+
     _cfg: Optional[DiGraph[BasicBlock]] = None
     _func_cfg: Optional[DiGraph[Function]] = None
 
@@ -660,55 +920,82 @@ class ProgramTrace(ABC):
     @property
     @abstractmethod
     def functions(self) -> Iterable[Function]:
+        """The static functions operated on by the trace."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def basic_blocks(self) -> Iterable[BasicBlock]:
+        """The static basic blocks operated on by the trace."""
         raise NotImplementedError()
 
     @abstractmethod
     def has_event(self, uid: int) -> bool:
+        """Returns whether an event with the given ID exists in this trace."""
         raise NotImplementedError()
 
     @abstractmethod
     def get_event(self, uid: int) -> TraceEvent:
+        """Gets a trace event by its ID."""
         raise NotImplementedError()
 
     @abstractmethod
     def get_function(self, name: str) -> Function:
+        """Looks up a function by its name.
+
+        Raises:
+            KeyError: if a function of that name was not executed in the trace
+
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def has_function(self, name: str) -> bool:
+        """Returns whether a function of the given name was executed in this trace."""
         raise NotImplementedError()
 
     @abstractmethod
     def access_sequence(self) -> Iterator[TaintAccess]:
+        """Yields the taint accesses in this trace, in order."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def num_accesses(self) -> int:
+        """The number of taint accesses in this trace."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def inputs(self) -> Iterable[Input]:
+        """The taint sources operated on in this trace."""
         raise NotImplementedError()
 
     @property
     @abstractmethod
     def taint_forest(self) -> TaintForest:
+        """The taint forest associated with this trace."""
         raise NotImplementedError()
 
     def function_trace(self) -> Iterator[FunctionEntry]:
+        """Iterates over all of the :class:`FunctionEntry` events in this trace.
+
+        This is equivalent to::
+
+            iter(event for event in self if isinstance(event, FunctionEntry))
+
+        However, concrete implementations such as :class:`polytracker.database.DBProgramTrace` might have more efficient
+        implementations.
+
+        """
         return iter(event for event in self if isinstance(event, FunctionEntry))
 
     def num_function_calls(self) -> int:
+        """Returns the number of function calls in this trace."""
         return sum(1 for _ in self.function_trace())
 
     def num_basic_block_entries(self) -> int:
+        """Returns the number of basic block entries in this trace."""
         return sum(1 for event in self if isinstance(event, BasicBlockEntry))
 
     def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
@@ -730,6 +1017,7 @@ class ProgramTrace(ABC):
 
     @property
     def entrypoint(self) -> Optional[FunctionInvocation]:
+        """Returns the entrypoint to this trace (*i.e.*, its first :class:`FunctionInvocation`, typically ``main``)."""
         try:
             return FunctionInvocation(next(iter(self.function_trace())))
         except StopIteration:
@@ -737,14 +1025,32 @@ class ProgramTrace(ABC):
 
     @abstractmethod
     def __getitem__(self, uid: int) -> TraceEvent:
+        """Returns the trace event associated with the given identifier.
+
+        Raises:
+            KeyError: if the event does not exist.
+
+        Equivalent to::
+
+            self.get_event(uid)
+
+        """
         raise NotImplementedError()
 
     @abstractmethod
     def __contains__(self, uid: int):
+        """Returns whether an event with the given ID exists in this trace.
+
+        Equivalent to::
+
+            self.has_event(uid)
+
+        """
         raise NotImplementedError()
 
     @property
     def cfg(self) -> DiGraph[BasicBlock]:
+        """The static control flow graph associated with this trace."""
         if not hasattr(self, "_cfg") or self._cfg is None:
             setattr(self, "_cfg", DiGraph())
             for bb in self.basic_blocks:
@@ -769,6 +1075,7 @@ class ProgramTrace(ABC):
                 yield bb
 
     def is_cfg_connected(self) -> bool:
+        """Calculates whether the trace's control flow graph is connected."""
         roots = iter(self.cfg_roots())
         try:
             next(roots)
@@ -840,7 +1147,8 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             args: additional arguments to pass the binary
             return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
 
-        Returns: The program trace or the instrumented binary's exit code
+        Returns:
+            The program trace or the instrumented binary's exit code
 
         """
         can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]

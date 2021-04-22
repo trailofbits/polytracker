@@ -1,0 +1,31 @@
+{%- extends "!layout.html" %}
+
+{% block footer %}
+  {% if not READTHEDOCS %}
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        {{ version }}
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>{{ _('Versions') }}</dt>
+          {% if test_versions %}
+            {% for version in test_versions %}
+            <dd><a href="#">{{ version }}</a></dd>
+            {% endfor %}
+          {% else %}
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          {% endif %}
+        </dl>
+        <dl>
+          <dt>{{ _('Source Code') }}</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">{{ _('GitHub Page') }}</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -28,6 +28,11 @@ the entire _provenance_ of a taint. In February of 2021, the LLVM DataFlowSaniti
 taint provenance called [_origin tracking_](https://reviews.llvm.org/D95835). However, it is only able to track at most
 16 taints at once, while PolyTracker can track up to 2³².
 
+This README serves as the general usage guide for installing PolyTracker and compiling/instrumenting binaries. For
+programmatically interacting with or extending PolyTracker through its Python API, as well as for interacting with
+runtime traces produced from instrumented code,
+[consult the Python documentation](https://trailofbits.github.io/polytracker/latest/).
+
 ## Quickstart
 
 PolyTracker is controlled via a Python script called `polytracker`. You can install it by running
@@ -164,6 +169,8 @@ This will automatically run the instrumented binary in a Docker container, if ne
 
 The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
 level trace of the program.
+
+The Python API documentation is available [here](https://trailofbits.github.io/polytracker/latest/).
 
 ## Runtime Parameters and Instrumentation Tuning
 
