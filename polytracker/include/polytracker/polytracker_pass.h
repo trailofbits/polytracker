@@ -30,6 +30,8 @@ struct PolytrackerPass : public llvm::ModulePass {
   llvm::FunctionCallee func_entry_log;
   llvm::FunctionType *func_entry_type;
   llvm::FunctionCallee func_exit_log;
+  llvm::FunctionCallee func_call_log;
+
   llvm::FunctionCallee bb_entry_log;
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
@@ -62,6 +64,8 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee func_exit_log;
+  llvm::FunctionCallee func_call_log;
+
   llvm::IntegerType *shadow_type;
 };
 
