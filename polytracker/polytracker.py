@@ -1,3 +1,5 @@
+__docformat__ = "google"
+
 import logging
 import pkg_resources
 

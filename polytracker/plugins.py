@@ -1,3 +1,81 @@
+"""A module containing base classes for implementing PolyTracker plugins and commands.
+
+For extending the REPL, see :mod:`polytracker.repl`.
+
+
+Examples:
+
+    Let's say you want to implement a new command called ``foo`` that can be executed at the command line by running
+
+    .. code-block:: console
+
+        $ polytracker foo
+
+    All you have to do is extend :class:`Command`::
+
+        class Foo(Command):
+            name = "foo"
+            help = "This is the foo command!"
+
+            def run(self, args: Namespace):
+                print("Inside foo!")
+                return 0
+
+    Simply extending the :class:`Command` class will automatically register the command.
+
+    .. code-block:: console
+
+        $ polytracker foo --help
+        usage: polytracker foo [-h]
+
+        optional arguments:
+          -h, --help  show this help message and exit
+        $ polytracker foo
+        Inside foo!
+
+    To add additional command line arguments, extend the :meth:`Command.__init_arguments__` function::
+
+        class Foo(Command):
+            name = "foo"
+            help = "This is the foo command!"
+
+            def __init_arguments__(parser: ArgumentParser):
+                parser.add_argument("--bar", type=str, help="baz")
+
+            def run(self, args: Namespace):
+                print(f"Inside foo: {bar!r}")
+                return 0
+
+    .. code-block:: console
+
+        $ polytracker foo --bar baz
+        Inside foo: "baz"
+
+    Next, say you want to add a subcommand to ``foo`` called ``asdf``:
+
+    .. code-block:: console
+
+        $ polytracker foo asdf
+        Do something completely different!
+
+    You can do this by subclassing :class:`Subcommand`::
+
+        class ASDF(Subcommand[Foo]):
+            name = "asdf"
+            help = "a subcommand of foo"
+            parent_type = Foo
+
+            def __init_arguments__(self, parser):
+                parser.add_argument("QWERTY", type=str, help="another argument")
+
+            def run(self, args: Namespace):
+                print("Inside ASDF: {args.QWERTY!r}")
+
+    The idea behind subcommands is that they allow you to programmatically extend *any* existing command without having
+    to edit the code in which the parent command is implemented.
+
+"""
+
 from abc import ABC, ABCMeta, abstractmethod
 from argparse import ArgumentParser, Namespace
 from inspect import isabstract
@@ -16,11 +94,16 @@ from typing import (
 
 
 PLUGINS: Dict[str, Type["Plugin"]] = {}
+"""A global dictionary mapping plugin names to their types."""
 COMMANDS: Dict[str, Type["Command"]] = {}
+"""A global dictionary mapping commands to their types."""
 
 
 class PluginMeta(ABCMeta):
+    """Metaclass for PolyTracker plugins."""
+
     parent_type: Optional[Type["Plugin"]] = None
+    """The type of this plugin's parent plugin, in the case of sub-plugins."""
 
     def __init__(cls, name, bases, clsdict):
         super().__init__(name, bases, clsdict)
@@ -46,8 +129,16 @@ class PluginMeta(ABCMeta):
 
 
 class Plugin(ABC, metaclass=PluginMeta):
+    """Abstract base class for all PolyTracker plugins.
+
+    At a minimum, a plugin must define a unique :attr:`name` class member.
+
+    """
+
     name: str
+    """The name of this plugin."""
     parent: Optional["Plugin"]
+    """The parent of this plugin, if it is a sub-plugin."""
 
     def __init__(self, parent: Optional["Plugin"] = None):
         self.parent = parent
@@ -62,11 +153,22 @@ class Plugin(ABC, metaclass=PluginMeta):
 
 
 class AbstractCommand(Plugin):
+    """Abstract base class for PolyTracker commands.
+
+    A PolyTracker command is exposed as a command line option.
+
+    """
+
     help: str
+    """Help string for this command."""
     parent_parsers: Tuple[ArgumentParser, ...] = ()
+    """An optional sequence of parent argument parsers from which to parse options."""
     extension_types: Optional[List[Type["CommandExtension"]]] = None
+    """An auto-populated list of eny extensions to this command."""
     subcommand_types: Optional[List[Type["Subcommand"]]] = None
+    """An auto-populated list of subcommands of this command."""
     subparser: Optional[Any] = None
+    """A subparser, auto-populated if subcommand_types is not ``None``."""
 
     def __init__(
         self, argument_parser: ArgumentParser, parent: Optional[Plugin] = None
@@ -99,6 +201,11 @@ class AbstractCommand(Plugin):
             e.__init_arguments__(argument_parser)
 
     def __init_arguments__(self, parser: ArgumentParser):
+        """Initializes this command's argument parser.
+
+        Subclasses should extend this function and add any necessary options to ``parser``.
+
+        """
         pass
 
     def __getattribute__(self, item):
@@ -115,6 +222,12 @@ class AbstractCommand(Plugin):
 
     @abstractmethod
     def run(self, args: Namespace):
+        """Callback for when the command is run.
+
+        Args:
+            args: The result of parsing the commandline arguments set up by :meth:`Command.__init_arguments__`.
+
+        """
         raise NotImplementedError()
 
 
@@ -122,6 +235,7 @@ C = TypeVar("C", bound=AbstractCommand)
 
 
 class Command(AbstractCommand, ABC):
+    """A base command class."""
     def __init__(self, argument_parser: ArgumentParser):
         super().__init__(argument_parser)
 
@@ -140,6 +254,8 @@ def _lookup_class_property(
 
 
 class CommandExtensionMeta(PluginMeta, Generic[C]):
+    """A metaclass for command extensions."""
+
     def __init__(cls, name, bases, clsdict):
         if not isabstract(cls) and name not in (
             "Plugin",
@@ -176,6 +292,7 @@ class CommandExtensionMeta(PluginMeta, Generic[C]):
 
     @property
     def parent_command_type(self) -> Type[C]:
+        """Returns the type of this command extension's parent command."""
         return cast(Type[C], self.parent_type)
 
 
@@ -208,6 +325,7 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
 
     @property
     def parent_command(self) -> C:
+        """Returns the parent command associated with this extension"""
         return cast(C, self.parent)
 
     @abstractmethod
@@ -216,6 +334,8 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
 
 
 class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMeta[C]):  # type: ignore
+    """An abstract class for PolyTracker subcommands."""
+
     def __init_subclass__(cls, **kwargs):
         if not isabstract(cls):
             if cls.parent_type is None:
@@ -238,10 +358,12 @@ class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMet
 
     @property
     def parent_command(self) -> C:
+        """Returns the parent command associated with this subcommand."""
         return cast(C, self.parent)
 
 
 def add_command_subparsers(parser: ArgumentParser):
+    """Adds subparsers for all PolyTracker commands"""
     subparsers = parser.add_subparsers(
         title="command",
         description="valid PolyTracker commands",
