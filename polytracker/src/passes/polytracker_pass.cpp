@@ -86,6 +86,7 @@ void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto called_func = ci.getCalledFunction();
+  bool is_uninst = false;
   if (called_func != nullptr) {
     if (called_func->hasName() &&
         called_func->getName().find("polytracker") != std::string::npos) {
@@ -97,11 +98,12 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
     if (called_func->hasName()) {
       std::string name = called_func->getName().str();
       if (ignore_funcs.find(name) != ignore_funcs.end()) {
-        return;
+        is_uninst = true;
       }
     }
   }
   llvm::Function *caller = inst->getParent()->getParent();
+
   assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
   func_index_t index = func_index_map[caller->getName().str()];
   if (block_global_map.find(ci.getParent()) == block_global_map.end()) {
@@ -111,15 +113,30 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   }
   uint64_t gid = block_global_map[ci.getParent()];
   bb_index_t bindex = gid & 0xFFFF;
-  // Insert after
-  llvm::IRBuilder<> IRB(inst->getNextNode());
-  llvm::LLVMContext &context = mod->getContext();
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), index, false);
-  llvm::Value *BlockIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), bindex, false);
 
-  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex});
+  // We wont have a func entry event for this, so just add a func call event.
+  if (is_uninst) {
+    llvm::IRBuilder<> IRB(inst);
+    llvm::LLVMContext &context = mod->getContext();
+    llvm::Value *FuncIndex = llvm::ConstantInt::get(
+        llvm::IntegerType::getInt32Ty(context), index, false);
+    llvm::Value *BlockIndex = llvm::ConstantInt::get(
+        llvm::IntegerType::getInt32Ty(context), bindex, false);
+    llvm::Value *func_name = IRB.CreateGlobalStringPtr(called_func->getName());
+    CallInst *FuncCall =
+        IRB.CreateCall(func_call_log, {func_name, FuncIndex, BlockIndex});
+  }
+  if (!is_uninst) {
+    // Insert after
+    llvm::IRBuilder<> IRB(inst->getNextNode());
+    llvm::LLVMContext &context = mod->getContext();
+    llvm::Value *FuncIndex = llvm::ConstantInt::get(
+        llvm::IntegerType::getInt32Ty(context), index, false);
+    llvm::Value *BlockIndex = llvm::ConstantInt::get(
+        llvm::IntegerType::getInt32Ty(context), bindex, false);
+
+    CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex});
+  }
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -261,6 +278,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   visitor.block_global_map = block_global_map;
   visitor.ignore_funcs = ignore_funcs;
   visitor.shadow_type = shadow_type;
+  visitor.func_call_log = func_call_log;
   for (auto &inst : insts) {
     visitor.visit(inst);
   }
@@ -289,6 +307,8 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
+  func_call_log =
+      mod.getOrInsertFunction("__polytracker_log_func_call", func_entry_type);
   // Should pass in the function index
   auto exit_fn_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
                                             {shadow_type, shadow_type}, false);
