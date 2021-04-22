@@ -79,10 +79,8 @@ void logFunctionEntry(const char *fname, const function_id_t func_id) {
   storeFunc(output_db, fname, func_id);
   // Func CFG edges added by funcExit (as it knows the return location)
   const auto this_event_id = event_id++;
-  /*
   storeFuncCFGEdge(output_db, input_id, thread_id, func_id, curr_func_index,
                    this_event_id, EdgeType::FORWARD);
-  */
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
   function_stack.push({this_event_id, func_id, {}});
@@ -120,10 +118,8 @@ void logFunctionExit(const function_id_t index) {
     //              ", curr_func_index = " << curr_func_index <<
     //              ", current_function_event = " << current_function_event <<
     //              "\n";
-    /*
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      this_event_id, EdgeType::BACKWARD);
-    */
     function_stack.pop();
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, curr_func_index, 0, current_function_event);
@@ -132,7 +128,7 @@ void logFunctionExit(const function_id_t index) {
 }
 
 void logBBEntry(const char *fname, const function_id_t findex,
-                const block_id_t bindex, const uint8_t &btype) {
+                const block_id_t bindex, const uint8_t btype) {
   assignThreadID();
   // NOTE (Carson) we could memoize this to prevent repeated calls for loop
   // blocks
