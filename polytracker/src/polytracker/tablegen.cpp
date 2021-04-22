@@ -93,6 +93,15 @@ static constexpr const char *createTaintForestTable() {
          ") WITHOUT ROWID;";
 }
 
+static constexpr const char *createCallTable() {
+  return "CREATE TABLE IF NOT EXISTS call_events ("
+         "event_id BIGINT,"
+         "name TEXT,"
+         "thread_id INTEGER,"
+         "thread_event_id BIGINT,"
+         "input_id INTEGER);";
+}
+
 static constexpr const char *createEventsTable() {
   return "CREATE TABLE IF NOT EXISTS events ("
          "event_id BIGINT," /* event_id is globally unique and sequential for
@@ -121,13 +130,10 @@ static constexpr const char *createBlockEntryTable() {
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
       std::string(createInputTable()) + std::string(createFuncTable()) +
-      std::string(createBlockTable()) +
-      // std::string(createBlockInstanceTable()) +
-      // //std::string(createCallTable()) +
-      /*std::string(createRetTable()) +*/ std::string(createTaintTable()) +
-      std::string(createPolytrackerTable()) +
+      std::string(createBlockTable()) + std::string(createTaintTable()) +
+      std::string(createPolytrackerTable()) + std::string(createCallTable()) +
       std::string(createCanonicalTable()) + std::string(createChunksTable()) +
-      std::string(createCFGTable()) + std::string(createTaintForestTable()) +
-      std::string(createEventsTable()) + std::string(createBlockEntryTable());
+      std::string(createTaintForestTable()) + std::string(createEventsTable()) +
+      std::string(createBlockEntryTable()) + std::string(createCFGTable());
   sql_exec(output_db, table_gen.c_str());
 }
