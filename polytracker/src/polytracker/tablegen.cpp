@@ -96,7 +96,7 @@ static constexpr const char *createTaintForestTable() {
 static constexpr const char *createCallTable() {
   return "CREATE TABLE IF NOT EXISTS call_events ("
          "event_id BIGINT,"
-         "name TEXT);"
+         "name TEXT);";
 }
 
 static constexpr const char *createEventsTable() {
