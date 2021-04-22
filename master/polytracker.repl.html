@@ -1,0 +1,533 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.repl &mdash; PolyTracker 3.0.2 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.repl.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.taint_forest" href="polytracker.taint_forest.html" />
+    <link rel="prev" title="polytracker.plugins" href="polytracker.plugins.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.repl</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#repl-classes">repl classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#commands">Commands</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#polytrackercompleter">PolyTrackerCompleter</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#polytrackerrepl">PolyTrackerREPL</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#replcommand">REPLCommand</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#repl-functions">repl functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#print-function-help">print_function_help</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.repl</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.repl.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-polytracker.repl">
+<span id="polytracker-repl"></span><h1>polytracker.repl<a class="headerlink" href="#module-polytracker.repl" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="repl-classes">
+<h2>repl classes<a class="headerlink" href="#repl-classes" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="commands">
+<h3>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.repl.Commands">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.repl.</span></code><code class="sig-name descname"><span class="pre">Commands</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)"><span class="pre">argparse.ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.Commands" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.Command</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.repl.Commands.__init__">
+<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)"><span class="pre">argparse.ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.Commands.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.Commands.__init_arguments__">
+<code class="sig-name descname"><span class="pre">__init_arguments__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parser</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)"><span class="pre">argparse.ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.Commands.__init_arguments__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes this command’s argument parser.</p>
+<p>Subclasses should extend this function and add any necessary options to <code class="docutils literal notranslate"><span class="pre">parser</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.extension_types">
+<code class="sig-name descname"><span class="pre">extension_types</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">CommandExtension</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#polytracker.repl.Commands.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.extensions">
+<code class="sig-name descname"><span class="pre">extensions</span></code><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">CommandExtension</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.repl.Commands.extensions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.Commands.full_name">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">full_name</span></code><a class="headerlink" href="#polytracker.repl.Commands.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.help">
+<code class="sig-name descname"><span class="pre">help</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">'print</span> <span class="pre">the</span> <span class="pre">PolyTracker</span> <span class="pre">commands'</span></em><a class="headerlink" href="#polytracker.repl.Commands.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.name">
+<code class="sig-name descname"><span class="pre">name</span></code><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><em class="property"> <span class="pre">=</span> <span class="pre">'commands'</span></em><a class="headerlink" href="#polytracker.repl.Commands.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.parent">
+<code class="sig-name descname"><span class="pre">parent</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Plugin</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.repl.Commands.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.parent_parsers">
+<code class="sig-name descname"><span class="pre">parent_parsers</span></code><em class="property"><span class="pre">:</span> <span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.9)"><span class="pre">argparse.ArgumentParser</span></a><span class="p"><span class="pre">,</span> </span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">()</span></em><a class="headerlink" href="#polytracker.repl.Commands.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.Commands.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.Commands.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.subcommand_types">
+<code class="sig-name descname"><span class="pre">subcommand_types</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">Subcommand</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#polytracker.repl.Commands.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.subcommands">
+<code class="sig-name descname"><span class="pre">subcommands</span></code><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Subcommand</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.repl.Commands.subcommands" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.Commands.subparser">
+<code class="sig-name descname"><span class="pre">subparser</span></code><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#polytracker.repl.Commands.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="polytrackercompleter">
+<h3>PolyTrackerCompleter<a class="headerlink" href="#polytrackercompleter" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.repl.PolyTrackerCompleter">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.repl.</span></code><code class="sig-name descname"><span class="pre">PolyTrackerCompleter</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">repl</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.repl.PolyTrackerREPL" title="polytracker.repl.PolyTrackerREPL"><span class="pre">polytracker.repl.PolyTrackerREPL</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">prompt_toolkit.completion.base.Completer</span></code></p>
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerCompleter.__init__">
+<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">repl</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.repl.PolyTrackerREPL" title="polytracker.repl.PolyTrackerREPL"><span class="pre">polytracker.repl.PolyTrackerREPL</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerCompleter.bottom_toolbar">
+<code class="sig-name descname"><span class="pre">bottom_toolbar</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter.bottom_toolbar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerCompleter.get_completions">
+<code class="sig-name descname"><span class="pre">get_completions</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">complete_event</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter.get_completions" title="Permalink to this definition">¶</a></dt>
+<dd><p>This should be a generator that yields <code class="xref py py-class docutils literal notranslate"><span class="pre">Completion</span></code> instances.</p>
+<p>If the generation of completions is something expensive (that takes a
+lot of time), consider wrapping this <cite>Completer</cite> class in a
+<cite>ThreadedCompleter</cite>. In that case, the completer algorithm runs in a
+background thread and completions will be displayed as soon as they
+arrive.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>document</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">Document</span></code> instance.</p></li>
+<li><p><strong>complete_event</strong> – <code class="xref py py-class docutils literal notranslate"><span class="pre">CompleteEvent</span></code> instance.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerCompleter.get_completions_async">
+<code class="sig-name descname"><span class="pre">get_completions_async</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">prompt_toolkit.document.Document</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">complete_event</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">prompt_toolkit.completion.base.CompleteEvent</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">AsyncGenerator</span><span class="p"><span class="pre">[</span></span><span class="pre">prompt_toolkit.completion.base.Completion</span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><span class="pre">None</span></a><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter.get_completions_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asynchronous generator for completions. (Probably, you won’t have to
+override this.)</p>
+<p>Asynchronous generator of <code class="xref py py-class docutils literal notranslate"><span class="pre">Completion</span></code> objects.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerCompleter.rprompt">
+<code class="sig-name descname"><span class="pre">rprompt</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerCompleter.rprompt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="polytrackerrepl">
+<h3>PolyTrackerREPL<a class="headerlink" href="#polytrackerrepl" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.repl.PolyTrackerREPL">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.repl.</span></code><code class="sig-name descname"><span class="pre">PolyTrackerREPL</span></code><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.__init__">
+<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.PolyTrackerREPL.commands">
+<code class="sig-name descname"><span class="pre">commands</span></code><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#polytracker.repl.REPLCommand" title="polytracker.repl.REPLCommand"><span class="pre">polytracker.repl.REPLCommand</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">{'commands':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'docker_run':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'extract_grammar':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'load_trace':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'run_trace':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;}</span></em><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.commands" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.commands_command">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">commands_command</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.commands_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>print the PolyTracker commands</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.current_instance">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">current_instance</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="#polytracker.repl.PolyTrackerREPL" title="polytracker.repl.PolyTrackerREPL"><span class="pre">polytracker.repl.PolyTrackerREPL</span></a><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.current_instance" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.print_exc">
+<code class="sig-name descname"><span class="pre">print_exc</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.print_exc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.prompt">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">prompt</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">options</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'yN'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.prompt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.register">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">register</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">discardable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.register" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function decorator for registering a command with this REPL</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.register_global">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">register_global</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.register_global" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="polytracker.repl.PolyTrackerREPL.registered_globals">
+<code class="sig-name descname"><span class="pre">registered_globals</span></code><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">{'CAN_RUN_NATIVELY':</span> <span class="pre">False,</span> <span class="pre">'commands':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'docker_run':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'extract_grammar':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'load_trace':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;,</span> <span class="pre">'run_trace':</span> <span class="pre">&lt;polytracker.repl.REPLCommand</span> <span class="pre">object&gt;}</span></em><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.registered_globals" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.run" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.run_on_exit">
+<code class="sig-name descname"><span class="pre">run_on_exit</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.run_on_exit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Registers a function to be executed when this REPL completes</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.run_python">
+<code class="sig-name descname"><span class="pre">run_python</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.run_python" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.PolyTrackerREPL.warning">
+<em class="property"><span class="pre">static</span> </em><code class="sig-name descname"><span class="pre">warning</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.PolyTrackerREPL.warning" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="replcommand">
+<h3>REPLCommand<a class="headerlink" href="#replcommand" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="polytracker.repl.REPLCommand">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.repl.</span></code><code class="sig-name descname"><span class="pre">REPLCommand</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discardable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.REPLCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.__init__">
+<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discardable</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.REPLCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.discardable">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">discardable</span></code><a class="headerlink" href="#polytracker.repl.REPLCommand.discardable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.func">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">func</span></code><a class="headerlink" href="#polytracker.repl.REPLCommand.func" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.help">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">help</span></code><a class="headerlink" href="#polytracker.repl.REPLCommand.help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.name">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">name</span></code><a class="headerlink" href="#polytracker.repl.REPLCommand.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="polytracker.repl.REPLCommand.run_bare">
+<code class="sig-name descname"><span class="pre">run_bare</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.REPLCommand.run_bare" title="Permalink to this definition">¶</a></dt>
+<dd><p>called when the command is run from the REPL with no parenthesis</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="repl-functions">
+<h2>repl functions<a class="headerlink" href="#repl-functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="print-function-help">
+<h3>print_function_help<a class="headerlink" href="#print-function-help" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt id="polytracker.repl.print_function_help">
+<code class="sig-prename descclassname"><span class="pre">polytracker.repl.</span></code><code class="sig-name descname"><span class="pre">print_function_help</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">func_name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.repl.print_function_help" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.taint_forest.html" class="btn btn-neutral float-right" title="polytracker.taint_forest" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.plugins.html" class="btn btn-neutral float-left" title="polytracker.plugins" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.0.2
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

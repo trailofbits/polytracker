@@ -1,0 +1,42 @@
+polytracker.cache
+=================
+
+.. automodule:: polytracker.cache
+
+cache classes
+-------------
+
+LRUCache
+********
+
+.. autoclass:: LRUCache
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Memoized
+********
+
+.. autoclass:: Memoized
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+OrderedSet
+**********
+
+.. autoclass:: OrderedSet
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+cache functions
+---------------
+
+memoize
+*******
+
+.. autofunction:: memoize

@@ -1,0 +1,51 @@
+polytracker.repl
+================
+
+.. automodule:: polytracker.repl
+
+repl classes
+------------
+
+Commands
+********
+
+.. autoclass:: Commands
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+PolyTrackerCompleter
+********************
+
+.. autoclass:: PolyTrackerCompleter
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+PolyTrackerREPL
+***************
+
+.. autoclass:: PolyTrackerREPL
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+REPLCommand
+***********
+
+.. autoclass:: REPLCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+repl functions
+--------------
+
+print_function_help
+*******************
+
+.. autofunction:: print_function_help

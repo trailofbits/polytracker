@@ -1,0 +1,88 @@
+polytracker.containerization
+============================
+
+.. automodule:: polytracker.containerization
+
+containerization classes
+------------------------
+
+DockerCommand
+*************
+
+.. autoclass:: DockerCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerContainer
+***************
+
+.. autoclass:: DockerContainer
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerExists
+************
+
+.. autoclass:: DockerExists
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerOutOfDateError
+********************
+
+.. autoclass:: DockerOutOfDateError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerPull
+**********
+
+.. autoclass:: DockerPull
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerRebuild
+*************
+
+.. autoclass:: DockerRebuild
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerRun
+*********
+
+.. autoclass:: DockerRun
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DockerSubcommand
+****************
+
+.. autoclass:: DockerSubcommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Dockerfile
+**********
+
+.. autoclass:: Dockerfile
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

@@ -1,0 +1,51 @@
+polytracker.diffing
+===================
+
+.. automodule:: polytracker.diffing
+
+diffing classes
+---------------
+
+ControlFlowDiff
+***************
+
+.. autoclass:: ControlFlowDiff
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TemporalVisualization
+*********************
+
+.. autoclass:: TemporalVisualization
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TraceDiff
+*********
+
+.. autoclass:: TraceDiff
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TraceDiffCommand
+****************
+
+.. autoclass:: TraceDiffCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+diffing functions
+-----------------
+
+print_file_context
+******************
+
+.. autofunction:: print_file_context

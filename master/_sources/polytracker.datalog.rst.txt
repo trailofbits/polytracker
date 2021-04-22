@@ -1,0 +1,119 @@
+polytracker.datalog
+===================
+
+.. automodule:: polytracker.datalog
+
+datalog classes
+---------------
+
+DatalogClause
+*************
+
+.. autoclass:: DatalogClause
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogFact
+***********
+
+.. autoclass:: DatalogFact
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogFactDecl
+***************
+
+.. autoclass:: DatalogFactDecl
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogGrammar
+**************
+
+.. autoclass:: DatalogGrammar
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogOutputDecl
+*****************
+
+.. autoclass:: DatalogOutputDecl
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogRule
+***********
+
+.. autoclass:: DatalogRule
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogRuleDecl
+***************
+
+.. autoclass:: DatalogRuleDecl
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogRuleList
+***************
+
+.. autoclass:: DatalogRuleList
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogTrueFact
+***************
+
+.. autoclass:: DatalogTrueFact
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DatalogTrueFactDecl
+*******************
+
+.. autoclass:: DatalogTrueFactDecl
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ExtractDatalogCommand
+*********************
+
+.. autoclass:: ExtractDatalogCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+datalog functions
+-----------------
+
+datalog_repl_match
+******************
+
+.. autofunction:: datalog_repl_match
+
+get_valid_datalog_name
+**********************
+
+.. autofunction:: get_valid_datalog_name
