@@ -95,7 +95,7 @@ static input_id_t get_input_id(sqlite3 *output_db) {
   }
   return count;
 }
-/*
+
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &dest,
                       const function_id_t &src, const event_id_t &event_id,
@@ -118,7 +118,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_finalize(stmt);
   // sqlite3_reset(stmt);
 }
-*/
+
 input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
                          const uint64_t &start, const uint64_t &end,
                          const int &trace_level) {
