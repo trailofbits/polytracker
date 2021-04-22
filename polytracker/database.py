@@ -1,6 +1,6 @@
 from enum import IntEnum
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
