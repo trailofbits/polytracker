@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.query import Query
+from sqlalchemy.sql.expression import func
 from sqlalchemy import (
     BigInteger,
     BLOB,
@@ -42,6 +43,7 @@ from .tracing import (
     TaintAccess,
     Taints,
     TraceEvent,
+    UninstrumentedFunctionCall,
 )
 
 Base = declarative_base()
@@ -51,6 +53,7 @@ class EventType(IntEnum):
     FUNC_ENTER = 0
     FUNC_RET = 1
     BLOCK_ENTER = 2
+    FUNC_CALL = 3
 
 
 class EdgeType(IntEnum):
@@ -125,6 +128,22 @@ class DBFunction(Base, Function):  # type: ignore
             for edge in self.incoming_edges
             if edge.src is not None and edge.edge_type == EdgeType.FORWARD
         }
+
+
+class DBUninstrumentedFunction(Function):
+    def __init__(self, name: str, function_index: int, called_from: Iterable[Function]):
+        super().__init__(name=name, function_index=function_index)
+        self._called_from: Set[Function] = set(called_from)
+
+    def taints(self) -> Taints:
+        return Taints(())
+
+    def calls_to(self) -> Set[Function]:
+        # TODO: Figure out a way to record when uninstrumented functions call into instrumented code
+        return set()
+
+    def called_from(self) -> Set[Function]:
+        return self._called_from
 
 
 class FunctionCFGEdge(Base):  # type: ignore
@@ -426,6 +445,26 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
         )
 
 
+class FunctionCall(Base):  # type: ignore
+    __tablename__ = "call_events"
+
+    event_id = Column(BigInteger, ForeignKey("events.event_id"), primary_key=True)
+    name = Column(Text)
+
+    event = relationship("DBUninstrumentedFunctionCall")
+
+
+class DBUninstrumentedFunctionCall(DBTraceEvent, UninstrumentedFunctionCall):  # type: ignore
+    __mapper_args__ = {
+        "polymorphic_identity": EventType.FUNC_CALL,  # type: ignore
+    }
+
+    _call = relationship("FunctionCall")
+
+    def called_function(self) -> Function:
+        return self.trace.uninstrumented_functions[self._call.name]
+
+
 class BlockEntries(Base):  # type: ignore
     __tablename__ = "block_entries"
     event_id: int = Column(BigInteger,  ForeignKey("events.event_id"), primary_key=True)
@@ -598,6 +637,31 @@ class DBProgramTrace(ProgramTrace):
         self.session: Session = session
         self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
         self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
+        self.uninstrumented_functions: Dict[str, Function] = {}
+        try:
+            max_function_id, *_ = session.query(func.max(DBFunction.id)).one()
+        except NoResultFound:
+            max_function_id = 0
+
+        # Create a function object for every uninstrumented function:
+        for func_name, *_ in session.query(FunctionCall.name).distinct().order_by(FunctionCall.name.asc()).all():
+            max_function_id += 1
+            called_from = session \
+                .query(DBFunction) \
+                .join(DBBasicBlock) \
+                .join(DBUninstrumentedFunctionCall) \
+                .join(FunctionCall) \
+                .filter(
+                    FunctionCall.name == func_name,
+                    DBUninstrumentedFunctionCall.event_id == FunctionCall.event_id,
+                    DBBasicBlock.id == DBUninstrumentedFunctionCall.block_gid,
+                    DBFunction.id == DBBasicBlock.function_id
+            ).all()
+            self.uninstrumented_functions[func_name] = DBUninstrumentedFunction(
+                name=func_name,
+                function_index=max_function_id,
+                called_from=called_from
+            )
 
         @event.listens_for(session, "pending_to_persistent")
         @event.listens_for(session, "deleted_to_persistent")

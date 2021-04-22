@@ -380,6 +380,12 @@ class ControlFlowEvent(TraceEvent):
     pass
 
 
+class UninstrumentedFunctionCall(ControlFlowEvent):
+    @abstractmethod
+    def called_function(self) -> Function:
+        raise NotImplementedError()
+
+
 class FunctionEntry(ControlFlowEvent):
     def __init__(self, uid: int):
         super().__init__(uid=uid)
