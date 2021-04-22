@@ -53,12 +53,10 @@ extern "C" void __dfsw___polytracker_log_taint_cmp(
   __polytracker_log_taint_cmp(arg1_label, arg2_label, findex, bindex);
 }
 
-extern "C" void __polytracker_log_func_call(char *target_name,
-                                            uint32_t target_index,
-                                            uint32_t caller_index,
-                                            EdgeType edge_type) {
+extern "C" void __polytracker_log_func_call(char *target_name, uint32_t findex,
+                                            uint32_t bindex) {
   if (LIKELY(!done)) {
-    logFuncCall(target_name, target_index, caller_index, edge_type);
+    logFuncCall(target_name, findex, bindex);
   }
 }
 
