@@ -274,6 +274,9 @@ void polytracker_print_settings() {
   for (auto target_source : target_sources) {
     std::cout << "POLYPATH:      " << target_source << std::endl;
   }
+  if (target_sources.empty()) {
+    std::cout << "POLYPATH:      *" << std::endl;
+  }
   std::cout << "POLYDB:        " << polytracker_db_name << std::endl;
   std::cout << "POLYFUNC:      " << polytracker_trace_func << std::endl;
   std::cout << "POLYTRACE:     " << polytracker_trace << std::endl;
