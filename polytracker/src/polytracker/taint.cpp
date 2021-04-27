@@ -38,6 +38,9 @@ extern thread_local event_id_t thread_event_id;
 extern thread_local FunctionStack function_stack;
 extern char *forest_mem;
 extern std::unordered_set<std::string> target_sources;
+extern uint64_t byte_start;
+extern uint64_t byte_end;
+extern bool polytracker_trace;
 
 void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
@@ -105,6 +108,11 @@ void addDerivedSource(std::string &track_path, const int &new_fd) {
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
   track_target_fd_map[new_fd] = track_target_name_map[track_path];
   fd_name_map[new_fd] = track_path;
+  // Store input if no taints have been specified/no input id has been created.
+  if (target_sources.empty()) {
+    input_id = storeNewInput(output_db, track_path, byte_start, byte_end,
+                             polytracker_trace);
+  }
 }
 
 auto getSourceName(const int &fd) -> std::string & {
