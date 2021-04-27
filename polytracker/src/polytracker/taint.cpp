@@ -9,6 +9,7 @@
 #include <sanitizer/dfsan_interface.h>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -35,8 +36,8 @@ extern thread_local function_id_t curr_func_index;
 extern std::atomic<event_id_t> event_id;
 extern thread_local event_id_t thread_event_id;
 extern thread_local FunctionStack function_stack;
-extern bool track_all_taint;
 extern char *forest_mem;
+extern std::unordered_set<std::string> target_sources;
 
 void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
@@ -47,7 +48,7 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 [[nodiscard]] bool isTrackingSource(const std::string &fd) {
-  if (track_all_taint) {
+  if (target_sources.empty()) {
     return true;
   }
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
@@ -58,7 +59,7 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 [[nodiscard]] bool isTrackingSource(const int &fd) {
-  if (track_all_taint) {
+  if (target_sources.empty()) {
     return true;
   }
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
@@ -69,7 +70,7 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 void closeSource(const std::string &fd) {
-  if (!track_all_taint) {
+  if (!target_sources.empty()) {
     const std::lock_guard<std::mutex> guard(track_target_map_lock);
     if (track_target_name_map.find(fd) != track_target_name_map.end()) {
       track_target_name_map.erase(fd);
@@ -78,7 +79,7 @@ void closeSource(const std::string &fd) {
 }
 
 void closeSource(const int &fd) {
-  if (!track_all_taint) {
+  if (!target_sources.empty()) {
     const std::lock_guard<std::mutex> guard(track_target_map_lock);
     if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
       track_target_fd_map.erase(fd);
