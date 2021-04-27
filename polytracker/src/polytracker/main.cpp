@@ -24,8 +24,8 @@ using json = nlohmann::json;
 extern int errno;
 std::string polytracker_forest_name = "";
 std::string polytracker_db_name = "";
-int byte_start = -1;
-int byte_end = -1;
+uint64_t byte_start = 0;
+uint64_t byte_end = 0;
 bool polytracker_trace = false;
 bool polytracker_trace_func = false;
 /**
@@ -33,7 +33,10 @@ bool polytracker_trace_func = false;
  */
 bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
+// If this is empty, taint everything.
 std::string target_file = "";
+bool track_all_taint = false;
+
 char *forest_mem;
 std::atomic_bool done = ATOMIC_VAR_INIT(false);
 
@@ -46,26 +49,23 @@ input_id_t input_id;
 // For settings that have not been initialized, set to default if one exists
 void set_defaults() {
   // If a target is set, set the default start/end.
-  if (target_file.empty()) {
-    fprintf(stderr, "Error! No target file specified, set with POLYPATH\n");
-    exit(1);
-  } else {
+  if (!target_file.empty()) {
     FILE *temp_file = fopen(target_file.c_str(), "r");
     if (temp_file == NULL) {
       fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
               target_file.c_str(), strerror(errno));
       exit(1);
     }
-    // Init start and end
-    if (byte_start == -1) {
-      byte_start = 0;
-    }
-    if (byte_end == -1) {
+    if (byte_end == 0) {
       fseek(temp_file, 0L, SEEK_END);
       // Last byte, len - 1
       byte_end = ftell(temp_file) - 1;
     }
     fclose(temp_file);
+  } else {
+    if (byte_end == 0) {
+      byte_end = INT64_MAX;
+    }
   }
   // If taint/output not set, set their defaults as well.
   if (taint_node_ttl <= 0) {
@@ -232,9 +232,13 @@ void polytracker_get_settings() {
   polytracker_parse_env();
   set_defaults();
 
-  std::string poly_str(target_file);
-  // Add named source for polytracker
-  addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
+  if (!target_file.empty()) {
+    std::string poly_str(target_file);
+    // Add named source for polytracker
+    addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
+  } else {
+    track_all_taint = true;
+  }
 }
 
 void polytracker_end() {
