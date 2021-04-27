@@ -55,7 +55,8 @@ void parse_target_files(const std::string polypath) {
     if (j == ':') {
       target_sources.insert(curr_str);
       curr_str = "";
-    } else {
+    } else if (curr_str.length() > 0 || (j != ' ' && j != '\t' && j != '\n' && j != '\r')) {
+      // skip over leading whitespace
       curr_str += j;
     }
   }
