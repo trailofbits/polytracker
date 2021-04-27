@@ -52,7 +52,7 @@ void parse_target_files(const std::string polypath) {
   std::string curr_str = "";
   std::cout << polypath << std::endl;
   for (auto j : polypath) {
-    if (j == ';') {
+    if (j == ':') {
       target_sources.insert(curr_str);
       curr_str = "";
     } else {
