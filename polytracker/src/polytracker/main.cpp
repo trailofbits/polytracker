@@ -60,7 +60,7 @@ void parse_target_files(const std::string polypath) {
       curr_str += j;
     }
   }
-  // Last file does not need a ;, like test_data;other_data
+  // Last file does not need a :, like test_data;other_data
   // insert it
   if (!curr_str.empty()) {
     target_sources.insert(curr_str);
