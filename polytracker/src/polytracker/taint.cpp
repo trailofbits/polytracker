@@ -9,6 +9,7 @@
 #include <sanitizer/dfsan_interface.h>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -35,8 +36,11 @@ extern thread_local function_id_t curr_func_index;
 extern std::atomic<event_id_t> event_id;
 extern thread_local event_id_t thread_event_id;
 extern thread_local FunctionStack function_stack;
-
 extern char *forest_mem;
+extern std::unordered_set<std::string> target_sources;
+extern uint64_t byte_start;
+extern uint64_t byte_end;
+extern bool polytracker_trace;
 
 void checkMaxLabel(dfsan_label label) {
   if (label == MAX_LABELS) {
@@ -47,6 +51,9 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 [[nodiscard]] bool isTrackingSource(const std::string &fd) {
+  if (target_sources.empty()) {
+    return true;
+  }
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
   if (track_target_name_map.find(fd) != track_target_name_map.end()) {
     return true;
@@ -55,6 +62,9 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 [[nodiscard]] bool isTrackingSource(const int &fd) {
+  if (target_sources.empty()) {
+    return true;
+  }
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
   if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
     return true;
@@ -63,16 +73,20 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 void closeSource(const std::string &fd) {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_name_map.find(fd) != track_target_name_map.end()) {
-    track_target_name_map.erase(fd);
+  if (!target_sources.empty()) {
+    const std::lock_guard<std::mutex> guard(track_target_map_lock);
+    if (track_target_name_map.find(fd) != track_target_name_map.end()) {
+      track_target_name_map.erase(fd);
+    }
   }
 }
 
 void closeSource(const int &fd) {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
-    track_target_fd_map.erase(fd);
+  if (!target_sources.empty()) {
+    const std::lock_guard<std::mutex> guard(track_target_map_lock);
+    if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
+      track_target_fd_map.erase(fd);
+    }
   }
 }
 
@@ -94,6 +108,11 @@ void addDerivedSource(std::string &track_path, const int &new_fd) {
   const std::lock_guard<std::mutex> guard(track_target_map_lock);
   track_target_fd_map[new_fd] = track_target_name_map[track_path];
   fd_name_map[new_fd] = track_path;
+  // Store input if no taints have been specified/no input id has been created.
+  if (target_sources.empty()) {
+    input_id = storeNewInput(output_db, track_path, byte_start, byte_end,
+                             polytracker_trace);
+  }
 }
 
 auto getSourceName(const int &fd) -> std::string & {
