@@ -153,11 +153,6 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
         opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
     opt_command += [str(output_bc), "-o", str(output_bc)]
     subprocess.check_call(opt_command)
-    # TODO (Carson)
-    opt_command = ["opt", "-O3", str(output_bc), "-o", str(output_bc)]
-    ret = subprocess.check_call(opt_command)
-    # opt_command = ["opt", "-O2", output_bc, "-o", output_bc]
-    # ret = subprocess.call(opt_command)
     assert output_bc.exists()
     return output_bc
 
