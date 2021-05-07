@@ -25,7 +25,7 @@ RUN apt-get install python3-dev
 RUN apt install pkg-config libasound2-dev libssl-dev cmake libfreetype6-dev libexpat1-dev libxcb-composite0-dev -y
 #RUN apt install libxml2-dev -y 
 
-RUN echo "ree" > /PLACEHOLDER 
+RUN echo "temp" > /PLACEHOLDER
 ENV POLYPATH=/PLACEHOLDER
 RUN apt-get install zlib1g-dev -y
 
