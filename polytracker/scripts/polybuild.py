@@ -100,7 +100,6 @@ POLYCXX_LIBS: List[str] = [
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
     str(POLY_LIB_PATH),
-    "-lsqlite3",
     "-lm"
 ]
 # TODO (Carson), double check, also maybe need -ldl?

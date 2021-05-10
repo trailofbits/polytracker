@@ -26,6 +26,7 @@ ${POLY_DIR}/taint.cpp
 ${POLY_DIR}/output.cpp 
 ${POLY_DIR}/tablegen.cpp 
 ${POLY_DIR}/polytracker.cpp
+${POLY_DIR}/sqlite3.c
 )
 
 set (TAINT_SOURCES 
