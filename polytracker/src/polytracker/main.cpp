@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <unordered_set>
 
 using json = nlohmann::json;
 
@@ -24,8 +25,8 @@ using json = nlohmann::json;
 extern int errno;
 std::string polytracker_forest_name = "";
 std::string polytracker_db_name = "";
-int byte_start = -1;
-int byte_end = -1;
+uint64_t byte_start = 0;
+uint64_t byte_end = 0;
 bool polytracker_trace = false;
 bool polytracker_trace_func = false;
 /**
@@ -33,7 +34,8 @@ bool polytracker_trace_func = false;
  */
 bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
-std::string target_file = "";
+// If this is empty, taint everything.
+std::unordered_set<std::string> target_sources;
 char *forest_mem;
 std::atomic_bool done = ATOMIC_VAR_INIT(false);
 
@@ -43,29 +45,36 @@ sqlite3 *output_db;
 // Input id is unique document key
 input_id_t input_id;
 
+/*
+Parse files deliminated by ; and add them to unordered set.
+*/
+void parse_target_files(const std::string polypath) {
+  std::string curr_str = "";
+  std::cout << polypath << std::endl;
+  for (auto j : polypath) {
+    if (j == ':') {
+      if (curr_str.length()) {
+        // ignore empty strings
+        target_sources.insert(curr_str);
+      }
+      curr_str = "";
+    } else if (curr_str.length() > 0 ||
+               (j != ' ' && j != '\t' && j != '\n' && j != '\r')) {
+      // skip over leading whitespace
+      curr_str += j;
+    }
+  }
+  // Last file does not need a :, like test_data;other_data
+  // insert it
+  if (!curr_str.empty()) {
+    target_sources.insert(curr_str);
+  }
+}
+
 // For settings that have not been initialized, set to default if one exists
 void set_defaults() {
-  // If a target is set, set the default start/end.
-  if (target_file.empty()) {
-    fprintf(stderr, "Error! No target file specified, set with POLYPATH\n");
-    exit(1);
-  } else {
-    FILE *temp_file = fopen(target_file.c_str(), "r");
-    if (temp_file == NULL) {
-      fprintf(stderr, "Error: target file \"%s\" could not be opened: %s\n",
-              target_file.c_str(), strerror(errno));
-      exit(1);
-    }
-    // Init start and end
-    if (byte_start == -1) {
-      byte_start = 0;
-    }
-    if (byte_end == -1) {
-      fseek(temp_file, 0L, SEEK_END);
-      // Last byte, len - 1
-      byte_end = ftell(temp_file) - 1;
-    }
-    fclose(temp_file);
+  if (byte_end == 0) {
+    byte_end = INT64_MAX;
   }
   // If taint/output not set, set their defaults as well.
   if (taint_node_ttl <= 0) {
@@ -86,7 +95,7 @@ void polytracker_parse_config(std::ifstream &config_file) {
   }
   auto config_json = json::parse(json_str);
   if (config_json.contains("POLYPATH")) {
-    target_file = config_json["POLYPATH"].get<std::string>();
+    parse_target_files(config_json["POLYPATH"].get<std::string>());
   }
   if (config_json.contains("POLYSTART")) {
     byte_start = config_json["POLYSTART"].get<int>();
@@ -163,7 +172,7 @@ bool polytracker_detect_config(std::ifstream &config) {
 // Parses the env looking to override current settings
 void polytracker_parse_env() {
   if (getenv("POLYPATH")) {
-    target_file = getenv("POLYPATH");
+    parse_target_files(getenv("POLYPATH"));
   }
   if (getenv("POLYSTART")) {
     byte_start = atoi(getenv("POLYSTART"));
@@ -232,9 +241,10 @@ void polytracker_get_settings() {
   polytracker_parse_env();
   set_defaults();
 
-  std::string poly_str(target_file);
-  // Add named source for polytracker
-  addInitialTaintSource(poly_str, byte_start, byte_end, poly_str);
+  for (auto target_source : target_sources) {
+    // Add named source for polytracker
+    addInitialTaintSource(target_source, byte_start, byte_end, target_source);
+  }
 }
 
 void polytracker_end() {
@@ -265,7 +275,12 @@ char *mmap_taint_forest(unsigned long size) {
 }
 
 void polytracker_print_settings() {
-  std::cout << "POLYPATH:      " << target_file << std::endl;
+  for (auto target_source : target_sources) {
+    std::cout << "POLYPATH:      " << target_source << std::endl;
+  }
+  if (target_sources.empty()) {
+    std::cout << "POLYPATH:      *" << std::endl;
+  }
   std::cout << "POLYDB:        " << polytracker_db_name << std::endl;
   std::cout << "POLYFUNC:      " << polytracker_trace_func << std::endl;
   std::cout << "POLYTRACE:     " << polytracker_trace << std::endl;
@@ -280,8 +295,10 @@ void polytracker_start() {
   polytracker_print_settings();
   output_db = db_init(polytracker_db_name);
   // Store new file
-  input_id = storeNewInput(output_db, target_file, byte_start, byte_end,
-                           polytracker_trace);
+  for (auto target_source : target_sources) {
+    input_id = storeNewInput(output_db, target_source, byte_start, byte_end,
+                             polytracker_trace);
+  }
   // Set up the atexit call
   atexit(polytracker_end);
   // Reserve memory for polytracker taintforest.
