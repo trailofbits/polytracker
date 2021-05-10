@@ -23,6 +23,7 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
@@ -34,6 +35,8 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" /> 
 </head>
@@ -501,9 +504,11 @@
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintAccess.access_type">access_type (polytracker.database.DBTaintAccess attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.accessed_labels">accessed_labels (polytracker.database.DBBasicBlockEntry attribute)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.accessed_labels">accessed_labels (polytracker.database.DBBasicBlock property)</a>
 
       <ul>
+        <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.accessed_labels">(polytracker.database.DBBasicBlockEntry attribute)</a>
+</li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunction.accessed_labels">(polytracker.database.DBFunction attribute)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.accessed_labels">(polytracker.database.DBFunctionEntry attribute)</a>
@@ -513,8 +518,6 @@
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.accessed_labels">(polytracker.database.DBTraceEvent attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.accessed_labels">accessed_labels() (polytracker.database.DBBasicBlock property)</a>
-</li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.accesses">accesses (polytracker.database.DBTaintForestNode attribute)</a>
 </li>
       <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet.add">add() (polytracker.cache.OrderedSet method)</a>
@@ -567,7 +570,7 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_weighted_edges_from">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adj">adj() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adj">adj (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.adj">(polytracker.cfg.DAG property)</a>
@@ -634,14 +637,12 @@
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.basic_block">(polytracker.database.DBFunctionEntry attribute)</a>
 </li>
+        <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.basic_block">(polytracker.database.DBFunctionInvocation property)</a>
+</li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.basic_block">(polytracker.database.DBFunctionReturn attribute)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.basic_block">(polytracker.database.DBTraceEvent attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.basic_block">basic_block() (polytracker.database.DBFunctionInvocation property)</a>
-
-      <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.basic_block">(polytracker.tracing.BasicBlockEntry property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ControlFlowEvent.basic_block">(polytracker.tracing.ControlFlowEvent property)</a>
@@ -658,17 +659,17 @@
       <li><a href="polytracker.database.html#polytracker.database.DBFunction.basic_blocks">basic_blocks (polytracker.database.DBFunction attribute)</a>
 
       <ul>
+        <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.basic_blocks">(polytracker.database.DBProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.Function.basic_blocks">(polytracker.tracing.Function attribute)</a>
+</li>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.basic_blocks">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.basic_blocks">basic_blocks() (polytracker.database.DBFunctionInvocation method)</a>
 
       <ul>
-        <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.basic_blocks">(polytracker.database.DBProgramTrace property)</a>
-</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionInvocation.basic_blocks">(polytracker.tracing.FunctionInvocation method)</a>
-</li>
-        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.basic_blocks">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -679,7 +680,7 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType">BasicBlockType (class in polytracker.tracing)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.bb_index">bb_index() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.bb_index">bb_index (polytracker.database.DBBasicBlockEntry property)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.EventType.BLOCK_ENTER">BLOCK_ENTER (polytracker.database.EventType attribute)</a>
 </li>
@@ -703,9 +704,9 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteOffset">ByteOffset (class in polytracker.tracing)</a>
 </li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_first">bytes_only_in_first() (polytracker.tracing.TaintDiff property)</a>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_first">bytes_only_in_first (polytracker.tracing.TaintDiff property)</a>
 </li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_second">bytes_only_in_second() (polytracker.tracing.TaintDiff property)</a>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_second">bytes_only_in_second (polytracker.tracing.TaintDiff property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -721,13 +722,13 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.Function.called_from">(polytracker.tracing.Function method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.called_function">called_function() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.called_function">called_function (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.called_function">(polytracker.tracing.BasicBlockEntry property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.caller">caller() (polytracker.database.DBFunctionEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.caller">caller (polytracker.database.DBFunctionEntry property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionEntry.caller">(polytracker.tracing.FunctionEntry property)</a>
@@ -745,7 +746,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.Function.calls_to">(polytracker.tracing.Function method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.grammars.html#polytracker.grammars.Production.can_produce_terminal">can_produce_terminal() (polytracker.grammars.Production property)</a>
+      <li><a href="polytracker.grammars.html#polytracker.grammars.Production.can_produce_terminal">can_produce_terminal (polytracker.grammars.Production property)</a>
 
       <ul>
         <li><a href="polytracker.grammars.html#polytracker.grammars.Rule.can_produce_terminal">(polytracker.grammars.Rule property)</a>
@@ -755,7 +756,7 @@
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG">CFG (class in polytracker.cfg)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.cfg">cfg() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.cfg">cfg (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.cfg">(polytracker.tracing.ProgramTrace property)</a>
@@ -769,10 +770,12 @@
       </ul></li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand">CFGTraceCommand (class in polytracker.tracing)</a>
 </li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.children">children (polytracker.tracing.BasicBlock attribute)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.children">children (polytracker.database.DBBasicBlock property)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.children">(polytracker.tracing.BasicBlock attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.children">children() (polytracker.database.DBBasicBlock property)</a>
-</li>
+      </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.LRUCache.clear">clear() (polytracker.cache.LRUCache method)</a>
 
       <ul>
@@ -793,13 +796,13 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.clear_edges">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.client">client() (polytracker.containerization.DockerContainer property)</a>
+      <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.client">client (polytracker.containerization.DockerContainer property)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType.CMP_ACCESS">CMP_ACCESS (polytracker.tracing.ByteAccessType attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.cmp_bytes">cmp_bytes() (polytracker.cfg.FunctionInfo property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.cmp_bytes">cmp_bytes (polytracker.cfg.FunctionInfo property)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.cmp_chunks">cmp_chunks() (polytracker.cfg.FunctionInfo method)</a>
 </li>
@@ -821,19 +824,19 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.CONDITIONAL">CONDITIONAL (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
-      <li><a href="polytracker.grammars.html#polytracker.grammars.MatchPossibility.consumed">consumed() (polytracker.grammars.MatchPossibility property)</a>
+      <li><a href="polytracker.grammars.html#polytracker.grammars.MatchPossibility.consumed">consumed (polytracker.grammars.MatchPossibility property)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.consumed_tokens">consumed_tokens() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.consumed_tokens">consumed_tokens (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.consumed_tokens">(polytracker.tracing.BasicBlockEntry property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.container">container (polytracker.containerization.DockerCommand attribute)</a>
-</li>
-      <li><a href="polytracker.containerization.html#polytracker.containerization.DockerExists.container">container() (polytracker.containerization.DockerExists property)</a>
 
       <ul>
+        <li><a href="polytracker.containerization.html#polytracker.containerization.DockerExists.container">(polytracker.containerization.DockerExists property)</a>
+</li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerPull.container">(polytracker.containerization.DockerPull property)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerRebuild.container">(polytracker.containerization.DockerRebuild property)</a>
@@ -843,7 +846,7 @@
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerSubcommand.container">(polytracker.containerization.DockerSubcommand property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBInput.content">content() (polytracker.database.DBInput property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBInput.content">content (polytracker.database.DBInput property)</a>
 
       <ul>
         <li><a href="polytracker.inputs.html#polytracker.inputs.Input.content">(polytracker.inputs.Input property)</a>
@@ -933,7 +936,7 @@
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent">DBTraceEvent (class in polytracker.database)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.degree">degree() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.degree">degree (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.degree">(polytracker.cfg.DAG property)</a>
@@ -943,7 +946,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.demangled_name">demangled_name() (polytracker.cfg.FunctionInfo property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.demangled_name">demangled_name (polytracker.cfg.FunctionInfo property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunction.demangled_name">(polytracker.database.DBFunction property)</a>
@@ -981,7 +984,7 @@
 </li>
       <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet.discard">discard() (polytracker.cache.OrderedSet method)</a>
 </li>
-      <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.discardable">discardable() (polytracker.repl.REPLCommand property)</a>
+      <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.discardable">discardable (polytracker.repl.REPLCommand property)</a>
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.DisconnectedGrammarError">DisconnectedGrammarError (class in polytracker.grammars)</a>
 </li>
@@ -1003,7 +1006,7 @@
 </li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerSubcommand">DockerSubcommand (class in polytracker.containerization)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.dominator_forest">dominator_forest() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.dominator_forest">dominator_forest (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.dominator_forest">(polytracker.cfg.DAG property)</a>
@@ -1035,7 +1038,7 @@
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.edge_type">edge_type (polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.edges">edges() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.edges">edges (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.edges">(polytracker.cfg.DAG property)</a>
@@ -1045,16 +1048,14 @@
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.EdgeType">EdgeType (class in polytracker.database)</a>
 </li>
-      <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogTrueFact.end_char">end_char() (polytracker.datalog.DatalogTrueFact property)</a>
+      <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogTrueFact.end_char">end_char (polytracker.datalog.DatalogTrueFact property)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.TaintedChunksItem.end_offset">end_offset (polytracker.database.TaintedChunksItem attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.entries">entries() (polytracker.database.DBBasicBlock property)</a>
-
-      <ul>
-        <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.entries">(polytracker.tracing.BasicBlock method)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.entries">entries (polytracker.database.DBBasicBlock property)</a>
 </li>
-      </ul></li>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.entries">entries() (polytracker.tracing.BasicBlock method)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.BlockEntries.entry">entry (polytracker.database.BlockEntries attribute)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.BlockEntries.entry_count">entry_count (polytracker.database.BlockEntries attribute)</a>
@@ -1065,7 +1066,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.entry_count">(polytracker.tracing.BasicBlockEntry method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.entrypoint">entrypoint() (polytracker.database.DBFunctionEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.entrypoint">entrypoint (polytracker.database.DBFunctionEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.entrypoint">(polytracker.database.DBProgramTrace property)</a>
@@ -1195,9 +1196,9 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.find">find() (polytracker.tracing.Taints method)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.ControlFlowDiff.first_function_with_different_control_flow">first_function_with_different_control_flow() (polytracker.diffing.ControlFlowDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.ControlFlowDiff.first_function_with_different_control_flow">first_function_with_different_control_flow (polytracker.diffing.ControlFlowDiff property)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.first_intervals">first_intervals() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.first_intervals">first_intervals (polytracker.diffing.TraceDiff property)</a>
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Production.first_rule">first_rule() (polytracker.grammars.Production method)</a>
 </li>
@@ -1205,7 +1206,7 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.from_source">from_source() (polytracker.tracing.Taints method)</a>
 </li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.full_name">full_name() (polytracker.build.PolyBuild property)</a>
+      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.full_name">full_name (polytracker.build.PolyBuild property)</a>
 
       <ul>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.full_name">(polytracker.containerization.DockerCommand property)</a>
@@ -1247,7 +1248,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.full_name">(polytracker.tracing.TraceCommand property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.func">func() (polytracker.repl.REPLCommand property)</a>
+      <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.func">func (polytracker.repl.REPLCommand property)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.EventType.FUNC_ENTER">FUNC_ENTER (polytracker.database.EventType attribute)</a>
 </li>
@@ -1266,10 +1267,10 @@
       <li><a href="polytracker.tracing.html#polytracker.tracing.Function">Function (class in polytracker.tracing)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.function">function (polytracker.database.DBBasicBlock attribute)</a>
-</li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function">function() (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
+        <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function">(polytracker.database.DBBasicBlockEntry property)</a>
+</li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.function">(polytracker.database.DBFunctionEntry property)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.function">(polytracker.database.DBFunctionInvocation property)</a>
@@ -1295,15 +1296,13 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_CALL">FUNCTION_CALL (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.function_cfg">function_cfg() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.function_cfg">function_cfg (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.function_cfg">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_ENTRY">FUNCTION_ENTRY (polytracker.tracing.BasicBlockType attribute)</a>
-</li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function_entry">function_entry() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function_entry">function_entry (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.function_entry">(polytracker.database.DBFunctionEntry property)</a>
@@ -1316,8 +1315,12 @@
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.function_entry">(polytracker.tracing.BasicBlockEntry property)</a>
 </li>
-        <li><a href="polytracker.tracing.html#polytracker.tracing.ControlFlowEvent.function_entry">(polytracker.tracing.ControlFlowEvent property)</a>
+      </ul></li>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_ENTRY">FUNCTION_ENTRY (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.ControlFlowEvent.function_entry">function_entry (polytracker.tracing.ControlFlowEvent property)</a>
+
+      <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionEntry.function_entry">(polytracker.tracing.FunctionEntry property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionInvocation.function_entry">(polytracker.tracing.FunctionInvocation property)</a>
@@ -1331,21 +1334,23 @@
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.function_id">function_id (polytracker.database.DBBasicBlock attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function_index">function_index() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.function_index">function_index (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunction.function_index">(polytracker.database.DBFunction property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_RETURN">FUNCTION_RETURN (polytracker.tracing.BasicBlockType attribute)</a>
-</li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.function_return">function_return() (polytracker.database.DBFunctionEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.function_return">function_return (polytracker.database.DBFunctionEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.function_return">(polytracker.database.DBFunctionInvocation property)</a>
 </li>
-        <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionEntry.function_return">(polytracker.tracing.FunctionEntry property)</a>
+      </ul></li>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_RETURN">FUNCTION_RETURN (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionEntry.function_return">function_return (polytracker.tracing.FunctionEntry property)</a>
+
+      <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionInvocation.function_return">(polytracker.tracing.FunctionInvocation property)</a>
 </li>
       </ul></li>
@@ -1365,17 +1370,17 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn">FunctionReturn (class in polytracker.tracing)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.functions">functions() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.functions">functions (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.functions">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_in_both">functions_in_both() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_in_both">functions_in_both (polytracker.diffing.TraceDiff property)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_only_in_first">functions_only_in_first() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_only_in_first">functions_only_in_first (polytracker.diffing.TraceDiff property)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_only_in_second">functions_only_in_second() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.functions_only_in_second">functions_only_in_second (polytracker.diffing.TraceDiff property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1455,9 +1460,9 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.has_function">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.has_input_chunks_only_in_first">has_input_chunks_only_in_first() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.has_input_chunks_only_in_first">has_input_chunks_only_in_first (polytracker.diffing.TraceDiff property)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.has_input_chunks_only_in_second">has_input_chunks_only_in_second() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.has_input_chunks_only_in_second">has_input_chunks_only_in_second (polytracker.diffing.TraceDiff property)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_node">has_node() (polytracker.cfg.CFG method)</a>
 
@@ -1524,6 +1529,8 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.help">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.help">(polytracker.repl.REPLCommand property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.help">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.help">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -1531,8 +1538,6 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.help">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.help">help() (polytracker.repl.REPLCommand property)</a>
-</li>
   </ul></td>
 </tr></table>
 
@@ -1545,7 +1550,7 @@
         <li><a href="polytracker.database.html#polytracker.database.DBFunction.id">(polytracker.database.DBFunction attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_degree">in_degree() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_degree">in_degree (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.in_degree">(polytracker.cfg.DAG property)</a>
@@ -1553,7 +1558,7 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.in_degree">(polytracker.cfg.DiGraph property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_edges">in_edges() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_edges">in_edges (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.in_edges">(polytracker.cfg.DAG property)</a>
@@ -1563,7 +1568,7 @@
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBFunction.incoming_edges">incoming_edges (polytracker.database.DBFunction attribute)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.index_in_function">index_in_function() (polytracker.database.DBBasicBlock property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.index_in_function">index_in_function (polytracker.database.DBBasicBlock property)</a>
 </li>
       <li><a href="polytracker.inputs.html#polytracker.inputs.Input">Input (class in polytracker.inputs)</a>
 </li>
@@ -1579,13 +1584,13 @@
       </ul></li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType.INPUT_ACCESS">INPUT_ACCESS (polytracker.tracing.ByteAccessType attribute)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.input_bytes">input_bytes() (polytracker.cfg.FunctionInfo property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.input_bytes">input_bytes (polytracker.cfg.FunctionInfo property)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.input_chunks">input_chunks() (polytracker.cfg.FunctionInfo method)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.input_chunks_only_in_first">input_chunks_only_in_first() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.input_chunks_only_in_first">input_chunks_only_in_first (polytracker.diffing.TraceDiff property)</a>
 </li>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.input_chunks_only_in_second">input_chunks_only_in_second() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.input_chunks_only_in_second">input_chunks_only_in_second (polytracker.diffing.TraceDiff property)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.CanonicalMap.input_id">input_id (polytracker.database.CanonicalMap attribute)</a>
 
@@ -1607,7 +1612,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs">inputs() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs">inputs (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.inputs">(polytracker.tracing.ProgramTrace property)</a>
@@ -1803,7 +1808,15 @@
       <li><a href="polytracker.build.html#polytracker.build.PolyBuild.name">name (polytracker.build.PolyBuild attribute)</a>
 
       <ul>
+        <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.name">(polytracker.cfg.CFG property)</a>
+</li>
+        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.name">(polytracker.cfg.DAG property)</a>
+</li>
+        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.name">(polytracker.cfg.DiGraph property)</a>
+</li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.name">(polytracker.containerization.DockerCommand attribute)</a>
+</li>
+        <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.name">(polytracker.containerization.DockerContainer property)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerExists.name">(polytracker.containerization.DockerExists attribute)</a>
 </li>
@@ -1837,23 +1850,13 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.name">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.name">(polytracker.repl.REPLCommand property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.name">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.name">(polytracker.tracing.RunTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.name">(polytracker.tracing.TraceCommand attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.name">name() (polytracker.cfg.CFG property)</a>
-
-      <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.name">(polytracker.cfg.DAG property)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.name">(polytracker.cfg.DiGraph property)</a>
-</li>
-        <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.name">(polytracker.containerization.DockerContainer property)</a>
-</li>
-        <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.name">(polytracker.repl.REPLCommand property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nbunch_iter">nbunch_iter() (polytracker.cfg.CFG method)</a>
@@ -1884,7 +1887,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.next_basic_block_in_function_that_touched_taint">(polytracker.tracing.BasicBlockEntry method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_control_flow_event">next_control_flow_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_control_flow_event">next_control_flow_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.next_control_flow_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -1910,7 +1913,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_event">next_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_event">next_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.next_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -1940,7 +1943,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.next_function_entry">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_global_event">next_global_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_global_event">next_global_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.next_global_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -1980,21 +1983,23 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.node_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nodes">nodes() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nodes">nodes (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.nodes">(polytracker.cfg.DAG property)</a>
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.nodes">(polytracker.cfg.DiGraph property)</a>
 </li>
-        <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.nodes">(polytracker.database.DBTaintForest method)</a>
-</li>
+      </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.nodes">nodes() (polytracker.database.DBTaintForest method)</a>
+
+      <ul>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.nodes">(polytracker.taint_forest.TaintForest method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.non_disjoint_union_all">non_disjoint_union_all() (in module polytracker.cfg)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_accesses">num_accesses() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_accesses">num_accesses (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.num_accesses">(polytracker.tracing.ProgramTrace property)</a>
@@ -2044,7 +2049,7 @@
       </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet">OrderedSet (class in polytracker.cache)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_degree">out_degree() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_degree">out_degree (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.out_degree">(polytracker.cfg.DAG property)</a>
@@ -2054,7 +2059,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_edges">out_edges() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_edges">out_edges (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.out_edges">(polytracker.cfg.DAG property)</a>
@@ -2114,7 +2119,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.parent">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.containerization.html#polytracker.containerization.DockerExists.parent_command">parent_command() (polytracker.containerization.DockerExists property)</a>
+      <li><a href="polytracker.containerization.html#polytracker.containerization.DockerExists.parent_command">parent_command (polytracker.containerization.DockerExists property)</a>
 
       <ul>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerPull.parent_command">(polytracker.containerization.DockerPull property)</a>
@@ -2136,9 +2141,9 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.parent_command">(polytracker.tracing.RunTraceCommand property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.plugins.html#polytracker.plugins.CommandExtensionMeta.parent_command_type">parent_command_type() (polytracker.plugins.CommandExtensionMeta property)</a>
+      <li><a href="polytracker.plugins.html#polytracker.plugins.CommandExtensionMeta.parent_command_type">parent_command_type (polytracker.plugins.CommandExtensionMeta property)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_one">parent_one() (polytracker.database.DBTaintForestNode property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_one">parent_one (polytracker.database.DBTaintForestNode property)</a>
 
       <ul>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.parent_one">(polytracker.taint_forest.TaintForestNode property)</a>
@@ -2186,7 +2191,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.parent_parsers">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_two">parent_two() (polytracker.database.DBTaintForestNode property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_two">parent_two (polytracker.database.DBTaintForestNode property)</a>
 
       <ul>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.parent_two">(polytracker.taint_forest.TaintForestNode property)</a>
@@ -2361,7 +2366,7 @@
       </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.LRUCache.popitem">popitem() (polytracker.cache.LRUCache method)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.pred">pred() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.pred">pred (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.pred">(polytracker.cfg.DAG property)</a>
@@ -2369,8 +2374,12 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.pred">(polytracker.cfg.DiGraph property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.predecessors">predecessors (polytracker.tracing.BasicBlock attribute)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.predecessors">predecessors (polytracker.database.DBBasicBlock property)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.predecessors">(polytracker.tracing.BasicBlock attribute)</a>
 </li>
+      </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.predecessors">predecessors() (polytracker.cfg.CFG method)</a>
 
       <ul>
@@ -2378,10 +2387,8 @@
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.predecessors">(polytracker.cfg.DiGraph method)</a>
 </li>
-        <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.predecessors">(polytracker.database.DBBasicBlock property)</a>
-</li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_control_flow_event">previous_control_flow_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_control_flow_event">previous_control_flow_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.previous_control_flow_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -2405,7 +2412,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.previous_control_flow_event">(polytracker.tracing.TraceEvent property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_event">previous_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_event">previous_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.previous_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -2429,7 +2436,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.previous_event">(polytracker.tracing.TraceEvent property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_global_event">previous_global_event() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.previous_global_event">previous_global_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.previous_global_event">(polytracker.database.DBFunctionEntry property)</a>
@@ -2481,9 +2488,9 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.regions">regions() (polytracker.tracing.Taints method)</a>
 </li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.regions_only_in_first">regions_only_in_first() (polytracker.tracing.TaintDiff property)</a>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.regions_only_in_first">regions_only_in_first (polytracker.tracing.TaintDiff property)</a>
 </li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.regions_only_in_second">regions_only_in_second() (polytracker.tracing.TaintDiff property)</a>
+      <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.regions_only_in_second">regions_only_in_second (polytracker.tracing.TaintDiff property)</a>
 </li>
       <li><a href="polytracker.plugins.html#polytracker.plugins.CommandExtensionMeta.register">register() (polytracker.plugins.CommandExtensionMeta method)</a>
 
@@ -2549,13 +2556,13 @@
       </ul></li>
       <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand">REPLCommand (class in polytracker.repl)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.returning_from">returning_from() (polytracker.database.DBFunctionReturn property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.returning_from">returning_from (polytracker.database.DBFunctionReturn property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn.returning_from">(polytracker.tracing.FunctionReturn property)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.returning_to">returning_to() (polytracker.database.DBFunctionReturn property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.returning_to">returning_to (polytracker.database.DBFunctionReturn property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn.returning_to">(polytracker.tracing.FunctionReturn property)</a>
@@ -2571,7 +2578,7 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.roots">roots() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.roots">roots (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.roots">(polytracker.cfg.DAG property)</a>
@@ -2647,7 +2654,7 @@
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.second_intervals">second_intervals() (polytracker.diffing.TraceDiff property)</a>
+      <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.second_intervals">second_intervals (polytracker.diffing.TraceDiff property)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.set_roots">set_roots() (polytracker.cfg.CFG method)</a>
 
@@ -2795,7 +2802,7 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.subparser">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.succ">succ() (polytracker.cfg.CFG property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.succ">succ (polytracker.cfg.CFG property)</a>
 
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.succ">(polytracker.cfg.DAG property)</a>
@@ -2819,7 +2826,7 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.taint_accesses">taint_accesses() (polytracker.database.DBFunctionInvocation method)</a>
 </li>
-      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.taint_forest">taint_forest() (polytracker.database.DBProgramTrace property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.taint_forest">taint_forest (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.taint_forest">(polytracker.tracing.ProgramTrace property)</a>
@@ -2831,7 +2838,7 @@
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.taint_source_sizes">taint_source_sizes() (polytracker.cfg.FunctionInfo method)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.taint_sources">taint_sources() (polytracker.cfg.FunctionInfo property)</a>
+      <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.taint_sources">taint_sources (polytracker.cfg.FunctionInfo property)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.TaintAccess">TaintAccess (class in polytracker.tracing)</a>
 </li>
@@ -2963,17 +2970,9 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_undirected_class">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.touched_taint">touched_taint() (polytracker.database.DBBasicBlockEntry method)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.touched_taint">touched_taint (polytracker.database.DBFunctionInvocation property)</a>
 
       <ul>
-        <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.touched_taint">(polytracker.database.DBFunctionEntry method)</a>
-</li>
-        <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.touched_taint">(polytracker.database.DBFunctionInvocation property)</a>
-</li>
-        <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.touched_taint">(polytracker.database.DBFunctionReturn method)</a>
-</li>
-        <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.touched_taint">(polytracker.database.DBTraceEvent method)</a>
-</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.touched_taint">(polytracker.tracing.BasicBlockEntry property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ControlFlowEvent.touched_taint">(polytracker.tracing.ControlFlowEvent property)</a>
@@ -2985,6 +2984,16 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn.touched_taint">(polytracker.tracing.FunctionReturn property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.touched_taint">(polytracker.tracing.TraceEvent property)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.touched_taint">touched_taint() (polytracker.database.DBBasicBlockEntry method)</a>
+
+      <ul>
+        <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.touched_taint">(polytracker.database.DBFunctionEntry method)</a>
+</li>
+        <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.touched_taint">(polytracker.database.DBFunctionReturn method)</a>
+</li>
+        <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.touched_taint">(polytracker.database.DBTraceEvent method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.trace">trace (polytracker.database.DBBasicBlockEntry attribute)</a>
@@ -3023,14 +3032,14 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.database.html#polytracker.database.DBInput.uid">uid (polytracker.database.DBInput attribute)</a>
-</li>
-      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.uid">uid() (polytracker.database.DBBasicBlockEntry property)</a>
+      <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.uid">uid (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionEntry.uid">(polytracker.database.DBFunctionEntry property)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.uid">(polytracker.database.DBFunctionReturn property)</a>
+</li>
+        <li><a href="polytracker.database.html#polytracker.database.DBInput.uid">(polytracker.database.DBInput attribute)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.uid">(polytracker.database.DBTraceEvent property)</a>
 </li>
@@ -3051,7 +3060,7 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.update">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.grammars.html#polytracker.grammars.Production.used_by">used_by() (polytracker.grammars.Production property)</a>
+      <li><a href="polytracker.grammars.html#polytracker.grammars.Production.used_by">used_by (polytracker.grammars.Production property)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -3059,7 +3068,7 @@
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogClause.val">val() (polytracker.datalog.DatalogClause property)</a>
+      <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogClause.val">val (polytracker.datalog.DatalogClause property)</a>
 
       <ul>
         <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogFact.val">(polytracker.datalog.DatalogFact property)</a>
@@ -3084,10 +3093,10 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.PolytrackerItem.value">value (polytracker.database.PolytrackerItem attribute)</a>
-</li>
-      <li><a href="polytracker.tracing.html#polytracker.tracing.ByteOffset.value">value() (polytracker.tracing.ByteOffset property)</a>
 
       <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ByteOffset.value">(polytracker.tracing.ByteOffset property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.TaintedRegion.value">(polytracker.tracing.TaintedRegion property)</a>
 </li>
       </ul></li>

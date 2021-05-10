@@ -5,7 +5,8 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>polytracker.cache &mdash; PolyTracker 3.0.2 documentation</title>
@@ -23,6 +24,7 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
@@ -34,6 +36,8 @@
   
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="polytracker.cfg" href="polytracker.cfg.html" />
@@ -177,113 +181,113 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="module-polytracker.cache">
+  <section id="module-polytracker.cache">
 <span id="polytracker-cache"></span><h1>polytracker.cache<a class="headerlink" href="#module-polytracker.cache" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="cache-classes">
+<section id="cache-classes">
 <h2>cache classes<a class="headerlink" href="#cache-classes" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="lrucache">
+<section id="lrucache">
 <h3>LRUCache<a class="headerlink" href="#lrucache" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
-<dt id="polytracker.cache.LRUCache">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></code><code class="sig-name descname"><span class="pre">LRUCache</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">30000000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.V</span></code>], <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableMapping</span></code></a></p>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></span><span class="sig-name descname"><span class="pre">LRUCache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">30000000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.V</span></code>], <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableMapping" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableMapping</span></code></a></p>
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.__init__">
-<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">30000000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache.__init__" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">30000000</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.LRUCache.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.clear">
-<code class="sig-name descname"><span class="pre">clear</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">None.</span>&#160; <span class="pre">Remove</span> <span class="pre">all</span> <span class="pre">items</span> <span class="pre">from</span> <span class="pre">D.</span><a class="headerlink" href="#polytracker.cache.LRUCache.clear" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">None.</span>&#160; <span class="pre">Remove</span> <span class="pre">all</span> <span class="pre">items</span> <span class="pre">from</span> <span class="pre">D.</span><a class="headerlink" href="#polytracker.cache.LRUCache.clear" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.get">
-<code class="sig-name descname"><span class="pre">get</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">D[k]</span> <span class="pre">if</span> <span class="pre">k</span> <span class="pre">in</span> <span class="pre">D,</span> <span class="pre">else</span> <span class="pre">d.</span>&#160; <span class="pre">d</span> <span class="pre">defaults</span> <span class="pre">to</span> <span class="pre">None.</span><a class="headerlink" href="#polytracker.cache.LRUCache.get" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">D[k]</span> <span class="pre">if</span> <span class="pre">k</span> <span class="pre">in</span> <span class="pre">D,</span> <span class="pre">else</span> <span class="pre">d.</span>&#160; <span class="pre">d</span> <span class="pre">defaults</span> <span class="pre">to</span> <span class="pre">None.</span><a class="headerlink" href="#polytracker.cache.LRUCache.get" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.items">
-<code class="sig-name descname"><span class="pre">items</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">items</span><a class="headerlink" href="#polytracker.cache.LRUCache.items" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">items</span><a class="headerlink" href="#polytracker.cache.LRUCache.items" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.keys">
-<code class="sig-name descname"><span class="pre">keys</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">keys</span><a class="headerlink" href="#polytracker.cache.LRUCache.keys" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.keys">
+<span class="sig-name descname"><span class="pre">keys</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">a</span> <span class="pre">set-like</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">keys</span><a class="headerlink" href="#polytracker.cache.LRUCache.keys" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.pop">
-<code class="sig-name descname"><span class="pre">pop</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">v,</span> <span class="pre">remove</span> <span class="pre">specified</span> <span class="pre">key</span> <span class="pre">and</span> <span class="pre">return</span> <span class="pre">the</span> <span class="pre">corresponding</span> <span class="pre">value.</span><a class="headerlink" href="#polytracker.cache.LRUCache.pop" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.pop">
+<span class="sig-name descname"><span class="pre">pop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">v,</span> <span class="pre">remove</span> <span class="pre">specified</span> <span class="pre">key</span> <span class="pre">and</span> <span class="pre">return</span> <span class="pre">the</span> <span class="pre">corresponding</span> <span class="pre">value.</span><a class="headerlink" href="#polytracker.cache.LRUCache.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>If key is not found, d is returned if given, otherwise KeyError is raised.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.popitem">
-<code class="sig-name descname"><span class="pre">popitem</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">(k,</span> <span class="pre">v),</span> <span class="pre">remove</span> <span class="pre">and</span> <span class="pre">return</span> <span class="pre">some</span> <span class="pre">(key,</span> <span class="pre">value)</span> <span class="pre">pair</span><a class="headerlink" href="#polytracker.cache.LRUCache.popitem" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.popitem">
+<span class="sig-name descname"><span class="pre">popitem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">(k,</span> <span class="pre">v),</span> <span class="pre">remove</span> <span class="pre">and</span> <span class="pre">return</span> <span class="pre">some</span> <span class="pre">(key,</span> <span class="pre">value)</span> <span class="pre">pair</span><a class="headerlink" href="#polytracker.cache.LRUCache.popitem" title="Permalink to this definition">¶</a></dt>
 <dd><p>as a 2-tuple; but raise KeyError if D is empty.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.setdefault">
-<code class="sig-name descname"><span class="pre">setdefault</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">D.get(k,d),</span> <span class="pre">also</span> <span class="pre">set</span> <span class="pre">D[k]=d</span> <span class="pre">if</span> <span class="pre">k</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">D</span><a class="headerlink" href="#polytracker.cache.LRUCache.setdefault" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.setdefault">
+<span class="sig-name descname"><span class="pre">setdefault</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">k</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span> &#x2192; <span class="pre">D.get(k,d),</span> <span class="pre">also</span> <span class="pre">set</span> <span class="pre">D[k]=d</span> <span class="pre">if</span> <span class="pre">k</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">D</span><a class="headerlink" href="#polytracker.cache.LRUCache.setdefault" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.update">
-<code class="sig-name descname"><span class="pre">update</span></code><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param"><span class="pre">E</span></em>, <span class="optional">]</span><em class="sig-param"><span class="pre">**F</span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None.</span>&#160; <span class="pre">Update</span> <span class="pre">D</span> <span class="pre">from</span> <span class="pre">mapping/iterable</span> <span class="pre">E</span> <span class="pre">and</span> <span class="pre">F.</span><a class="headerlink" href="#polytracker.cache.LRUCache.update" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param"><span class="pre">E</span></em>, <span class="optional">]</span><em class="sig-param"><span class="pre">**F</span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">None.</span>&#160; <span class="pre">Update</span> <span class="pre">D</span> <span class="pre">from</span> <span class="pre">mapping/iterable</span> <span class="pre">E</span> <span class="pre">and</span> <span class="pre">F.</span><a class="headerlink" href="#polytracker.cache.LRUCache.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>If E present and has a .keys() method, does:     for k in E: D[k] = E[k]
 If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v
 In either case, this is followed by: for k, v in F.items(): D[k] = v</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.LRUCache.values">
-<code class="sig-name descname"><span class="pre">values</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">an</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">values</span><a class="headerlink" href="#polytracker.cache.LRUCache.values" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.LRUCache.values">
+<span class="sig-name descname"><span class="pre">values</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">an</span> <span class="pre">object</span> <span class="pre">providing</span> <span class="pre">a</span> <span class="pre">view</span> <span class="pre">on</span> <span class="pre">D’s</span> <span class="pre">values</span><a class="headerlink" href="#polytracker.cache.LRUCache.values" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
 
-</div>
-<div class="section" id="memoized">
+</section>
+<section id="memoized">
 <h3>Memoized<a class="headerlink" href="#memoized" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
-<dt id="polytracker.cache.Memoized">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></code><code class="sig-name descname"><span class="pre">Memoized</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>]</p>
+<dt class="sig sig-object py" id="polytracker.cache.Memoized">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></span><span class="sig-name descname"><span class="pre">Memoized</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">polytracker.cache.R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>]</p>
 <dl class="py method">
-<dt id="polytracker.cache.Memoized.__init__">
-<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized.__init__" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.Memoized.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">polytracker.cache.R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.Memoized.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
 </dd></dl>
 
 </dd></dl>
 
-</div>
-<div class="section" id="orderedset">
+</section>
+<section id="orderedset">
 <h3>OrderedSet<a class="headerlink" href="#orderedset" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
-<dt id="polytracker.cache.OrderedSet">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></code><code class="sig-name descname"><span class="pre">OrderedSet</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>], <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableSet" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableSet</span></code></a></p>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></span><span class="sig-name descname"><span class="pre">OrderedSet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cache.R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cache.R</span></code>], <a class="reference external" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.MutableSet" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.MutableSet</span></code></a></p>
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.__init__">
-<code class="sig-name descname"><span class="pre">__init__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.__init__" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cache.R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet._from_iterable">
-<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">_from_iterable</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">it</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._from_iterable" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet._from_iterable">
+<em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">_from_iterable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">it</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._from_iterable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Construct an instance of the class from any iterable input.</p>
 <p>Must override this method if the class constructor signature
 does not accept an iterable for an input.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet._hash">
-<code class="sig-name descname"><span class="pre">_hash</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._hash" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet._hash">
+<span class="sig-name descname"><span class="pre">_hash</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet._hash" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the hash value of a set.</p>
 <p>Note that we don’t define __hash__: not all sets are hashable.
 But if you define a hashable set type, its __hash__ should
@@ -297,57 +301,57 @@ by the built-in frozenset type.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.add">
-<code class="sig-name descname"><span class="pre">add</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.add" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cache.R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.add" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add an element.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.clear">
-<code class="sig-name descname"><span class="pre">clear</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.clear" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.clear" title="Permalink to this definition">¶</a></dt>
 <dd><p>This is slow (creates N new iterators!) but effective.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.discard">
-<code class="sig-name descname"><span class="pre">discard</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.discard" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.discard">
+<span class="sig-name descname"><span class="pre">discard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">item</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cache.R</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.discard" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove an element.  Do not raise an exception if absent.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.isdisjoint">
-<code class="sig-name descname"><span class="pre">isdisjoint</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.isdisjoint" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.isdisjoint">
+<span class="sig-name descname"><span class="pre">isdisjoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.isdisjoint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return True if two sets have a null intersection.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.pop">
-<code class="sig-name descname"><span class="pre">pop</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.pop" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.pop">
+<span class="sig-name descname"><span class="pre">pop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.pop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the popped value.  Raise KeyError if empty.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="polytracker.cache.OrderedSet.remove">
-<code class="sig-name descname"><span class="pre">remove</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.remove" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.OrderedSet.remove">
+<span class="sig-name descname"><span class="pre">remove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cache.OrderedSet.remove" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove an element. If not a member, raise a KeyError.</p>
 </dd></dl>
 
 </dd></dl>
 
-</div>
-</div>
-<div class="section" id="cache-functions">
+</section>
+</section>
+<section id="cache-functions">
 <h2>cache functions<a class="headerlink" href="#cache-functions" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="memoize">
+<section id="memoize">
 <h3>memoize<a class="headerlink" href="#memoize" title="Permalink to this headline">¶</a></h3>
 <dl class="py function">
-<dt id="polytracker.cache.memoize">
-<code class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></code><code class="sig-name descname"><span class="pre">memoize</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">…</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">R</span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.cache.memoize" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.cache.memoize">
+<span class="sig-prename descclassname"><span class="pre">polytracker.cache.</span></span><span class="sig-name descname"><span class="pre">memoize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">polytracker.cache.R</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">polytracker.cache.R</span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.cache.memoize" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>
