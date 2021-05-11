@@ -25,6 +25,7 @@ extern bool polytracker_trace;
 extern bool polytracker_save_input_file;
 
 extern thread_local event_id_t last_bb_event_id;
+extern thread_local FunctionStack function_stack;
 
 // Could there be a race condition here?
 // TODO Check if input_table/taint_forest tables already filled
@@ -101,9 +102,13 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const function_id_t &src, const event_id_t &event_id,
                       EdgeType edgetype) {
   sqlite3_stmt *stmt;
-  const char *insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
-                       "event_id, thread_id, input_id, edge_type)"
-                       "VALUES (?, ?, ?, ?, ?, ?);";
+  // FIXME (Evan): The function CFG shouldn't be linked to events
+  const char *insert =
+      "INSERT OR IGNORE INTO func_cfg (dest, src, "
+      "event_id, thread_id, input_id, edge_type)"
+      "VALUES (?, ?, ?, ?, ?, ?); "
+      /* default the function entry to not having touched taint */
+      "INSERT INTO func_entries (event_id, touched_taint) VALUES (?, 0);";
   sql_prep(output_db, insert, -1, &stmt, NULL);
   sqlite3_bind_int(stmt, 1, dest);
   sqlite3_bind_int(stmt, 2, src);
@@ -114,6 +119,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int(stmt, 4, curr_thread_id);
   sqlite3_bind_int64(stmt, 5, input_id);
   sqlite3_bind_int(stmt, 6, static_cast<int>(edgetype));
+  sqlite3_bind_int64(stmt, 7, event_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
   // sqlite3_reset(stmt);
@@ -313,6 +319,21 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sqlite3_bind_int64(stmt, 4, input_id);
   sql_step(output_db, stmt);
   sqlite3_finalize(stmt);
+  for (auto it = function_stack.rbegin();
+       it != function_stack.rend() && !it->touched_taint; it++) {
+    /* iterate over the function stack in reverse, stopping when we reach the
+     * first function that already touched taint. this is because once a
+     * function touches taint, all of the functions below it on the stack also
+     * touch taint
+     */
+    it->touched_taint = true;
+    const char *update = "INSERT OR REPLACE INTO func_entries (event_id, "
+                         "touched_taint) VALUES(?, 1);";
+    sql_prep(output_db, update, -1, &stmt, NULL);
+    sqlite3_bind_int64(stmt, 1, it->func_event_id);
+    sql_step(output_db, stmt);
+    sqlite3_finalize(stmt);
+  }
 }
 
 void storeBlock(sqlite3 *output_db, const function_id_t &findex,

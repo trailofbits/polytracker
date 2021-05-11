@@ -1,98 +1,65 @@
-import heapq
-import itertools
+from abc import ABCMeta, abstractmethod
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
+import itertools
 from logging import getLogger
 from typing import (
     Any,
     cast,
     Dict,
+    FrozenSet,
     Iterable,
     Iterator,
     List,
     Optional,
     Set,
     Tuple,
+    TypeVar,
     Union,
 )
 
 # TODO remove
 import graphviz
 import networkx as nx
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from . import PolyTrackerTrace
 from .cfg import DiGraph
+from .parsing import (
+    highlight_offset,
+    ImmutableParseTree,
+    MutableParseTree,
+    NonGeneralizedParseTree,
+    ParseTree,
+    Start,
+    Terminal,
+    trace_to_non_generalized_tree,
+)
 from .plugins import Command
 from .repl import PolyTrackerREPL
 from .tracing import (
     BasicBlockEntry,
-    FunctionEntry,
     FunctionInvocation,
     ProgramTrace,
     TraceEvent,
 )
 
-
 log = getLogger("grammars")
 
 
-class Terminal:
-    def __init__(self, terminal: Union[bytes, str]):
-        if isinstance(terminal, str):
-            terminal = terminal.encode("utf-8")
-        self.terminal: bytes = terminal
-
-    def __add__(self, other: Union[bytes, str, "Terminal"]) -> "Terminal":
-        if isinstance(other, Terminal):
-            other = other.terminal
-        elif isinstance(other, str):
-            other = other.encode("utf-8")
-        return Terminal(self.terminal + other)
-
-    def __eq__(self, other):
-        return isinstance(other, Terminal) and other.terminal == self.terminal
-
-    def __hash__(self):
-        return hash(self.terminal)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(terminal={self.terminal!r})"
-
-    def __str__(self):
-        ret = '"'
-        for i in self.terminal:
-            if i == ord("\n"):
-                b = "\\n"
-            elif i == ord("\t"):
-                b = "\\t"
-            elif i == ord("\r"):
-                b = "\\r"
-            elif i == ord('"'):
-                b = '\\"'
-            elif i == ord("\\"):
-                b = "\\\\"
-            elif ord(" ") <= i <= ord("~"):
-                b = chr(i)
-            else:
-                b = f"\\x{i:02x}"
-            ret = f"{ret}{b}"
-        return f'{ret}"'
+NonTerminal = str
+Symbol = Union[NonTerminal, Terminal]
 
 
 class Rule:
-    def __init__(self, grammar: "Grammar", *sequence: Union[Terminal, str]):
+    def __init__(self, grammar: "Grammar", *sequence: Symbol):
         self.grammar: Grammar = grammar
-        self.sequence: Tuple[Union[Terminal, str], ...] = Rule.combine_terminals(
-            sequence
-        )
+        self.sequence: Tuple[Symbol, ...] = Rule.combine_terminals(sequence)
         self.has_terminals: bool = any(isinstance(t, Terminal) for t in self.sequence)
 
     @staticmethod
-    def combine_terminals(
-        sequence: Iterable[Union[Terminal, str]]
-    ) -> Tuple[Union[Terminal, str], ...]:
-        seq: List[Union[Terminal, str]] = []
+    def combine_terminals(sequence: Iterable[Symbol]) -> Tuple[Symbol, ...]:
+        seq: List[Symbol] = []
         for t in sequence:
             if isinstance(t, Terminal):
                 if seq and isinstance(seq[-1], Terminal):
@@ -116,13 +83,11 @@ class Rule:
         )
         return len(self.sequence) != old_len
 
-    def replace_sub_production(
-        self, to_replace: str, replace_with: Union[str, "Rule"]
-    ) -> bool:
-        if isinstance(replace_with, str):
+    def replace_sub_production(self, to_replace: NonTerminal, replace_with: Union[NonTerminal, "Rule"]) -> bool:
+        if isinstance(replace_with, NonTerminal):
             if to_replace == replace_with:
                 return False
-            replacement: List[Union[str, Terminal]] = [replace_with]
+            replacement: List[Symbol] = [replace_with]
         else:
             replacement = list(replace_with.sequence)
         new_seq = []
@@ -144,10 +109,10 @@ class Rule:
         return self.sequence == other.sequence
 
     @staticmethod
-    def load(grammar: "Grammar", *sequence: Union[Terminal, str]) -> "Rule":
-        alts: List[Union[Terminal, str]] = []
+    def load(grammar: "Grammar", *sequence: Symbol) -> "Rule":
+        alts: List[Symbol] = []
         for a in sequence:
-            if isinstance(a, str):
+            if isinstance(a, NonTerminal):
                 if a.startswith("<") and a.endswith(">"):
                     alts.append(a)
                 else:
@@ -165,6 +130,9 @@ class Rule:
 
     def __len__(self):
         return len(self.sequence)
+
+    def __getitem__(self, index):
+        return self.sequence[index]
 
     def __bool__(self):
         return bool(self.sequence)
@@ -185,6 +153,7 @@ class Production:
         self.grammar: Grammar = grammar
         self.name: str = name
         self.rules: Set[Rule] = set(rules)
+        self.removable: bool = True
         grammar.productions[name] = self
         for rule in rules:
             for term in rule.sequence:
@@ -198,20 +167,100 @@ class Production:
         else:
             return None
 
+    def partial_match(self, sentence: bytes) -> Iterator["PartialMatch"]:
+        """Enumerates all partial parse trees and remaining symbols that match the given sentence"""
+        if not self.rules or not sentence:
+            yield PartialMatch(tree=ImmutableParseTree(self), remaining_symbols=(), remaining_bytes=sentence)
+            return
+        for rule in self.rules:
+
+            def make_tree() -> Tuple[ParseTree[ParseTreeValue], ParseTree[ParseTreeValue]]:
+                root: ParseTree[ParseTreeValue] = ImmutableParseTree(self)
+                rtree: ParseTree[ParseTreeValue] = ImmutableParseTree(rule)
+                root.children.append(rtree)  # type: ignore
+                return root, rtree
+
+            stack: List[Tuple[bytes, List[ParseTree[ParseTreeValue]], List[Symbol]]] = [(sentence, [], list(rule.sequence))]
+            while stack:
+                remaining_bytes, trees, remaining_symbols = stack.pop()
+                if not remaining_symbols or not remaining_bytes:
+                    root_tree, rule_tree = make_tree()
+                    if not rule_tree.children:
+                        if not trees:
+                            trees = [ImmutableParseTree(Terminal(""))]
+                        rule_tree.children = trees  # type: ignore
+                    yield PartialMatch(
+                        tree=root_tree, remaining_symbols=tuple(remaining_symbols), remaining_bytes=remaining_bytes
+                    )
+                else:
+                    next_symbol = remaining_symbols[0]
+                    if isinstance(next_symbol, Terminal):
+                        if remaining_bytes == next_symbol.terminal:
+                            root_tree, rule_tree = make_tree()
+                            rule_tree.children = trees + [ImmutableParseTree(next_symbol)]  # type: ignore
+                            yield PartialMatch(
+                                tree=root_tree, remaining_symbols=tuple(remaining_symbols[1:]), remaining_bytes=b""
+                            )
+                        elif remaining_bytes.startswith(next_symbol.terminal):
+                            stack.append(
+                                (
+                                    remaining_bytes[len(next_symbol.terminal) :],
+                                    trees + [ImmutableParseTree(next_symbol)],
+                                    remaining_symbols[1:],
+                                )
+                            )
+                        else:
+                            # the terminal didn't match the input sentence
+                            pass
+                    else:
+                        # this is a non-terminal
+                        for match in self.grammar[next_symbol].partial_match(remaining_bytes):
+                            if not match.remaining_bytes or (not match.remaining_symbols and len(remaining_symbols) < 2):
+                                root_tree, rule_tree = make_tree()
+                                rule_tree.children = trees + [match.tree]  # type: ignore
+                                yield PartialMatch(
+                                    tree=root_tree,
+                                    remaining_symbols=tuple(remaining_symbols[1:]),
+                                    remaining_bytes=match.remaining_bytes,
+                                )
+                            else:
+                                stack.append(
+                                    (
+                                        match.remaining_bytes,
+                                        trees + [match.tree],
+                                        list(match.remaining_symbols) + remaining_symbols[1:],
+                                    )
+                                )
+
+    def remove_recursive_rules(self) -> Set[Rule]:
+        """Removes and returns all rules that solely recursively call this same production"""
+        removed = set([rule for rule in self if len(rule) == 1 and rule[0] == self.name])
+        self.rules -= removed
+        return removed
+
     @property
     def can_produce_terminal(self) -> bool:
         if self._can_produce_terminal is None:
-            with tqdm(leave=False, unit=" productions", delay=1.0) as status:
-                status.set_description("building grammar dependency graph")
-                graph: DiGraph = self.grammar.dependency_graph()
-                status.total = len(graph)
-                status.set_description("calculating dominator forest")
-                forest = graph.dominator_forest
-                status.set_description("finding empty productions")
-                for production in nx.dfs_postorder_nodes(forest):
+            queue: List[Production] = [
+                prod
+                for prod in self.grammar.productions.values()
+                if prod._can_produce_terminal is None and any(r.has_terminals for r in prod.rules)
+            ]
+            visited: Set[Production] = set(queue)
+            for p in queue:
+                # all nodes in the queue can trivially produce a terminal
+                p._can_produce_terminal = True
+            with tqdm(leave=False, unit=" productions", desc="finding empty productions") as status:
+                while queue:
+                    prod = queue.pop()
+                    used_by = [used_by_prod for used_by_prod in prod.used_by if used_by_prod not in visited]
+                    for used_by_prod in used_by:
+                        used_by_prod._can_produce_terminal = True
+                    queue.extend(used_by)
+                    visited |= set(used_by)
                     status.update(1)
-                    # use a postorder traversal so dependencies are calculated first
-                    cast(Production, production)._propagate_terminals()
+            if self._can_produce_terminal is None:
+                self._can_produce_terminal = False
         return self._can_produce_terminal  # type: ignore
 
     @property
@@ -247,14 +296,14 @@ class Production:
         self.rules = set(new_rules)
         self.grammar.used_by[name].remove(self.name)
 
-    def replace_sub_production(self, to_replace: str, replace_with: Union[str, Rule]):
-        if isinstance(replace_with, str):
+    def replace_sub_production(self, to_replace: NonTerminal, replace_with: Union[NonTerminal, Rule]):
+        if isinstance(replace_with, NonTerminal):
             if to_replace == replace_with:
                 return
-            new_prods: List[str] = [replace_with]
+            new_prods: List[NonTerminal] = [replace_with]
             replace_with = Rule(self.grammar, replace_with)
         else:
-            new_prods = [v for v in replace_with.sequence if isinstance(v, str)]
+            new_prods = [v for v in replace_with.sequence if isinstance(v, NonTerminal)]
         modified = False
         for rule in list(self.rules):
             self.rules.remove(rule)
@@ -279,7 +328,7 @@ class Production:
             return False
         self.rules.add(rule)
         for term in rule.sequence:
-            if isinstance(term, str):
+            if isinstance(term, NonTerminal):
                 self.grammar.used_by[term].add(self.name)
         # TODO: investigate checking for common subsequences and generating new sub-productions for those
         return True
@@ -324,140 +373,508 @@ class MissingProductionError(CorruptedGrammarError):
     pass
 
 
-class ParseTree:
-    def __init__(self, production_or_terminal: Union[Production, Terminal]):
-        self.value: Union[Production, Terminal] = production_or_terminal
-        self.children: List[ParseTree] = []
-
-    def __iter__(self) -> Iterator["ParseTree"]:
-        return iter(self.children)
-
-    def __len__(self):
-        return len(self.children)
-
-    def __str__(self):
-        if not self.children:
-            return str(self.value)
-        else:
-            return f"[{self.value!s} [{' '.join(map(str, self.children))}]]"
+ParseTreeValue = Union[Production, Rule, Terminal]
 
 
-class MatchPossibility:
-    def __init__(
-        self,
-        grammar: "Grammar",
-        remainder: bytes,
-        production: Production,
-        rule: Rule,
-        after_sequence: Iterable[Tuple["MatchPossibility", Union[str, Terminal]]] = (),
-        previous: Optional["MatchPossibility"] = None,
-        parent: Optional["MatchPossibility"] = None,
-    ):
-        self.grammar: "Grammar" = grammar
-        self.remainder: bytes = remainder
-        self.rule: Rule = rule
-        self.sequence: List[Tuple["MatchPossibility", Union[str, Terminal]]] = [
-            (self, s) for s in rule.sequence
-        ] + list(after_sequence)
-        self.previous: Optional[MatchPossibility] = previous
-        self.parent: Optional[MatchPossibility] = parent
-        self.production: Production = production
-        self._consumed: Optional[List[Tuple["MatchPossibility", Terminal]]] = None
-        if previous is None:
-            self.depth: int = 0
-        else:
-            self.depth = previous.depth + 1
+class PartialMatch:
+    __slots__ = "tree", "remaining_symbols", "remaining_bytes"
+
+    def __init__(self, tree: ParseTree[ParseTreeValue], remaining_symbols: Tuple[Symbol, ...], remaining_bytes: bytes):
+        self.tree: ParseTree[ParseTreeValue] = tree
+        self.remaining_symbols: Tuple[Symbol, ...] = remaining_symbols
+        self.remaining_bytes: bytes = remaining_bytes
+
+
+class EarleyState(metaclass=ABCMeta):
+    __slots__ = "prediction", "parsed", "expected", "index", "depth", "predecessors"
+
+    def __init__(self, prediction: "Prediction", parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
+        self.prediction: Prediction = prediction
+        self.parsed: Tuple[Symbol, ...] = parsed
+        self.expected: Tuple[Symbol, ...] = expected
+        self.index: int = index
+        self.depth: int = 0
+        self.predecessors: FrozenSet[EarleyState] = frozenset()
 
     @property
-    def consumed(self) -> List[Tuple["MatchPossibility", Terminal]]:
-        if self._consumed is None:
-            # running self.expand() automatically sets self._consumed
-            _ = self.expand()
-        return self._consumed  # type: ignore
+    def production(self) -> Production:
+        return self.prediction.production
 
-    def __lt__(self, other: "MatchPossibility"):
-        return (self.depth < other.depth) or (
-            self.depth == other.depth and len(self.remainder) < len(other.remainder)
+    def add_predecessor(self, left_sibling: "EarleyState"):
+        assert left_sibling.prediction == self.prediction
+        self.predecessors = self.predecessors | {left_sibling}
+        self.depth = min(p.depth for p in self.predecessors) + 1
+
+    @property
+    def finished(self) -> bool:
+        return len(self.expected) == 0
+
+    @property
+    def next_element(self) -> Symbol:
+        return self.expected[0]
+
+    @abstractmethod
+    def to_tree(self) -> MutableParseTree[ParseTreeValue]:
+        raise NotImplementedError()
+
+    def __hash__(self):
+        return hash((self.parsed, self.expected, self.index, self.prediction))
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and (
+            self.index == other.index
+            and self.parsed == other.parsed
+            and self.expected == other.expected
+            and self.prediction == other.prediction
         )
 
-    def expand(self) -> Optional[List["MatchPossibility"]]:
-        possibilities = []
-        remainder = self.remainder
-        matches = 0
-        if self._consumed is None:
-            self._consumed = []
-            assign_consumed = True
-        else:
-            assign_consumed = False
-        for source, seq in self.sequence:
-            if isinstance(seq, Terminal):
-                if not remainder.startswith(seq.terminal):
-                    return None
-                remainder = remainder[len(seq.terminal):]
-                if assign_consumed:
-                    self._consumed.append((source, seq))
-                matches += 1
-            else:
-                break
-        if matches == len(self.sequence):
-            return []
-        parent, next_production = self.sequence[matches]
-        assert isinstance(next_production, str)
-        production = self.grammar[next_production]
-        rules: Iterable[Rule] = production.rules
-        if not rules:
-            rules = [Rule(self.grammar)]
-        for rule in rules:
-            possibilities.append(
-                MatchPossibility(
-                    grammar=self.grammar,
-                    remainder=remainder,
-                    production=production,
-                    rule=rule,
-                    after_sequence=self.sequence[matches + 1:],
-                    parent=parent,
-                    previous=self,
-                )
+    def __str__(self):
+        parsed = "".join(map(str, self.parsed))
+        expected = "".join(map(repr, self.expected))
+        return f"({self.production.name} → {parsed}•{expected}, {self.index})"
+
+
+class Prediction(EarleyState):
+    __slots__ = "_production", "rule"
+
+    def __init__(
+        self, production: Production, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int, rule: Rule
+    ):
+        super().__init__(self, parsed, expected, index)
+        self._production: Production = production
+        self.rule: Rule = rule
+
+    @property
+    def production(self) -> Production:
+        return self._production
+
+    def to_tree(self) -> MutableParseTree[ParseTreeValue]:
+        return MutableParseTree(self.rule)
+
+    def __hash__(self):
+        return hash((self.parsed, self.expected, self.index, self.production))
+
+    def __eq__(self, other):
+        if isinstance(other, Prediction):
+            return (
+                self.index == other.index
+                and self.parsed == other.parsed
+                and self.expected == other.expected
+                and self.production == other.production
             )
-        return possibilities
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class EmptyProduction(EarleyState):
+    __slots__ = "_production"
+
+    def __init__(
+        self,
+        production: Production,
+        prediction: Prediction,
+        parsed: Tuple[Symbol, ...],
+        expected: Tuple[Symbol, ...],
+        index: int,
+    ):
+        super().__init__(prediction, parsed, expected, index)
+        self._production: Production = production
+
+    __hash__ = EarleyState.__hash__  # type: ignore
+
+    __ne__ = EarleyState.__ne__  # type: ignore
+
+    def __eq__(self, other):
+        return isinstance(other, EmptyProduction) and EarleyState.__eq__(self, other) and self._production == other._production
+
+    def to_tree(self) -> MutableParseTree[ParseTreeValue]:
+        return MutableParseTree(self._production)
+
+
+class Completion(EarleyState):
+    __slots__ = "completed_by"
+
+    def __init__(self, prediction: Prediction, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int):
+        super().__init__(prediction=prediction, parsed=parsed, expected=expected, index=index)
+        self.completed_by: Set[EarleyState] = set()
+
+    __hash__ = EarleyState.__hash__  # type: ignore
+
+    __eq__ = EarleyState.__eq__  # type: ignore
+
+    __ne__ = EarleyState.__ne__  # type: ignore
+
+    def to_tree(self) -> MutableParseTree[ParseTreeValue]:
+        return MutableParseTree(self.production)
+
+
+class ScannedTerminal(EarleyState):
+    __slots__ = "terminal"
+
+    def __init__(
+        self, prediction: Prediction, parsed: Tuple[Symbol, ...], expected: Tuple[Symbol, ...], index: int, terminal: Terminal
+    ):
+        super().__init__(prediction, parsed, expected, index)
+        self.terminal: Terminal = terminal
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.terminal))
+
+    def __eq__(self, other):
+        return isinstance(other, ScannedTerminal) and other.terminal == self.terminal and EarleyState.__eq__(self, other)
+
+    __ne__ = EarleyState.__ne__  # type: ignore
+
+    def to_tree(self) -> MutableParseTree[ParseTreeValue]:
+        return MutableParseTree(self.terminal)
+
+
+S = TypeVar("S", bound=EarleyState)
+
+
+class EarleyQueue:
+    def __init__(self, parser: "EarleyParser"):
+        self.parser: EarleyParser = parser
+        self.queue: List[EarleyState] = []
+        self.elements: Dict[EarleyState, EarleyState] = {}
+        self.waiting_for: Dict[NonTerminal, Set[EarleyState]] = defaultdict(set)
+        self.already_completed: Dict[NonTerminal, Dict[EarleyState, Set[int]]] = defaultdict(lambda: defaultdict(set))
+
+    def complete_state(self, state: EarleyState, completed: EarleyState):
+        assert not state.finished
+        assert isinstance(state.next_element, NonTerminal)
+        assert state.next_element == completed.production.name
+        new_state = Completion(
+            prediction=state.prediction, parsed=state.parsed + completed.parsed, expected=state.expected[1:], index=state.index
+        )
+        self.add(new_state, left_sibling=state).completed_by.add(completed)
+
+    def add(self, state: S, left_sibling: Optional[EarleyState] = None) -> S:
+        if state in self.elements:
+            # We already have this state
+            state = cast(S, self.elements[state])
+        else:
+            self.queue.append(state)
+            self.elements[state] = state
+        if not state.finished and isinstance(state.next_element, NonTerminal):
+            self.waiting_for[state.next_element].add(state)
+            for completed, k_set in self.already_completed[state.next_element].items():
+                for k in k_set:
+                    self.parser.states[k].complete_state(state, completed)
+        if left_sibling is not None:
+            state.add_predecessor(left_sibling)
+        return state
+
+    def remove(self, *states: Union[EarleyState, Iterable]) -> int:
+        num_removed: int = 0
+        state_set = set()
+        for state in states:
+            if isinstance(state, set):
+                state_set |= state
+            elif isinstance(state, EarleyState):
+                state_set.add(state)
+            else:
+                state_set |= set(state)
+        size_before: int = len(self.elements)
+        self.queue = [e for e in self.queue if e not in state_set]
+        self.elements = {e: e for e in self.queue}
+        for s in self.waiting_for.values():
+            s -= state_set
+        for e in self.queue:
+            e.predecessors = e.predecessors - state_set
+        num_removed += size_before - len(self.elements)
+        return num_removed
+
+    def __contains__(self, item):
+        return item in self.elements
+
+    def __getitem__(self, state: EarleyState) -> EarleyState:
+        return self.elements[state]
+
+    def __len__(self):
+        return len(self.elements)
+
+    def __iter__(self) -> Iterator[EarleyState]:
+        # allow the EarleyQueue to be modified during iteration
+        i = 0
+        while len(self.queue) > i:
+            yield self.queue[i]
+            i += 1
+
+
+class EarleyParser:
+    def __init__(self, grammar: "Grammar", sentence: Union[str, bytes], start: Optional[Production] = None):
+        self.grammar: Grammar = grammar
+        if isinstance(sentence, str):
+            self.sentence: bytes = sentence.encode("utf-8")
+        else:
+            self.sentence = sentence
+        if start is None:
+            if self.grammar.start is None:
+                raise ValueError("Either the grammar must have a start production or one must be provided")
+            self.start: Production = self.grammar.start
+        else:
+            self.start = start
+        self.states: List[EarleyQueue] = [EarleyQueue(self) for _ in range(len(sentence) + 1)]
+        self.parsed: bool = False
+        self.start_states: FrozenSet[Prediction] = frozenset()
+
+    @property
+    def end_states(self) -> Iterator[EarleyState]:
+        return (s for s in self.states[-1] if s.finished and s.production == self.start)
+
+    def parse(self) -> Iterator[ParseTree[ParseTreeValue]]:
+        if not self.parsed:
+            self.parsed = True
+            self.start_states = frozenset(
+                [
+                    Prediction(production=self.start, parsed=(), expected=rule.sequence, index=0, rule=rule)
+                    for rule in self.start.rules
+                ]
+            )
+            for start_state in self.start_states:
+                self.states[0].add(start_state)
+            last_k_with_match = -1
+            for k in trange(len(self.sentence) + 1, leave=False, desc="Parsing", unit=" bytes"):
+                for state in self.states[k]:
+                    if not state.finished:
+                        next_element = state.next_element
+                        if isinstance(next_element, NonTerminal):
+                            # print(f"{type(state)}: {state}")
+                            # do not predict off of a non-initial Prediction
+                            if not isinstance(state, Prediction) or not state.parsed:
+                                # state is either a Completion, a Scanned Terminal, or a Prediction that has nothing
+                                # parsed yet
+                                self._predict(state, k)
+                        else:
+                            if self._scan(state, k):
+                                last_k_with_match = max(last_k_with_match, k + len(state.next_element.terminal) - 1)
+                    else:
+                        self._complete(state, k)
+            if last_k_with_match < len(self.sentence) - 1:
+                offset = last_k_with_match + 1
+                raise ValueError(
+                    f"Unexpected byte {self.sentence[offset:offset+1]!r} at offset "
+                    f"{last_k_with_match+1}\n{highlight_offset(self.sentence, offset)}"
+                )
+        return self.parse_trees()
+
+    def parse_trees(self) -> Iterator[ParseTree[ParseTreeValue]]:
+        """Reconstructs all parse trees from the parse"""
+        if not self.parsed:
+            yield from self.parse()
+            return
+
+        for end_state in self.end_states:
+            root = _Node(end_state)
+            while True:
+                tree = MutableParseTree(self.start)
+                tree.children = [n.tree.clone() for n in root.siblings]
+                yield tree  # type: ignore
+                if not root.iterate():
+                    break
+
+    def _predict(self, state: EarleyState, k: int):
+        prod: Production = self.grammar[state.next_element]  # type: ignore
+        if not prod.can_produce_terminal:
+            new_state: EarleyState = EmptyProduction(
+                prediction=state.prediction, production=prod, parsed=(), expected=(), index=k
+            )
+            self.states[k].add(new_state)
+            return
+        for rule in prod.rules:
+            new_state = Prediction(production=prod, parsed=(), expected=rule.sequence, index=k, rule=rule)
+            self.states[k].add(new_state)
+
+    def _scan(self, state: EarleyState, k: int) -> bool:
+        expected_element = state.next_element
+        terminal = expected_element.terminal  # type: ignore
+        if not self.sentence[k:].startswith(terminal):
+            return False
+        new_state = ScannedTerminal(
+            prediction=state.prediction,
+            parsed=state.parsed + (state.next_element,),
+            expected=state.expected[1:],
+            index=state.index,
+            terminal=expected_element,  # type: ignore
+        )
+        self.states[k + len(terminal)].add(new_state, left_sibling=state)
+        return True
+
+    def _complete(self, completed: EarleyState, k: int):
+        self.states[completed.index].already_completed[completed.production.name][completed].add(k)
+        for state in self.states[completed.index].waiting_for[completed.production.name]:
+            self.states[k].complete_state(state, completed)
+
+
+class _Node:
+    def __init__(self, state: EarleyState, parent: Optional["_Node"] = None, _initialize: bool = True):
+        self.parent: Optional[_Node] = parent
+        if parent is None:
+            self.root: _Node = self
+            self.history: Set[EarleyState] = {state}
+        else:
+            self.root = parent.root
+            self.history = parent.history
+            self.history.add(state)
+        self.state: EarleyState = state
+        self.sibling_possibilities: Iterator[EarleyState] = iter(sorted(state.predecessors, key=lambda p: p.depth))
+        if isinstance(state, Completion):
+            self.child_possibilities: Iterator[EarleyState] = iter(sorted(state.completed_by, key=lambda p: p.depth))
+        else:
+            self.child_possibilities = iter(())
+        self.rightmost_child: Optional[_Node] = None
+        self.left_sibling: Optional[_Node] = None
+        if isinstance(self.state, Prediction) and parent is not None:
+            self.tree: MutableParseTree[ParseTreeValue] = MutableParseTree(self.state.rule)
+        elif isinstance(self.state, ScannedTerminal):
+            self.tree = MutableParseTree(self.state.terminal)
+        else:
+            self.tree = MutableParseTree(self.state.production)
+
+        if _initialize:
+            stack: List[_Node] = [self]
+            while stack:
+                node = stack.pop()
+                try:
+                    left_sibling = node.next_sibling()
+                    node.left_sibling = _Node(left_sibling, parent=self.parent, _initialize=False)
+                    stack.append(node.left_sibling)
+                except StopIteration:
+                    pass
+                try:
+                    rightmost_child = node.next_child()
+                    node.rightmost_child = _Node(rightmost_child, parent=self, _initialize=False)
+                    stack.append(node.rightmost_child)
+                except StopIteration:
+                    pass
+            for node in self.postorder_traversal():
+                if node.rightmost_child is not None:
+                    node.tree.children = [child.tree for child in node.rightmost_child.siblings]
+            if parent is not None:
+                parent.tree.children = [child.tree for child in parent.children]
+
+    def next_sibling(self) -> EarleyState:
+        while True:
+            left_sibling = next(self.sibling_possibilities)
+            if left_sibling not in self.history:
+                return left_sibling
+
+    def next_child(self) -> EarleyState:
+        while True:
+            rightmost_child = next(self.child_possibilities)
+            if rightmost_child not in self.history:
+                return rightmost_child
+
+    def descendants(self) -> Iterator[EarleyState]:
+        stack: List[_Node] = [self]
+        while stack:
+            node = stack.pop()
+            yield node.state
+            if node.left_sibling:
+                stack.append(node.left_sibling)
+            if node.rightmost_child:
+                stack.append(node.rightmost_child)
+
+    @property
+    def siblings(self) -> Iterator["_Node"]:
+        nodes = [self]
+        while nodes[-1].left_sibling is not None:
+            nodes.append(nodes[-1].left_sibling)
+        return reversed(nodes)
+
+    @property
+    def children(self) -> Iterator["_Node"]:
+        if self.rightmost_child is not None:
+            yield from self.rightmost_child.siblings
+
+    def _iterate_local(self) -> bool:
+        try:
+            left_sibling = self.next_sibling()
+            if self.left_sibling is not None:
+                self.history -= set(self.left_sibling.descendants())
+            self.left_sibling = _Node(left_sibling, parent=self.parent)
+            return True
+        except StopIteration:
+            pass
+        try:
+            rightmost_child = self.next_child()
+            if self.rightmost_child is not None:
+                self.history -= set(self.rightmost_child.descendants())
+            self.rightmost_child = _Node(rightmost_child, parent=self)
+            return True
+        except StopIteration:
+            return False
+
+    def postorder_traversal(self) -> Iterator["_Node"]:
+        stack: List[Tuple[bool, _Node]] = [(False, self)]
+
+        while stack:
+            expanded, node = stack.pop()
+            if not expanded:
+                stack.append((True, node))
+                if node.left_sibling is not None:
+                    stack.append((False, node.left_sibling))
+                if node.rightmost_child is not None:
+                    stack.append((False, node.rightmost_child))
+            else:
+                yield node
+
+    def iterate(self) -> bool:
+        for node in self.postorder_traversal():
+            if node._iterate_local():
+                return True
+        return False
+
+
+class Match:
+    def __init__(self, parser: EarleyParser):
+        self.parser: EarleyParser = parser
+        self._is_match: Optional[bool] = None
+
+    @property
+    def parse_tree(self) -> Optional[ParseTree[ParseTreeValue]]:
+        """Returns the first parse tree matched"""
+        if self._is_match is None:
+            try:
+                tree = next(iter(self.parser.parse()))
+                self._is_match = True
+                return tree
+            except StopIteration:
+                self._is_match = False
+        elif self._is_match:
+            return next(iter(self.parser.parse_trees()))
+        return None
+
+    def __bool__(self):
+        if self._is_match is None:
+            return self.parse_tree is not None
+        else:
+            return self._is_match
+
+    def __iter__(self) -> Iterator[ParseTree[ParseTreeValue]]:
+        return self.parser.parse_trees()
 
 
 class Grammar:
     def __init__(self):
-        self.productions: Dict[str, Production] = {}
-        self.used_by: Dict[str, Set[str]] = defaultdict(set)
+        self.productions: Dict[NonTerminal, Production] = {}
+        self.used_by: Dict[NonTerminal, Set[NonTerminal]] = defaultdict(set)
         self.start: Optional[Production] = None
 
-    def match(
-        self, sentence: Union[str, bytes], start: Optional[Production] = None
-    ) -> ParseTree:
-        if isinstance(sentence, str):
-            sentence = sentence.encode("utf-8")
+    def match(self, sentence: Union[str, bytes], start: Optional[Production] = None) -> Match:
+        parser = EarleyParser(grammar=self, sentence=sentence, start=start)
+        return Match(parser)
+
+    def find_partial_trees(self, sentence: bytes, start: Optional[Production] = None) -> Iterator[ParseTree[ParseTreeValue]]:
+        """Enumerates all partial parse trees that could result in the given starting sentence fragment."""
         if start is None:
-            if self.start is None:
-                raise ValueError(
-                    "Either the grammar must have a start production or one must be provided to `match`"
-                )
             start = self.start
-        possibilities = [
-            MatchPossibility(
-                grammar=self, remainder=sentence, production=start, rule=rule
-            )
-            for rule in start.rules
-        ]
-        while possibilities:
-            possibility = heapq.heappop(possibilities)
-            print(possibility.production)
-            sub_possibilities = possibility.expand()
-            if sub_possibilities is not None:
-                if len(sub_possibilities) == 0:
-                    # we found a match!
-                    # TODO: Convert this to a ParseTree
-                    return possibility  # type:ignore
-                for p in sub_possibilities:
-                    heapq.heappush(possibilities, p)
-        # TODO: Describe this parse error
-        raise ValueError()
+        for pm in start.partial_match(sentence):  # type: ignore
+            yield pm.tree
 
     def dependency_graph(self) -> DiGraph[Production]:
         graph: DiGraph[Production] = DiGraph()
@@ -476,7 +893,7 @@ class Grammar:
         for name, definition in raw_grammar.items():
             Production.load(self, name, *definition)
 
-    def remove(self, production: Union[str, Production]) -> bool:
+    def remove(self, production: Union[NonTerminal, Production]) -> bool:
         if isinstance(production, Production):
             name: str = production.name
             if name not in self:
@@ -489,7 +906,7 @@ class Grammar:
         # update all of the productions we use
         for rule in production:
             for v in rule.sequence:  # type: ignore   # mypy is dumb and thinks that this can sometimes be a str?
-                if isinstance(v, str):
+                if isinstance(v, NonTerminal):
                     try:
                         self.used_by[v].remove(name)
                     except KeyError:
@@ -551,6 +968,41 @@ class Grammar:
 
     def simplify(self) -> bool:
         modified = False
+        with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
+            for prod in tqdm(
+                    list(self.productions.values()),
+                    desc="simplifying trivial productions",
+                    unit=" productions",
+                    leave=False,
+                    unit_divisor=1
+            ):
+                # remove any rules in the production that just recursively call the same production
+                prod.remove_recursive_rules()
+                if prod.removable and len(prod.rules) == 1:
+                    # this production has a single rule, so replace all uses with that rule
+                    for user in list(prod.used_by):
+                        user.replace_sub_production(prod.name, prod.first_rule())  # type: ignore
+                    self.remove(prod)
+                    modified = True
+                    # print(f"replaced {prod} with {prod.first_rule()}")
+                    # self.verify(test_disconnection=False)
+                    status.update(1)
+            for prod in tqdm(
+                    list(self.productions.values()),
+                    desc="removing empty productions",
+                    unit=" productions",
+                    leave=False,
+                    unit_divisor=1
+            ):
+                if prod.removable and not prod.can_produce_terminal:
+                    removed = self.remove(prod)
+                    assert removed
+                    # print(f"removed {prod} because it was empty")
+                    # self.verify(test_disconnection=False)
+                    status.update(1)
+                    modified = True
+        return modified
+        modified = False
         modified_last_pass = True
         with tqdm(
             desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1
@@ -558,6 +1010,9 @@ class Grammar:
             while modified_last_pass:
                 modified_last_pass = False
                 for prod in list(self.productions.values()):
+                    # remove any rules in the production that just recursively call the same production
+                    recursive_rules = prod.remove_recursive_rules()
+                    modified_last_pass = bool(recursive_rules)
                     if not prod.can_produce_terminal and prod is not self.start:
                         # remove any produtions that only produce empty strings
                         removed = self.remove(prod)
@@ -614,6 +1069,40 @@ def production_name(event: TraceEvent) -> str:
         return f"<{event!s}>"
     else:
         return f"<{event.function.name}>"
+
+
+def parse_tree_to_grammar(tree: NonGeneralizedParseTree) -> Grammar:
+    grammar = Grammar()
+
+    for node in tree.preorder_traversal():
+        if isinstance(node.value, Terminal):
+            continue
+        sequence: List[Union[Terminal, str]] = []
+        for child in node.children:
+            if isinstance(child.value, Terminal):
+                sequence.append(child.value)
+            else:
+                sequence.append(production_name(child.value))
+
+        rule = Rule(grammar, *sequence)
+        if isinstance(node.value, Start):
+            prod_name = "<START>"
+        else:
+            prod_name = production_name(node.value)
+        if prod_name in grammar:
+            production = grammar[prod_name]
+            if rule not in production:
+                production.add(rule)
+        else:
+            prod = Production(grammar, prod_name, rule)
+            if prod_name == "<START>":  # or isinstance(node.value, FunctionCall):
+                # TODO: Re-implement the `or isinstance...` above
+                # do not allow the START production or function calls to be simplified out of the grammar
+                prod.removable = False
+
+    grammar.start = grammar["<START>"]
+
+    return grammar
 
 
 def trace_to_grammar(trace: ProgramTrace) -> Grammar:
@@ -710,12 +1199,37 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
 @PolyTrackerREPL.register("extract_grammar")
 def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
     """extract a grammar from a set of traces"""
-    trace_iter = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
+    trace_iter: Iterable[ProgramTrace] = tqdm(traces, unit=" trace", desc="extracting traces", leave=False)
     for trace in trace_iter:
+        inputs = list(trace.inputs)
+        if len(inputs) == 0:
+            raise ValueError(f"Trace {trace} did not load any taints")
+        source = inputs[0]
+        if len(inputs) > 1:
+            log.warning(f"Trace {trace} operated on multiple inputs; using {source}")
+        properties = trace.input_properties(source)
+        if properties.unused_byte_offsets:
+            log.warning(
+                "Warning: The following byte offsets were never recorded as being read in the trace: "
+                f"        {[(offset, source.content[offset:offset+1]) for offset in properties.unused_byte_offsets]!r}"
+            )
+        if properties.out_of_order_byte_offsets:
+            log.warning(
+                "Warning: The trace read the following bytes out of order (implying that the trace is of a parser that "
+                f"is not a pure recursive descent parser): {', '.join(map(str, properties.out_of_order_byte_offsets))}"
+            )
+        if properties.file_seeks:
+            # this should only ever happen if properties.out_of_order_byte_offsets is also populated
+            seeks = [f"⎆{i}:⎗{from_offset}→{to_offset}⎘" for i, from_offset, to_offset in properties.file_seeks]
+            log.info(
+                f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}"
+            )
+        tree = trace_to_non_generalized_tree(trace)
+        match_before = tree.matches()
+        tree.simplify()
+        assert match_before == tree.matches() == source.content
         # TODO: Merge the grammars
-        grammar = trace_to_grammar(trace)
-        # grammar.match(trace.inputstr)
-        trace_iter.set_description("simplifying the grammar")
+        grammar = parse_tree_to_grammar(tree)
         if simplify:
             grammar.simplify()
         return grammar

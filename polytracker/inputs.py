@@ -1,7 +1,22 @@
 """A module for modeling taint sources like input files"""
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
+
+
+class InputProperties:
+    def __init__(
+            self,
+            unused_byte_offsets: List[int],
+            out_of_order_byte_offsets: List[int],
+            file_seeks: List[Tuple[int, int, int]]
+    ):
+        self.unused_byte_offsets: List[int] = unused_byte_offsets
+        self.file_seeks: List[Tuple[int, int, int]] = file_seeks
+        self.out_of_order_byte_offsets: List[int] = out_of_order_byte_offsets
+
+    def __bool__(self):
+        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets and not self.file_seeks
 
 
 class Input:

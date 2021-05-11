@@ -22,6 +22,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     Union,
 )
 import weakref
@@ -29,7 +30,7 @@ import weakref
 from cxxfilt import demangle
 
 from .cfg import DiGraph
-from .inputs import Input
+from .inputs import Input, InputProperties
 from .plugins import Command, Subcommand
 from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest
@@ -767,6 +768,11 @@ class FunctionReturn(ControlFlowEvent):
         )
 
     @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return super().basic_block
+
+    @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
         """The basic block to which the function returned."""
         next_event = self.next_control_flow_event
@@ -783,7 +789,7 @@ class FunctionReturn(ControlFlowEvent):
         return entry.basic_block.function
 
 
-class FunctionInvocation(TraceEvent):
+class FunctionInvocation(ControlFlowEvent):
     """A conglomerated trace event representing an entire function invocation.
 
     This includes associating a :class:`FunctionEntry` with its :class:`FunctionReturn` event, and allows for reasoning
@@ -855,17 +861,16 @@ class FunctionInvocation(TraceEvent):
     def __eq__(self, other):
         return isinstance(other, FunctionInvocation) and other.uid == self.uid
 
-    def __iter__(self) -> Iterator[ControlFlowEvent]:
-        """Iterates over all of the control flow events that took place during this function invocation,
-        including all events generated from calls to other functions from within this invocation.
+    def __iter__(self) -> Iterator[Union[BasicBlockEntry, "FunctionInvocation"]]:
+        """Iterates all of the basic block entries that took place during this function invocation.
+        Any functions that are called from this function are yielded as a FunctionInvocation.
 
         """
-        if self.function_return is None:
-            return
-        next_event = self.function_entry.next_control_flow_event
-        while next_event is not None and not next_event == self.function_return:
-            yield next_event
-            next_event = next_event.next_control_flow_event
+        for bb in self.basic_blocks():
+            yield bb
+            func = bb.called_function
+            if func is not None:
+                yield func
 
     def basic_blocks(self) -> Iterator[BasicBlockEntry]:
         """Yields all of the basic blocks executed in this function,
@@ -880,7 +885,7 @@ class FunctionInvocation(TraceEvent):
     def taints(self) -> Taints:
         """Returns all taints operated on by this function or any functions called by this function."""
         if not hasattr(self, "_taints"):
-            setattr(self, "_taints", Taints(itertools.chain(event.taints() for event in self)))  # type: ignore
+            setattr(self, "_taints", Taints(itertools.chain(*(event.taints() for event in self))))
         return getattr(self, "_taints")
 
     def __str__(self):
@@ -971,6 +976,29 @@ class ProgramTrace(ABC):
         """The taint sources operated on in this trace."""
         raise NotImplementedError()
 
+    def input_properties(self, source: Input) -> InputProperties:
+        first_usages: List[Optional[int]] = [None] * source.size
+        file_seeks: List[Tuple[int, int, int]] = []
+        last_offset: Optional[int] = None
+        for i, taint_access in enumerate(self.access_sequence()):
+            for offset in taint_access.taints():
+                if not offset.source == source:
+                    continue
+                if first_usages[offset.offset] is None:
+                    first_usages[offset.offset] = i
+                if last_offset is not None:
+                    if offset.offset < last_offset:
+                        file_seeks.append((i - 1, last_offset, offset.offset))
+                last_offset = offset.offset
+        unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
+        out_of_order = [
+            previous_offset + 1
+            for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
+            if previous > first_used  # type: ignore
+        ]
+        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order,
+                               file_seeks=file_seeks)
+
     @property
     @abstractmethod
     def taint_forest(self) -> TaintForest:
@@ -993,6 +1021,9 @@ class ProgramTrace(ABC):
     def num_function_calls(self) -> int:
         """Returns the number of function calls in this trace."""
         return sum(1 for _ in self.function_trace())
+
+    def num_function_calls_that_touched_taint(self) -> int:
+        return sum(1 for func in self.function_trace() if func.touched_taint)
 
     def num_basic_block_entries(self) -> int:
         """Returns the number of basic block entries in this trace."""

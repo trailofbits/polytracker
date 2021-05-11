@@ -68,11 +68,13 @@ void logFunctionEntry(const char *fname, const function_id_t func_id) {
   storeFunc(output_db, fname, func_id);
   // Func CFG edges added by funcExit (as it knows the return location)
   const auto this_event_id = event_id++;
+  // FIXME (Evan): the function CFG shouldn't store event IDs because we can
+  // reconstruct that from the events
   storeFuncCFGEdge(output_db, input_id, thread_id, func_id, curr_func_index,
                    this_event_id, EdgeType::FORWARD);
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
-  function_stack.push({this_event_id, func_id, {}});
+  function_stack.push_back({this_event_id, func_id, {}, false});
   curr_func_index = func_id;
 }
 
@@ -88,19 +90,38 @@ void logFunctionExit(const function_id_t index) {
   if (UNLIKELY(!is_init)) {
     return;
   } else if (UNLIKELY(function_stack.empty() ||
-                      function_stack.top().func_id != curr_func_index)) {
+                      function_stack.back().func_id != curr_func_index)) {
     std::cerr
         << "Warning: Could not resolve the function entry associated with "
            "the return from function "
         << funcName(curr_func_index) << " to " << funcName(index);
     if (!function_stack.empty()) {
       std::cerr << " (expected to be returning from function "
-                << funcName(function_stack.top().func_id) << ")";
+                << funcName(function_stack.back().func_id) << ")";
+      // if uninstrumented code calls into instrumented code, we'll get a
+      // function entry event but no associated function exit. So see if we can
+      // clean up the function stack:
+      while (!function_stack.empty() &&
+             function_stack.back().func_id != curr_func_index) {
+        const auto current_function_event = function_stack.back().func_event_id;
+        const auto func_index = function_stack.back().func_id;
+        const auto this_event_id = event_id++;
+        function_stack.pop_back();
+        storeEvent(output_db, input_id, thread_id, this_event_id,
+                   thread_event_id++, EventType::FUNC_RET, func_index, 0,
+                   current_function_event);
+      }
+      if (!function_stack.empty()) {
+        // we were able to clean up the function stack
+        logFunctionExit(index);
+      }
     }
     std::cerr << ". This is likely due to either an instrumentation error "
-              << "or non-standard control-flow in the instrumented program.\n";
+              << "or non-standard control-flow in the instrumented program "
+                 "(e.g., if uninstrumented code calls into "
+              << "instrumented code.\n";
   } else {
-    const auto current_function_event = function_stack.top().func_event_id;
+    const auto current_function_event = function_stack.back().func_event_id;
     const auto this_event_id = event_id++;
     // std::cerr << "logFunctionExit(" << index << ") event_id = " <<
     // this_event_id <<
@@ -109,7 +130,7 @@ void logFunctionExit(const function_id_t index) {
     //              "\n";
     storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
                      this_event_id, EdgeType::BACKWARD);
-    function_stack.pop();
+    function_stack.pop_back();
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, curr_func_index, 0, current_function_event);
   }
@@ -123,11 +144,11 @@ void logBBEntry(const char *fname, const function_id_t findex,
   // blocks
   storeBlock(output_db, findex, bindex, btype);
   last_bb_event_id = event_id++;
-  auto entryCount = function_stack.top().bb_entry_count[bindex]++;
+  auto entryCount = function_stack.back().bb_entry_count[bindex]++;
   storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
                   thread_event_id++, findex, bindex,
                   function_stack.empty() ? last_bb_event_id
-                                         : function_stack.top().func_event_id,
+                                         : function_stack.back().func_event_id,
                   entryCount);
   curr_block_index = bindex;
 }
