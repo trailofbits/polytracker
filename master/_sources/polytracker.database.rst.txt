@@ -159,6 +159,15 @@ FunctionCFGEdge
    :inherited-members:
    :show-inheritance:
 
+FunctionEntries
+***************
+
+.. autoclass:: FunctionEntries
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 PolytrackerItem
 ***************
 

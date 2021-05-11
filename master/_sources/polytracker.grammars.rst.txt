@@ -6,6 +6,15 @@ polytracker.grammars
 grammars classes
 ----------------
 
+Completion
+**********
+
+.. autoclass:: Completion
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 CorruptedGrammarError
 *********************
 
@@ -19,6 +28,42 @@ DisconnectedGrammarError
 ************************
 
 .. autoclass:: DisconnectedGrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyParser
+************
+
+.. autoclass:: EarleyParser
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyQueue
+***********
+
+.. autoclass:: EarleyQueue
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyState
+***********
+
+.. autoclass:: EarleyState
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EmptyProduction
+***************
+
+.. autoclass:: EmptyProduction
    :members:
    :undoc-members:
    :inherited-members:
@@ -51,10 +96,10 @@ GrammarError
    :inherited-members:
    :show-inheritance:
 
-MatchPossibility
-****************
+Match
+*****
 
-.. autoclass:: MatchPossibility
+.. autoclass:: Match
    :members:
    :undoc-members:
    :inherited-members:
@@ -69,10 +114,19 @@ MissingProductionError
    :inherited-members:
    :show-inheritance:
 
-ParseTree
-*********
+PartialMatch
+************
 
-.. autoclass:: ParseTree
+.. autoclass:: PartialMatch
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Prediction
+**********
+
+.. autoclass:: Prediction
    :members:
    :undoc-members:
    :inherited-members:
@@ -96,10 +150,10 @@ Rule
    :inherited-members:
    :show-inheritance:
 
-Terminal
-********
+ScannedTerminal
+***************
 
-.. autoclass:: Terminal
+.. autoclass:: ScannedTerminal
    :members:
    :undoc-members:
    :inherited-members:
@@ -112,6 +166,11 @@ extract
 *******
 
 .. autofunction:: extract
+
+parse_tree_to_grammar
+*********************
+
+.. autofunction:: parse_tree_to_grammar
 
 production_name
 ***************

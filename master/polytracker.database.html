@@ -110,6 +110,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#edgetype">EdgeType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#eventtype">EventType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#functioncfgedge">FunctionCFGEdge</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#functionentries">FunctionEntries</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#polytrackeritem">PolytrackerItem</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#taintedchunksitem">TaintedChunksItem</a></li>
 </ul>
@@ -124,6 +125,7 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
@@ -846,9 +848,9 @@ for example, any mapped columns or relationships.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionInvocation.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><span class="pre">polytracker.tracing.ControlFlowEvent</span></a><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.database.DBFunctionInvocation.__iter__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterates over all of the control flow events that took place during this function invocation,
-including all events generated from calls to other functions from within this invocation.</p>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry" title="polytracker.tracing.BasicBlockEntry"><span class="pre">polytracker.tracing.BasicBlockEntry</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.FunctionInvocation" title="polytracker.tracing.FunctionInvocation"><span class="pre">polytracker.tracing.FunctionInvocation</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.database.DBFunctionInvocation.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates all of the basic block entries that took place during this function invocation.
+Any functions that are called from this function are yielded as a FunctionInvocation.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1294,6 +1296,11 @@ implementations.</p>
 <span class="sig-name descname"><span class="pre">has_thread_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thread_event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a><a class="headerlink" href="#polytracker.database.DBProgramTrace.has_thread_event" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.input_properties">
+<span class="sig-name descname"><span class="pre">input_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.InputProperties" title="polytracker.inputs.InputProperties"><span class="pre">polytracker.inputs.InputProperties</span></a><a class="headerlink" href="#polytracker.database.DBProgramTrace.input_properties" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.inputs">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">inputs</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable[polytracker.inputs.Input]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.inputs" title="Permalink to this definition">¶</a></dt>
@@ -1335,6 +1342,11 @@ implementations.</p>
 <span class="sig-name descname"><span class="pre">num_function_calls</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><a class="headerlink" href="#polytracker.database.DBProgramTrace.num_function_calls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the number of function calls in this trace.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.num_function_calls_that_touched_taint">
+<span class="sig-name descname"><span class="pre">num_function_calls_that_touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><a class="headerlink" href="#polytracker.database.DBProgramTrace.num_function_calls_that_touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.taint_forest">
@@ -1763,6 +1775,46 @@ for example, any mapped columns or relationships.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.database.FunctionCFGEdge.thread_id">
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.FunctionCFGEdge.thread_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="functionentries">
+<h3>FunctionEntries<a class="headerlink" href="#functionentries" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">FunctionEntries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.FunctionEntries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.FunctionEntries.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries.entry">
+<span class="sig-name descname"><span class="pre">entry</span></span><em class="property"><span class="pre">:</span> <a class="reference internal" href="#polytracker.database.DBFunctionEntry" title="polytracker.database.DBFunctionEntry"><span class="pre">polytracker.database.DBFunctionEntry</span></a></em><a class="headerlink" href="#polytracker.database.FunctionEntries.entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries.event_id">
+<span class="sig-name descname"><span class="pre">event_id</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.FunctionEntries.event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.FunctionEntries.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.FunctionEntries.touched_taint">
+<span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.FunctionEntries.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
@@ -251,6 +252,7 @@
 <li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#edgetype">EdgeType</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#eventtype">EventType</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#functioncfgedge">FunctionCFGEdge</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#functionentries">FunctionEntries</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#polytrackeritem">PolytrackerItem</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.database.html#taintedchunksitem">TaintedChunksItem</a></li>
 </ul>
@@ -299,21 +301,28 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html#grammars-classes">grammars classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#completion">Completion</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#corruptedgrammarerror">CorruptedGrammarError</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#disconnectedgrammarerror">DisconnectedGrammarError</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#earleyparser">EarleyParser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#earleyqueue">EarleyQueue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#earleystate">EarleyState</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#emptyproduction">EmptyProduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#extractgrammarcommand">ExtractGrammarCommand</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#grammar">Grammar</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#grammarerror">GrammarError</a></li>
-<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#matchpossibility">MatchPossibility</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#match">Match</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#missingproductionerror">MissingProductionError</a></li>
-<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#parsetree">ParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#partialmatch">PartialMatch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#prediction">Prediction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#production">Production</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#rule">Rule</a></li>
-<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#terminal">Terminal</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#scannedterminal">ScannedTerminal</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html#grammars-functions">grammars functions</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#extract">extract</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#parse-tree-to-grammar">parse_tree_to_grammar</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#production-name">production_name</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#to-dot">to_dot</a></li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.grammars.html#trace-to-grammar">trace_to_grammar</a></li>
@@ -324,6 +333,26 @@
 <li class="toctree-l1"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html#inputs-classes">inputs classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.inputs.html#input">Input</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.inputs.html#inputproperties">InputProperties</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html#parsing-classes">parsing classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#immutableparsetree">ImmutableParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#mutableparsetree">MutableParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#nongeneralizedparsetree">NonGeneralizedParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#parsetree">ParseTree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#start">Start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#terminal">Terminal</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html#parsing-functions">parsing functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#escape-byte">escape_byte</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#highlight-offset">highlight_offset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#trace-to-non-generalized-tree">trace_to_non_generalized_tree</a></li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.parsing.html#trace-to-tree">trace_to_tree</a></li>
 </ul>
 </li>
 </ul>

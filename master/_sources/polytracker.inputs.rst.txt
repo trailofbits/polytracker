@@ -14,3 +14,12 @@ Input
    :undoc-members:
    :inherited-members:
    :show-inheritance:
+
+InputProperties
+***************
+
+.. autoclass:: InputProperties
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

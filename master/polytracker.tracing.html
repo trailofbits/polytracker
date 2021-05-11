@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
@@ -905,7 +906,7 @@ is in <a class="reference internal" href="polytracker.database.html#module-polyt
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.tracing.FunctionInvocation">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">FunctionInvocation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function_entry</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.tracing.FunctionEntry" title="polytracker.tracing.FunctionEntry"><span class="pre">polytracker.tracing.FunctionEntry</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.FunctionInvocation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TraceEvent</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
 <p>A conglomerated trace event representing an entire function invocation.</p>
 <p>This includes associating a <a class="reference internal" href="#polytracker.tracing.FunctionEntry" title="polytracker.tracing.FunctionEntry"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionEntry</span></code></a> with its <a class="reference internal" href="#polytracker.tracing.FunctionReturn" title="polytracker.tracing.FunctionReturn"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionReturn</span></code></a> event, and allows for reasoning
 about any sub-invocations (<em>i.e.</em>, other functions called from within this function).</p>
@@ -922,9 +923,9 @@ about any sub-invocations (<em>i.e.</em>, other functions called from within thi
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.tracing.FunctionInvocation.__iter__">
-<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><span class="pre">polytracker.tracing.ControlFlowEvent</span></a><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.tracing.FunctionInvocation.__iter__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Iterates over all of the control flow events that took place during this function invocation,
-including all events generated from calls to other functions from within this invocation.</p>
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.BasicBlockEntry" title="polytracker.tracing.BasicBlockEntry"><span class="pre">polytracker.tracing.BasicBlockEntry</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#polytracker.tracing.FunctionInvocation" title="polytracker.tracing.FunctionInvocation"><span class="pre">polytracker.tracing.FunctionInvocation</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#polytracker.tracing.FunctionInvocation.__iter__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates all of the basic block entries that took place during this function invocation.
+Any functions that are called from this function are yielded as a FunctionInvocation.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1045,8 +1046,8 @@ not including any basic blocks inside called functions.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.tracing.FunctionReturn.basic_block">
-<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">basic_block</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.BasicBlock</span></em><a class="headerlink" href="#polytracker.tracing.FunctionReturn.basic_block" title="Permalink to this definition">¶</a></dt>
-<dd><p>The basic block that was executing during which this event took place.</p>
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">basic_block</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.BasicBlock</span></em><a class="headerlink" href="#polytracker.tracing.FunctionReturn.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd><p>The basic block that called <cite>return</cite>. For the return site of the function, use <cite>self.returning_to</cite></p>
 </dd></dl>
 
 <dl class="py property">
@@ -1259,6 +1260,11 @@ implementations.</p>
 <dd><p>Returns whether a function of the given name was executed in this trace.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.input_properties">
+<span class="sig-name descname"><span class="pre">input_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a></span></em><span class="sig-paren">)</span> &#x2192; <a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.InputProperties" title="polytracker.inputs.InputProperties"><span class="pre">polytracker.inputs.InputProperties</span></a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.input_properties" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.inputs">
 <em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">inputs</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable[polytracker.inputs.Input]</span></em><a class="headerlink" href="#polytracker.tracing.ProgramTrace.inputs" title="Permalink to this definition">¶</a></dt>
@@ -1294,6 +1300,11 @@ implementations.</p>
 <span class="sig-name descname"><span class="pre">num_function_calls</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.num_function_calls" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the number of function calls in this trace.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.num_function_calls_that_touched_taint">
+<span class="sig-name descname"><span class="pre">num_function_calls_that_touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><a class="headerlink" href="#polytracker.tracing.ProgramTrace.num_function_calls_that_touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.taint_forest">
