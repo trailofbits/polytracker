@@ -39,20 +39,20 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &callee,
                       const function_id_t &caller, const event_id_t &event_id,
                       EdgeType edgetype);
-void storeBlock(sqlite3 *output_db, const function_id_t &findex,
-                const block_id_t &bindex, uint8_t btype);
+void storeBlock(sqlite3 *output_db, const function_id_t findex,
+                const block_id_t bindex, uint8_t btype);
 
-void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
-                const int &thread_id, const event_id_t &event_id,
-                const event_id_t &thread_event_id, EventType event_type,
-                const function_id_t &findex, const block_id_t &bindex,
-                const event_id_t &func_event_id);
+void storeEvent(sqlite3 *output_db, const input_id_t input_id,
+                const int thread_id, const event_id_t event_id,
+                const event_id_t thread_event_id, EventType event_type,
+                const function_id_t findex, const block_id_t bindex,
+                const event_id_t func_event_id);
 
-void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
-                     const int &thread_id, const event_id_t &event_id,
-                     const event_id_t &thread_event_id,
-                     const function_id_t &findex, const block_id_t &bindex,
-                     const event_id_t &func_event_id,
+void storeBlockEntry(sqlite3 *output_db, const input_id_t input_id,
+                     const int thread_id, const event_id_t event_id,
+                     const event_id_t thread_event_id,
+                     const function_id_t findex, const block_id_t bindex,
+                     const event_id_t func_event_id,
                      const block_entry_count_t entry_count);
 
 void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,

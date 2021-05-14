@@ -1,6 +1,7 @@
 #include "polytracker/output.h"
 #include "polytracker/logging.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/sqlite3.h"
 #include "polytracker/tablegen.h"
 #include "polytracker/taint.h"
 #include <fstream>
@@ -10,7 +11,6 @@
 #include <mutex>
 #include <optional>
 #include <set>
-#include <sqlite3.h>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -36,6 +36,21 @@ std::mutex thread_id_lock;
 
 extern bool polytracker_trace;
 extern bool polytracker_trace_func;
+
+/*
+SQL statements to prepare
+*/
+const char *block_event_insert =
+    "INSERT OR IGNORE into block_entries(event_id, entry_count)"
+    "VALUES (?, ?)";
+
+const char *event_insert =
+    "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
+    "input_id, thread_id, block_gid, func_event_id)"
+    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+sqlite3_stmt *event_stmt;
+sqlite3_stmt *block_event_stmt;
 
 // Callback function for sql_exces
 static int sql_callback(void *debug, int count, char **data, char **columns) {
@@ -257,46 +272,38 @@ std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId) {
   return "";
 }
 
-void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
-                const int &thread_id, const event_id_t &event_id,
-                const event_id_t &thread_event_id, EventType event_type,
-                const function_id_t &findex, const block_id_t &bindex,
-                const event_id_t &func_event_id) {
-  sqlite3_stmt *stmt;
-  const char *insert =
-      "INSERT OR IGNORE into events(event_id, thread_event_id, event_type, "
-      "input_id, thread_id, block_gid, func_event_id)"
-      "VALUES (?, ?, ?, ?, ?, ?, ?)";
+void storeEvent(sqlite3 *output_db, const input_id_t input_id,
+                const int thread_id, const event_id_t event_id,
+                const event_id_t thread_event_id, EventType event_type,
+                const function_id_t findex, const block_id_t bindex,
+                const event_id_t func_event_id) {
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
-  sql_prep(output_db, insert, -1, &stmt, NULL);
-  sqlite3_bind_int64(stmt, 1, event_id);
-  sqlite3_bind_int64(stmt, 2, thread_event_id);
-  sqlite3_bind_int(stmt, 3, static_cast<int>(event_type));
-  sqlite3_bind_int64(stmt, 4, input_id);
-  sqlite3_bind_int(stmt, 5, thread_id);
-  sqlite3_bind_int64(stmt, 6, gid);
-  sqlite3_bind_int64(stmt, 7, func_event_id);
-  sql_step(output_db, stmt);
-  sqlite3_finalize(stmt);
+  sqlite3_bind_int64(event_stmt, 1, event_id);
+  sqlite3_bind_int64(event_stmt, 2, thread_event_id);
+  sqlite3_bind_int(event_stmt, 3, static_cast<int>(event_type));
+  sqlite3_bind_int64(event_stmt, 4, input_id);
+  sqlite3_bind_int(event_stmt, 5, thread_id);
+  sqlite3_bind_int64(event_stmt, 6, gid);
+  sqlite3_bind_int64(event_stmt, 7, func_event_id);
+  sql_step(output_db, event_stmt);
 }
 
-void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
-                     const int &thread_id, const event_id_t &event_id,
-                     const event_id_t &thread_event_id,
-                     const function_id_t &findex, const block_id_t &bindex,
-                     const event_id_t &func_event_id,
+void prepSQLInserts(sqlite3 *output_db) {
+  sql_prep(output_db, event_insert, -1, &event_stmt, NULL);
+  sql_prep(output_db, block_event_insert, -1, &block_event_stmt, NULL);
+}
+
+void storeBlockEntry(sqlite3 *output_db, const input_id_t input_id,
+                     const int thread_id, const event_id_t event_id,
+                     const event_id_t thread_event_id,
+                     const function_id_t findex, const block_id_t bindex,
+                     const event_id_t func_event_id,
                      const block_entry_count_t entry_count) {
   storeEvent(output_db, input_id, thread_id, event_id, thread_event_id,
              EventType::BLOCK_ENTER, findex, bindex, func_event_id);
-  sqlite3_stmt *stmt;
-  const char *insert =
-      "INSERT OR IGNORE into block_entries(event_id, entry_count)"
-      "VALUES (?, ?)";
-  sql_prep(output_db, insert, -1, &stmt, NULL);
-  sqlite3_bind_int64(stmt, 1, event_id);
-  sqlite3_bind_int64(stmt, 2, entry_count);
-  sql_step(output_db, stmt);
-  sqlite3_finalize(stmt);
+  sqlite3_bind_int64(block_event_stmt, 1, event_id);
+  sqlite3_bind_int64(block_event_stmt, 2, entry_count);
+  sql_step(output_db, block_event_stmt);
 }
 
 void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
@@ -315,8 +322,8 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sqlite3_finalize(stmt);
 }
 
-void storeBlock(sqlite3 *output_db, const function_id_t &findex,
-                const block_id_t &bindex, uint8_t btype) {
+void storeBlock(sqlite3 *output_db, const function_id_t findex,
+                const block_id_t bindex, uint8_t btype) {
   sqlite3_stmt *bb_stmt;
   const char *bb_stmt_insert =
       "INSERT OR IGNORE INTO basic_block(id, function_id, block_attributes)"
@@ -393,6 +400,7 @@ sqlite3 *db_init(const std::string &db_path) {
                &errorMessage);
   createDBTables(output_db);
   storeVersion(output_db);
+  prepSQLInserts(output_db);
   return output_db;
   // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
