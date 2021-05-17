@@ -23,8 +23,6 @@ thread_local event_id_t thread_event_id = 0;
 thread_local event_id_t last_bb_event_id = 0;
 std::atomic<event_id_t> event_id = 0;
 std::atomic<size_t> last_thread_id{0};
-static bool is_init = false;
-std::mutex is_init_mutex;
 
 static void assignThreadID() {
   if (UNLIKELY(thread_id == -1)) {
@@ -54,6 +52,7 @@ void logFunctionEntry(const char *fname, const function_id_t func_id) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
+  /*
   if (UNLIKELY(!is_init)) {
     if (strcmp(fname, "main") != 0) {
       return;
@@ -61,8 +60,10 @@ void logFunctionEntry(const char *fname, const function_id_t func_id) {
     is_init = true;
     polytracker_start();
   }
+  */
   // std::cerr << "logFunctionEntry(" << fname << ", " << func_id << ")\n";
   // TODO (Carson) for Evan, its just a check quick to assign a thread_id.
+  // TODO (Carson), can we remove this check?
   assignThreadID();
   // This just stores a mapping, should be true for all runs.
   storeFunc(output_db, fname, func_id);
@@ -85,10 +86,13 @@ std::string funcName(const function_id_t index) {
 }
 
 void logFunctionExit(const function_id_t index) {
+  /*
   if (UNLIKELY(!is_init)) {
     return;
-  } else if (UNLIKELY(function_stack.empty() ||
-                      function_stack.top().func_id != curr_func_index)) {
+  }
+  */
+  if (UNLIKELY(function_stack.empty() ||
+               function_stack.top().func_id != curr_func_index)) {
     std::cerr
         << "Warning: Could not resolve the function entry associated with "
            "the return from function "

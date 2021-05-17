@@ -37,11 +37,9 @@ decay_val taint_node_ttl = 0;
 // If this is empty, taint everything.
 std::unordered_set<std::string> target_sources;
 char *forest_mem;
-std::atomic_bool done = ATOMIC_VAR_INIT(false);
 
 // DB for storing things
 sqlite3 *output_db;
-
 // Input id is unique document key
 input_id_t input_id;
 
@@ -248,6 +246,7 @@ void polytracker_get_settings() {
 }
 
 void polytracker_end() {
+  /*
   if (done) {
     return;
   }
@@ -256,6 +255,7 @@ void polytracker_end() {
   if (!polytracker_forest_name.empty()) {
     storeTaintForestDisk(polytracker_forest_name, last_label);
   }
+  */
   db_fini(output_db);
 }
 
@@ -310,3 +310,6 @@ void polytracker_start() {
   init_node->p2 = 0;
   init_node->decay = taint_node_ttl;
 }
+
+__attribute__((section(".init_array"),
+               used)) static void (*poly_init_ptr)() = polytracker_start;
