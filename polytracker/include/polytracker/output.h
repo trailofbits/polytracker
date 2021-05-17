@@ -33,7 +33,7 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
                       const ByteAccessType &access_type);
 
 void storeFunc(sqlite3 *output_db, const char *fname,
-               const function_id_t &func_id);
+               const function_id_t func_id);
 std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId);
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &callee,
@@ -55,11 +55,11 @@ void storeBlockEntry(sqlite3 *output_db, const input_id_t input_id,
                      const event_id_t func_event_id,
                      const block_entry_count_t entry_count);
 
-void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
-                       const dfsan_label &label, const uint64_t &file_offset);
+void storeCanonicalMap(sqlite3 *output_db, const input_id_t input_id,
+                       const dfsan_label label, const uint64_t file_offset);
 
-void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
-                       const uint64_t &start, const uint64_t &end);
+void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
+                       const uint64_t start, const uint64_t end);
 
 void storeTaintForestDisk(const std::string &outfile,
                           const dfsan_label &last_label);

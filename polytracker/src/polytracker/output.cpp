@@ -163,6 +163,28 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   // sqlite3_reset(stmt);
 }
 
+std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId) {
+  const char *fetchQuery = "SELECT name FROM func WHERE id = ?;";
+  sqlite3_stmt *stmt;
+  auto rc = sqlite3_prepare_v2(outputDb, fetchQuery, -1, &stmt, 0);
+  if (rc == SQLITE_OK) {
+    sqlite3_bind_int64(stmt, 1, funcId);
+  } else {
+    fprintf(stderr, "Failed to execute statement: %s\n",
+            sqlite3_errmsg(outputDb));
+    return "";
+  }
+  int step = sqlite3_step(stmt);
+  if (step == SQLITE_ROW) {
+    auto fName = std::string(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    sqlite3_finalize(stmt);
+    return fName;
+  }
+  sqlite3_finalize(stmt);
+  return "";
+}
+
 input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
                          const uint64_t &start, const uint64_t &end,
                          const int &trace_level) {
@@ -205,8 +227,9 @@ input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
   return get_input_id(output_db);
 }
 
-void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
-                       const dfsan_label &label, const uint64_t &file_offset) {
+void storeCanonicalMap(sqlite3 *output_db, const input_id_t input_id,
+                       const dfsan_label label, const uint64_t file_offset) {
+  std::cout << input_id << " " << label << " " << file_offset << std::endl;
   sqlite3_bind_int64(canonical_stmt, 1, input_id);
   sqlite3_bind_int64(canonical_stmt, 2, label);
   sqlite3_bind_int64(canonical_stmt, 3, file_offset);
@@ -214,8 +237,8 @@ void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
   // sqlite3_finalize(canonical_stmt);
 }
 
-void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
-                       const uint64_t &start, const uint64_t &end) {
+void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
+                       const uint64_t start, const uint64_t end) {
   sqlite3_bind_int64(chunk_stmt, 1, input_id);
   sqlite3_bind_int64(chunk_stmt, 2, start);
   sqlite3_bind_int64(chunk_stmt, 3, end);
@@ -224,7 +247,7 @@ void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
 }
 
 void storeFunc(sqlite3 *output_db, const char *fname,
-               const function_id_t &func_id) {
+               const function_id_t func_id) {
   sqlite3_bind_int(insert_func_stmt, 1, func_id);
   sqlite3_bind_text(insert_func_stmt, 2, fname, strlen(fname), SQLITE_STATIC);
   sql_step(output_db, insert_func_stmt);
