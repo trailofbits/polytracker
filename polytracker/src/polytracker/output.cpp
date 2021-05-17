@@ -53,7 +53,7 @@ const char *event_insert =
     "input_id, thread_id, block_gid, func_event_id)"
     "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-sqlite3_new_input_stmt *new_input_stmt;
+sqlite3_stmt *new_input_stmt;
 const char *insert_new_input = "INSERT INTO input(path, content, track_start, "
                                "track_end, size, trace_level)"
                                "VALUES(?, ?, ?, ?, ?, ?);";
@@ -61,7 +61,7 @@ const char *insert_forest_node =
     "INSERT INTO taint_forest (parent_one, parent_two, "
     "label, input_id) VALUES (?, ?, ?, ?);";
 
-sqlite3_cfg_stmt *cfg_stmt;
+sqlite3_stmt *cfg_stmt;
 const char *cfg_insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
                          "event_id, thread_id, input_id, edge_type)"
                          "VALUES (?, ?, ?, ?, ?, ?);";
@@ -82,7 +82,7 @@ sqlite3_stmt *insert_node_stmt;
 sqlite3_stmt *event_stmt;
 sqlite3_stmt *block_event_stmt;
 
-sqlite3_chunk_stmt *chunk_stmt;
+sqlite3_stmt *chunk_stmt;
 const char *insert_chunk = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
                            "start_offset, end_offset) VALUES (?, ?, ?);";
 
