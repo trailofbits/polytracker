@@ -1,6 +1,7 @@
 #include "polytracker/polytracker_pass.h"
 #include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
+// #include "polytracker/thread_pool.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -139,6 +140,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::LLVMContext &context = func->getContext();
   llvm::Instruction *insert_point =
       &(*(func->getEntryBlock().getFirstInsertionPt()));
+
   llvm::IRBuilder<> IRB(insert_point);
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(func->getName());
   // Add a callback for BB entry
@@ -168,7 +170,28 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   if (curr_bb == entry_block) {
     // this is the entrypoint basic block in a function, so make sure the
     // BB instrumentation happens after the function call instrumentation
-    InsertBefore = entry_block->getFirstInsertionPt()->getNextNode();
+    InsertBefore = entry_block->getFirstNonPHI();
+    // Scan for log func, should hit it.
+    while (InsertBefore) {
+      if (llvm::isa<llvm::CallInst>(InsertBefore)) {
+        auto call_inst = llvm::dyn_cast<llvm::CallInst>(InsertBefore);
+        if (call_inst->getCalledFunction()->hasName()) {
+          std::string name = call_inst->getCalledFunction()->getName().str();
+          // If a call instruction is the first inst in the block.
+          // if its name has polytracker in it.
+          // Iterate to next insertion point.
+          if (name.find("polytracker_log_func") != std::string::npos) {
+            InsertBefore = InsertBefore->getNextNode();
+            break;
+          }
+        }
+      }
+      InsertBefore = InsertBefore->getNextNode();
+    }
+    if (InsertBefore == nullptr) {
+      std::cout << "ERROR No log func found!" << std::endl;
+      InsertBefore = Inst;
+    }
   } else {
     InsertBefore = Inst;
   }
@@ -178,6 +201,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
     // so we need to add the callback afterward
     InsertBefore = InsertBefore->getNextNode();
   }
+
   // FIXME figure out how to reuse the IRB
   llvm::IRBuilder<> new_IRB(InsertBefore);
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
@@ -216,6 +240,14 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
       llvm::ConstantInt::get(shadow_type, func_index, false);
 
   bb_index_t bb_index = 0;
+
+  std::string fname = f->getName().str();
+  std::cout << "ANALYZING " << fname << std::endl;
+  if (fname == "main") {
+    std::cout << "INSTRUMENTING MAIN" << std::endl;
+    llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+    // IRB.SetInsertPoint(call->getNextNode());
+  }
 
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
@@ -273,6 +305,11 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   llvm::LLVMContext &context = mod.getContext();
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
 
+  auto polytracker_start_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
+  polytracker_start =
+      mod.getOrInsertFunction("__polytracker_start", polytracker_start_fn_ty);
+
   // Return type, arg types, is vararg
   auto taint_log_fn_ty = llvm::FunctionType::get(
       llvm::Type::getVoidTy(context),
@@ -324,9 +361,11 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
       continue;
     }
 
-    if (line.find("discard") && line.find("main") == std::string::npos) {
+    if (line.find("discard") != std::string::npos &&
+        line.find("main") == std::string::npos) {
       int start_pos = line.find(':');
       int end_pos = line.find("=");
+      std::cout << "SHOULD BE IGNORING " << line << std::endl;
       // :test=und
       std::string func_name =
           line.substr(start_pos + 1, end_pos - (start_pos + 1));
@@ -343,6 +382,25 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     }
   }
   initializeTypes(mod);
+  /*
+bool (polytracker::PolytrackerPass::*)(llvm::Function *f, const
+polytracker::func_index_t &func_index)
+  */
+  // TODO (Carson) need better generics here, use std::function
+  /*
+  ThreadPool<bool (polytracker::PolytrackerPass::*)(llvm::Function *f, const
+  polytracker::func_index_t &func_index), llvm::Function*, const func_index_t&>
+  thread_pool(10);
+*/
+  /*
+    auto &globals = mod.getGlobalList();
+    for (auto &global : globals) {
+      if (global.hasName()) {
+        std::string g_name = global.getName().str();
+        std::cout << g_name << std::endl;
+      }
+    }
+  */
   bool ret = false;
   func_index_t function_index = 0;
   if (file_id) {
@@ -423,9 +481,12 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       continue;
     }
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
+    // thread_pool.add_job(&polytracker::PolytrackerPass::analyzeFunction, func,
+    // func_index_map[func->getName().str()]);
   }
   std::cerr << std::endl;
-  return ret;
+  // thread_pool.wait();
+  return true;
 }
 
 char PolytrackerPass::ID = 0;
