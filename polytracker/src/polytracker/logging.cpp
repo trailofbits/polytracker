@@ -24,7 +24,7 @@ thread_local event_id_t last_bb_event_id = 0;
 std::atomic<event_id_t> event_id = 0;
 std::atomic<size_t> last_thread_id{0};
 
-static void assignThreadID() {
+static void inline assignThreadID() {
   if (UNLIKELY(thread_id == -1)) {
     thread_id = last_thread_id.fetch_add(1) + 1;
   }
@@ -123,11 +123,15 @@ void logFunctionExit(const function_id_t index) {
 void logBBEntry(const char *fname, const function_id_t findex,
                 const block_id_t bindex, const uint8_t btype) {
   assignThreadID();
-  // NOTE (Carson) we could memoize this to prevent repeated calls for loop
+  // NOTE (Carson) we could cache this to prevent repeated calls for loop
   // blocks
   storeBlock(output_db, findex, bindex, btype);
   last_bb_event_id = event_id++;
+  // TODO Carson, make this just a large array of size blocks.
   auto entryCount = function_stack.top().bb_entry_count[bindex]++;
+
+  // Carson, if you can make sure that function_event always before block_event
+  // Then remove the ternary and take the else branch
   storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
                   thread_event_id++, findex, bindex,
                   function_stack.empty() ? last_bb_event_id
