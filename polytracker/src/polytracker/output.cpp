@@ -102,8 +102,8 @@ void sql_exec(sqlite3 *output_db, const char *cmd) {
   }
 }
 
-static void sql_prep(sqlite3 *db, const char *sql, int max_len,
-                     sqlite3_stmt **stmt, const char **tail) {
+static void inline sql_prep(sqlite3 *db, const char *sql, int max_len,
+                            sqlite3_stmt **stmt, const char **tail) {
   int err = sqlite3_prepare_v2(db, sql, max_len, stmt, tail);
   if (err != SQLITE_OK) {
     fprintf(stderr, "SQL prep error: %s\n", sqlite3_errmsg(db));
@@ -111,7 +111,7 @@ static void sql_prep(sqlite3 *db, const char *sql, int max_len,
   }
 }
 
-static void sql_step(sqlite3 *db, sqlite3_stmt *stmt) {
+static void inline sql_step(sqlite3 *db, sqlite3_stmt *stmt) {
   int err = sqlite3_step(stmt);
   if (err != SQLITE_DONE) {
     printf("execution failed: %s\n", sqlite3_errmsg(db));
@@ -229,7 +229,7 @@ input_id_t storeNewInput(sqlite3 *output_db, const std::string &filename,
 
 void storeCanonicalMap(sqlite3 *output_db, const input_id_t input_id,
                        const dfsan_label label, const uint64_t file_offset) {
-  std::cout << input_id << " " << label << " " << file_offset << std::endl;
+  // std::cout << input_id << " " << label << " " << file_offset << std::endl;
   sqlite3_bind_int64(canonical_stmt, 1, input_id);
   sqlite3_bind_int64(canonical_stmt, 2, label);
   sqlite3_bind_int64(canonical_stmt, 3, file_offset);
@@ -254,11 +254,11 @@ void storeFunc(sqlite3 *output_db, const char *fname,
   // sqlite3_finalize(stmt);
 }
 
-void storeEvent(sqlite3 *output_db, const input_id_t input_id,
-                const int thread_id, const event_id_t event_id,
-                const event_id_t thread_event_id, EventType event_type,
+void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
+                const int &thread_id, const event_id_t &event_id,
+                const event_id_t &thread_event_id, EventType event_type,
                 const function_id_t findex, const block_id_t bindex,
-                const event_id_t func_event_id) {
+                const event_id_t &func_event_id) {
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sqlite3_bind_int64(event_stmt, 1, event_id);
   sqlite3_bind_int64(event_stmt, 2, thread_event_id);
@@ -283,12 +283,12 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, bb_stmt_insert, -1, &bb_stmt, NULL);
 }
 
-void storeBlockEntry(sqlite3 *output_db, const input_id_t input_id,
-                     const int thread_id, const event_id_t event_id,
-                     const event_id_t thread_event_id,
+void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
+                     const int &thread_id, const event_id_t &event_id,
+                     const event_id_t &thread_event_id,
                      const function_id_t findex, const block_id_t bindex,
-                     const event_id_t func_event_id,
-                     const block_entry_count_t entry_count) {
+                     const event_id_t &func_event_id,
+                     const block_entry_count_t &entry_count) {
   storeEvent(output_db, input_id, thread_id, event_id, thread_event_id,
              EventType::BLOCK_ENTER, findex, bindex, func_event_id);
   sqlite3_bind_int64(block_event_stmt, 1, event_id);
