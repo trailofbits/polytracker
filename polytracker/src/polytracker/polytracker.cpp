@@ -104,6 +104,10 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
   // }
 }
 
+extern "C" void __polytracker_start() { polytracker_start(); }
+
+// wtf is going on?
+extern "C" void dfs$__polytracker_start() { __polytracker_start(); }
 /*
 extern "C" dfsan_label __polytracker_union(dfsan_label l1, dfsan_label l2,
                                            dfsan_label curr_max) {

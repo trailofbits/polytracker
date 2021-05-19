@@ -48,7 +48,6 @@ Parse files deliminated by ; and add them to unordered set.
 */
 void parse_target_files(const std::string polypath) {
   std::string curr_str = "";
-  std::cout << polypath << std::endl;
   for (auto j : polypath) {
     if (j == ':') {
       if (curr_str.length()) {
@@ -311,5 +310,7 @@ void polytracker_start() {
   init_node->decay = taint_node_ttl;
 }
 
+/*
 __attribute__((section(".init_array"),
                used)) static void (*poly_init_ptr)() = polytracker_start;
+*/
