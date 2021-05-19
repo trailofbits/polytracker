@@ -28,6 +28,7 @@ struct PolytrackerPass : public llvm::ModulePass {
   void readIgnoreFile(const std::string &ignore_file);
   llvm::Module *mod;
   llvm::FunctionCallee func_entry_log;
+  llvm::FunctionCallee polytracker_start;
   llvm::FunctionType *func_entry_type;
   llvm::FunctionCallee func_exit_log;
   llvm::FunctionCallee bb_entry_log;
