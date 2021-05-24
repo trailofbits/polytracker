@@ -133,7 +133,7 @@ def program_trace(request):
             raise ValueError(f"Invalid input argument: {input_val!r}")
     else:
         input_bytes = None
-    return_exceptions = marker.kwargs["return_exceptions"]
+    return_exceptions = "return_exceptions" in marker.kwargs and marker.kwargs["return_exceptions"]
 
     assert polyclang_compile_target(target_name) == 0
 
