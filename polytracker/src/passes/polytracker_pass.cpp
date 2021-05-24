@@ -120,7 +120,8 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Value *BlockIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), bindex, false);
 
-  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex});
+  CallInst *ExitCall =
+      IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -251,7 +252,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
-  IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
+  llvm::Value *stack_loc =
+      IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
 
   // Build the dominator tree for this function once blocks are split.
   // Used by the BBSplitting/entry analysis code
@@ -293,6 +295,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   visitor.block_global_map = block_global_map;
   visitor.ignore_funcs = ignore_funcs;
   visitor.shadow_type = shadow_type;
+  visitor.stack_loc = stack_loc;
   for (auto &inst : insts) {
     visitor.visit(inst);
   }
@@ -321,14 +324,15 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
 
   // Should pass in func_name and uint32_t function index.
   func_entry_type = llvm::FunctionType::get(
-      llvm::Type::getVoidTy(context),
+      llvm::Type::getInt32Ty(context),
       {llvm::Type::getInt8PtrTy(context), shadow_type, shadow_type}, false);
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
   // Should pass in the function index
-  auto exit_fn_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                            {shadow_type, shadow_type}, false);
+  auto exit_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context),
+                              {shadow_type, shadow_type, shadow_type}, false);
   func_exit_log =
       mod.getOrInsertFunction("__polytracker_log_func_exit", exit_fn_ty);
 

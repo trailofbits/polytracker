@@ -48,7 +48,7 @@ void logOperation(const dfsan_label label, const function_id_t findex,
   storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
 }
 
-void logFunctionEntry(const char *fname, const function_id_t func_id) {
+int logFunctionEntry(const char *fname, const function_id_t func_id) {
   // The pre init/init array hasn't played friendly with our use of C++
   // For example, the bucket count for unordered_map is 0 when accessing one
   // during the init phase
@@ -75,6 +75,7 @@ void logFunctionEntry(const char *fname, const function_id_t func_id) {
              EventType::FUNC_ENTER, func_id, 0, this_event_id);
   function_stack.push({this_event_id, func_id, {}});
   curr_func_index = func_id;
+  return function_stack.size();
 }
 
 std::string funcName(const function_id_t index) {
@@ -85,38 +86,55 @@ std::string funcName(const function_id_t index) {
   return funcName + std::string("index ") + std::to_string(index);
 }
 
-void logFunctionExit(const function_id_t index) {
+void logFunctionExit(const function_id_t index, const int stack_loc) {
   /*
   if (UNLIKELY(!is_init)) {
     return;
   }
   */
-  if (UNLIKELY(function_stack.empty() ||
-               function_stack.top().func_id != curr_func_index)) {
-    std::cerr
-        << "Warning: Could not resolve the function entry associated with "
-           "the return from function "
-        << funcName(curr_func_index) << " to " << funcName(index);
-    if (!function_stack.empty()) {
-      std::cerr << " (expected to be returning from function "
-                << funcName(function_stack.top().func_id) << ")";
-    }
-    std::cerr << ". This is likely due to either an instrumentation error "
-              << "or non-standard control-flow in the instrumented program.\n";
-  } else {
-    const auto current_function_event = function_stack.top().func_event_id;
-    const auto this_event_id = event_id++;
-    // std::cerr << "logFunctionExit(" << index << ") event_id = " <<
-    // this_event_id <<
-    //              ", curr_func_index = " << curr_func_index <<
-    //              ", current_function_event = " << current_function_event <<
-    //              "\n";
-    storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
-                     this_event_id, EdgeType::BACKWARD);
-    function_stack.pop();
+  auto current_function_event = function_stack.top().func_event_id;
+  auto this_event_id = event_id++;
+  storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
+                   this_event_id, EdgeType::BACKWARD);
+  // TODO (Carson) move to logCallExit after
+  // Pop off stack while the stack_loc < current stack size. Means we hopped
+  // around.
+  while (stack_loc < function_stack.size()) {
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, curr_func_index, 0, current_function_event);
+    function_stack.pop();
+    current_function_event = function_stack.top().func_event_id;
+    this_event_id = event_id++;
   }
+
+  /*
+    if (UNLIKELY(function_stack.empty() ||
+                 function_stack.top().func_id != curr_func_index)) {
+      std::cerr
+          << "Warning: Could not resolve the function entry associated with "
+             "the return from function "
+          << funcName(curr_func_index) << " to " << funcName(index);
+      if (!function_stack.empty()) {
+        std::cerr << " (expected to be returning from function "
+                  << funcName(function_stack.top().func_id) << ")";
+      }
+      std::cerr << ". This is likely due to either an instrumentation error "
+                << "or non-standard control-flow in the instrumented
+    program.\n"; } else { const auto current_function_event =
+    function_stack.top().func_event_id; const auto this_event_id = event_id++;
+      // std::cerr << "logFunctionExit(" << index << ") event_id = " <<
+      // this_event_id <<
+      //              ", curr_func_index = " << curr_func_index <<
+      //              ", current_function_event = " << current_function_event <<
+      //              "\n";
+      storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
+                       this_event_id, EdgeType::BACKWARD);
+      function_stack.pop();
+      storeEvent(output_db, input_id, thread_id, this_event_id,
+    thread_event_id++, EventType::FUNC_RET, curr_func_index, 0,
+    current_function_event);
+    }
+    */
   curr_func_index = index;
 }
 

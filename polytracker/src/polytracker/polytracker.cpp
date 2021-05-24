@@ -8,6 +8,8 @@
 
 extern bool polytracker_trace_func;
 extern bool polytracker_trace;
+extern thread_local FunctionStack function_stack;
+
 // extern std::atomic_bool done;
 
 extern "C" void __polytracker_log_taint_op(dfsan_label arg1, dfsan_label arg2,
@@ -53,18 +55,19 @@ extern "C" void __dfsw___polytracker_log_taint_cmp(
   __polytracker_log_taint_cmp(arg1_label, arg2_label, findex, bindex);
 }
 
-extern "C" void __polytracker_log_func_entry(char *fname, uint32_t index,
-                                             uint32_t block_index) {
+extern "C" int __polytracker_log_func_entry(char *fname, uint32_t index,
+                                            uint32_t block_index) {
   // if (LIKELY(!done)) {
-  logFunctionEntry(fname, index);
+  return logFunctionEntry(fname, index);
   // }
 }
 
 // TODO (Carson) we can use this block index if we need to.
 extern "C" void __polytracker_log_func_exit(uint32_t func_index,
-                                            uint32_t block_index) {
+                                            uint32_t block_index,
+                                            const int stack_loc) {
   // if (LIKELY(!done)) {
-  logFunctionExit(func_index);
+  logFunctionExit(func_index, stack_loc);
   // }
 }
 
@@ -103,6 +106,8 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
   logUnion(l1, l2, union_label, 100);
   // }
 }
+
+extern "C" int __polytracker_size() { return function_stack.size(); }
 
 extern "C" void __polytracker_start() { polytracker_start(); }
 
