@@ -1,5 +1,6 @@
 import pytest
 from shutil import copyfile
+from subprocess import CalledProcessError
 from tempfile import NamedTemporaryFile
 
 from polytracker import PolyTrackerTrace, ProgramTrace
@@ -56,8 +57,9 @@ def polyclang_compile_target(target_name: str) -> int:
 
 # Returns the Polyprocess object
 def validate_execute_target(
-    target_name: str, config_path: Optional[Union[str, Path]], input_bytes: Optional[bytes] = None
-) -> ProgramTrace:
+    target_name: str, config_path: Optional[Union[str, Path]], input_bytes: Optional[bytes] = None,
+    return_exceptions: bool = False
+) -> Union[ProgramTrace, CalledProcessError]:
     target_bin_path = BUILD_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
@@ -92,7 +94,12 @@ def validate_execute_target(
             path = Path(tmp_input_file.name)
             if path.exists():
                 path.unlink()
-    assert ret_val == 0
+    if ret_val != 0:
+        error = CalledProcessError(ret_val, f"`{target_bin_path} {' '.join(input_path)}`")
+        if return_exceptions:
+            return error
+        else:
+            raise error
     # Assert that the appropriate files were created
     return PolyTrackerTrace.load(db_path)
 
@@ -126,7 +133,9 @@ def program_trace(request):
             raise ValueError(f"Invalid input argument: {input_val!r}")
     else:
         input_bytes = None
+    return_exceptions = marker.kwargs["return_exceptions"]
 
     assert polyclang_compile_target(target_name) == 0
 
-    return validate_execute_target(target_name, config_path=config_path, input_bytes=input_bytes)
+    return validate_execute_target(target_name, config_path=config_path, input_bytes=input_bytes,
+                                   return_exceptions=return_exceptions)

@@ -1,6 +1,7 @@
 from collections import defaultdict
 import os
 import pytest
+from subprocess import CalledProcessError
 from typing import Dict
 
 from tqdm import tqdm
@@ -212,3 +213,9 @@ def test_taint_forest(program_trace: ProgramTrace):
             assert taint_node.parent_two is not None
             had_taint_union = True
     assert had_taint_union
+
+
+@pytest.mark.program_trace("test_retcode.c", return_exceptions=True)
+def test_retcode(program_trace: Union[ProgramTrace, Exception]):
+    # test_retcode.c should cause a CalledProcessError to be returned since it has a non-zero exit code
+    assert isinstance(program_trace, CalledProcessError)
