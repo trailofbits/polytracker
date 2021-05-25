@@ -64,6 +64,7 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee func_exit_log;
   llvm::IntegerType *shadow_type;
+  llvm::Value *stack_loc;
 };
 
 }; // namespace polytracker
