@@ -118,6 +118,18 @@ static constexpr const char *createBlockEntryTable() {
          ") WITHOUT ROWID;";
 }
 
+static constexpr const char *createFuncEntryTable() {
+  return "CREATE TABLE IF NOT EXISTS func_entries ("
+         "event_id BIGINT,"       /* the event_id associated with the function
+                                     entry */
+         "touched_taint TINYINT," /* whether or not the any taint was accessed
+                                     in this function invocation,
+                                     including any other functions called from
+                                     this function */
+         "PRIMARY KEY(event_id)"
+         ") WITHOUT ROWID;";
+}
+
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
       std::string(createInputTable()) + std::string(createFuncTable()) +
@@ -128,6 +140,7 @@ void createDBTables(sqlite3 *output_db) {
       std::string(createPolytrackerTable()) +
       std::string(createCanonicalTable()) + std::string(createChunksTable()) +
       std::string(createCFGTable()) + std::string(createTaintForestTable()) +
-      std::string(createEventsTable()) + std::string(createBlockEntryTable());
+      std::string(createEventsTable()) + std::string(createBlockEntryTable()) +
+      std::string(createFuncEntryTable());
   sql_exec(output_db, table_gen.c_str());
 }

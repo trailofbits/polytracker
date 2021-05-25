@@ -487,6 +487,14 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
             return None
 
 
+class FunctionEntries(Base):  # type: ignore
+    __tablename__ = "func_entries"
+    event_id: int = Column(BigInteger,  ForeignKey("events.event_id"), primary_key=True)
+    touched_taint: int = Column(BigInteger)
+
+    entry: "DBFunctionEntry" = relationship("DBFunctionEntry", uselist=False)
+
+
 class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}  # type: ignore
 
@@ -530,15 +538,10 @@ class DBFunctionInvocation(FunctionInvocation):
 
     @property
     def touched_taint(self) -> bool:
-        query = self.trace.session.query(DBTaintAccess).join(DBTraceEvent).filter(
-            DBTraceEvent.thread_id == self.function_entry.thread_id,
-            DBTraceEvent.thread_event_id >= self.function_entry.thread_event_id
-        )
-        ret = self.function_return
-        if ret is not None:
-            query = query.filter(DBTraceEvent.thread_event_id < ret.thread_event_id)
         try:
-            return query.limit(1).count() > 0
+            return bool(self.trace.session.query(FunctionEntries).filter(
+                FunctionEntries.event_id == self.function_entry.event_id
+            ).one().touched_taint)
         except NoResultFound:
             return False
 
@@ -653,6 +656,9 @@ class DBProgramTrace(ProgramTrace):
 
     def num_function_calls(self) -> int:
         return self.session.query(DBFunctionEntry).count()
+
+    def num_function_calls_that_touched_taint(self) -> int:
+        return self.session.query(FunctionEntries).filter(FunctionEntries.touched_taint > 0).count()
 
     def num_basic_block_entries(self) -> int:
         return self.session.query(DBBasicBlockEntry).count()

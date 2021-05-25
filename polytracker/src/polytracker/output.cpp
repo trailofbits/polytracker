@@ -25,6 +25,7 @@ extern bool polytracker_trace;
 extern bool polytracker_save_input_file;
 
 extern thread_local event_id_t last_bb_event_id;
+extern thread_local FunctionStack function_stack;
 
 // Could there be a race condition here?
 // TODO Check if input_table/taint_forest tables already filled
@@ -62,9 +63,13 @@ const char *insert_forest_node =
     "label, input_id) VALUES (?, ?, ?, ?);";
 
 sqlite3_stmt *cfg_stmt;
-const char *cfg_insert = "INSERT OR IGNORE INTO func_cfg (dest, src, "
-                         "event_id, thread_id, input_id, edge_type)"
-                         "VALUES (?, ?, ?, ?, ?, ?);";
+const char *cfg_insert =
+    "INSERT OR IGNORE INTO func_cfg (dest, src, "
+    "event_id, thread_id, input_id, edge_type)"
+    "VALUES (?, ?, ?, ?, ?, ?); "
+    /* default the function entry to not having touched taint */
+    "INSERT INTO func_entries (event_id, touched_taint) VALUES (?, 0);";
+
 sqlite3_stmt *taint_access_stmt;
 const char *insert_taint_access =
     "INSERT INTO accessed_label(event_id, label, access_type, input_id)"
@@ -85,6 +90,11 @@ sqlite3_stmt *block_event_stmt;
 sqlite3_stmt *chunk_stmt;
 const char *insert_chunk = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
                            "start_offset, end_offset) VALUES (?, ?, ?);";
+
+sqlite3_stmt *func_entry_stmt;
+const char *func_entry_insert =
+    "INSERT OR REPLACE INTO func_entries (event_id, "
+    "touched_taint) VALUES(?, 1);";
 
 // Callback function for sql_exces
 static int sql_callback(void *debug, int count, char **data, char **columns) {
@@ -149,6 +159,7 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &dest,
                       const function_id_t &src, const event_id_t &event_id,
                       EdgeType edgetype) {
+  // FIXME (Evan): The function CFG shouldn't be linked to events
   sqlite3_bind_int(cfg_stmt, 1, dest);
   sqlite3_bind_int(cfg_stmt, 2, src);
   // Bind the dest, because the function entry is essentially the edge between
@@ -158,8 +169,9 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int(cfg_stmt, 4, curr_thread_id);
   sqlite3_bind_int64(cfg_stmt, 5, input_id);
   sqlite3_bind_int(cfg_stmt, 6, static_cast<int>(edgetype));
+  sqlite3_bind_int64(cfg_stmt, 7, event_id);
   sql_step(output_db, cfg_stmt);
-  // sqlite3_finalize(cfg_stmt);
+  // sqlite3_finalize(stmt);
   // sqlite3_reset(stmt);
 }
 
@@ -281,6 +293,7 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, insert_taint_access, -1, &taint_access_stmt, NULL);
   sql_prep(output_db, insert_func, -1, &insert_func_stmt, NULL);
   sql_prep(output_db, bb_stmt_insert, -1, &bb_stmt, NULL);
+  sql_prep(output_db, func_entry_insert, -1, &func_entry_stmt, NULL);
 }
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
@@ -305,6 +318,20 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
   sqlite3_bind_int64(taint_access_stmt, 4, input_id);
   sql_step(output_db, taint_access_stmt);
   // sqlite3_finalize(stmt);
+  for (auto it = function_stack.rbegin();
+       it != function_stack.rend() && !it->touched_taint; it++) {
+    /* iterate over the function stack in reverse, stopping when we reach the
+     * first function that already touched taint. this is because once a
+     * function touches taint, all of the functions below it on the stack also
+     * touch taint
+     */
+    it->touched_taint = true;
+    // const char *update = "INSERT OR REPLACE INTO func_entries (event_id, "
+    //                     "touched_taint) VALUES(?, 1);";
+    sqlite3_bind_int64(func_entry_stmt, 1, it->func_event_id);
+    sql_step(output_db, func_entry_stmt);
+    // sqlite3_finalize(stmt);
+  }
 }
 
 void storeBlock(sqlite3 *output_db, const function_id_t findex,
