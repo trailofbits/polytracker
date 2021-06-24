@@ -107,23 +107,26 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
   // }
 }
 
-extern "C" int __polytracker_size() { return function_stack.size(); }
+extern "C" int __polytracker_size() {
+  printf("Using internal size func!\n");
+  return function_stack.size();
+}
 
 extern "C" void __polytracker_start() { polytracker_start(); }
 
-// wtf is going on?
-extern "C" void dfs$__polytracker_start() { __polytracker_start(); }
-/*
-extern "C" dfsan_label __polytracker_union(dfsan_label l1, dfsan_label l2,
-                                           dfsan_label curr_max) {
-  if (LIKELY(!done)) {
-    dfsan_label ret = createUnionLabel(l1, l2);
-    //__dfsan_update_label_count(ret);
-    return ret;
-  }
-  return 0;
+// These two dfs$ functions exist for testing
+// If polytracker-llvm needs an update but it's too time consuming to
+// rebuild/wait Then adding dfs$ prefixes is helpful. When polytracker-llvm is
+// updated with a proper ignore list, it should just call __polytracker_start()
+// by default (and not instrument it with dfs$ prefix)
+extern "C" void dfs$__polytracker_start() {
+  fprintf(stderr, "WARNING Using instrumented internal start func");
+  __polytracker_start();
 }
-*/
+extern "C" int dfs$__polytracker_size() {
+  fprintf(stderr, "WARNING Using instrumented internal size func");
+  return __polytracker_size();
+}
 
 extern "C" void __polytracker_print_label(dfsan_label l1) {
   printf("label from inst is: %" PRIu32 "\n", l1);
@@ -134,9 +137,3 @@ extern "C" void __polytracker_dump(const dfsan_label last_label) {}
 extern "C" int __polytracker_has_label(dfsan_label label, dfsan_label elem) {
   return false;
 }
-
-// This will always get replaced by instrumentation
-// It exists here for instrumentation for tests
-// Rather than rework our build system, we can have this stub which gets
-// transformed anyway extern "C" dfsan_label dfsan_get_label(long data) { return
-// 1337; }
