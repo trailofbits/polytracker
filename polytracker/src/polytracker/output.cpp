@@ -128,6 +128,8 @@ static void inline sql_step(sqlite3 *db, sqlite3_stmt *stmt) {
     sqlite3_finalize(stmt);
     abort();
   }
+  sqlite3_reset(stmt);
+  sqlite3_clear_bindings(stmt);
 }
 
 static int sql_fetch_input_id_callback(void *res, int argc, char **data,
@@ -171,8 +173,6 @@ void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int(cfg_stmt, 6, static_cast<int>(edgetype));
   sqlite3_bind_int64(cfg_stmt, 7, event_id);
   sql_step(output_db, cfg_stmt);
-  // sqlite3_finalize(stmt);
-  // sqlite3_reset(stmt);
 }
 
 std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId) {
@@ -263,7 +263,6 @@ void storeFunc(sqlite3 *output_db, const char *fname,
   sqlite3_bind_int(insert_func_stmt, 1, func_id);
   sqlite3_bind_text(insert_func_stmt, 2, fname, strlen(fname), SQLITE_STATIC);
   sql_step(output_db, insert_func_stmt);
-  // sqlite3_finalize(stmt);
 }
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
@@ -271,6 +270,7 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const event_id_t &thread_event_id, EventType event_type,
                 const function_id_t findex, const block_id_t bindex,
                 const event_id_t &func_event_id) {
+
   uint64_t gid = (static_cast<uint64_t>(findex) << 32) | bindex;
   sqlite3_bind_int64(event_stmt, 1, event_id);
   sqlite3_bind_int64(event_stmt, 2, thread_event_id);
@@ -283,6 +283,7 @@ void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
 }
 
 void prepSQLInserts(sqlite3 *output_db) {
+  sql_prep(output_db, insert_func, -1, &insert_func_stmt, NULL);
   sql_prep(output_db, event_insert, -1, &event_stmt, NULL);
   sql_prep(output_db, insert_new_input, -1, &new_input_stmt, NULL);
   sql_prep(output_db, cfg_insert, -1, &cfg_stmt, NULL);
@@ -395,7 +396,8 @@ sqlite3 *db_init(const std::string &db_path) {
     exit(1);
   }
   char *errorMessage;
-  sqlite3_exec(output_db, "PRAGMA synchronous=OFF", NULL, NULL, &errorMessage);
+  // TODO (Not sure what this means)
+  sqlite3_exec(output_db, "PRAGMA synchronous=ON", NULL, NULL, &errorMessage);
   sqlite3_exec(output_db, "PRAGMA count_changes=OFF", NULL, NULL,
                &errorMessage);
   sqlite3_exec(output_db, "PRAGMA journal_mode=OFF", NULL, NULL, &errorMessage);
