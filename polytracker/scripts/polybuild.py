@@ -63,7 +63,8 @@ if not COMPILER_DIR.is_dir():
 
 POLY_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libPolytrackerPass.so")
 POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
-ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt")
+DFSAN_ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
+POLY_ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt")
 ABI_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists")
 
 is_cxx: bool = "++" in sys.argv[0]
@@ -138,7 +139,7 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={ABI_LIST_PATH!s}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
@@ -147,7 +148,7 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     print(opt_command)
     ret = subprocess.call(opt_command)
     assert ret == 0
-    opt_command = ["opt", "-enable-new-pm=0", "-dfsan", f"-dfsan-abilist={ABI_LIST_PATH}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-dfsan", f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}"]
     for item in ignore_lists:
         opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
     opt_command += [str(output_bc), "-o", str(output_bc)]
@@ -310,9 +311,9 @@ def do_everything(argv: List[str]):
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     # Lower bitcode. Creates a .o
     if is_cxx:
-        subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
+        subprocess.check_call(["gclang++", "-fxray-instrument","-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
     else:
-        subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+        subprocess.check_call(["gclang", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
     obj_file = input_bitcode.with_suffix(".o")
 
     # Compile into executable
@@ -320,7 +321,7 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
         re_comp = ["gclang++"]
     else:
         re_comp = ["gclang"]
-    re_comp.extend(["-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
+    re_comp.extend(["-pie", "-fxray-instrument", "-fxray-instruction-threshold=1", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
                     "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
