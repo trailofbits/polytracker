@@ -84,6 +84,26 @@ void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
   logOp(&Op, taint_op_log);
 }
 
+void PolyInstVisitor::visitReturnInst(llvm::ReturnInst &RI) {
+  llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&RI);
+
+  uint64_t gid = block_global_map[RI.getParent()];
+  bb_index_t bindex = gid & 0xFFFF;
+  // Insert after
+  llvm::IRBuilder<> IRB(inst);
+  llvm::LLVMContext &context = mod->getContext();
+  llvm::Function *caller = inst->getParent()->getParent();
+  assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
+  func_index_t index = func_index_map[caller->getName().str()];
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), index, false);
+  llvm::Value *BlockIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), bindex, false);
+
+  CallInst *ExitCall =
+      IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
+}
+
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto called_func = ci.getCalledFunction();
@@ -110,18 +130,18 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
               << std::endl;
     exit(1);
   }
-  uint64_t gid = block_global_map[ci.getParent()];
-  bb_index_t bindex = gid & 0xFFFF;
-  // Insert after
-  llvm::IRBuilder<> IRB(inst->getNextNode());
-  llvm::LLVMContext &context = mod->getContext();
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), index, false);
-  llvm::Value *BlockIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), bindex, false);
+  // uint64_t gid = block_global_map[ci.getParent()];
+  // bb_index_t bindex = gid & 0xFFFF;
+  // // Insert after
+  // llvm::IRBuilder<> IRB(inst->getNextNode());
+  // llvm::LLVMContext &context = mod->getContext();
+  // llvm::Value *FuncIndex = llvm::ConstantInt::get(
+  //     llvm::IntegerType::getInt32Ty(context), index, false);
+  // llvm::Value *BlockIndex = llvm::ConstantInt::get(
+  //     llvm::IntegerType::getInt32Ty(context), bindex, false);
 
-  CallInst *ExitCall =
-      IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
+  // CallInst *ExitCall =
+  //     IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -243,9 +263,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   bb_index_t bb_index = 0;
 
   std::string fname = f->getName().str();
-  std::cout << "ANALYZING " << fname << std::endl;
   if (fname == "main") {
-    std::cout << "INSTRUMENTING MAIN" << std::endl;
     llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
     // IRB.SetInsertPoint(call->getNextNode());
   }
@@ -272,6 +290,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
         insts.push_back(call);
       } else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
         insts.push_back(cmp);
+      } else if (auto ret = llvm::dyn_cast<llvm::ReturnInst>(&inst)) {
+        insts.push_back(ret);
       }
       // insts.push_back(&inst);
     }
@@ -369,7 +389,6 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
         line.find("main") == std::string::npos) {
       int start_pos = line.find(':');
       int end_pos = line.find("=");
-      std::cout << "SHOULD BE IGNORING " << line << std::endl;
       // :test=und
       std::string func_name =
           line.substr(start_pos + 1, end_pos - (start_pos + 1));
@@ -381,7 +400,6 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
     for (auto &file_path : ignore_file_path) {
-      std::cout << "IGNORING: " << file_path << std::endl;
       readIgnoreFile(file_path);
     }
   }
