@@ -10,7 +10,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <assert.h> /* assert */
 #include <fstream>
 #include <iomanip> /* for std::setw */
@@ -262,11 +264,11 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   bb_index_t bb_index = 0;
 
-  std::string fname = f->getName().str();
-  if (fname == "main") {
-    llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
-    // IRB.SetInsertPoint(call->getNextNode());
-  }
+  // std::string fname = f->getName().str();
+  // if (fname == "main") {
+  //   llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+  //   // IRB.SetInsertPoint(call->getNextNode());
+  // }
 
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
@@ -373,6 +375,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 }
+
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   std::ifstream ignore_file(ignore_file_path);
   if (!ignore_file.is_open()) {
@@ -397,6 +400,33 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   }
 }
 
+/// Given a llvm.global_ctors list that we can understand,
+/// return a map of the function* for quick lookup
+static std::vector<llvm::Function *>
+parseGlobalCtors(llvm::GlobalVariable *GV) {
+  if (GV->getInitializer()->isNullValue())
+    return std::vector<llvm::Function *>();
+  llvm::ConstantArray *CA =
+      llvm::cast<llvm::ConstantArray>(GV->getInitializer());
+  std::vector<llvm::Function *> Result;
+  Result.reserve(CA->getNumOperands());
+  for (auto &V : CA->operands()) {
+    llvm::ConstantStruct *CS = llvm::cast<llvm::ConstantStruct>(V);
+    Result.push_back(llvm::dyn_cast<llvm::Function>(CS->getOperand(1)));
+  }
+  return Result;
+}
+
+/// Find the llvm.global_ctors list
+static llvm::GlobalVariable *findGlobalCtors(llvm::Module &M) {
+  llvm::GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
+  if (!GV) {
+    std::cerr << "Warning: No constructors found, returning" << std::endl;
+    return nullptr;
+  }
+  return GV;
+}
+
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
     for (auto &file_path : ignore_file_path) {
@@ -404,31 +434,28 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     }
   }
   initializeTypes(mod);
-  /*
-bool (polytracker::PolytrackerPass::*)(llvm::Function *f, const
-polytracker::func_index_t &func_index)
-  */
-  // TODO (Carson) need better generics here, use std::function
-  /*
-  ThreadPool<bool (polytracker::PolytrackerPass::*)(llvm::Function *f, const
-  polytracker::func_index_t &func_index), llvm::Function*, const func_index_t&>
-  thread_pool(10);
-*/
-  /*
-    auto &globals = mod.getGlobalList();
-    for (auto &global : globals) {
-      if (global.hasName()) {
-        std::string g_name = global.getName().str();
-        std::cout << g_name << std::endl;
-      }
-    }
-  */
+
   bool ret = false;
   func_index_t function_index = 0;
   if (file_id) {
     function_index = (file_id << 24) | function_index;
   }
-  // Collect functions before instrumenting
+  //   // Collect globals
+  // llvm::GlobalVariable* g_ctor = findGlobalCtors(mod);
+  // if (g_ctor != nullptr) {
+  //   std::vector<llvm::Function*> init_list = parseGlobalCtors(g_ctor);
+  // }
+
+  llvm::Function *poly_start =
+      llvm::dyn_cast<llvm::Function>(polytracker_start.getCallee());
+  if (poly_start == nullptr) {
+    std::cerr << "Error: cannot get Function* for polytracker_start"
+              << std::endl;
+    abort();
+  }
+  // Append our start function to go last
+  llvm::appendToGlobalCtors(mod, poly_start, INT32_MAX, nullptr);
+
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
     // Ignore if its in our ignore list
