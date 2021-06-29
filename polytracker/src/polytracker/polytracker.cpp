@@ -107,10 +107,7 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
   // }
 }
 
-extern "C" int __polytracker_size() {
-  printf("Using internal size func!\n");
-  return function_stack.size();
-}
+extern "C" int __polytracker_size() { return function_stack.size(); }
 
 extern "C" void __polytracker_start() { polytracker_start(); }
 
