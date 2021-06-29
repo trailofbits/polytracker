@@ -54,6 +54,8 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   // entering a func
   void visitCallInst(llvm::CallInst &ci);
 
+  void visitReturnInst(llvm::ReturnInst &RI);
+
   // TODO Make this reference and on construction
   std::unordered_map<llvm::BasicBlock *, uint64_t> block_global_map;
   std::unordered_map<std::string, func_index_t> func_index_map;

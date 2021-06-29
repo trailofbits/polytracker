@@ -2,6 +2,7 @@
 #define POLYTRACKER_OUTPUT
 #include "polytracker/dfsan_types.h"
 #include <sqlite3.h>
+#include <string>
 // #include "polytracker/logging.h"
 typedef uint32_t input_id_t;
 typedef uint32_t function_id_t;
