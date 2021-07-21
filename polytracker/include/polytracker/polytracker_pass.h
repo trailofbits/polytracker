@@ -31,6 +31,7 @@ struct PolytrackerPass : public llvm::ModulePass {
   llvm::FunctionCallee polytracker_start;
   llvm::FunctionType *func_entry_type;
   llvm::FunctionCallee func_exit_log;
+  llvm::FunctionCallee call_exit_log;
   llvm::FunctionCallee bb_entry_log;
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
@@ -44,6 +45,10 @@ struct PolytrackerPass : public llvm::ModulePass {
 };
 
 struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
+  PolyInstVisitor(std::unordered_map<std::string, func_index_t> &map,
+                  std::unordered_map<std::string, bool> &igf,
+                  std::unordered_map<llvm::BasicBlock *, uint64_t> &bgm)
+      : func_index_map(map), ignore_funcs(igf), block_global_map(bgm) {}
   void logOp(llvm::Instruction *inst, llvm::FunctionCallee &callback);
   // Visitor instructions
   // Special case for comparisons, just good to know
@@ -57,14 +62,15 @@ struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
   void visitReturnInst(llvm::ReturnInst &RI);
 
   // TODO Make this reference and on construction
-  std::unordered_map<llvm::BasicBlock *, uint64_t> block_global_map;
-  std::unordered_map<std::string, func_index_t> func_index_map;
-  std::unordered_map<std::string, bool> ignore_funcs;
+  std::unordered_map<llvm::BasicBlock *, uint64_t> &block_global_map;
+  std::unordered_map<std::string, func_index_t> &func_index_map;
+  std::unordered_map<std::string, bool> &ignore_funcs;
   llvm::Module *mod;
   llvm::FunctionCallee dfsan_get_label;
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee func_exit_log;
+  llvm::FunctionCallee call_exit_log;
   llvm::IntegerType *shadow_type;
   llvm::Value *stack_loc;
 };

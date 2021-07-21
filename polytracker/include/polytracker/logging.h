@@ -15,6 +15,8 @@ void logOperation(const dfsan_label label, const function_id_t findex,
                   const block_id_t bindex);
 int logFunctionEntry(const char *fname, const function_id_t func_id);
 void logFunctionExit(const function_id_t index, const int stack_loc);
+void logCallExit(const function_id_t index, const int stack_loc);
+
 void logBBEntry(const char *fname, const function_id_t findex,
                 const block_id_t bindex, const uint8_t btype);
 
