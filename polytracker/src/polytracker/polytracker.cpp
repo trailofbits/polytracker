@@ -71,6 +71,12 @@ extern "C" void __polytracker_log_func_exit(uint32_t func_index,
   // }
 }
 
+extern "C" void __polytracker_log_call_exit(uint32_t func_index,
+                                            uint32_t block_index,
+                                            const int stack_loc) {
+  logCallExit(func_index, stack_loc);
+}
+
 extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
                                            uint32_t bindex, uint8_t btype) {
   // if (polytracker_trace && LIKELY(!done)) {
@@ -79,7 +85,6 @@ extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
   }
 }
 
-// TODO (Carson) add checks for DONE.
 extern "C" atomic_dfsan_label *
 __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
   // if (LIKELY(!done)) {
@@ -111,17 +116,22 @@ extern "C" int __polytracker_size() { return function_stack.size(); }
 
 extern "C" void __polytracker_start() { polytracker_start(); }
 
+extern "C" void dfs$__polytracker_log_call_exit(uint32_t func_index,
+                                                uint32_t block_index,
+                                                const int stack_loc) {
+  fprintf(stdout, "WARNING Using instrumented log call exit func\n");
+  __polytracker_log_call_exit(func_index, block_index, stack_loc);
+}
+
 // These two dfs$ functions exist for testing
 // If polytracker-llvm needs an update but it's too time consuming to
-// rebuild/wait Then adding dfs$ prefixes is helpful. When polytracker-llvm is
-// updated with a proper ignore list, it should just call __polytracker_start()
-// by default (and not instrument it with dfs$ prefix)
+// rebuild/wait
 extern "C" void dfs$__polytracker_start() {
-  fprintf(stderr, "WARNING Using instrumented internal start func");
+  fprintf(stderr, "WARNING Using instrumented internal start func\n");
   __polytracker_start();
 }
 extern "C" int dfs$__polytracker_size() {
-  fprintf(stderr, "WARNING Using instrumented internal size func");
+  fprintf(stderr, "WARNING Using instrumented internal size func\n");
   return __polytracker_size();
 }
 

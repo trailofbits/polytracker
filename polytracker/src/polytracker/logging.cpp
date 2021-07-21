@@ -49,24 +49,9 @@ void logOperation(const dfsan_label label, const function_id_t findex,
 }
 
 int logFunctionEntry(const char *fname, const function_id_t func_id) {
-  // The pre init/init array hasn't played friendly with our use of C++
-  // For example, the bucket count for unordered_map is 0 when accessing one
-  // during the init phase
-  /*
-  if (UNLIKELY(!is_init)) {
-    if (strcmp(fname, "main") != 0) {
-      return;
-    }
-    is_init = true;
-    polytracker_start();
-  }
-  */
-  // std::cerr << "logFunctionEntry(" << fname << ", " << func_id << ")\n";
-  // TODO (Carson) for Evan, its just a check quick to assign a thread_id.
-  // TODO (Carson), can we remove this check?
   assignThreadID();
-  // This just stores a mapping, should be true for all runs.
-  // TODO (Carson) do at compile time an store it into the binary
+  // We store this in the binary now at compile time. We can remove this
+  // eventually
   storeFunc(output_db, fname, func_id);
   // Func CFG edges added by funcExit (as it knows the return location)
   const auto this_event_id = event_id++;
@@ -89,52 +74,21 @@ std::string funcName(const function_id_t index) {
   return funcName + std::string("index ") + std::to_string(index);
 }
 
-void logFunctionExit(const function_id_t index, const int stack_loc) {
-  /*
-  if (UNLIKELY(!is_init)) {
-    return;
-  } else
-  */
-  // if (UNLIKELY(function_stack.empty() ||
-  //              function_stack.back().func_id != curr_func_index)) {
-  // std::cerr
-  //     << "Warning: Could not resolve the function entry associated with "
-  //        "the return from function "
-  //     << funcName(curr_func_index) << " to " << funcName(index);
-  std::cout << "Stack loc and size: " << stack_loc << ", "
-            << function_stack.size() << std::endl;
-
+void logExit(const int stack_loc, const std::function<bool(int, int)> &lambda) {
   if (UNLIKELY(!function_stack.empty())) {
-    // std::cerr << " (expected to be returning from function "
-    //           << funcName(function_stack.back().func_id) << ")";
     // if uninstrumented code calls into instrumented code, we'll get a
     // function entry event but no associated function exit. So see if we can
     // clean up the function stack:
-    // <= because this is the location we are popping off from :)
-    while (stack_loc <= function_stack.size()) {
-      std::cout << "Popping!" << std::endl;
-      const auto current_function_event = function_stack.back().func_event_id;
-      const auto func_index = function_stack.back().func_id;
-      const auto this_event_id = event_id++;
+    // lambda is because on call exit, we want <, and on funcExit we want <=
+    while (lambda(stack_loc, function_stack.size())) {
+      const auto &current_function_event = function_stack.back().func_event_id;
+      const auto &func_index = function_stack.back().func_id;
+      const auto &this_event_id = event_id++;
       function_stack.pop_back();
       storeEvent(output_db, input_id, thread_id, this_event_id,
                  thread_event_id++, EventType::FUNC_RET, func_index, 0,
                  current_function_event);
     }
-    for (auto item : function_stack) {
-      std::cout << "Done popping! stack item: " << item.func_id << std::endl;
-    }
-    /*
-    if (!function_stack.empty()) {
-      // we were able to clean up the function stack
-      logFunctionExit(index);
-    }
-    */
-    //}
-    // std::cerr << ". This is likely due to either an instrumentation error "
-    //           << "or non-standard control-flow in the instrumented program "
-    //              "(e.g., if uninstrumented code calls into "
-    //           << "instrumented code.\n";
   } else {
     const auto current_function_event = function_stack.back().func_event_id;
     const auto func_index = function_stack.back().func_id;
@@ -143,35 +97,40 @@ void logFunctionExit(const function_id_t index, const int stack_loc) {
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, func_index, 0, current_function_event);
   }
+}
 
-  /*
-    if (UNLIKELY(function_stack.empty() ||
-                 function_stack.top().func_id != curr_func_index)) {
-      std::cerr
-          << "Warning: Could not resolve the function entry associated with "
-             "the return from function "
-          << funcName(curr_func_index) << " to " << funcName(index);
-      if (!function_stack.empty()) {
-        std::cerr << " (expected to be returning from function "
-                  << funcName(function_stack.top().func_id) << ")";
-      }
-      std::cerr << ". This is likely due to either an instrumentation error "
-                << "or non-standard control-flow in the instrumented
-    program.\n"; } else { const auto current_function_event =
-    function_stack.top().func_event_id; const auto this_event_id = event_id++;
-      // std::cerr << "logFunctionExit(" << index << ") event_id = " <<
-      // this_event_id <<
-      //              ", curr_func_index = " << curr_func_index <<
-      //              ", current_function_event = " << current_function_event <<
-      //              "\n";
-      storeFuncCFGEdge(output_db, input_id, thread_id, index, curr_func_index,
-                       this_event_id, EdgeType::BACKWARD);
-      function_stack.pop();
-      storeEvent(output_db, input_id, thread_id, this_event_id,
-    thread_event_id++, EventType::FUNC_RET, curr_func_index, 0,
-    current_function_event);
-    }
-    */
+const auto call_exit_cmp = [](int a, int b) { return a < b; };
+const auto func_exit_cmp = [](int a, int b) { return a <= b; };
+void logCallExit(const function_id_t index, const int stack_loc) {
+  logExit(stack_loc, call_exit_cmp);
+  curr_func_index = index;
+}
+
+void logFunctionExit(const function_id_t index, const int stack_loc) {
+  logExit(stack_loc, func_exit_cmp);
+  // if (UNLIKELY(!function_stack.empty())) {
+  //   // if uninstrumented code calls into instrumented code, we'll get a
+  //   // function entry event but no associated function exit. So see if we can
+  //   // clean up the function stack:
+  //   // <= because this is the location we are popping off from :)
+  //   while (stack_loc <= function_stack.size()) {
+  //     const auto& current_function_event =
+  //     function_stack.back().func_event_id; const auto& func_index =
+  //     function_stack.back().func_id; const auto& this_event_id = event_id++;
+  //     function_stack.pop_back();
+  //     storeEvent(output_db, input_id, thread_id, this_event_id,
+  //                thread_event_id++, EventType::FUNC_RET, func_index, 0,
+  //                current_function_event);
+  //   }
+  // } else {
+  //   const auto current_function_event = function_stack.back().func_event_id;
+  //   const auto func_index = function_stack.back().func_id;
+  //   const auto this_event_id = event_id++;
+  //   function_stack.pop_back();
+  //   storeEvent(output_db, input_id, thread_id, this_event_id,
+  //   thread_event_id++,
+  //              EventType::FUNC_RET, func_index, 0, current_function_event);
+  // }
   curr_func_index = index;
 }
 
