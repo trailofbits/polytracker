@@ -316,10 +316,10 @@ def do_everything(argv: List[str]):
         result = subprocess.call(
             [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
     assert result == 0
-
+    re_comp: List[str]
     # Compile into executable
     if XRAY_BUILD:
-        re_comp: List[str] = [
+        re_comp = [
             compiler,
             "-fxray-instrument",
             "-fxray-instruction-threshold=1",
@@ -334,7 +334,7 @@ def do_everything(argv: List[str]):
             "-lc++abi",
         ]
     else:
-        re_comp: List[str] = [
+        re_comp = [
             compiler,
             "-pie",
             f"-L{CXX_LIB_PATH!s}",
