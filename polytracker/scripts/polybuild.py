@@ -3,19 +3,19 @@
 """
   This code is inspired by Angora's angora-clang
   which is a modification of AFL's LLVM mode
- 
+
   We do not use any of the AFL internal macros/instrumentation
- 
+
   This is a compiler wrapper around gllvm, but wllvm will also work
- 
+
   The workflow is to build a project using the build setting, then you can extract all the bitcode you want
- 
+
   llvm-link the bitcode together into a whole program archive
- 
+
   Then you can use polybuild(++) --instrument -f program.bc -o output -llib1 -llib2
- 
+
   It will run opt to instrument your bitcode and then compile/link all instrumentation libraries with clang to create your output exec.
- 
+
   Part of the reason this isnt a fully automated process is it allows users to easily build complex projects with multiple DSOs without accidentally linking
   against the compiler-rt based runtime pre_init_array. This allows the user to extract BC for whatever DSOs and executables they want, while still being
   able to easily include other libraries they did not want tracking in.
@@ -30,10 +30,10 @@ from typing import Iterable, List, Optional
 import sqlite3
 
 """
-Polybuild is supposed to do a few things. 
+Polybuild is supposed to do a few things.
 
 1. It provides a wrapper to quickly build simple test targets.
-2. It instruments and optimizes whole program bitcode 
+2. It instruments and optimizes whole program bitcode
 3. During more complex builds, it swaps out clang for gclang and uses our libcxx
 4. It records the build steps and build artifacts to link against later
 5. Lower bitcode and link with some libraries (used for example docker files like MuPDF)
@@ -137,7 +137,8 @@ def is_building(argv) -> bool:
 
 
 # (2)
-def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, file_id=None) -> Path:
+def instrument_bitcode(bitcode_file: Path, output_bc: Path,
+                       ignore_lists=None, file_id=None) -> Path:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
@@ -168,7 +169,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
 
 
 # (3)
-# NOTE (Carson), no static here, but there might be times where we get-bc on libcxx and llvm-link some bitcode together
+# NOTE (Carson), no static here, but there might be times where we get-bc
+# on libcxx and llvm-link some bitcode together
 def modify_exec_args(argv: List[str]):
     """
     Replaces clang with gclang, uses our libcxx, and links our libraries if needed
@@ -421,7 +423,8 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     assert ret == 0
 
 
-def replay_build_instance(input_bc: Path, file_id: int, ignore_lists, non_track_artifacts, bc_files):
+def replay_build_instance(input_bc: Path, file_id: int,
+                          ignore_lists, non_track_artifacts, bc_files):
     output_bc = append_to_stem(input_bc, "_done")
     bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
     bc_files.append(os.path.realpath(bc_file))
@@ -433,19 +436,19 @@ def main():
     Compiler wrapper around gllvm and instrumentation driver for PolyTracker
 
     For programs with a simple build system, you can quickstart the process
-    by invoking: 
-        polybuild --instrument-target <your flags here> -o <output_file> 
+    by invoking:
+        polybuild --instrument-target <your flags here> -o <output_file>
 
     Instrumenting bitcode example:
-        polybuild --instrument-bitcode -i input.bc -o output.bc 
-    
-    Lowering bitcode (just compiles into an executable and links) example: 
+        polybuild --instrument-bitcode -i input.bc -o output.bc
+
+    Lowering bitcode (just compiles into an executable and links) example:
         polybuild --lower-bitcode -i input.bc -o output --libs pthread
 
     Run normally with gclang/gclang++:
-        polybuild <normal args> 
-    
-    Get bitcode from gclang built executables with get-bc -b 
+        polybuild <normal args>
+
+    Get bitcode from gclang built executables with get-bc -b
     """
     )
     parser.add_argument("--instrument-bitcode", action="store_true",
