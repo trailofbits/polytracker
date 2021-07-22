@@ -16,7 +16,11 @@ set(TAINT_DIR "taint_sources")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -O3 -g")
+if (XRAY_ON)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fxray-instrument -fxray-instruction-threshold=1 -Wall -Werror -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -g -O3")
+else()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -g -O3")
+endif()
 set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -L${POLYTRACK_CXX_LIB} -Wl,--start-group,-lc++abi")
 
 set(POLY_SOURCES
