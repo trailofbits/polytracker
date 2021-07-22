@@ -52,38 +52,45 @@ def ensure_exists(path: Path) -> Path:
 
 def append_to_stem(path: Path, to_append: str) -> Path:
     name = path.name
-    name_without_suffix = name[:-len(path.suffix)]
+    name_without_suffix = name[: -len(path.suffix)]
     new_name = f"{name_without_suffix}{to_append}{path.suffix}"
     return path.with_name(new_name)
 
 
 if not COMPILER_DIR.is_dir():
-    sys.stderr.write(f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
+    sys.stderr.write(
+        f"Error: did not find polytracker directory at {COMPILER_DIR}\n\n")
     sys.exit(1)
 
-POLY_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libPolytrackerPass.so")
+POLY_PASS_PATH: Path = ensure_exists(
+    COMPILER_DIR / "pass" / "libPolytrackerPass.so")
 POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
-DFSAN_ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
-POLY_ABI_LIST_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt")
+DFSAN_ABI_LIST_PATH: Path = ensure_exists(
+    COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
+POLY_ABI_LIST_PATH: Path = ensure_exists(
+    COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt")
 ABI_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists")
 
 is_cxx: bool = "++" in sys.argv[0]
 
 CXX_LIB_PATH_ENV: str = os.getenv("CXX_LIB_PATH", default="")
 if not CXX_LIB_PATH_ENV:
-    sys.stderr.write("Error: the CXX_LIB_PATH environment variable must be set")
+    sys.stderr.write(
+        "Error: the CXX_LIB_PATH environment variable must be set")
     sys.exit(1)
 CXX_DIR_PATH: Path = ensure_exists(Path(CXX_LIB_PATH_ENV))
 
 DFSAN_LIB_PATH_ENV: str = os.getenv("DFSAN_LIB_PATH", default="")
 if not DFSAN_LIB_PATH_ENV:
-    sys.stderr.write("Error: the DFSAN_LIB_PATH_ENV environment variable must be set")
+    sys.stderr.write(
+        "Error: the DFSAN_LIB_PATH_ENV environment variable must be set")
     sys.exit(1)
 DFSAN_LIB_PATH: Path = ensure_exists(Path(DFSAN_LIB_PATH_ENV))
 
 ARTIFACT_STORE_PATH_ENV: str = os.getenv("WLLVM_ARTIFACT_STORE", default="")
 if not ARTIFACT_STORE_PATH_ENV:
-    sys.stderr.write("Error: the WLLVM_ARTIFACT_STORE environment variable must be set")
+    sys.stderr.write(
+        "Error: the WLLVM_ARTIFACT_STORE environment variable must be set")
     sys.exit(1)
 ARTIFACT_STORE_PATH: Path = ensure_exists(Path(ARTIFACT_STORE_PATH_ENV))
 
@@ -101,18 +108,18 @@ POLYCXX_LIBS: List[str] = [
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
     str(POLY_LIB_PATH),
-    "-lm"
+    "-lm",
 ]
 # TODO (Carson), double check, also maybe need -ldl?
-LINK_LIBS: List[str] = [
-    str(CXX_LIB_PATH / "libc++.a"),
-    str(CXX_LIB_PATH / "libc++abi.a"),
-    "-lpthread"
-]
+LINK_LIBS: List[str] = [str(CXX_LIB_PATH / "libc++.a"),
+                        str(CXX_LIB_PATH / "libc++abi.a"), "-lpthread"]
 
-XRAY_BUILD: bool = ("--xray-instrument-target" or "--xray-lower-bitcode") in sys.argv
+XRAY_BUILD: bool = (
+    "--xray-instrument-target" or "--xray-lower-bitcode") in sys.argv
 
 # Helper function, check to see if non linking options are present.
+
+
 def is_linking(argv) -> bool:
     nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
     for option in argv:
@@ -140,8 +147,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack",
-                   f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-load",
+                   str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
@@ -150,7 +157,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     print(opt_command)
     ret = subprocess.call(opt_command)
     assert ret == 0
-    opt_command = ["opt", "-enable-new-pm=0", "-dfsan", f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-dfsan",
+                   f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}"]
     for item in ignore_lists:
         opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
     opt_command += [str(output_bc), "-o", str(output_bc)]
@@ -175,9 +183,11 @@ def modify_exec_args(argv: List[str]):
     linking: bool = is_linking(argv)
     if building:
         if linking and is_cxx:
-            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-L{CXX_LIB_PATH!s}"])
+            compile_command.extend(
+                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-L{CXX_LIB_PATH!s}"])
         elif is_cxx:
-            compile_command.extend(["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}"])
+            compile_command.extend(
+                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}"])
 
     if not building and linking and is_cxx:
         compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH!s}"])
@@ -261,8 +271,7 @@ def handle_cmd(argv: List[str]) -> Optional[Path]:
     conn = sqlite3.connect(MANIFEST_FILE)
     cur = conn.cursor()
     for art in artifacts:
-        query = "INSERT INTO manifest (target, artifact) VALUES (\"" \
-                f"{output_file.absolute()}\", \"{art.absolute()}\");"
+        query = 'INSERT INTO manifest (target, artifact) VALUES ("' f'{output_file.absolute()}", "{art.absolute()}");'
         cur.execute(query)
     conn.commit()
     conn.close()
@@ -297,28 +306,46 @@ def do_everything(argv: List[str]):
         compiler = "gclang"
     if XRAY_BUILD:
         result = subprocess.call(
-            [compiler, "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(temp_bc), "-o",
-             str(obj_file)])
+            [compiler, "-fxray-instrument", "-fxray-instruction-threshold=1",
+                "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
+        )
     else:
-        result = subprocess.call([compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
+        result = subprocess.call(
+            [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
     assert result == 0
 
     # Compile into executable
     if XRAY_BUILD:
         re_comp: List[str] = [
-            compiler, "-fxray-instrument", "-fxray-instruction-threshold=1", "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o",
-            str(output_file), str(obj_file),
+            compiler,
+            "-fxray-instrument",
+            "-fxray-instruction-threshold=1",
+            "-pie",
+            f"-L{CXX_LIB_PATH!s}",
+            "-g",
+            "-o",
+            str(output_file),
+            str(obj_file),
             "-Wl,--allow-multiple-definition",
-            "-Wl,--start-group", "-lc++abi"
+            "-Wl,--start-group",
+            "-lc++abi",
         ]
     else:
         re_comp: List[str] = [
-            compiler, "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
+            compiler,
+            "-pie",
+            f"-L{CXX_LIB_PATH!s}",
+            "-g",
+            "-o",
+            str(output_file),
+            str(obj_file),
             "-Wl,--allow-multiple-definition",
-            "-Wl,--start-group", "-lc++abi"
+            "-Wl,--start-group",
+            "-lc++abi",
         ]
     re_comp.extend(POLYCXX_LIBS)
-    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
+    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread",
+                   "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
 
@@ -328,16 +355,22 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     if is_cxx:
         if XRAY_BUILD:
             subprocess.check_call(
-                ["gclang++", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+                ["gclang++", "-fxray-instrument", "-fxray-instruction-threshold=1",
+                    "-fPIC", "-c", str(input_bitcode)]
+            )
         else:
-            subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
+            subprocess.check_call(
+                ["gclang++", "-fPIC", "-c", str(input_bitcode)])
 
     else:
         if XRAY_BUILD:
             subprocess.check_call(
-                ["gclang", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+                ["gclang", "-fxray-instrument", "-fxray-instruction-threshold=1",
+                    "-fPIC", "-c", str(input_bitcode)]
+            )
         else:
-            subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+            subprocess.check_call(
+                ["gclang", "-fPIC", "-c", str(input_bitcode)])
 
     obj_file = input_bitcode.with_suffix(".o")
 
@@ -348,19 +381,42 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
         re_comp = ["gclang"]
     if XRAY_BUILD:
         re_comp.extend(
-            ["-pie", "-fxray-instrument", "-fxray-instruction-threshold=1", f"-L{CXX_LIB_PATH!s}", "-g", "-o",
-             str(output_file), str(obj_file),
-             "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
+            [
+                "-pie",
+                "-fxray-instrument",
+                "-fxray-instruction-threshold=1",
+                f"-L{CXX_LIB_PATH!s}",
+                "-g",
+                "-o",
+                str(output_file),
+                str(obj_file),
+                "-Wl,--allow-multiple-definition",
+                "-Wl,--start-group",
+                "-lc++abi",
+            ]
+        )
     else:
-        re_comp.extend(["-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
-                        "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
+        re_comp.extend(
+            [
+                "-pie",
+                f"-L{CXX_LIB_PATH!s}",
+                "-g",
+                "-o",
+                str(output_file),
+                str(obj_file),
+                "-Wl,--allow-multiple-definition",
+                "-Wl,--start-group",
+                "-lc++abi",
+            ]
+        )
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
         if lib.endswith(".a") or lib.endswith(".o"):
             re_comp.append(lib)
         else:
             re_comp.append(f"-l{lib}")
-    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
+    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread",
+                   "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
     assert ret == 0
 
@@ -392,21 +448,21 @@ def main():
     Get bitcode from gclang built executables with get-bc -b 
     """
     )
-    parser.add_argument("--instrument-bitcode", action="store_true", help="Specify to add polytracker instrumentation")
-    parser.add_argument("--input-file", "-i", type=Path, help="Path to the whole program bitcode file")
-    parser.add_argument("--output-file", "-o", type=Path, help="Specify binary output path")
+    parser.add_argument("--instrument-bitcode", action="store_true",
+                        help="Specify to add polytracker instrumentation")
+    parser.add_argument("--input-file", "-i", type=Path,
+                        help="Path to the whole program bitcode file")
+    parser.add_argument("--output-file", "-o", type=Path,
+                        help="Specify binary output path")
     parser.add_argument(
         "--instrument-target", action="store_true", help="Specify to build a single source file " "with instrumentation"
     )
-    parser.add_argument(
-        "--lower-bitcode", action="store_true", help="Specify to compile bitcode into an object file"
-    )
-    parser.add_argument(
-        "--file-id", type=int, help="File id for lowering bitcode in parallel"
-    )
-    parser.add_argument(
-        "--rebuild-track", type=str, help="full path to artifact to auto rebuild with instrumentation"
-    )
+    parser.add_argument("--lower-bitcode", action="store_true",
+                        help="Specify to compile bitcode into an object file")
+    parser.add_argument("--file-id", type=int,
+                        help="File id for lowering bitcode in parallel")
+    parser.add_argument("--rebuild-track", type=str,
+                        help="full path to artifact to auto rebuild with instrumentation")
     parser.add_argument(
         "--libs",
         nargs="+",
@@ -417,14 +473,12 @@ def main():
         "--num-opt",
         type=int,
         default=10,
-        help="When rebuilding with track, parallelize the instrumentation process with num opt instances"
+        help="When rebuilding with track, parallelize the instrumentation process with num opt instances",
     )
-    parser.add_argument(
-        "--compile-bitcode",
-        action="store_true",
-        help="for debugging"
-    )
-    parser.add_argument("--lists", nargs="+", default=[], help="Specify additional ignore lists to Polytracker")
+    parser.add_argument("--compile-bitcode",
+                        action="store_true", help="for debugging")
+    parser.add_argument("--lists", nargs="+", default=[],
+                        help="Specify additional ignore lists to Polytracker")
     if len(sys.argv) <= 1:
         return
     # Case 1, just instrument bitcode.
@@ -448,7 +502,8 @@ def main():
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
-        bc_file = instrument_bitcode(args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+        bc_file = instrument_bitcode(
+            args.input_file, args.output_file.with_suffix(".bc"), args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
 
     elif sys.argv[1] == "--compile-bitcode":
@@ -465,7 +520,8 @@ def main():
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
-        bc_file = instrument_bitcode(args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+        bc_file = instrument_bitcode(
+            args.input_file, args.output_file.with_suffix(".bc"), args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
 
     # Do gllvm build
