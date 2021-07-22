@@ -17,7 +17,8 @@ def test_bb_splitting(program_trace: ProgramTrace):
     for event in program_trace:
         if not isinstance(event, BasicBlockEntry):
             if isinstance(event, FunctionReturn):
-                assert indent >= 2
+                func_name = event.returning_from.name
+                print(f"RETURNING FROM: {'  ' * indent}{func_name}")
                 indent -= 2
             continue
         func = event.called_function
@@ -33,5 +34,7 @@ def test_bb_splitting(program_trace: ProgramTrace):
             if event.next_event is not None:
                 jumps_to[event.basic_block].add(event.next_event.basic_block)
     for bb in must_not_be_conditional:
-        assert len(jumps_to[bb]) < 2, f"Basic block {bb} is the return site for a function, but it is conditional; it" \
-                                      f" jumps to {', '.join(map(str, jumps_to[bb]))}"
+        assert len(jumps_to[bb]) < 2, (
+            f"Basic block {bb} is the return site for a function, but it is conditional; it"
+            f" jumps to {', '.join(map(str, jumps_to[bb]))}"
+        )

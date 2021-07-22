@@ -41,7 +41,8 @@ class BasicBlockType(IntFlag):
     Basic block types
 
     This should be kept in parity with the enum in
-    `/polytracker/include/polytracker/basic_block_types.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/basic_block_types.h>`_
+    `/polytracker/include/polytracker/basic_block_types.h
+    <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/basic_block_types.h>`_
 
     """
 
@@ -69,9 +70,11 @@ class ByteAccessType(IntFlag):
     """Bitfield enum defining the context in which taints were accessed.
 
     This should be kept in parity with the enum in
-    `/polytracker/include/polytracker/output.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/output.h>`_
+    `/polytracker/include/polytracker/output.h
+    <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/output.h>`_
 
     """
+
     UNKNOWN_ACCESS = 0
     INPUT_ACCESS = 1
     CMP_ACCESS = 2
@@ -80,6 +83,7 @@ class ByteAccessType(IntFlag):
 
 class TaintedRegion:
     """Base class representing a tainted region of code"""
+
     def __init__(self, source: Input, offset: int, length: int):
         """Initializes a tainted region.
 
@@ -103,7 +107,7 @@ class TaintedRegion:
                         does not exist.
 
         """
-        return self.source.content[self.offset:self.offset+self.length]
+        return self.source.content[self.offset: self.offset + self.length]
 
     def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
         """Gets a :class:`ByteOffset` or sliced :class:`TaintedRegion` from this region"""
@@ -118,7 +122,7 @@ class TaintedRegion:
                 stop = self.length + stop
             if start >= stop or start >= self.length or stop <= 0:
                 return TaintedRegion(source=self.source, offset=self.offset, length=0)
-            return TaintedRegion(source=self.source, offset=self.offset+start, length=stop-start)
+            return TaintedRegion(source=self.source, offset=self.offset + start, length=stop - start)
         elif index_or_slice < 0 or index_or_slice >= self.length:
             raise IndexError(index_or_slice)
         else:
@@ -132,22 +136,31 @@ class TaintedRegion:
         return hash((self.source, self.offset))
 
     def __eq__(self, other):
-        return isinstance(other, TaintedRegion) and self.source == other.source and self.offset == other.offset and \
-               self.length == other.length
+        return (
+            isinstance(other, TaintedRegion)
+            and self.source == other.source
+            and self.offset == other.offset
+            and self.length == other.length
+        )
 
     def __lt__(self, other):
-        return isinstance(other, TaintedRegion) and \
-               (self.source.uid, self.offset, self.length) < (other.source.uid, other.offset, other.length)
+        return isinstance(other, TaintedRegion) and (self.source.uid, self.offset, self.length) < (
+            other.source.uid,
+            other.offset,
+            other.length,
+        )
 
 
 class ByteOffset(TaintedRegion):
     """A :class:`TaintedRegion` of length 1."""
+
     def __init__(self, source: Input, offset: int):
         super().__init__(source=source, offset=offset, length=1)
 
 
 class TaintDiff:
     """A diff of two sets of taints."""
+
     def __init__(self, taints1: "Taints", taints2: "Taints"):
         """Initializes a taint diff.
 
@@ -201,6 +214,7 @@ class TaintDiff:
 
 class Taints:
     """A class for representing a collection of tainted regions"""
+
     def __init__(self, byte_offsets: Iterable[ByteOffset]):
         """Initializes a taint collection.
 
@@ -212,8 +226,7 @@ class Taints:
         for offset in byte_offsets:
             offsets_by_source[offset.source].add(offset)
         self._offsets_by_source: Dict[Input, List[ByteOffset]] = {
-            source: sorted(offsets)
-            for source, offsets in offsets_by_source.items()
+            source: sorted(offsets) for source, offsets in offsets_by_source.items()
         }
 
     def sources(self) -> Set[Input]:
@@ -284,7 +297,7 @@ class Taints:
                 content = region.value
                 offset = content.find(byte_sequence, offset)
                 if offset >= 0:
-                    yield region[offset:offset+len(byte_sequence)]
+                    yield region[offset: offset + len(byte_sequence)]
                 else:
                     break
 
@@ -398,9 +411,7 @@ class Function:
         return self.function_index
 
     def __eq__(self, other):
-        return (
-            isinstance(other, Function) and self.function_index == other.function_index
-        )
+        return isinstance(other, Function) and self.function_index == other.function_index
 
     def __str__(self):
         return self.name
@@ -409,11 +420,11 @@ class Function:
 class BasicBlock:
     """A class representing a basic block in an instrumented program.
 
-        .. note::
+    .. note::
 
-            This is a static basic block instance, *not* a basic block that is observed during a runtime trace.
+        This is a static basic block instance, *not* a basic block that is observed during a runtime trace.
 
-            For runtime trace events, see :class:`BasicBlockEntry`.
+        For runtime trace events, see :class:`BasicBlockEntry`.
 
     """
 
@@ -463,9 +474,7 @@ class BasicBlock:
     def is_conditional(self, trace: "ProgramTrace") -> bool:
         """Returns whether this basic block contains a conditional branch."""
         # we are a conditional if we have at least two children in the same function and we are not a loop entry
-        return sum(
-            1 for c in self.children if c.function == self.function
-        ) >= 2 and not self.is_loop_entry(trace)
+        return sum(1 for c in self.children if c.function == self.function) >= 2 and not self.is_loop_entry(trace)
 
     def __hash__(self):
         return hash((self.function, self.index_in_function))
@@ -591,6 +600,7 @@ class TraceEvent:
 
 class ControlFlowEvent(TraceEvent):
     """An abstract base class for events that have to do with control flow."""
+
     pass
 
 
@@ -763,9 +773,7 @@ class FunctionReturn(ControlFlowEvent):
         super().__init__(uid=uid)
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}({self.uid!r})"
-        )
+        return f"{self.__class__.__name__}({self.uid!r})"
 
     @property
     def basic_block(self) -> BasicBlock:
@@ -996,8 +1004,7 @@ class ProgramTrace(ABC):
             for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
             if previous > first_used  # type: ignore
         ]
-        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order,
-                               file_seeks=file_seeks)
+        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order, file_seeks=file_seeks)
 
     @property
     @abstractmethod
@@ -1151,8 +1158,13 @@ class RunTraceCommand(Subcommand[TraceCommand]):
 
     def __init_arguments__(self, parser):
         parser.add_argument("--no-bb-trace", action="store_true", help="do not trace at the basic block level")
-        parser.add_argument("--output-db", "-o", type=str, default="polytracker.db",
-                            help="path to the output database (default is polytracker.db)")
+        parser.add_argument(
+            "--output-db",
+            "-o",
+            type=str,
+            default="polytracker.db",
+            help="path to the output database (default is polytracker.db)",
+        )
         parser.add_argument("INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run")
         parser.add_argument("INPUT_FILE", type=str, help="the file to track")
         parser.add_argument("args", nargs=REMAINDER)
@@ -1160,12 +1172,12 @@ class RunTraceCommand(Subcommand[TraceCommand]):
     @staticmethod
     @PolyTrackerREPL.register("run_trace")
     def run_trace(
-            instrumented_binary_path: Union[str, Path],
-            input_file_path: Union[str, Path],
-            no_bb_trace: bool = False,
-            output_db_path: Optional[Union[str, Path]] = None,
-            args=(),
-            return_trace: bool = True
+        instrumented_binary_path: Union[str, Path],
+        input_file_path: Union[str, Path],
+        no_bb_trace: bool = False,
+        output_db_path: Optional[Union[str, Path]] = None,
+        args=(),
+        return_trace: bool = True,
     ) -> Union[ProgramTrace, int]:
         """
         Runs an instrumented binary and returns the resulting trace
@@ -1200,7 +1212,7 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             input_file_path = Path(input_file_path)
 
         if output_db_path.exists():
-            PolyTrackerREPL.warning(f"<style fg=\"gray\">{output_db_path}</style> already exists")
+            PolyTrackerREPL.warning(f'<style fg="gray">{output_db_path}</style> already exists')
 
         if can_run_natively:
             kwargs = {}
@@ -1216,11 +1228,7 @@ class RunTraceCommand(Subcommand[TraceCommand]):
                 instrumented_binary_path = f"./{instrumented_binary_path}"
 
         cmd_args = [instrumented_binary_path] + list(args) + [str(input_file_path)]
-        env = {
-            "POLYPATH": str(input_file_path),
-            "POLYTRACE": ["1", "0"][no_bb_trace],
-            "POLYDB": str(output_db_path)
-        }
+        env = {"POLYPATH": str(input_file_path), "POLYTRACE": ["1", "0"][no_bb_trace], "POLYDB": str(output_db_path)}
         if can_run_natively:
             retval = subprocess.call(cmd_args, env=env)  # type: ignore
         else:
@@ -1228,6 +1236,7 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             retval = run_command(args=cmd_args, interactive=True, env=env, **kwargs)
         if return_trace:
             from . import PolyTrackerTrace
+
             trace = PolyTrackerTrace.load(output_db_path)
             if tmpdir is not None:
                 weakref.finalize(trace, tmpdir.cleanup)
@@ -1244,7 +1253,7 @@ class RunTraceCommand(Subcommand[TraceCommand]):
             no_bb_trace=args.no_bb_trace,
             output_db_path=args.output_db,
             args=args.args,
-            return_trace=False
+            return_trace=False,
         )
         if retval == 0:
             print(f"Trace saved to {args.output_db}")
@@ -1261,5 +1270,6 @@ class CFGTraceCommand(Subcommand[TraceCommand]):
 
     def run(self, args: Namespace):
         from . import PolyTrackerTrace
+
         db = PolyTrackerTrace.load(args.TRACE_DB)
         db.function_cfg.to_dot().save("trace.dot")

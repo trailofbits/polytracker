@@ -99,9 +99,7 @@ class TracedBasicBlockEntry(TracedEvent, BasicBlockEntry):
         return self._basic_block
 
     def taints(self) -> Taints:
-        return Taints((
-            ByteOffset(source=self.tracer.source, offset=i) for i in self.consumed
-        ))
+        return Taints((ByteOffset(source=self.tracer.source, offset=i) for i in self.consumed))
 
 
 class TracedFunctionEntry(TracedEvent, FunctionEntry):
@@ -147,12 +145,7 @@ class TracedFunctionReturn(TracedEvent, FunctionReturn):
 
 class Tracer(ProgramTrace):
     def __init__(self, inputstr: bytes):
-        self.source: Input = Input(
-            uid=1,
-            path="test.data",
-            size=len(inputstr),
-            content=inputstr
-        )
+        self.source: Input = Input(uid=1, path="test.data", size=len(inputstr), content=inputstr)
         self.call_stack: List[TracedFunctionEntry] = []
         self.bb_stack: List[List[TracedBasicBlockEntry]] = []
         self.events: Dict[int, TraceEvent] = {}
@@ -199,7 +192,7 @@ class Tracer(ProgramTrace):
 
     @property
     def inputs(self) -> Iterable[Input]:
-        return self.source,
+        return (self.source,)
 
     @property
     def taint_forest(self) -> TaintForest:

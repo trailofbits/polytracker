@@ -12,9 +12,7 @@ def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
     if not path.exists():
         return True
     elif CAN_RUN_NATIVELY:
-        return (
-            True  # For now, always rebuild binaries if we can run PolyTracker natively
-        )
+        return True  # For now, always rebuild binaries if we can run PolyTracker natively
     # We need to run PolyTracker in a Docker container.
     last_build_time = docker_container().last_build_time()
     if last_build_time is None:
@@ -57,8 +55,10 @@ def polyclang_compile_target(target_name: str) -> int:
 
 # Returns the Polyprocess object
 def validate_execute_target(
-    target_name: str, config_path: Optional[Union[str, Path]], input_bytes: Optional[bytes] = None,
-    return_exceptions: bool = False
+    target_name: str,
+    config_path: Optional[Union[str, Path]],
+    input_bytes: Optional[bytes] = None,
+    return_exceptions: bool = False,
 ) -> Union[ProgramTrace, CalledProcessError]:
     target_bin_path = BUILD_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
@@ -74,19 +74,12 @@ def validate_execute_target(
         tmp_input_file.write(input_bytes)
         input_path = to_native_path(tmp_input_file.name)
         tmp_input_file.close()
-    env = {
-        "POLYPATH": input_path,
-        "POLYDB": to_native_path(db_path),
-        "POLYTRACE": "1",
-        "POLYFUNC": "1"
-    }
+    env = {"POLYPATH": input_path, "POLYDB": to_native_path(db_path), "POLYTRACE": "1", "POLYFUNC": "1"}
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
     try:
-        ret_val = run_natively(
-            env=env, *[to_native_path(target_bin_path), input_path]
-        )
+        ret_val = run_natively(env=env, *[to_native_path(target_bin_path), input_path])
     finally:
         if tmp_config.exists():
             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
@@ -137,5 +130,6 @@ def program_trace(request):
 
     assert polyclang_compile_target(target_name) == 0
 
-    return validate_execute_target(target_name, config_path=config_path, input_bytes=input_bytes,
-                                   return_exceptions=return_exceptions)
+    return validate_execute_target(
+        target_name, config_path=config_path, input_bytes=input_bytes, return_exceptions=return_exceptions
+    )

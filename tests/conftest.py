@@ -28,5 +28,5 @@ def setup_targets():
 
 
 pytest_plugins = [
-   "tests.tracing",
+    "tests.tracing",
 ]

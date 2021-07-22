@@ -1,4 +1,5 @@
 install (FILES "polytracker_abilist.txt" DESTINATION ${POLYTRACK_RULE_DIR})
+install (FILES "dfsan_abilist.txt" DESTINATION ${POLYTRACK_RULE_DIR})
 install (FILES "cxx_ignore.txt" DESTINATION ${POLYTRACK_RULE_DIR})
 install (FILES "fontconfig" DESTINATION ${POLYTRACK_RULE_DIR})
 install (FILES "freetype" DESTINATION ${POLYTRACK_RULE_DIR})

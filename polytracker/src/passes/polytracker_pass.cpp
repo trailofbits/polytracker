@@ -1,6 +1,7 @@
 #include "polytracker/polytracker_pass.h"
 #include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
+// #include "polytracker/thread_pool.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -9,7 +10,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <assert.h> /* assert */
 #include <fstream>
 #include <iomanip> /* for std::setw */
@@ -33,7 +36,7 @@ static llvm::cl::opt<int> file_id(
 
 namespace polytracker {
 
-bool op_check(llvm::Value *inst) {
+static bool op_check(llvm::Value *inst) {
   // logOp(&CI, taint_cmp_log);
   if (inst->getType()->isVectorTy() || inst->getType()->isStructTy() ||
       inst->getType()->isArrayTy() || inst->getType()->isDoubleTy() ||
@@ -83,6 +86,26 @@ void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
   logOp(&Op, taint_op_log);
 }
 
+void PolyInstVisitor::visitReturnInst(llvm::ReturnInst &RI) {
+  llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&RI);
+
+  uint64_t gid = block_global_map[RI.getParent()];
+  bb_index_t bindex = gid & 0xFFFF;
+  // Insert after
+  llvm::IRBuilder<> IRB(inst);
+  llvm::LLVMContext &context = mod->getContext();
+  llvm::Function *caller = inst->getParent()->getParent();
+  assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
+  func_index_t index = func_index_map[caller->getName().str()];
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), index, false);
+  llvm::Value *BlockIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), bindex, false);
+
+  CallInst *ExitCall =
+      IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
+}
+
 void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto called_func = ci.getCalledFunction();
@@ -111,7 +134,7 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   }
   uint64_t gid = block_global_map[ci.getParent()];
   bb_index_t bindex = gid & 0xFFFF;
-  // Insert after
+  // // Insert after
   llvm::IRBuilder<> IRB(inst->getNextNode());
   llvm::LLVMContext &context = mod->getContext();
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
@@ -119,7 +142,8 @@ void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
   llvm::Value *BlockIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), bindex, false);
 
-  CallInst *ExitCall = IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex});
+  CallInst *ExitCall =
+      IRB.CreateCall(call_exit_log, {FuncIndex, BlockIndex, stack_loc});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -139,6 +163,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::LLVMContext &context = func->getContext();
   llvm::Instruction *insert_point =
       &(*(func->getEntryBlock().getFirstInsertionPt()));
+
   llvm::IRBuilder<> IRB(insert_point);
   llvm::Value *func_name = IRB.CreateGlobalStringPtr(func->getName());
   // Add a callback for BB entry
@@ -168,7 +193,28 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   if (curr_bb == entry_block) {
     // this is the entrypoint basic block in a function, so make sure the
     // BB instrumentation happens after the function call instrumentation
-    InsertBefore = entry_block->getFirstInsertionPt()->getNextNode();
+    InsertBefore = entry_block->getFirstNonPHI();
+    // Scan for log func, should hit it.
+    while (InsertBefore) {
+      if (llvm::isa<llvm::CallInst>(InsertBefore)) {
+        auto call_inst = llvm::dyn_cast<llvm::CallInst>(InsertBefore);
+        if (call_inst->getCalledFunction()->hasName()) {
+          std::string name = call_inst->getCalledFunction()->getName().str();
+          // If a call instruction is the first inst in the block.
+          // if its name has polytracker in it.
+          // Iterate to next insertion point.
+          if (name.find("polytracker_log_func") != std::string::npos) {
+            InsertBefore = InsertBefore->getNextNode();
+            break;
+          }
+        }
+      }
+      InsertBefore = InsertBefore->getNextNode();
+    }
+    if (InsertBefore == nullptr) {
+      std::cout << "ERROR No log func found!" << std::endl;
+      InsertBefore = Inst;
+    }
   } else {
     InsertBefore = Inst;
   }
@@ -178,7 +224,8 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
     // so we need to add the callback afterward
     InsertBefore = InsertBefore->getNextNode();
   }
-  // FIXME figure out how to reuse the IRB
+
+  // FIXME reuse IRB
   llvm::IRBuilder<> new_IRB(InsertBefore);
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), findex, false);
@@ -217,9 +264,16 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   bb_index_t bb_index = 0;
 
+  std::string fname = f->getName().str();
+  if (fname == "main") {
+    llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+    // IRB.SetInsertPoint(call->getNextNode());
+  }
+
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
-  IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
+  llvm::Value *stack_loc =
+      IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
 
   // Build the dominator tree for this function once blocks are split.
   // Used by the BBSplitting/entry analysis code
@@ -238,6 +292,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
         insts.push_back(call);
       } else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
         insts.push_back(cmp);
+      } else if (auto ret = llvm::dyn_cast<llvm::ReturnInst>(&inst)) {
+        insts.push_back(ret);
       }
       // insts.push_back(&inst);
     }
@@ -251,16 +307,16 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   }
 
   // FIXME I don't like this
-  PolyInstVisitor visitor;
+  PolyInstVisitor visitor(func_index_map, ignore_funcs, block_global_map);
   visitor.mod = mod;
   visitor.dfsan_get_label = dfsan_get_label;
   visitor.taint_cmp_log = taint_cmp_log;
   visitor.taint_op_log = taint_op_log;
   visitor.func_exit_log = func_exit_log;
-  visitor.func_index_map = func_index_map;
-  visitor.block_global_map = block_global_map;
-  visitor.ignore_funcs = ignore_funcs;
+  visitor.call_exit_log = call_exit_log;
   visitor.shadow_type = shadow_type;
+  visitor.stack_loc = stack_loc;
+
   for (auto &inst : insts) {
     visitor.visit(inst);
   }
@@ -273,6 +329,11 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   llvm::LLVMContext &context = mod.getContext();
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
 
+  auto polytracker_start_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
+  polytracker_start =
+      mod.getOrInsertFunction("__polytracker_start", polytracker_start_fn_ty);
+
   // Return type, arg types, is vararg
   auto taint_log_fn_ty = llvm::FunctionType::get(
       llvm::Type::getVoidTy(context),
@@ -284,16 +345,19 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
 
   // Should pass in func_name and uint32_t function index.
   func_entry_type = llvm::FunctionType::get(
-      llvm::Type::getVoidTy(context),
+      llvm::Type::getInt32Ty(context),
       {llvm::Type::getInt8PtrTy(context), shadow_type, shadow_type}, false);
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
   // Should pass in the function index
-  auto exit_fn_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                            {shadow_type, shadow_type}, false);
+  auto exit_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context),
+                              {shadow_type, shadow_type, shadow_type}, false);
   func_exit_log =
       mod.getOrInsertFunction("__polytracker_log_func_exit", exit_fn_ty);
+  call_exit_log =
+      mod.getOrInsertFunction("__polytracker_log_call_exit", exit_fn_ty);
 
   llvm::Type *bb_func_args[4] = {llvm::Type::getInt8PtrTy(context), shadow_type,
                                  shadow_type,
@@ -312,6 +376,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 }
+
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   std::ifstream ignore_file(ignore_file_path);
   if (!ignore_file.is_open()) {
@@ -324,7 +389,8 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
       continue;
     }
 
-    if (line.find("discard") && line.find("main") == std::string::npos) {
+    if (line.find("discard") != std::string::npos &&
+        line.find("main") == std::string::npos) {
       int start_pos = line.find(':');
       int end_pos = line.find("=");
       // :test=und
@@ -335,20 +401,105 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   }
 }
 
+/// Given a llvm.global_ctors list that we can understand,
+/// return a map of the function* for quick lookup
+static std::vector<llvm::Function *>
+parseGlobalCtors(llvm::GlobalVariable *GV) {
+  if (GV->getInitializer()->isNullValue())
+    return std::vector<llvm::Function *>();
+  llvm::ConstantArray *CA =
+      llvm::cast<llvm::ConstantArray>(GV->getInitializer());
+  std::vector<llvm::Function *> Result;
+  Result.reserve(CA->getNumOperands());
+  for (auto &V : CA->operands()) {
+    llvm::ConstantStruct *CS = llvm::cast<llvm::ConstantStruct>(V);
+    Result.push_back(llvm::dyn_cast<llvm::Function>(CS->getOperand(1)));
+  }
+  return Result;
+}
+
+/// Find the llvm.global_ctors list
+static llvm::GlobalVariable *findGlobalCtors(llvm::Module &M) {
+  llvm::GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
+  if (!GV) {
+    std::cerr << "Warning: No constructors found, returning" << std::endl;
+    return nullptr;
+  }
+  return GV;
+}
+
+static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
+  auto arr_ty = llvm::ArrayType::get(
+      llvm::IntegerType::getInt8Ty(mod.getContext()), str.size() + 1);
+  auto int8_ty = llvm::IntegerType::getInt8Ty(mod.getContext());
+  // TODO (Carson) this feels hacky
+  std::vector<llvm::Constant *> vals;
+  for (auto i = 0; i < str.size(); i++) {
+    auto new_const = llvm::ConstantInt::get(int8_ty, str[i]);
+    vals.push_back(new_const);
+  }
+  auto int8ptr_ty = llvm::IntegerType::getInt8PtrTy(mod.getContext());
+  auto init = llvm::ConstantArray::get(arr_ty, vals);
+  // Not int8_ptr, arr_ty
+  auto str_global = new llvm::GlobalVariable(
+      mod, init->getType(), true, llvm::GlobalVariable::InternalLinkage, init);
+
+  auto casted = llvm::ConstantExpr::getPointerCast(str_global, int8ptr_ty);
+  return casted;
+}
+
+static llvm::Constant *
+create_globals(llvm::Module &mod,
+               std::unordered_map<std::string, uint32_t> &func_index_map) {
+  llvm::LLVMContext &context = mod.getContext();
+  auto int64_type = llvm::IntegerType::getInt64Ty(mod.getContext());
+  auto int32_type = llvm::IntegerType::getInt32Ty(mod.getContext());
+  auto int8_ty = llvm::IntegerType::getInt8Ty(context);
+  auto str_type = llvm::IntegerType::getInt8PtrTy(mod.getContext());
+  llvm::StructType *func_struct = llvm::StructType::create(
+      mod.getContext(), {str_type, int32_type}, "func_struct");
+  std::vector<llvm::Constant *> const_structs;
+  for (auto pair : func_index_map) {
+    auto key = pair.first;
+    auto val = pair.second;
+    auto key_const = create_str(mod, key);
+    auto val_const = llvm::ConstantInt::get(
+        llvm::IntegerType::getInt32Ty(mod.getContext()), val);
+    auto struct_const =
+        llvm::ConstantStruct::get(func_struct, {key_const, val_const});
+    const_structs.push_back(struct_const);
+  }
+  auto arr_type = llvm::ArrayType::get(func_struct, const_structs.size());
+  auto global_structs = new llvm::GlobalVariable(
+      mod, arr_type, true, llvm::GlobalVariable::InternalLinkage,
+      llvm::ConstantArray::get(arr_type, const_structs), "func_index_map");
+  return global_structs;
+}
+
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
     for (auto &file_path : ignore_file_path) {
-      std::cout << "IGNORING: " << file_path << std::endl;
       readIgnoreFile(file_path);
     }
   }
   initializeTypes(mod);
+
   bool ret = false;
   func_index_t function_index = 0;
   if (file_id) {
     function_index = (file_id << 24) | function_index;
   }
-  // Collect functions before instrumenting
+
+  // llvm::Function *poly_start =
+  //     llvm::dyn_cast<llvm::Function>(polytracker_start.getCallee());
+  // if (poly_start == nullptr) {
+  //   std::cerr << "Error: cannot get Function* for polytracker_start"
+  //             << std::endl;
+  //   abort();
+  // }
+  // // Append our start function to go last
+  // llvm::appendToGlobalCtors(mod, poly_start, INT32_MAX, nullptr);
+
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
     // Ignore if its in our ignore list
@@ -425,7 +576,8 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
   std::cerr << std::endl;
-  return ret;
+  create_globals(mod, func_index_map);
+  return true;
 }
 
 char PolytrackerPass::ID = 0;

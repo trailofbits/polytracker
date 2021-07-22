@@ -13,9 +13,7 @@ class PolyBuild(Command):
     _container: Optional[DockerContainer] = None
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "--c++", action="store_true", help="run polybuild++ in C++ mode"
-        )
+        parser.add_argument("--c++", action="store_true", help="run polybuild++ in C++ mode")
         parser.add_argument("args", nargs=argparse.REMAINDER)
 
     def run(self, args: argparse.Namespace):
@@ -51,12 +49,8 @@ class PolyBuild(Command):
 
 
 def main():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(
-        argparse.Namespace(args=sys.argv[1:], **{"c++": False})
-    )
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": False}))
 
 
 def main_plus_plus():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(
-        argparse.Namespace(args=sys.argv[1:], **{"c++": True})
-    )
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": True}))

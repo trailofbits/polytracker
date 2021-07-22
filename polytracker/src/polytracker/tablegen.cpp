@@ -1,6 +1,6 @@
 #include "polytracker/output.h"
+#include "polytracker/sqlite3.h"
 #include <iostream>
-#include <sqlite3.h>
 #include <string>
 
 static constexpr const char *createInputTable() {

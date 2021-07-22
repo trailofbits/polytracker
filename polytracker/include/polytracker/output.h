@@ -2,6 +2,7 @@
 #define POLYTRACKER_OUTPUT
 #include "polytracker/dfsan_types.h"
 #include <sqlite3.h>
+#include <string>
 // #include "polytracker/logging.h"
 typedef uint32_t input_id_t;
 typedef uint32_t function_id_t;
@@ -33,33 +34,33 @@ void storeTaintAccess(sqlite3 *output_db, const dfsan_label &label,
                       const ByteAccessType &access_type);
 
 void storeFunc(sqlite3 *output_db, const char *fname,
-               const function_id_t &func_id);
+               const function_id_t func_id);
 std::string getFuncName(sqlite3 *outputDb, const function_id_t &funcId);
 void storeFuncCFGEdge(sqlite3 *output_db, const input_id_t &input_id,
                       const size_t &curr_thread_id, const function_id_t &callee,
                       const function_id_t &caller, const event_id_t &event_id,
                       EdgeType edgetype);
-void storeBlock(sqlite3 *output_db, const function_id_t &findex,
-                const block_id_t &bindex, uint8_t btype);
+void storeBlock(sqlite3 *output_db, const function_id_t findex,
+                const block_id_t bindex, uint8_t btype);
 
 void storeEvent(sqlite3 *output_db, const input_id_t &input_id,
                 const int &thread_id, const event_id_t &event_id,
                 const event_id_t &thread_event_id, EventType event_type,
-                const function_id_t &findex, const block_id_t &bindex,
+                const function_id_t findex, const block_id_t bindex,
                 const event_id_t &func_event_id);
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
                      const int &thread_id, const event_id_t &event_id,
                      const event_id_t &thread_event_id,
-                     const function_id_t &findex, const block_id_t &bindex,
+                     const function_id_t findex, const block_id_t bindex,
                      const event_id_t &func_event_id,
-                     const block_entry_count_t entry_count);
+                     const block_entry_count_t &entry_count);
 
-void storeCanonicalMap(sqlite3 *output_db, const input_id_t &input_id,
-                       const dfsan_label &label, const uint64_t &file_offset);
+void storeCanonicalMap(sqlite3 *output_db, const input_id_t input_id,
+                       const dfsan_label label, const uint64_t file_offset);
 
-void storeTaintedChunk(sqlite3 *output_db, const input_id_t &input_id,
-                       const uint64_t &start, const uint64_t &end);
+void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
+                       const uint64_t start, const uint64_t end);
 
 void storeTaintForestDisk(const std::string &outfile,
                           const dfsan_label &last_label);

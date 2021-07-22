@@ -25,3 +25,4 @@
 #endif
 
 void polytracker_end();
+void polytracker_start();

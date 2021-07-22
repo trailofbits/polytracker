@@ -1,0 +1,106 @@
+FROM trailofbits/polytracker
+MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike
+
+#Update pkg-config/util-linux (needed for FontConfig)
+RUN apt update && apt install pkg-config \
+	uuid-dev \
+	gperf \
+  wget \
+	libtool \
+	gettext \
+	autopoint \
+	autoconf \
+	python3-dev \
+	libasound2-dev \
+	libssl-dev \
+	cmake \
+	libfreetype6-dev \
+	libxcb-composite0-dev \
+	libxml2-dev -y
+
+#RUN apt-get install python3-dev
+
+#Fontconfig requires some stuff?
+#RUN apt install pkg-config \libasound2-dev libssl-dev cmake libfreetype6-dev libexpat1-dev libxcb-composite0-dev -y
+#RUN apt install libxml2-dev -y
+
+#=================================
+WORKDIR /polytracker/the_klondike
+
+#FreeType http://www.linuxfromscratch.org/blfs/view/svn/general/freetype2.html
+RUN wget https://downloads.sourceforge.net/freetype/freetype-2.10.1.tar.xz
+RUN tar -xvf freetype-2.10.1.tar.xz
+
+WORKDIR freetype-2.10.1
+
+#Some linux from scratch magic
+RUN sed -ri "s:.*(AUX_MODULES.*valid):\1:" modules.cfg
+RUN sed -r "s:.*(#.*SUBPIXEL_RENDERING) .*:\1:" -i include/freetype/config/ftoption.h
+RUN ./configure --prefix=/usr --enable-freetype-config
+RUN make -j5 install
+
+#=================================
+WORKDIR /polytracker/the_klondike
+
+#zlib
+RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
+RUN tar -xzvf zlib-1.2.11.tar.gz
+WORKDIR zlib-1.2.11
+RUN ./configure --prefix=/usr && make -j$(nproc) test && make -j$(nproc) install
+
+#=================================
+WORKDIR /polytracker/the_klondike
+
+#Libxml2
+
+RUN wget http://xmlsoft.org/sources/libxml2-2.9.10.tar.gz
+RUN tar -xvf libxml2-2.9.10.tar.gz
+WORKDIR libxml2-2.9.10
+RUN ./configure --disable-dependency-tracking --prefix=/usr --with-python=/usr/bin/python3
+RUN make -j5 install
+RUN make install
+
+
+#=================================
+WORKDIR /polytracker/the_klondike
+
+##Fontconfig (depends on FreeType), note that the linux from scratch version is broken
+#The gitlab version is up to date, and has a PR merged from a year ago with the bug fix
+#https://gitlab.freedesktop.org/fontconfig/fontconfig/merge_requests/2/diffs?commit_id=8208f99fa1676c42bfd8d74de3e9dac5366c150c
+
+RUN git clone https://gitlab.freedesktop.org/fontconfig/fontconfig.git
+
+WORKDIR fontconfig
+RUN ./autogen.sh --sysconfdir=/etc --prefix=/usr --enable-libxml2 --mandir=/usr/share/man
+RUN make -j5 install
+
+#=================================
+WORKDIR /polytracker/the_klondike
+
+RUN wget https://dl.xpdfreader.com/xpdf-4.03.tar.gz
+RUN tar -xvf xpdf-4.03.tar.gz
+WORKDIR xpdf-4.03
+RUN mkdir build
+WORKDIR build
+RUN cmake -DCMAKE_BUILD_TYPE=Release ..
+RUN make -j5 install
+
+#=================================
+WORKDIR xpdf
+
+#Extract and instrument pdftotext, other poppler tools should work the same
+RUN get-bc -b pdftotext
+RUN ${CXX} --lower-bitcode -i pdftotext.bc -o pdftotext_track --libs /build_artifacts/libfofi.a /build_artifacts/libgoo.a /build_artifacts/libsplash.a freetype fontconfig pthread --lists freetype fontconfig xml2 libz
+
+RUN get-bc -b pdfinfo
+RUN ${CXX} --lower-bitcode -i pdfinfo.bc -o pdfinfo_track --libs /build_artifacts/libfofi.a /build_artifacts/libgoo.a /build_artifacts/libsplash.a freetype fontconfig pthread --lists freetype fontconfig xml2 libz
+
+
+RUN get-bc -b pdftops
+RUN ${CXX} --lower-bitcode -i pdtops.bc -o pdftops_track --libs /build_artifacts/libfofi.a /build_artifacts/libgoo.a /build_artifacts/libsplash.a freetype fontconfig pthread --lists freetype fontconfig xml2 libz
+
+# Note, the /workdir directory is intended to be mounted at runtime
+#VOLUME ["/workdir"]
+#WORKDIR /workdir

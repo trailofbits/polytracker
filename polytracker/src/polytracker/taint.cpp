@@ -219,6 +219,8 @@ void logUnion(const dfsan_label &l1, const dfsan_label &l2,
   storeTaintForestNode(output_db, input_id, union_label, l1, l2);
 }
 
+// TODO (Carson) this seems slow and inefficent
+// Can we do this without locking?
 atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
                                   const dfsan_label &l2) {
   std::lock_guard<std::mutex> guard(new_table_lock);

@@ -61,6 +61,4 @@ def temporal_animation(
             col = offset.offset % width
             image.putpixel((col, row), 0)
         images.append(image)
-    images[0].save(
-        output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True
-    )
+    images[0].save(output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True)

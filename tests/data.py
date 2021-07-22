@@ -34,18 +34,20 @@ def run_natively(*args, **kwargs) -> int:
             del kwargs["env"]
         else:
             env = {}
-        sys.stderr.write(
-            f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n"
-        )
+        sys.stderr.write(f"Running `{' '.join(args)}` in Docker because it requires a native install of PolyTracker...\n")
         if "POLYDB" in env:
             # write to a different path inside the container to speed things up on macOS:
             old_polydb_path = env["POLYDB"]
             env["POLYDB"] = "/polytracker.db"
-            args = tuple(["bash", "-c", " ".join(args + (
-                ";", "exitcode=$?",
-                ";", "mv", "/polytracker.db", old_polydb_path,
-                ";", "exit", "$exitcode"
-            ))])
+            args = tuple(
+                [
+                    "bash",
+                    "-c",
+                    " ".join(
+                        args + (";", "exitcode=$?", ";", "mv", "/polytracker.db", old_polydb_path, ";", "exit", "$exitcode")
+                    ),
+                ]
+            )
         return docker_container().run(  # type: ignore
             *args,
             **kwargs,
@@ -53,7 +55,7 @@ def run_natively(*args, **kwargs) -> int:
             stdout=sys.stdout,
             stderr=sys.stderr,
             cwd=str(Path(__file__).parent.parent),
-            env=env
+            env=env,
         )
 
 
