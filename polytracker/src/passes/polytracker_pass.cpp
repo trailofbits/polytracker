@@ -264,11 +264,11 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   bb_index_t bb_index = 0;
 
-  // std::string fname = f->getName().str();
-  // if (fname == "main") {
-  //   llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
-  //   // IRB.SetInsertPoint(call->getNextNode());
-  // }
+  std::string fname = f->getName().str();
+  if (fname == "main") {
+    llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+    // IRB.SetInsertPoint(call->getNextNode());
+  }
 
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
@@ -490,15 +490,15 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  llvm::Function *poly_start =
-      llvm::dyn_cast<llvm::Function>(polytracker_start.getCallee());
-  if (poly_start == nullptr) {
-    std::cerr << "Error: cannot get Function* for polytracker_start"
-              << std::endl;
-    abort();
-  }
-  // Append our start function to go last
-  llvm::appendToGlobalCtors(mod, poly_start, INT32_MAX, nullptr);
+  // llvm::Function *poly_start =
+  //     llvm::dyn_cast<llvm::Function>(polytracker_start.getCallee());
+  // if (poly_start == nullptr) {
+  //   std::cerr << "Error: cannot get Function* for polytracker_start"
+  //             << std::endl;
+  //   abort();
+  // }
+  // // Append our start function to go last
+  // llvm::appendToGlobalCtors(mod, poly_start, INT32_MAX, nullptr);
 
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
