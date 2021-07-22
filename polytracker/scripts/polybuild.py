@@ -110,6 +110,8 @@ LINK_LIBS: List[str] = [
     "-lpthread"
 ]
 
+XRAY_BUILD: bool = False
+
 
 # Helper function, check to see if non linking options are present.
 def is_linking(argv) -> bool:
@@ -139,7 +141,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path, ignore_lists=None, f
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(POLY_PASS_PATH), "-ptrack",
+                   f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
     for item in ignore_lists:
@@ -259,7 +262,7 @@ def handle_cmd(argv: List[str]) -> Optional[Path]:
     conn = sqlite3.connect(MANIFEST_FILE)
     cur = conn.cursor()
     for art in artifacts:
-        query = "INSERT INTO manifest (target, artifact) VALUES (\""\
+        query = "INSERT INTO manifest (target, artifact) VALUES (\"" \
                 f"{output_file.absolute()}\", \"{art.absolute()}\");"
         cur.execute(query)
     conn.commit()
@@ -311,9 +314,19 @@ def do_everything(argv: List[str]):
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     # Lower bitcode. Creates a .o
     if is_cxx:
-        subprocess.check_call(["gclang++", "-fxray-instrument","-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+        if XRAY_BUILD:
+            subprocess.check_call(
+                ["gclang++", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+        else:
+            subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
+
     else:
-        subprocess.check_call(["gclang", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+        if XRAY_BUILD:
+            subprocess.check_call(
+                ["gclang", "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(input_bitcode)])
+        else:
+            subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+
     obj_file = input_bitcode.with_suffix(".o")
 
     # Compile into executable
@@ -321,8 +334,14 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
         re_comp = ["gclang++"]
     else:
         re_comp = ["gclang"]
-    re_comp.extend(["-pie", "-fxray-instrument", "-fxray-instruction-threshold=1", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
-                    "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
+    if XRAY_BUILD:
+        re_comp.extend(
+            ["-pie", "-fxray-instrument", "-fxray-instruction-threshold=1", f"-L{CXX_LIB_PATH!s}", "-g", "-o",
+             str(output_file), str(obj_file),
+             "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
+    else:
+        re_comp.extend(["-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
+                        "-Wl,--allow-multiple-definition", "-Wl,--start-group", "-lc++abi"])
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
         if lib.endswith(".a") or lib.endswith(".o"):
@@ -410,7 +429,6 @@ def main():
     # simple target.
     elif sys.argv[1] == "--instrument-target":
         new_argv = [x for x in sys.argv if x != "--instrument-target"]
-        # Find the output file
         do_everything(new_argv)
 
     elif sys.argv[1] == "--lower-bitcode":
@@ -425,47 +443,22 @@ def main():
         args = parser.parse_args(sys.argv[1:])
         lower_bc(args.input_file, args.output_file, args.libs)
 
-    elif sys.argv[1] == "--rebuild-track":
+    elif sys.argv[1] == "--xray-instrument-target":
+        new_argv = [x for x in sys.argv if x != "--xray-instrument-target"]
+        global XRAY_BUILD
+        XRAY_BUILD = True
+        # Find the output file
+        do_everything(new_argv)
+
+    elif sys.argv[1] == "--xray-lower-bitcode":
+        global XRAY_BUILD
+        XRAY_BUILD = True
         args = parser.parse_args(sys.argv[1:])
-        if not args.rebuild_track or not args.output_file:
-            print("Error! replay instrument path and output file must be specified")
+        if not args.input_file or not args.output_file:
+            print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
-        extracted_bc = args.rebuild_track.with_suffix(".bc")
-        get_bc = ["get-bc", "-o", str(extracted_bc), "-b", args.rebuild_track]
-        ret = subprocess.call(get_bc)
-        if ret != 0:
-            print("Error! Extraction failed!")
-            exit(1)
-        prefix = "split_"
-        split_num = 20
-        llvm_split = ["llvm-split", "-o", prefix, extracted_bc, f"-j{split_num}"]
-        ret = subprocess.call(llvm_split)
-        if ret != 0:
-            print("Error!, llvm-split failed!")
-            exit(1)
-        manager = Manager()
-        bc_files = manager.list()
-        non_track_artifacts = manager.list()
-        processes = []
-        for i in range(split_num):
-            curr_bc = f"{prefix}{i}"
-            p = Process(target=replay_build_instance, args=(curr_bc, i, args.lists, non_track_artifacts, bc_files))
-            processes.append(p)
-            p.start()
-        for proc in processes:
-            proc.join()
-        if len(bc_files) == 0:
-            print("Error! No bitcode files! Nothing to instrument")
-            exit(1)
-        mega_link_output = Path("mega_link.bc")
-        print("LINKING")
-        mega_link_args = ["llvm-link", "-only-needed"] + [bc for bc in bc_files] + ["-o", mega_link_output]
-        print(mega_link_args)
-        ret = subprocess.call(mega_link_args)
-        if ret != 0:
-            print("llvm link failed!")
-            exit(1)
-        lower_bc(mega_link_output, args.output_file, args.libs)
+        bc_file = instrument_bitcode(args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+        lower_bc(bc_file, args.output_file, args.libs)
 
     # Do gllvm build
     else:
