@@ -104,7 +104,7 @@ setup(
         'typing_extensions~=3.7.4.2'
     ],
     extras_require={
-        "dev": ["black>=20.8b1", "mypy", "pytest", "flake8", "Sphinx", "sphinx_rtd_theme~=0.4.3"]
+        "dev": ["black>=20.8b1", "mypy", "pytest", "flake8", "Sphinx", "sphinx_rtd_theme~=0.4.3", "types-setuptools"]
     },
     entry_points={
         'console_scripts': CONSOLE_SCRIPTS
