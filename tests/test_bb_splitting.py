@@ -17,7 +17,8 @@ def test_bb_splitting(program_trace: ProgramTrace):
     for event in program_trace:
         if not isinstance(event, BasicBlockEntry):
             if isinstance(event, FunctionReturn):
-                assert indent >= 2
+                func_name = event.returning_from.name
+                print(f"RETURNING FROM: {'  ' * indent}{func_name}")
                 indent -= 2
             continue
         func = event.called_function
