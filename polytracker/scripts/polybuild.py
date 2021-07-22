@@ -110,8 +110,7 @@ LINK_LIBS: List[str] = [
     "-lpthread"
 ]
 
-XRAY_BUILD: bool = False
-
+XRAY_BUILD: bool = ("--xray-instrument-target" or "--xray-lower-bitcode") in sys.argv
 
 # Helper function, check to see if non linking options are present.
 def is_linking(argv) -> bool:
@@ -296,15 +295,28 @@ def do_everything(argv: List[str]):
         compiler = "gclang++"
     else:
         compiler = "gclang"
-    result = subprocess.call([compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
+    if XRAY_BUILD:
+        result = subprocess.call(
+            [compiler, "-fxray-instrument", "-fxray-instruction-threshold=1", "-fPIC", "-c", str(temp_bc), "-o",
+             str(obj_file)])
+    else:
+        result = subprocess.call([compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
     assert result == 0
 
     # Compile into executable
-    re_comp: List[str] = [
-        compiler, "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
-        "-Wl,--allow-multiple-definition",
-        "-Wl,--start-group", "-lc++abi"
-    ]
+    if XRAY_BUILD:
+        re_comp: List[str] = [
+            compiler, "-fxray-instrument", "-fxray-instruction-threshold=1", "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o",
+            str(output_file), str(obj_file),
+            "-Wl,--allow-multiple-definition",
+            "-Wl,--start-group", "-lc++abi"
+        ]
+    else:
+        re_comp: List[str] = [
+            compiler, "-pie", f"-L{CXX_LIB_PATH!s}", "-g", "-o", str(output_file), str(obj_file),
+            "-Wl,--allow-multiple-definition",
+            "-Wl,--start-group", "-lc++abi"
+        ]
     re_comp.extend(POLYCXX_LIBS)
     re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
@@ -445,14 +457,10 @@ def main():
 
     elif sys.argv[1] == "--xray-instrument-target":
         new_argv = [x for x in sys.argv if x != "--xray-instrument-target"]
-        global XRAY_BUILD
-        XRAY_BUILD = True
         # Find the output file
         do_everything(new_argv)
 
     elif sys.argv[1] == "--xray-lower-bitcode":
-        global XRAY_BUILD
-        XRAY_BUILD = True
         args = parser.parse_args(sys.argv[1:])
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
