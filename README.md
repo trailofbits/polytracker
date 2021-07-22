@@ -312,6 +312,13 @@ The following tools are required to test and run PolyTracker:
 * [gllvm](https://github.com/SRI-CSL/gllvm) (`go get github.com/SRI-CSL/gllvm/cmd/...`) is used to create whole program
   bitcode archives and to extract bitcode from targets.
 
+## Building with LLVM Xray Instrumentation
+It's possible to build both Polytracker and target programs with [LLVM's Xray](https://llvm.org/docs/XRay.html)
+instrumentation. Pass the `XRAY_ON` option to Polytracker, and build targets with `--xray-instrument-target` or
+`--xray-lower-bitcode` to `polybuild` to build targets with xray instrumentation.
+
+An example on how to use Xray lives [here.](https://chromium.googlesource.com/external/github.com/llvm-mirror/llvm/+/refs/heads/master/docs/XRayExample.rst)
+
 ## Current Status and Known Issues
 
 PolyTracker currently only runs on Linux, because that is the only system supported by the DataFlow Santizer. This
