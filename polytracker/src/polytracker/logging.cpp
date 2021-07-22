@@ -66,14 +66,6 @@ int logFunctionEntry(const char *fname, const function_id_t func_id) {
   return function_stack.size();
 }
 
-std::string funcName(const function_id_t index) {
-  auto funcName = getFuncName(output_db, index);
-  if (!funcName.empty()) {
-    funcName = "`" + funcName + "` ";
-  }
-  return funcName + std::string("index ") + std::to_string(index);
-}
-
 // Handles stack jumps
 void logCallExit(const function_id_t index, const int stack_loc) {
   while (UNLIKELY(stack_loc < function_stack.size())) {
