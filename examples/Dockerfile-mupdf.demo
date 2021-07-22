@@ -18,7 +18,7 @@ WORKDIR /polytracker/the_klondike
 COPY --from=sources /polytracker/the_klondike/mupdf /polytracker/the_klondike/mupdf
 
 WORKDIR /polytracker/the_klondike/mupdf
-RUN git checkout aaeb9b50c4ee02f57c2c7cffe93d37208aa74787
+RUN git checkout d00de0e96a4a5ec90ffc30837d40cd624a6a89e0
 RUN make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
 
 WORKDIR /polytracker/the_klondike/mupdf/build/debug 
