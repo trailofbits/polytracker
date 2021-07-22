@@ -40,13 +40,8 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
     def path_length(self, from_node: N, to_node: N) -> Union[int, float]:
         if self._path_lengths is None:
-            self._path_lengths = dict(
-                nx.all_pairs_shortest_path_length(self, cutoff=None)
-            )
-        if (
-            from_node not in self._path_lengths
-            or to_node not in self._path_lengths[from_node]
-        ):
+            self._path_lengths = dict(nx.all_pairs_shortest_path_length(self, cutoff=None))
+        if from_node not in self._path_lengths or to_node not in self._path_lengths[from_node]:
             return math.inf
         else:
             return self._path_lengths[from_node][to_node]
@@ -70,14 +65,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         if not self.has_node(node):
             raise nx.NetworkXError(f"Node {node} is not in the graph")
         return OrderedSet(
-            *(
-                x
-                for _, x in sorted(
-                    (d, n)
-                    for n, d in nx.shortest_path_length(self, target=node).items()
-                    if n is not node
-                )
-            )
+            *(x for _, x in sorted((d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node))
         )
 
     def has_one_predecessor(self, node: N) -> bool:
@@ -120,10 +108,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
                 incoming_nodes = list(self.predecessors(pred))
                 outgoing_nodes = list(self.successors(node))
                 ret.remove_nodes_from([pred, node])
-                ret.add_edges_from(
-                    [(i, new_node) for i in incoming_nodes]
-                    + [(new_node, o) for o in outgoing_nodes]
-                )
+                ret.add_edges_from([(i, new_node) for i in incoming_nodes] + [(new_node, o) for o in outgoing_nodes])
                 if new_node is not pred:
                     nodes.remove(pred)
                     nodes.add(new_node)
@@ -285,8 +270,10 @@ class FunctionInfo:
         return self.demangled_name
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, "\
-               f"input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
+        return (
+            f"{self.__class__.__name__}(name={self.name!r}, cmp_bytes={self.cmp_bytes!r}, "
+            f"input_bytes={self.input_bytes!r}, called_from={self.called_from!r})"
+        )
 
 
 class CFG(DiGraph[FunctionInfo]):

@@ -220,7 +220,7 @@ class Tracer(ProgramTrace):
         return self.bb_stack[-1][-1].name
 
     def peek(self, num_bytes: int) -> bytes:
-        bytes_read = self.inputstr[self.input_offset : self.input_offset + num_bytes]
+        bytes_read = self.inputstr[self.input_offset: self.input_offset + num_bytes]
         self.current_bb.consumed.extend(range(self.input_offset, self.input_offset + len(bytes_read)))
         return bytes_read
 

@@ -6,10 +6,7 @@ from typing import List, Optional, Tuple
 
 class InputProperties:
     def __init__(
-            self,
-            unused_byte_offsets: List[int],
-            out_of_order_byte_offsets: List[int],
-            file_seeks: List[Tuple[int, int, int]]
+        self, unused_byte_offsets: List[int], out_of_order_byte_offsets: List[int], file_seeks: List[Tuple[int, int, int]]
     ):
         self.unused_byte_offsets: List[int] = unused_byte_offsets
         self.file_seeks: List[Tuple[int, int, int]] = file_seeks
@@ -21,14 +18,15 @@ class InputProperties:
 
 class Input:
     """A source of taint"""
+
     def __init__(
-            self,
-            uid: int,
-            path: str,
-            size: int,
-            track_start: int = 0,
-            track_end: Optional[int] = None,
-            content: Optional[bytes] = None
+        self,
+        uid: int,
+        path: str,
+        size: int,
+        track_start: int = 0,
+        track_end: Optional[int] = None,
+        content: Optional[bytes] = None,
     ):
         """Initializes a taint source.
 
@@ -63,9 +61,11 @@ class Input:
         if self.stored_content is not None:
             return self.stored_content
         elif not Path(self.path).exists():
-            raise ValueError(f"Input {self.uid} did not have its content stored to the database (the instrumented "
-                             f"binary was likely run with POLYSAVEINPUT=0) and the associated path {self.path!r} "
-                             "does not exist!")
+            raise ValueError(
+                f"Input {self.uid} did not have its content stored to the database (the instrumented "
+                f"binary was likely run with POLYSAVEINPUT=0) and the associated path {self.path!r} "
+                "does not exist!"
+            )
         with open(self.path, "rb") as f:
             self.stored_content = f.read()
         return self.stored_content

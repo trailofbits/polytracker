@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from collections.abc import MutableSet as AbstractMutableSet, MutableMapping
-from typing import Callable, Generic, Iterator, Optional, Tuple, TypeVar, Union
+from typing import Callable, Generic, Iterator, Optional, TypeVar, Union
 
 R = TypeVar("R")
 V = TypeVar("V")

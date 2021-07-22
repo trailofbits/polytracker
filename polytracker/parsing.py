@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from logging import getLogger
-from typing import Dict, Generic, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Generic, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
 
 from .cfg import DAG
-from .tracing import BasicBlockEntry, FunctionInvocation, FunctionReturn, ProgramTrace, TraceEvent
+from .tracing import BasicBlockEntry, FunctionInvocation, ProgramTrace, TraceEvent
 
 
 log = getLogger(__file__)
@@ -232,9 +232,9 @@ N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
 
 
 def trace_to_tree(
-        trace: ProgramTrace,
-        node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],  # type: ignore
-        include_terminals: bool = True
+    trace: ProgramTrace,
+    node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],  # type: ignore
+    include_terminals: bool = True,
 ) -> N:
     if trace.entrypoint is None:
         raise ValueError(f"Trace {trace} does not have an entrypoint!")
@@ -243,21 +243,17 @@ def trace_to_tree(
 
     entrypoint_node = node_type(trace.entrypoint)
     root.children.append(entrypoint_node)
-    function_stack: List[Tuple[FunctionInvocation, N]] = [
-        (trace.entrypoint, entrypoint_node)
-    ]
+    function_stack: List[Tuple[FunctionInvocation, N]] = [(trace.entrypoint, entrypoint_node)]
 
     with tqdm(
-            unit=" functions",
-            leave=False,
-            desc="extracting a parse tree",
-            total=trace.num_function_calls_that_touched_taint()
+        unit=" functions", leave=False, desc="extracting a parse tree", total=trace.num_function_calls_that_touched_taint()
     ) as t:
         while function_stack:
             function, node = function_stack.pop()
             t.update(1)
-            for bb in tqdm(function.basic_blocks(), unit=" basic blocks", leave=False,
-                           desc=function.function.demangled_name, delay=1.0):
+            for bb in tqdm(
+                function.basic_blocks(), unit=" basic blocks", leave=False, desc=function.function.demangled_name, delay=1.0
+            ):
                 child_node = node_type(bb)
                 node.children.append(child_node)
                 if include_terminals:
@@ -313,7 +309,7 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
         covered_input_bytes = IntervalTree()
         for child in self.children:
             if check_overlap and covered_input_bytes.overlaps(child.begin_offset, child.end_offset):
-                overlap = ", ".join([interval.data for interval in covered_input_bytes[child.begin_offset : child.end_offset]])
+                overlap = ", ".join([interval.data for interval in covered_input_bytes[child.begin_offset: child.end_offset]])
                 raise ValueError(f"Child node {child.value!s} of {self.value!s} overlaps with these siblings: " f"{overlap!r}")
             if child.end_offset > child.begin_offset:
                 covered_input_bytes.addi(child.begin_offset, child.end_offset, str(child.value))

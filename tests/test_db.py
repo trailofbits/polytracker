@@ -1,5 +1,3 @@
-import pytest
-
 from polytracker.database import DBProgramTrace
 
 

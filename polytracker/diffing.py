@@ -60,9 +60,7 @@ def print_file_context(
             written += len(to_write)
             output.write(to_write)
         if extra_bytes:
-            output.write(
-                f" [ … plus {extra_bytes} additional byte{['', 's'][extra_bytes > 1]} … ]"
-            )
+            output.write(f" [ … plus {extra_bytes} additional byte{['', 's'][extra_bytes > 1]} … ]")
         output.write("\n")
         if highlight_length < 0 <= highlight_start:
             highlight_length = written - highlight_start
@@ -154,11 +152,7 @@ class TraceDiff:
         for fname in {
             func.name
             for func in self.trace1.functions
-            if func.name
-            not in {
-                f.name
-                for f in (self.functions_only_in_first | self.functions_only_in_second)
-            }
+            if func.name not in {f.name for f in (self.functions_only_in_first | self.functions_only_in_second)}
         }:
             yield fname, self.trace1.get_function(fname).taints().diff(self.trace2.get_function(fname).taints())
 
@@ -173,9 +167,7 @@ class TraceDiff:
         if self._bytes_only_in_first is not None:
             return
         # TODO: Instead of looking at what functions touched, just look at the bytes in the canonical mapping!
-        with tqdm(
-            desc="Diffing tainted byte regions", leave=False, unit=" trace", total=2
-        ) as t:
+        with tqdm(desc="Diffing tainted byte regions", leave=False, unit=" trace", total=2) as t:
             for func in tqdm(
                 self.trace1.functions,
                 desc="Trace 1",
@@ -209,28 +201,16 @@ class TraceDiff:
                     unit=" intervals",
                     leave=False,
                 ):
-                    self._bytes_only_in_first[source].remove_overlap(
-                        interval.begin, interval.end
-                    )
-                self._bytes_only_in_second[source] = self._second_intervals[
-                    source
-                ].copy()
+                    self._bytes_only_in_first[source].remove_overlap(interval.begin, interval.end)
+                self._bytes_only_in_second[source] = self._second_intervals[source].copy()
                 for interval in tqdm(
                     self._first_intervals[source],
                     desc="Removing Trace 2 Overlap",
                     unit=" intervals",
                     leave=False,
                 ):
-                    self._bytes_only_in_second[source].remove_overlap(
-                        interval.begin, interval.end
-                    )
-                assert (
-                    len(
-                        self._bytes_only_in_first[source]
-                        & self._bytes_only_in_second[source]
-                    )
-                    == 0
-                )
+                    self._bytes_only_in_second[source].remove_overlap(interval.begin, interval.end)
+                assert len(self._bytes_only_in_first[source] & self._bytes_only_in_second[source]) == 0
             for source in self._first_intervals.keys() - self._second_intervals.keys():
                 # sources only in first
                 self._bytes_only_in_first[source] = self._first_intervals[source]
@@ -298,8 +278,7 @@ class TraceDiff:
 
         if self.has_input_chunks_only_in_first:
             status.write(
-                "The reference trace touched the following byte regions that were not touched by the diffed "
-                "trace:\n"
+                "The reference trace touched the following byte regions that were not touched by the diffed " "trace:\n"
             )
             for region in self.input_chunks_only_in_first:
                 print_chunk_info((region,))
@@ -311,8 +290,10 @@ class TraceDiff:
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
                             different_function = cfd.first_function_with_different_control_flow
-                            function_diff = self.trace1.get_function(different_function).taints().diff(
-                                self.trace2.get_function(different_function).taints()
+                            function_diff = (
+                                self.trace1.get_function(different_function)
+                                .taints()
+                                .diff(self.trace2.get_function(different_function).taints())
                             )
                             if not bool(function_diff):
                                 continue
@@ -322,8 +303,7 @@ class TraceDiff:
                             )
                             if function_diff.bytes_only_in_first:
                                 status.write(
-                                    "\t\tHere are the bytes that affected control flow only in the reference "
-                                    "trace:\n"
+                                    "\t\tHere are the bytes that affected control flow only in the reference " "trace:\n"
                                 )
                                 print_chunk_info(
                                     function_diff.regions_only_in_first,
@@ -331,8 +311,7 @@ class TraceDiff:
                                 )
                             if function_diff.bytes_only_in_second:
                                 status.write(
-                                    "\t\tHere are the bytes that affected control flow only in the differed "
-                                    "trace:\n"
+                                    "\t\tHere are the bytes that affected control flow only in the differed " "trace:\n"
                                 )
                                 print_chunk_info(
                                     function_diff.regions_only_in_second,
@@ -341,8 +320,7 @@ class TraceDiff:
 
         if self.has_input_chunks_only_in_second:
             status.write(
-                "The diffed trace touched the following byte regions that were not touched by the reference "
-                "trace:\n"
+                "The diffed trace touched the following byte regions that were not touched by the reference " "trace:\n"
             )
             for region in self.input_chunks_only_in_second:
                 print_chunk_info((region,))
@@ -354,8 +332,10 @@ class TraceDiff:
                         cfd = ControlFlowDiff(self.trace1, self.trace2, func.name)
                         if cfd:
                             different_function = cfd.first_function_with_different_control_flow
-                            function_diff = self.trace1.get_function(different_function).taints().diff(
-                                self.trace2.get_function(different_function).taints()
+                            function_diff = (
+                                self.trace1.get_function(different_function)
+                                .taints()
+                                .diff(self.trace2.get_function(different_function).taints())
                             )
                             if not bool(function_diff):
                                 continue
@@ -365,8 +345,7 @@ class TraceDiff:
                             )
                             if function_diff.bytes_only_in_first:
                                 status.write(
-                                    "\t\tHere are the bytes that affected control flow only in the reference "
-                                    "trace:\n"
+                                    "\t\tHere are the bytes that affected control flow only in the reference " "trace:\n"
                                 )
                                 print_chunk_info(
                                     function_diff.regions_only_in_first,
@@ -374,29 +353,21 @@ class TraceDiff:
                                 )
                             if function_diff.bytes_only_in_first:
                                 status.write(
-                                    "\t\tHere are the bytes that affected control flow only in the differed "
-                                    "trace:\n"
+                                    "\t\tHere are the bytes that affected control flow only in the differed " "trace:\n"
                                 )
                                 print_chunk_info(
                                     function_diff.regions_only_in_second,
                                     indent="\t\t\t",
                                 )
 
-        if (
-            not self.has_input_chunks_only_in_first
-            and not self.has_input_chunks_only_in_second
-        ):
+        if not self.has_input_chunks_only_in_first and not self.has_input_chunks_only_in_second:
             status.write("Both traces consumed the exact same input byte regions\n")
 
         for func in self.functions_only_in_first:
-            status.write(
-                f"Function {func!s} was called in the reference trace but not in the diffed trace\n"
-            )
+            status.write(f"Function {func!s} was called in the reference trace but not in the diffed trace\n")
             print_chunk_info(func.taints().regions())
         for func in self.functions_only_in_second:
-            status.write(
-                f"Function {func!s} was called in the diffed trace but not in the reference trace\n"
-            )
+            status.write(f"Function {func!s} was called in the diffed trace but not in the reference trace\n")
             print_chunk_info(func.taints().regions())
         for fname, func in self.functions_in_both:
             if func:
@@ -415,7 +386,7 @@ class TraceDiff:
                     print_chunk_info(func.regions_only_in_second)
 
         if not self:
-            status.write(f"Traces do not differ")
+            status.write("Traces do not differ")
         return status.getvalue()
 
 
@@ -424,12 +395,8 @@ class TraceDiffCommand(Command):
     help = "compute a diff of two program traces"
 
     def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument(
-            "trace1", type=str, help="the output database from the first trace"
-        )
-        parser.add_argument(
-            "trace2", type=str, help="the output database from the second trace"
-        )
+        parser.add_argument("trace1", type=str, help="the output database from the first trace")
+        parser.add_argument("trace2", type=str, help="the output database from the second trace")
         parser.add_argument(
             "--image",
             type=str,
@@ -439,6 +406,7 @@ class TraceDiffCommand(Command):
 
     def run(self, args: Namespace):
         from . import PolyTrackerTrace
+
         trace1 = PolyTrackerTrace.load(args.trace1)
         trace2 = PolyTrackerTrace.load(args.trace2)
         diff = TraceDiff(trace1, trace2)
@@ -452,14 +420,11 @@ class TemporalVisualization(Command):
     help = "generate an animation of the file accesses in a runtime trace"
 
     def __init_arguments__(self, parser):
-        parser.add_argument(
-            "POLYTRACKER_DB", type=str, help="the trace database"
-        )
-        parser.add_argument(
-            "OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation"
-        )
+        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation")
 
     def run(self, args):
         from . import PolyTrackerTrace
+
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         temporal_animation(args.OUTPUT_GIF_PATH, trace)

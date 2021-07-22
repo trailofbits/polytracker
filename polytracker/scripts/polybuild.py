@@ -14,17 +14,18 @@
 
   Then you can use polybuild(++) --instrument -f program.bc -o output -llib1 -llib2
 
-  It will run opt to instrument your bitcode and then compile/link all instrumentation libraries with clang to create your output exec.
+  It will run opt to instrument your bitcode and then compile/link all instrumentation libraries with clang to create
+  your output exec.
 
-  Part of the reason this isnt a fully automated process is it allows users to easily build complex projects with multiple DSOs without accidentally linking
-  against the compiler-rt based runtime pre_init_array. This allows the user to extract BC for whatever DSOs and executables they want, while still being
+  Part of the reason this isnt a fully automated process is it allows users to easily build complex projects with
+  multiple DSOs without accidentally linking against the compiler-rt based runtime pre_init_array.
+  This allows the user to extract BC for whatever DSOs and executables they want, while still being
   able to easily include other libraries they did not want tracking in.
 """
 import argparse
 import os
 import sys
 import subprocess
-from multiprocessing import Process, Manager
 from pathlib import Path
 from typing import Iterable, List, Optional
 import sqlite3

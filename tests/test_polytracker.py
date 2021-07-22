@@ -1,5 +1,4 @@
 from collections import defaultdict
-import os
 import pytest
 from subprocess import CalledProcessError
 from typing import Dict
@@ -77,40 +76,9 @@ def test_control_flow(program_trace: ProgramTrace):
     # so for now just ignore main
 
 
-# TODO: Update this test
-# def test_polyprocess_taint_sets(json_path, forest_path):
-#     logger.info("Testing taint set processing")
-#     poly_proc = PolyProcess(json_path, forest_path)
-#     poly_proc.process_taint_sets()
-#     poly_proc.set_output_filepath("/tmp/polytracker.json")
-#     poly_proc.output_processed_json()
-#     assert os.path.exists("/tmp/polytracker.json") is True
-#     with open("/tmp/polytracker.json", "r") as poly_json:
-#         json_size = os.path.getsize("/tmp/polytracker.json")
-#         polytracker_json = json.loads(poly_json.read(json_size))
-#         if "tainted_functions" in poly_proc.polytracker_json:
-#             assert "tainted_functions" in polytracker_json
-#             for func in poly_proc.polytracker_json["tainted_functions"]:
-#                 if "cmp_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
-#                     assert "cmp_bytes" in polytracker_json["tainted_functions"][func]
-#                 if "input_bytes" in poly_proc.polytracker_json["tainted_functions"][func]:
-#                     assert "input_bytes" in polytracker_json["tainted_functions"][func]
-#         assert "version" in polytracker_json
-#         assert polytracker_json["version"] == poly_proc.polytracker_json["version"]
-#         assert "runtime_cfg" in polytracker_json
-#         assert len(polytracker_json["runtime_cfg"]["main"]) == 1
-#         assert "taint_sources" in polytracker_json
-#         assert "canonical_mapping" not in polytracker_json
-#         assert "tainted_input_blocks" in polytracker_json
-
-
 @pytest.mark.program_trace("test_open.c")
 def test_source_open_full_validate_schema(program_trace: ProgramTrace):
-    forest_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_forest.bin")
-    json_path = os.path.join(TEST_RESULTS_DIR, "test_open.c0_process_set.json")
     assert any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
-    # TODO: Uncomment once we update this function
-    # test_polyprocess_taint_sets(json_path, forest_path)
 
 
 @pytest.mark.program_trace("test_memcpy.c")
@@ -179,7 +147,7 @@ def test_fgetc(program_trace: ProgramTrace):
     for i, called in enumerate(called_by_main):
         regions = list(called.taints().regions())
         assert len(regions) == 1
-        assert regions[0].value == b"ABCDEFGH"[i : i + 1]
+        assert regions[0].value == b"ABCDEFGH"[i: i + 1]
 
 
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")

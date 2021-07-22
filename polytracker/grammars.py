@@ -72,15 +72,11 @@ class Rule:
 
     @property
     def can_produce_terminal(self) -> bool:
-        return self.has_terminals or any(
-            p.can_produce_terminal for p in self if isinstance(p, Production)
-        )
+        return self.has_terminals or any(p.can_produce_terminal for p in self if isinstance(p, Production))
 
     def remove_sub_production(self, prod_name: str) -> bool:
         old_len = len(self.sequence)
-        self.sequence = Rule.combine_terminals(
-            [s for s in self.sequence if s != prod_name]
-        )
+        self.sequence = Rule.combine_terminals([s for s in self.sequence if s != prod_name])
         return len(self.sequence) != old_len
 
     def replace_sub_production(self, to_replace: NonTerminal, replace_with: Union[NonTerminal, "Rule"]) -> bool:
@@ -147,9 +143,7 @@ class Rule:
 class Production:
     def __init__(self, grammar: "Grammar", name: str, *rules: Rule):
         if name in grammar:
-            raise ValueError(
-                f"A production named {name!r} already exists in grammar {grammar!s}!"
-            )
+            raise ValueError(f"A production named {name!r} already exists in grammar {grammar!s}!")
         self.grammar: Grammar = grammar
         self.name: str = name
         self.rules: Set[Rule] = set(rules)
@@ -204,7 +198,7 @@ class Production:
                         elif remaining_bytes.startswith(next_symbol.terminal):
                             stack.append(
                                 (
-                                    remaining_bytes[len(next_symbol.terminal) :],
+                                    remaining_bytes[len(next_symbol.terminal):],
                                     trees + [ImmutableParseTree(next_symbol)],
                                     remaining_symbols[1:],
                                 )
@@ -925,9 +919,7 @@ class Grammar:
                 for v in rule.sequence:
                     if isinstance(v, str):
                         if v not in self:
-                            raise MissingProductionError(
-                                f"Production {prod.name} references {v}, which is not in the grammar"
-                            )
+                            raise MissingProductionError(f"Production {prod.name} references {v}, which is not in the grammar")
                         elif prod.name not in self.used_by[v]:
                             raise CorruptedGrammarError(
                                 f"Production {prod.name} references {v} but that is not "
@@ -943,23 +935,15 @@ class Grammar:
             #     print(f"Warning: Production {prod.name} is never used")
         for prod_name in self.used_by.keys():
             if prod_name not in self:
-                raise CorruptedGrammarError(
-                    f'Production {prod_name} is in the "used by" table, but not in the grammar'
-                )
+                raise CorruptedGrammarError(f'Production {prod_name} is in the "used by" table, but not in the grammar')
         if self.start is not None and test_disconnection:
             # make sure there is a path from start to every other production
             graph = self.dependency_graph()
-            visited = set(
-                node for node in nx.dfs_preorder_nodes(graph, source=self.start)
-            )
+            visited = set(node for node in nx.dfs_preorder_nodes(graph, source=self.start))
             if len(visited) < len(self.productions):
-                not_visited_prods = set(
-                    node for node in self.productions.values() if node not in visited
-                )
+                not_visited_prods = set(node for node in self.productions.values() if node not in visited)
                 # it's okay if the unvisited productions aren't able to produce terminals
-                not_visited = [
-                    node.name for node in not_visited_prods if node.can_produce_terminal
-                ]
+                not_visited = [node.name for node in not_visited_prods if node.can_produce_terminal]
                 if not_visited:
                     raise DisconnectedGrammarError(
                         "These productions are not accessible from the start production "
@@ -970,11 +954,11 @@ class Grammar:
         modified = False
         with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
             for prod in tqdm(
-                    list(self.productions.values()),
-                    desc="simplifying trivial productions",
-                    unit=" productions",
-                    leave=False,
-                    unit_divisor=1
+                list(self.productions.values()),
+                desc="simplifying trivial productions",
+                unit=" productions",
+                leave=False,
+                unit_divisor=1,
             ):
                 # remove any rules in the production that just recursively call the same production
                 prod.remove_recursive_rules()
@@ -988,11 +972,11 @@ class Grammar:
                     # self.verify(test_disconnection=False)
                     status.update(1)
             for prod in tqdm(
-                    list(self.productions.values()),
-                    desc="removing empty productions",
-                    unit=" productions",
-                    leave=False,
-                    unit_divisor=1
+                list(self.productions.values()),
+                desc="removing empty productions",
+                unit=" productions",
+                leave=False,
+                unit_divisor=1,
             ):
                 if prod.removable and not prod.can_produce_terminal:
                     removed = self.remove(prod)
@@ -1004,9 +988,7 @@ class Grammar:
         return modified
         modified = False
         modified_last_pass = True
-        with tqdm(
-            desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1
-        ) as status:
+        with tqdm(desc="garbage collecting", unit=" productions", leave=False, unit_divisor=1) as status:
             while modified_last_pass:
                 modified_last_pass = False
                 for prod in list(self.productions.values()):
@@ -1033,9 +1015,7 @@ class Grammar:
                 modified = modified or modified_last_pass
             # traverse the productions from the least dominant up
             dominators = self.dependency_graph().dominator_forest
-            ordered_productions: List[Production] = list(
-                nx.dfs_postorder_nodes(dominators, source=self.start)
-            )
+            ordered_productions: List[Production] = list(nx.dfs_postorder_nodes(dominators, source=self.start))
             # see if any of the productions are equivalent. if so, combine them
             for p1, p2 in itertools.combinations(ordered_productions, 2):
                 if p1 == p2:
@@ -1125,9 +1105,7 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
             prod_name = production_name(func)
 
             if grammar.start is None and func is entrypoint:
-                grammar.start = Production(
-                    grammar, "<START>", Rule.load(grammar, prod_name)
-                )
+                grammar.start = Production(grammar, "<START>", Rule.load(grammar, prod_name))
 
             if not func.touched_taint:
                 # do not expand the function if it didn't touch taint
@@ -1148,14 +1126,14 @@ def trace_to_grammar(trace: ProgramTrace) -> Grammar:
 
                 bbs: List[Optional[BasicBlockEntry]] = list(func.basic_blocks())
                 for bb, next_bb in tqdm(
-                        zip(bbs, bbs[1:] + [None]), leave=False, unit=" basic blocks",
-                        desc=func.function.demangled_name,
-                        delay=1.0,
-                        total=len(bbs)
+                    zip(bbs, bbs[1:] + [None]),
+                    leave=False,
+                    unit=" basic blocks",
+                    desc=func.function.demangled_name,
+                    delay=1.0,
+                    total=len(bbs),
                 ):
-                    sub_productions: List[Union[Terminal, str]] = [
-                        Terminal(token) for token in bb.consumed_tokens
-                    ]
+                    sub_productions: List[Union[Terminal, str]] = [Terminal(token) for token in bb.consumed_tokens]
 
                     called_function = bb.called_function
 
@@ -1221,9 +1199,7 @@ def extract(traces: Iterable[ProgramTrace], simplify: bool = False) -> Grammar:
         if properties.file_seeks:
             # this should only ever happen if properties.out_of_order_byte_offsets is also populated
             seeks = [f"⎆{i}:⎗{from_offset}→{to_offset}⎘" for i, from_offset, to_offset in properties.file_seeks]
-            log.info(
-                f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}"
-            )
+            log.info(f"The parser backtracked from one offset to another at the following event indexes: {', '.join(seeks)}")
         tree = trace_to_non_generalized_tree(trace)
         match_before = tree.matches()
         tree.simplify()
@@ -1272,9 +1248,7 @@ class ExtractGrammarCommand(Command):
             type=str,
             help="extract a grammar from the provided PolyTracker trace databases",
         )
-        parser.add_argument(
-            "--simplify", "-s", action="store_true", help="simplify the grammar"
-        )
+        parser.add_argument("--simplify", "-s", action="store_true", help="simplify the grammar")
 
     def run(self, args: Namespace):
         self.traces = []

@@ -41,7 +41,8 @@ class BasicBlockType(IntFlag):
     Basic block types
 
     This should be kept in parity with the enum in
-    `/polytracker/include/polytracker/basic_block_types.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/basic_block_types.h>`_
+    `/polytracker/include/polytracker/basic_block_types.h
+    <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/basic_block_types.h>`_
 
     """
 
@@ -69,7 +70,8 @@ class ByteAccessType(IntFlag):
     """Bitfield enum defining the context in which taints were accessed.
 
     This should be kept in parity with the enum in
-    `/polytracker/include/polytracker/output.h <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/output.h>`_
+    `/polytracker/include/polytracker/output.h
+    <https://github.com/trailofbits/polytracker/blob/master/polytracker/include/polytracker/output.h>`_
 
     """
 
@@ -105,7 +107,7 @@ class TaintedRegion:
                         does not exist.
 
         """
-        return self.source.content[self.offset : self.offset + self.length]
+        return self.source.content[self.offset: self.offset + self.length]
 
     def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
         """Gets a :class:`ByteOffset` or sliced :class:`TaintedRegion` from this region"""
@@ -295,7 +297,7 @@ class Taints:
                 content = region.value
                 offset = content.find(byte_sequence, offset)
                 if offset >= 0:
-                    yield region[offset : offset + len(byte_sequence)]
+                    yield region[offset: offset + len(byte_sequence)]
                 else:
                     break
 
