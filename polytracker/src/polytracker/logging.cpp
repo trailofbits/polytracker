@@ -74,63 +74,28 @@ std::string funcName(const function_id_t index) {
   return funcName + std::string("index ") + std::to_string(index);
 }
 
-void logExit(const int stack_loc, const std::function<bool(int, int)> &lambda) {
-  if (UNLIKELY(!function_stack.empty())) {
-    // if uninstrumented code calls into instrumented code, we'll get a
-    // function entry event but no associated function exit. So see if we can
-    // clean up the function stack:
-    // lambda is because on call exit, we want <, and on funcExit we want <=
-    while (lambda(stack_loc, function_stack.size())) {
-      const auto &current_function_event = function_stack.back().func_event_id;
-      const auto &func_index = function_stack.back().func_id;
-      const auto &this_event_id = event_id++;
-      function_stack.pop_back();
-      storeEvent(output_db, input_id, thread_id, this_event_id,
-                 thread_event_id++, EventType::FUNC_RET, func_index, 0,
-                 current_function_event);
-    }
-  } else {
-    const auto current_function_event = function_stack.back().func_event_id;
-    const auto func_index = function_stack.back().func_id;
-    const auto this_event_id = event_id++;
+// Handles stack jumps
+void logCallExit(const function_id_t index, const int stack_loc) {
+  while (UNLIKELY(stack_loc < function_stack.size())) {
+    const auto &current_function_event = function_stack.back().func_event_id;
+    const auto &func_index = function_stack.back().func_id;
+    const auto &this_event_id = event_id++;
     function_stack.pop_back();
     storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
                EventType::FUNC_RET, func_index, 0, current_function_event);
   }
-}
-
-const auto call_exit_cmp = [](int a, int b) { return a < b; };
-const auto func_exit_cmp = [](int a, int b) { return a <= b; };
-void logCallExit(const function_id_t index, const int stack_loc) {
-  logExit(stack_loc, call_exit_cmp);
   curr_func_index = index;
 }
 
 void logFunctionExit(const function_id_t index, const int stack_loc) {
-  logExit(stack_loc, func_exit_cmp);
-  // if (UNLIKELY(!function_stack.empty())) {
-  //   // if uninstrumented code calls into instrumented code, we'll get a
-  //   // function entry event but no associated function exit. So see if we can
-  //   // clean up the function stack:
-  //   // <= because this is the location we are popping off from :)
-  //   while (stack_loc <= function_stack.size()) {
-  //     const auto& current_function_event =
-  //     function_stack.back().func_event_id; const auto& func_index =
-  //     function_stack.back().func_id; const auto& this_event_id = event_id++;
-  //     function_stack.pop_back();
-  //     storeEvent(output_db, input_id, thread_id, this_event_id,
-  //                thread_event_id++, EventType::FUNC_RET, func_index, 0,
-  //                current_function_event);
-  //   }
-  // } else {
-  //   const auto current_function_event = function_stack.back().func_event_id;
-  //   const auto func_index = function_stack.back().func_id;
-  //   const auto this_event_id = event_id++;
-  //   function_stack.pop_back();
-  //   storeEvent(output_db, input_id, thread_id, this_event_id,
-  //   thread_event_id++,
-  //              EventType::FUNC_RET, func_index, 0, current_function_event);
-  // }
+  // The function stack should never be empty, as a logFunctionExit should have
+  // a corresponding logFunctionEntry
+  const auto &current_function_event = function_stack.back().func_event_id;
+  const auto &func_index = function_stack.back().func_id;
+  const auto &this_event_id = event_id++;
+  function_stack.pop_back();
+  storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
+             EventType::FUNC_RET, func_index, 0, current_function_event);
   curr_func_index = index;
 }
 
