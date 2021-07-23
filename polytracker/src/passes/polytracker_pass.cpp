@@ -48,7 +48,7 @@ static bool op_check(llvm::Value *inst) {
 }
 
 // On binary ops
-void PolyInstVisitor::logOp(llvm::Instruction *inst,
+void PolytrackerPass::logOp(llvm::Instruction *inst,
                             llvm::FunctionCallee &callback) {
   auto first_operand = inst->getOperand(0);
   auto second_operand = inst->getOperand(1);
@@ -78,15 +78,15 @@ void PolyInstVisitor::logOp(llvm::Instruction *inst,
       IRB.CreateCall(callback, {int_val, int_val_two, FuncIndex, BlockIndex});
 }
 
-void PolyInstVisitor::visitCmpInst(llvm::CmpInst &CI) {
+void PolytrackerPass::visitCmpInst(llvm::CmpInst &CI) {
   logOp(&CI, taint_cmp_log);
 }
 
-void PolyInstVisitor::visitBinaryOperator(llvm::BinaryOperator &Op) {
+void PolytrackerPass::visitBinaryOperator(llvm::BinaryOperator &Op) {
   logOp(&Op, taint_op_log);
 }
 
-void PolyInstVisitor::visitReturnInst(llvm::ReturnInst &RI) {
+void PolytrackerPass::visitReturnInst(llvm::ReturnInst &RI) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&RI);
 
   uint64_t gid = block_global_map[RI.getParent()];
@@ -106,7 +106,7 @@ void PolyInstVisitor::visitReturnInst(llvm::ReturnInst &RI) {
       IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
 }
 
-void PolyInstVisitor::visitCallInst(llvm::CallInst &ci) {
+void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto called_func = ci.getCalledFunction();
   if (called_func != nullptr) {
@@ -272,30 +272,21 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   llvm::Value *bindex_val =
       llvm::ConstantInt::get(shadow_type, bb_index, false);
-  llvm::Value *stack_loc =
+
+  // Instance variable, changes everytime we visit a new function
+  // this creates a call on function entry which stores the current function
+  // stack size after pushing down the item so the entrypoint of a program,
+  // main, would have size 1 stored in stack_loc.
+  stack_loc =
       IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
 
-  // Build the dominator tree for this function once blocks are split.
-  // Used by the BBSplitting/entry analysis code
-  // llvm::DominatorTree dominator_tree;
-  // dominator_tree.recalculate(*f);
-
-  // Collect basic blocks, don't confuse the iterator
+  // Collect basic blocks/insts, so we don't modify the container while iterate
   std::unordered_set<llvm::BasicBlock *> blocks;
   std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
     blocks.insert(&bb);
     for (auto &inst : bb) {
-      if (auto bo = llvm::dyn_cast<llvm::BinaryOperator>(&inst)) {
-        insts.push_back(bo);
-      } else if (auto call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-        insts.push_back(call);
-      } else if (auto cmp = llvm::dyn_cast<llvm::CmpInst>(&inst)) {
-        insts.push_back(cmp);
-      } else if (auto ret = llvm::dyn_cast<llvm::ReturnInst>(&inst)) {
-        insts.push_back(ret);
-      }
-      // insts.push_back(&inst);
+      insts.push_back(&inst);
     }
   }
   for (auto block : splitBBs) {
@@ -306,19 +297,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
     analyzeBlock(f, func_index, bb, bb_index++, splitBBs, DT);
   }
 
-  // FIXME I don't like this
-  PolyInstVisitor visitor(func_index_map, ignore_funcs, block_global_map);
-  visitor.mod = mod;
-  visitor.dfsan_get_label = dfsan_get_label;
-  visitor.taint_cmp_log = taint_cmp_log;
-  visitor.taint_op_log = taint_op_log;
-  visitor.func_exit_log = func_exit_log;
-  visitor.call_exit_log = call_exit_log;
-  visitor.shadow_type = shadow_type;
-  visitor.stack_loc = stack_loc;
-
   for (auto &inst : insts) {
-    visitor.visit(inst);
+    visit(inst);
   }
 
   return true;
@@ -489,16 +469,6 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (file_id) {
     function_index = (file_id << 24) | function_index;
   }
-
-  // llvm::Function *poly_start =
-  //     llvm::dyn_cast<llvm::Function>(polytracker_start.getCallee());
-  // if (poly_start == nullptr) {
-  //   std::cerr << "Error: cannot get Function* for polytracker_start"
-  //             << std::endl;
-  //   abort();
-  // }
-  // // Append our start function to go last
-  // llvm::appendToGlobalCtors(mod, poly_start, INT32_MAX, nullptr);
 
   std::vector<llvm::Function *> functions;
   for (auto &func : mod) {
