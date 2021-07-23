@@ -15,7 +15,8 @@ namespace polytracker {
 typedef uint32_t func_index_t;
 typedef uint32_t bb_index_t;
 
-struct PolytrackerPass : public llvm::ModulePass {
+struct PolytrackerPass : public llvm::ModulePass,
+                         public llvm::InstVisitor<PolytrackerPass> {
   static char ID;
   PolytrackerPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &function) override;
@@ -26,6 +27,18 @@ struct PolytrackerPass : public llvm::ModulePass {
                     llvm::DominatorTree &DT);
   void initializeTypes(llvm::Module &mod);
   void readIgnoreFile(const std::string &ignore_file);
+  void logOp(llvm::Instruction *inst, llvm::FunctionCallee &callback);
+  // Visitor instructions
+  // Special case for comparisons, just good to know
+  void visitCmpInst(llvm::CmpInst &CI);
+  // Handles basically all math operations
+  void visitBinaryOperator(llvm::BinaryOperator &I);
+  // This is how control flow is handled, we instrument after the call to denote
+  // entering a func
+  void visitCallInst(llvm::CallInst &ci);
+  void visitReturnInst(llvm::ReturnInst &RI);
+
+  llvm::Value *stack_loc;
   llvm::Module *mod;
   llvm::FunctionCallee func_entry_log;
   llvm::FunctionCallee polytracker_start;
@@ -42,37 +55,6 @@ struct PolytrackerPass : public llvm::ModulePass {
   const int shadow_width = 32;
   llvm::IntegerType *shadow_type;
   std::unordered_map<std::string, bool> ignore_funcs;
-};
-
-struct PolyInstVisitor : public llvm::InstVisitor<PolyInstVisitor> {
-  PolyInstVisitor(std::unordered_map<std::string, func_index_t> &map,
-                  std::unordered_map<std::string, bool> &igf,
-                  std::unordered_map<llvm::BasicBlock *, uint64_t> &bgm)
-      : func_index_map(map), ignore_funcs(igf), block_global_map(bgm) {}
-  void logOp(llvm::Instruction *inst, llvm::FunctionCallee &callback);
-  // Visitor instructions
-  // Special case for comparisons, just good to know
-  void visitCmpInst(llvm::CmpInst &CI);
-  // Handles basically all math operations
-  void visitBinaryOperator(llvm::BinaryOperator &I);
-  // This is how control flow is handled, we instrument after the call to denote
-  // entering a func
-  void visitCallInst(llvm::CallInst &ci);
-
-  void visitReturnInst(llvm::ReturnInst &RI);
-
-  // TODO Make this reference and on construction
-  std::unordered_map<llvm::BasicBlock *, uint64_t> &block_global_map;
-  std::unordered_map<std::string, func_index_t> &func_index_map;
-  std::unordered_map<std::string, bool> &ignore_funcs;
-  llvm::Module *mod;
-  llvm::FunctionCallee dfsan_get_label;
-  llvm::FunctionCallee taint_op_log;
-  llvm::FunctionCallee taint_cmp_log;
-  llvm::FunctionCallee func_exit_log;
-  llvm::FunctionCallee call_exit_log;
-  llvm::IntegerType *shadow_type;
-  llvm::Value *stack_loc;
 };
 
 }; // namespace polytracker
