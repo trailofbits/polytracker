@@ -52,6 +52,10 @@ fun:__polytracker_start=uninstrumented
 fun:__polytracker_start=discard
 fun:__polytracker_log_call_exit=uninstrumented
 fun:__polytracker_log_call_exit=discard
+fun:__polytracker_log_call_uninst=uninstrumented
+fun:__polytracker_log_call_uninst=discard
+fun:__polytracker_log_call_indirect=uninstrumented
+fun:__polytracker_log_call_indirect=discard
 fun:__dfsan_update_label_count=uninstrumented
 fun:__dfsan_update_label_count=discard
 

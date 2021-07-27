@@ -47,6 +47,23 @@ static bool op_check(llvm::Value *inst) {
   return false;
 }
 
+const std::pair<llvm::Value *, llvm::Value *>
+PolytrackerPass::getIndicies(llvm::Instruction *inst) {
+  llvm::LLVMContext &context = mod->getContext();
+  if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
+    std::cerr << "Error: Cannot find block in block map" << std::endl;
+    abort();
+  }
+  uint64_t gid = block_global_map[inst->getParent()];
+  bb_index_t bindex = gid & 0xFFFF;
+  func_index_t findex = (gid >> 32);
+  llvm::Value *FuncIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), findex, false);
+  llvm::Value *BlockIndex = llvm::ConstantInt::get(
+      llvm::IntegerType::getInt32Ty(context), bindex, false);
+  return {FuncIndex, BlockIndex};
+}
+
 // On binary ops
 void PolytrackerPass::logOp(llvm::Instruction *inst,
                             llvm::FunctionCallee &callback) {
@@ -67,15 +84,10 @@ void PolytrackerPass::logOp(llvm::Instruction *inst,
     std::cerr << "Error! cmp parent block not in block_map" << std::endl;
     exit(1);
   }
-  uint64_t gid = block_global_map[inst->getParent()];
-  bb_index_t bindex = gid & 0xFFFF;
-  func_index_t findex = (gid >> 32);
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), findex, false);
-  llvm::Value *BlockIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), bindex, false);
+  auto func_block_index = getIndicies(inst);
   CallInst *Call =
-      IRB.CreateCall(callback, {int_val, int_val_two, FuncIndex, BlockIndex});
+      IRB.CreateCall(callback, {int_val, int_val_two, func_block_index.first,
+                                func_block_index.second});
 }
 
 void PolytrackerPass::visitCmpInst(llvm::CmpInst &CI) {
@@ -88,26 +100,17 @@ void PolytrackerPass::visitBinaryOperator(llvm::BinaryOperator &Op) {
 
 void PolytrackerPass::visitReturnInst(llvm::ReturnInst &RI) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&RI);
-
-  uint64_t gid = block_global_map[RI.getParent()];
-  bb_index_t bindex = gid & 0xFFFF;
-  // Insert after
+  auto func_block_index = getIndicies(inst);
   llvm::IRBuilder<> IRB(inst);
-  llvm::LLVMContext &context = mod->getContext();
-  llvm::Function *caller = inst->getParent()->getParent();
-  assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
-  func_index_t index = func_index_map[caller->getName().str()];
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), index, false);
-  llvm::Value *BlockIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), bindex, false);
 
   CallInst *ExitCall =
-      IRB.CreateCall(func_exit_log, {FuncIndex, BlockIndex, stack_loc});
+      IRB.CreateCall(func_exit_log, {func_block_index.first,
+                                     func_block_index.second, stack_loc});
 }
 
 void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
+  auto func_block_indicies = getIndicies(inst);
   auto called_func = ci.getCalledFunction();
   if (called_func != nullptr) {
     if (called_func->hasName() &&
@@ -120,30 +123,26 @@ void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
     if (called_func->hasName()) {
       std::string name = called_func->getName().str();
       if (ignore_funcs.find(name) != ignore_funcs.end()) {
-        return;
+        // If were ignoring the function, we log the call to it.
+        // This doesnt affect the runtime function stack at all, it just notes
+        // that we are calling something uninstrumented.
+        llvm::IRBuilder<> IRB(inst);
+        IRB.CreateCall(call_uninst_log,
+                       {func_block_indicies.first, func_block_indicies.second});
       }
     }
+    // Indirect call
+    else {
+      llvm::IRBuilder<> IRB(inst);
+      IRB.CreateCall(call_indirect_log,
+                     {func_block_indicies.first, func_block_indicies.second});
+    }
   }
-  llvm::Function *caller = inst->getParent()->getParent();
-  assert(func_index_map.find(caller->getName().str()) != func_index_map.end());
-  func_index_t index = func_index_map[caller->getName().str()];
-  if (block_global_map.find(ci.getParent()) == block_global_map.end()) {
-    std::cerr << "Error! Call instruction parent block not in block_map"
-              << std::endl;
-    exit(1);
-  }
-  uint64_t gid = block_global_map[ci.getParent()];
-  bb_index_t bindex = gid & 0xFFFF;
   // // Insert after
   llvm::IRBuilder<> IRB(inst->getNextNode());
-  llvm::LLVMContext &context = mod->getContext();
-  llvm::Value *FuncIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), index, false);
-  llvm::Value *BlockIndex = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt32Ty(context), bindex, false);
-
   CallInst *ExitCall =
-      IRB.CreateCall(call_exit_log, {FuncIndex, BlockIndex, stack_loc});
+      IRB.CreateCall(call_exit_log, {func_block_indicies.first,
+                                     func_block_indicies.second, stack_loc});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -338,6 +337,13 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       mod.getOrInsertFunction("__polytracker_log_func_exit", exit_fn_ty);
   call_exit_log =
       mod.getOrInsertFunction("__polytracker_log_call_exit", exit_fn_ty);
+
+  auto call_log_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context), {shadow_type, shadow_type}, false);
+  call_uninst_log =
+      mod.getOrInsertFunction("__polytracker_log_call_uninst", call_log_type);
+  call_indirect_log =
+      mod.getOrInsertFunction("__polytracker_log_call_indirect", call_log_type);
 
   llvm::Type *bb_func_args[4] = {llvm::Type::getInt8PtrTy(context), shadow_type,
                                  shadow_type,

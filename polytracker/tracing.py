@@ -137,10 +137,10 @@ class TaintedRegion:
 
     def __eq__(self, other):
         return (
-            isinstance(other, TaintedRegion)
-            and self.source == other.source
-            and self.offset == other.offset
-            and self.length == other.length
+                isinstance(other, TaintedRegion)
+                and self.source == other.source
+                and self.offset == other.offset
+                and self.length == other.length
         )
 
     def __lt__(self, other):
@@ -481,9 +481,9 @@ class BasicBlock:
 
     def __eq__(self, other):
         return (
-            isinstance(other, BasicBlock)
-            and other.function == self.function
-            and self.index_in_function == other.index_in_function
+                isinstance(other, BasicBlock)
+                and other.function == self.function
+                and self.index_in_function == other.index_in_function
         )
 
     def __str__(self):
@@ -759,6 +759,38 @@ class BasicBlockEntry(ControlFlowEvent):
         return f"{self.basic_block!s}#{self.entry_count()}"
 
 
+class CallUninst(ControlFlowEvent):
+    """ A trace event associated with calling an uninstrumented function
+    """
+
+    def __init__(self, uid: int):
+        super().__init__(uid=uid)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return super().basic_block
+
+
+class CallIndirect(ControlFlowEvent):
+    """ A trace event associated with making an indirect call (ex: function pointers)
+    """
+
+    def __init__(self, uid: int):
+        super().__init__(uid=uid)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return super().basic_block
+
+
 class FunctionReturn(ControlFlowEvent):
     """A trace event associated with returning from a function.
 
@@ -1004,7 +1036,8 @@ class ProgramTrace(ABC):
             for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
             if previous > first_used  # type: ignore
         ]
-        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order, file_seeks=file_seeks)
+        return InputProperties(unused_byte_offsets=unused_bytes, out_of_order_byte_offsets=out_of_order,
+                               file_seeks=file_seeks)
 
     @property
     @abstractmethod
@@ -1172,12 +1205,12 @@ class RunTraceCommand(Subcommand[TraceCommand]):
     @staticmethod
     @PolyTrackerREPL.register("run_trace")
     def run_trace(
-        instrumented_binary_path: Union[str, Path],
-        input_file_path: Union[str, Path],
-        no_bb_trace: bool = False,
-        output_db_path: Optional[Union[str, Path]] = None,
-        args=(),
-        return_trace: bool = True,
+            instrumented_binary_path: Union[str, Path],
+            input_file_path: Union[str, Path],
+            no_bb_trace: bool = False,
+            output_db_path: Optional[Union[str, Path]] = None,
+            args=(),
+            return_trace: bool = True,
     ) -> Union[ProgramTrace, int]:
         """
         Runs an instrumented binary and returns the resulting trace

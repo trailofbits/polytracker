@@ -37,6 +37,8 @@ struct PolytrackerPass : public llvm::ModulePass,
   // entering a func
   void visitCallInst(llvm::CallInst &ci);
   void visitReturnInst(llvm::ReturnInst &RI);
+  const std::pair<llvm::Value *, llvm::Value *>
+  getIndicies(llvm::Instruction *);
 
   llvm::Value *stack_loc;
   llvm::Module *mod;
@@ -45,6 +47,8 @@ struct PolytrackerPass : public llvm::ModulePass,
   llvm::FunctionType *func_entry_type;
   llvm::FunctionCallee func_exit_log;
   llvm::FunctionCallee call_exit_log;
+  llvm::FunctionCallee call_uninst_log;
+  llvm::FunctionCallee call_indirect_log;
   llvm::FunctionCallee bb_entry_log;
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;

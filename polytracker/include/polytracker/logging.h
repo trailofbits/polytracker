@@ -16,9 +16,10 @@ void logOperation(const dfsan_label label, const function_id_t findex,
 int logFunctionEntry(const char *fname, const function_id_t func_id);
 void logFunctionExit(const function_id_t index, const int stack_loc);
 void logCallExit(const function_id_t index, const int stack_loc);
-
 void logBBEntry(const char *fname, const function_id_t findex,
                 const block_id_t bindex, const uint8_t btype);
+void logCallIndirect(const function_id_t func_id, const block_id_t block_id);
+void logCallUninst(const function_id_t func_id, const block_id_t block_id);
 
 struct FunctionStackFrame {
   event_id_t func_event_id;
