@@ -48,6 +48,20 @@ void logOperation(const dfsan_label label, const function_id_t findex,
   storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
 }
 
+void logCallUninst(const function_id_t func_id, const block_id_t block_id) {
+  const auto this_event_id = event_id++;
+  storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
+             EventType::CALL_UNINST, func_id, block_id,
+             function_stack.back().func_event_id);
+}
+
+void logCallIndirect(const function_id_t func_id, const block_id_t block_id) {
+  const auto this_event_id = event_id++;
+  storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
+             EventType::CALL_INDIRECT, func_id, block_id,
+             function_stack.back().func_event_id);
+}
+
 int logFunctionEntry(const char *fname, const function_id_t func_id) {
   assignThreadID();
   // We store this in the binary now at compile time. We can remove this
@@ -101,8 +115,6 @@ void logBBEntry(const char *fname, const function_id_t findex,
   auto entryCount = function_stack.back().bb_entry_count[bindex]++;
   storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
                   thread_event_id++, findex, bindex,
-                  function_stack.empty() ? last_bb_event_id
-                                         : function_stack.back().func_event_id,
-                  entryCount);
+                  function_stack.back().func_event_id, entryCount);
   curr_block_index = bindex;
 }

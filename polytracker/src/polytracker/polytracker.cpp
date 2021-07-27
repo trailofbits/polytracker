@@ -77,6 +77,16 @@ extern "C" void __polytracker_log_call_exit(uint32_t func_index,
   logCallExit(func_index, stack_loc);
 }
 
+extern "C" void __polytracker_log_call_uninst(uint32_t func_index,
+                                              uint32_t block_index) {
+  logCallUninst(func_index, block_index);
+}
+
+extern "C" void __polytracker_log_call_indirect(uint32_t func_index,
+                                                uint32_t block_index) {
+  logCallIndirect(func_index, block_index);
+}
+
 extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
                                            uint32_t bindex, uint8_t btype) {
   // if (polytracker_trace && LIKELY(!done)) {

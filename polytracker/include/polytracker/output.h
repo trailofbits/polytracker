@@ -19,7 +19,13 @@ enum class ByteAccessType : uint8_t {
   READ_ACCESS = 4
 };
 
-enum EventType : uint8_t { FUNC_ENTER = 0, FUNC_RET = 1, BLOCK_ENTER = 2 };
+enum EventType : uint8_t {
+  FUNC_ENTER = 0,
+  FUNC_RET = 1,
+  BLOCK_ENTER = 2,
+  CALL_UNINST = 3,
+  CALL_INDIRECT = 4
+};
 
 enum EdgeType : uint8_t { FORWARD = 0, BACKWARD = 1 };
 
