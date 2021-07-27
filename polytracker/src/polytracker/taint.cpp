@@ -152,7 +152,6 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
 [[nodiscard]] dfsan_label createReturnLabel(const int file_byte_offset,
                                             std::string &name) {
   dfsan_label ret_label = createCanonicalLabel(file_byte_offset, name);
-  // TODO (Carson) is this [start, end]?
   storeTaintedChunk(output_db, input_id, file_byte_offset, file_byte_offset);
   return ret_label;
 }
