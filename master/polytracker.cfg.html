@@ -302,7 +302,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.CFG.number_of_nodes" title="polytracker.cfg.CFG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.CFG.order" title="polytracker.cfg.CFG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.number_of_nodes" title="polytracker.cfg.CFG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.order" title="polytracker.cfg.CFG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -315,10 +320,10 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.__str__">
 <span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.CFG.__str__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the graph name.</p>
+<dd><p>Returns a short summary of the graph.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>name</strong> – The name of the graph.</p>
+<dd class="field-odd"><p><strong>info</strong> – Graph information as provided by <cite>nx.info</cite></p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>string</p>
@@ -327,7 +332,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
-<span class="go">&#39;foo&#39;</span>
+<span class="go">&quot;Graph named &#39;foo&#39; with 0 nodes and 0 edges&quot;</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+<span class="go">&#39;Graph with 3 nodes and 2 edges&#39;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -343,9 +353,9 @@ accessing the edge’s attribute dictionary. See examples below.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>u</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>u_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
-<li><p><strong>v</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>v_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
 <li><p><strong>attr</strong> (<em>keyword arguments</em><em>, </em><em>optional</em>) – Edge data (or labels or objects) can be assigned using
 keyword arguments.</p></li>
@@ -813,7 +823,7 @@ view are references to the corresponding attributes in the original
 graph. The view is read-only.</p>
 <p>To create a full graph version of the subgraph with its own copy
 of the edge or node attributes, use:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 </pre></div>
 </div>
 <p class="rubric">Examples</p>
@@ -1139,7 +1149,7 @@ If nbunch is None, iterate over all nodes in the graph.</p>
 <dd class="field-odd"><p>iterator</p>
 </dd>
 <dt class="field-even">Raises</dt>
-<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or or sequence of nodes.
+<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or sequence of nodes.
     If a node in nbunch is not hashable.</p>
 </dd>
 </dl>
@@ -1349,7 +1359,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.CFG.order" title="polytracker.cfg.CFG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a>, <a class="reference internal" href="#polytracker.cfg.CFG.__len__" title="polytracker.cfg.CFG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.order" title="polytracker.cfg.CFG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.__len__" title="polytracker.cfg.CFG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -1373,7 +1388,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.CFG.number_of_nodes" title="polytracker.cfg.CFG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.CFG.__len__" title="polytracker.cfg.CFG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.number_of_nodes" title="polytracker.cfg.CFG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.CFG.__len__" title="polytracker.cfg.CFG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -1971,8 +1991,8 @@ If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
 <p>It you want to update the graph using an adjacency structure
 it is straightforward to obtain the edges/nodes from adjacency.
 The following examples provide common cases, your adjacency may
-be slightly different and require tweaks of these examples.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
+be slightly different and require tweaks of these examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">adj</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">2</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">3</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">}}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">e</span> <span class="o">=</span> <span class="p">[(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">nbrs</span> <span class="ow">in</span> <span class="n">adj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nbrs</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">e</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="n">adj</span><span class="p">)</span>
@@ -2148,7 +2168,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DAG.number_of_nodes" title="polytracker.cfg.DAG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DAG.order" title="polytracker.cfg.DAG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.number_of_nodes" title="polytracker.cfg.DAG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.order" title="polytracker.cfg.DAG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -2161,10 +2186,10 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.__str__">
 <span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DAG.__str__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the graph name.</p>
+<dd><p>Returns a short summary of the graph.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>name</strong> – The name of the graph.</p>
+<dd class="field-odd"><p><strong>info</strong> – Graph information as provided by <cite>nx.info</cite></p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>string</p>
@@ -2173,7 +2198,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
-<span class="go">&#39;foo&#39;</span>
+<span class="go">&quot;Graph named &#39;foo&#39; with 0 nodes and 0 edges&quot;</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+<span class="go">&#39;Graph with 3 nodes and 2 edges&#39;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -2189,9 +2219,9 @@ accessing the edge’s attribute dictionary. See examples below.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>u</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>u_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
-<li><p><strong>v</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>v_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
 <li><p><strong>attr</strong> (<em>keyword arguments</em><em>, </em><em>optional</em>) – Edge data (or labels or objects) can be assigned using
 keyword arguments.</p></li>
@@ -2659,7 +2689,7 @@ view are references to the corresponding attributes in the original
 graph. The view is read-only.</p>
 <p>To create a full graph version of the subgraph with its own copy
 of the edge or node attributes, use:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 </pre></div>
 </div>
 <p class="rubric">Examples</p>
@@ -2985,7 +3015,7 @@ If nbunch is None, iterate over all nodes in the graph.</p>
 <dd class="field-odd"><p>iterator</p>
 </dd>
 <dt class="field-even">Raises</dt>
-<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or or sequence of nodes.
+<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or sequence of nodes.
     If a node in nbunch is not hashable.</p>
 </dd>
 </dl>
@@ -3195,7 +3225,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DAG.order" title="polytracker.cfg.DAG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DAG.__len__" title="polytracker.cfg.DAG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.order" title="polytracker.cfg.DAG.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.__len__" title="polytracker.cfg.DAG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -3219,7 +3254,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DAG.number_of_nodes" title="polytracker.cfg.DAG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DAG.__len__" title="polytracker.cfg.DAG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.number_of_nodes" title="polytracker.cfg.DAG.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DAG.__len__" title="polytracker.cfg.DAG.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -3817,8 +3857,8 @@ If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
 <p>It you want to update the graph using an adjacency structure
 it is straightforward to obtain the edges/nodes from adjacency.
 The following examples provide common cases, your adjacency may
-be slightly different and require tweaks of these examples.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
+be slightly different and require tweaks of these examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">adj</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">2</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">3</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">}}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">e</span> <span class="o">=</span> <span class="p">[(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">nbrs</span> <span class="ow">in</span> <span class="n">adj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nbrs</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">e</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="n">adj</span><span class="p">)</span>
@@ -3999,7 +4039,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DiGraph.number_of_nodes" title="polytracker.cfg.DiGraph.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DiGraph.order" title="polytracker.cfg.DiGraph.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.number_of_nodes" title="polytracker.cfg.DiGraph.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.order" title="polytracker.cfg.DiGraph.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -4012,10 +4057,10 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.__str__">
 <span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DiGraph.__str__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the graph name.</p>
+<dd><p>Returns a short summary of the graph.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p><strong>name</strong> – The name of the graph.</p>
+<dd class="field-odd"><p><strong>info</strong> – Graph information as provided by <cite>nx.info</cite></p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p>string</p>
@@ -4024,7 +4069,12 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;foo&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
-<span class="go">&#39;foo&#39;</span>
+<span class="go">&quot;Graph named &#39;foo&#39; with 0 nodes and 0 edges&quot;</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">str</span><span class="p">(</span><span class="n">G</span><span class="p">)</span>
+<span class="go">&#39;Graph with 3 nodes and 2 edges&#39;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -4040,9 +4090,9 @@ accessing the edge’s attribute dictionary. See examples below.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>u</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>u_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
-<li><p><strong>v</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
+<li><p><strong>v_of_edge</strong> (<em>nodes</em>) – Nodes can be, for example, strings or numbers.
 Nodes must be hashable (and not None) Python objects.</p></li>
 <li><p><strong>attr</strong> (<em>keyword arguments</em><em>, </em><em>optional</em>) – Edge data (or labels or objects) can be assigned using
 keyword arguments.</p></li>
@@ -4510,7 +4560,7 @@ view are references to the corresponding attributes in the original
 graph. The view is read-only.</p>
 <p>To create a full graph version of the subgraph with its own copy
 of the edge or node attributes, use:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">G</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 </pre></div>
 </div>
 <p class="rubric">Examples</p>
@@ -4836,7 +4886,7 @@ If nbunch is None, iterate over all nodes in the graph.</p>
 <dd class="field-odd"><p>iterator</p>
 </dd>
 <dt class="field-even">Raises</dt>
-<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or or sequence of nodes.
+<dd class="field-even"><p><strong>NetworkXError</strong> – If nbunch is not a node or sequence of nodes.
     If a node in nbunch is not hashable.</p>
 </dd>
 </dl>
@@ -5046,7 +5096,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DiGraph.order" title="polytracker.cfg.DiGraph.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DiGraph.__len__" title="polytracker.cfg.DiGraph.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.order" title="polytracker.cfg.DiGraph.order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.__len__" title="polytracker.cfg.DiGraph.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -5070,7 +5125,12 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
-<p><a class="reference internal" href="#polytracker.cfg.DiGraph.number_of_nodes" title="polytracker.cfg.DiGraph.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a>, <a class="reference internal" href="#polytracker.cfg.DiGraph.__len__" title="polytracker.cfg.DiGraph.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></p>
+<dl class="simple">
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.number_of_nodes" title="polytracker.cfg.DiGraph.number_of_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code></a></dt><dd><p>identical method</p>
+</dd>
+<dt><a class="reference internal" href="#polytracker.cfg.DiGraph.__len__" title="polytracker.cfg.DiGraph.__len__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__len__</span></code></a></dt><dd><p>identical method</p>
+</dd>
+</dl>
 </div>
 <p class="rubric">Examples</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">path_graph</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># or DiGraph, MultiGraph, MultiDiGraph, etc</span>
@@ -5668,8 +5728,8 @@ If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
 <p>It you want to update the graph using an adjacency structure
 it is straightforward to obtain the edges/nodes from adjacency.
 The following examples provide common cases, your adjacency may
-be slightly different and require tweaks of these examples.</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
+be slightly different and require tweaks of these examples:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dict-of-set/list/tuple</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">adj</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="p">{</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">2</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">},</span> <span class="mi">3</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">}}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">e</span> <span class="o">=</span> <span class="p">[(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">nbrs</span> <span class="ow">in</span> <span class="n">adj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">nbrs</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">G</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="n">e</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="n">adj</span><span class="p">)</span>

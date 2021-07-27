@@ -42,6 +42,24 @@ DBBasicBlockEntry
    :inherited-members:
    :show-inheritance:
 
+DBCallIndirect
+**************
+
+.. autoclass:: DBCallIndirect
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBCallUninst
+************
+
+.. autoclass:: DBCallUninst
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 DBFunction
 **********
 

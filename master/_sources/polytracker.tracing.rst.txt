@@ -60,6 +60,24 @@ CFGTraceCommand
    :inherited-members:
    :show-inheritance:
 
+CallIndirect
+************
+
+.. autoclass:: CallIndirect
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CallUninst
+**********
+
+.. autoclass:: CallUninst
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 ControlFlowEvent
 ****************
 

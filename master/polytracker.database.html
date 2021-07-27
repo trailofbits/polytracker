@@ -97,6 +97,8 @@
 <li class="toctree-l4"><a class="reference internal" href="#canonicalmap">CanonicalMap</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbbasicblock">DBBasicBlock</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbbasicblockentry">DBBasicBlockEntry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbcallindirect">DBCallIndirect</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbcalluninst">DBCallUninst</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunction">DBFunction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunctionentry">DBFunctionEntry</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunctioninvocation">DBFunctionInvocation</a></li>
@@ -573,6 +575,300 @@ for example, any mapped columns or relationships.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBBasicBlockEntry.uid">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBBasicBlockEntry.uid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbcallindirect">
+<h3>DBCallIndirect<a class="headerlink" href="#dbcallindirect" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBCallIndirect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallIndirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallIndirect" title="polytracker.tracing.CallIndirect"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallIndirect</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallIndirect.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.accessed_labels">
+<span class="sig-name descname"><span class="pre">accessed_labels</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.accessed_labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.basic_block">
+<span class="sig-name descname"><span class="pre">basic_block</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.block_gid">
+<span class="sig-name descname"><span class="pre">block_gid</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.block_gid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.event_id">
+<span class="sig-name descname"><span class="pre">event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.event_type">
+<span class="sig-name descname"><span class="pre">event_type</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.event_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.func_event_id">
+<span class="sig-name descname"><span class="pre">func_event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.func_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.function">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.function" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that was executing during which this event took place.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.function_entry">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.input">
+<span class="sig-name descname"><span class="pre">input</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.next_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.next_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.next_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the next event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.next_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.next_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.previous_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.previous_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the previous event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.previous_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.previous_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.taints">
+<span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of taints operated on during this event.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.thread_event_id">
+<span class="sig-name descname"><span class="pre">thread_event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.thread_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.thread_id">
+<span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.thread_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.touched_taint">
+<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not this event touched taint.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.trace">
+<span class="sig-name descname"><span class="pre">trace</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><span class="pre">polytracker.database.DBProgramTrace</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.uid">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.uid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbcalluninst">
+<h3>DBCallUninst<a class="headerlink" href="#dbcalluninst" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBCallUninst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallUninst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallUninst" title="polytracker.tracing.CallUninst"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallUninst</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallUninst.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.accessed_labels">
+<span class="sig-name descname"><span class="pre">accessed_labels</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.accessed_labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.basic_block">
+<span class="sig-name descname"><span class="pre">basic_block</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.block_gid">
+<span class="sig-name descname"><span class="pre">block_gid</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.block_gid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.event_id">
+<span class="sig-name descname"><span class="pre">event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.event_type">
+<span class="sig-name descname"><span class="pre">event_type</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.event_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.func_event_id">
+<span class="sig-name descname"><span class="pre">func_event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.func_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.function">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.function" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that was executing during which this event took place.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.function_entry">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.input">
+<span class="sig-name descname"><span class="pre">input</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.next_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.next_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.next_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the next event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.next_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.next_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.previous_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.previous_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the previous event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.previous_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.previous_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.taints">
+<span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of taints operated on during this event.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.thread_event_id">
+<span class="sig-name descname"><span class="pre">thread_event_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.thread_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.thread_id">
+<span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.thread_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.touched_taint">
+<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not this event touched taint.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.trace">
+<span class="sig-name descname"><span class="pre">trace</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><span class="pre">polytracker.database.DBProgramTrace</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.uid">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.uid" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -1688,6 +1984,16 @@ for example, any mapped columns or relationships.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.database.EventType.BLOCK_ENTER">
 <span class="sig-name descname"><span class="pre">BLOCK_ENTER</span></span><em class="property"> <span class="pre">=</span> <span class="pre">2</span></em><a class="headerlink" href="#polytracker.database.EventType.BLOCK_ENTER" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.EventType.CALL_INDIRECT">
+<span class="sig-name descname"><span class="pre">CALL_INDIRECT</span></span><em class="property"> <span class="pre">=</span> <span class="pre">4</span></em><a class="headerlink" href="#polytracker.database.EventType.CALL_INDIRECT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.EventType.CALL_UNINST">
+<span class="sig-name descname"><span class="pre">CALL_UNINST</span></span><em class="property"> <span class="pre">=</span> <span class="pre">3</span></em><a class="headerlink" href="#polytracker.database.EventType.CALL_UNINST" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">

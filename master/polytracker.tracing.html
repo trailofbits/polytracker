@@ -108,6 +108,8 @@
 <li class="toctree-l4"><a class="reference internal" href="#byteaccesstype">ByteAccessType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#byteoffset">ByteOffset</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#cfgtracecommand">CFGTraceCommand</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#callindirect">CallIndirect</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#calluninst">CallUninst</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#controlflowevent">ControlFlowEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#function">Function</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#functionentry">FunctionEntry</a></li>
@@ -638,6 +640,184 @@ is in <a class="reference internal" href="polytracker.database.html#module-polyt
 <dt class="sig sig-object py" id="polytracker.tracing.CFGTraceCommand.subparser">
 <span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><em class="property"> <span class="pre">=</span> <span class="pre">None</span></em><a class="headerlink" href="#polytracker.tracing.CFGTraceCommand.subparser" title="Permalink to this definition">¶</a></dt>
 <dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="callindirect">
+<h3>CallIndirect<a class="headerlink" href="#callindirect" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">CallIndirect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CallIndirect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
+<p>A trace event associated with making an indirect call (ex: function pointers)</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CallIndirect.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes a trace event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>uid</strong> – An identifier for this event that is unique across the entire trace.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.basic_block">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">basic_block</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.BasicBlock</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd><p>The basic block that called <cite>return</cite>. For the return site of the function, use <cite>self.returning_to</cite></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.function">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.function" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that was executing during which this event took place.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.function_entry">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.next_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.next_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.next_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the next event from <em>any</em> thread, see <a class="reference internal" href="#polytracker.tracing.TraceEvent.next_global_event" title="polytracker.tracing.TraceEvent.next_global_event"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.next_global_event()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.next_global_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.previous_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.previous_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the previous event from <em>any</em> thread, see <a class="reference internal" href="#polytracker.tracing.TraceEvent.previous_global_event" title="polytracker.tracing.TraceEvent.previous_global_event"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.previous_global_event()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.previous_global_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.taints">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.tracing.CallIndirect.taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of taints operated on during this event.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallIndirect.touched_taint">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#polytracker.tracing.CallIndirect.touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not this event touched taint.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="calluninst">
+<h3>CallUninst<a class="headerlink" href="#calluninst" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">CallUninst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CallUninst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.tracing.ControlFlowEvent" title="polytracker.tracing.ControlFlowEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.ControlFlowEvent</span></code></a></p>
+<p>A trace event associated with calling an uninstrumented function</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.CallUninst.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes a trace event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>uid</strong> – An identifier for this event that is unique across the entire trace.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.basic_block">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">basic_block</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.BasicBlock</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd><p>The basic block that called <cite>return</cite>. For the return site of the function, use <cite>self.returning_to</cite></p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.function">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.function" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that was executing during which this event took place.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.function_entry">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.next_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.next_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.next_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the next event from <em>any</em> thread, see <a class="reference internal" href="#polytracker.tracing.TraceEvent.next_global_event" title="polytracker.tracing.TraceEvent.next_global_event"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.next_global_event()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.next_global_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.previous_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.previous_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the previous event from <em>any</em> thread, see <a class="reference internal" href="#polytracker.tracing.TraceEvent.previous_global_event" title="polytracker.tracing.TraceEvent.previous_global_event"><code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.previous_global_event()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.previous_global_event">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.taints">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.tracing.CallUninst.taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of taints operated on during this event.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.CallUninst.touched_taint">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="pre">:</span> <span class="pre">bool</span></em><a class="headerlink" href="#polytracker.tracing.CallUninst.touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
 </dd></dl>
