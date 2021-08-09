@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:latest
+FROM trailofbits/polytracker-llvm:debug
 
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>

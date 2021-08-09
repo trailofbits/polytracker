@@ -3,6 +3,7 @@
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
+#include "polytracker/write_taints.h"
 #include <atomic>
 #include <errno.h>
 #include <fcntl.h>
@@ -15,6 +16,7 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <unordered_set>
 
