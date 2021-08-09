@@ -19,10 +19,11 @@ inline const dfsan_label *shadow_for(const void *ptr) {
 ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
 
 */
-
-ssize_t __dfsw_write(int fd, void *buf, size_t count, dfsan_label fd_label,
-                     dfsan_label buff_label, dfsan_label count_label,
-                     dfsan_label *ret_label) {
+#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
+EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
+                                dfsan_label fd_label, dfsan_label buff_label,
+                                dfsan_label count_label,
+                                dfsan_label *ret_label) {
   // We don't really care about the buf label exactly, what we want is for
   // every tainted byte we are writing, store the output offset taint pair.
   for (auto i = 0; i < count; i++) {
