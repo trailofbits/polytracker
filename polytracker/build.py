@@ -59,13 +59,13 @@ class PolyInst(Command):
 
     def run(self, args: argparse.Namespace):
         cmd = "polybuild_script"
-        args = [cmd] + ["--lower-bitcode", "-i", args.input_file, "-o", args.output_file]
+        items = [cmd] + ["--lower-bitcode", "-i", args.input_file, "-o", args.output_file]
         if CAN_RUN_NATIVELY:
-            return subprocess.call(args)
+            return subprocess.call(items)
         else:
             if self._container is None:
                 self._container = DockerContainer()
-            return DockerRun.run_on(self._container, args, interactive=False)
+            return DockerRun.run_on(self._container, items, interactive=False)
 
 
 def main():
