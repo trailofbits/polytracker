@@ -42,8 +42,12 @@ char *forest_mem;
 
 // DB for storing things
 sqlite3 *output_db;
+
 // Input id is unique document key
+// Change this for multiple taint sources
 input_id_t input_id;
+// Maps fds to associated input_ids.
+std::unordered_map<int, input_id_t> fd_input_map;
 
 /*
 Parse files deliminated by ; and add them to unordered set.
