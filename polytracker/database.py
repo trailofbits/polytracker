@@ -723,7 +723,10 @@ class DBProgramTrace(ProgramTrace):
     @property
     def entrypoint(self) -> Optional[DBFunctionInvocation]:
         try:
-            return DBFunctionInvocation(next(iter(self.function_trace())), trace=self)
+            for event in self.function_trace():
+                if isinstance(event, DBFunctionEntry):
+                    return DBFunctionInvocation(event, trace=self)
+            return None
         except StopIteration:
             return None
 
