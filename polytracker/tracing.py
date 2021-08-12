@@ -604,9 +604,35 @@ class ControlFlowEvent(TraceEvent):
     pass
 
 
-class FunctionEntry(ControlFlowEvent):
-    """An abstract class representing the entry into a function."""
+class FunctionEvent(ControlFlowEvent):
+    pass
 
+class CallUninst(FunctionEvent):
+    """ A trace event associated with calling an uninstrumented function
+    """
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return self.basic_block
+
+
+class CallIndirect(FunctionEvent):
+    """ A trace event associated with making an indirect call (ex: function pointers)
+    """
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return self.basic_block
+
+
+class FunctionEntry(FunctionEvent):
+    """An abstract class representing the entry into a function."""
     @property
     def caller(self) -> Optional["BasicBlockEntry"]:
         """The :class:`BasicBlockEntry` event associated with the basic block that called this function."""
@@ -644,7 +670,7 @@ class FunctionEntry(ControlFlowEvent):
 
     @property
     def function(self) -> Function:
-        """Returns the function that was entered"""
+        """Returns the function that was called"""
         if self.entrypoint is None:
             raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
         return self.entrypoint.function
@@ -793,38 +819,6 @@ class BasicBlockEntry(ControlFlowEvent):
 
     def __str__(self):
         return f"{self.basic_block!s}#{self.entry_count()}"
-
-
-class CallUninst(ControlFlowEvent):
-    """ A trace event associated with calling an uninstrumented function
-    """
-
-    def __init__(self, uid: int):
-        super().__init__(uid=uid)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
-
-    @property
-    def basic_block(self) -> BasicBlock:
-        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
-        return super().basic_block
-
-
-class CallIndirect(ControlFlowEvent):
-    """ A trace event associated with making an indirect call (ex: function pointers)
-    """
-
-    def __init__(self, uid: int):
-        super().__init__(uid=uid)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
-
-    @property
-    def basic_block(self) -> BasicBlock:
-        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
-        return super().basic_block
 
 
 class FunctionReturn(ControlFlowEvent):

@@ -36,6 +36,7 @@ from .tracing import (
     ByteOffset,
     Function,
     FunctionEntry,
+    FunctionEvent,
     FunctionInvocation,
     FunctionReturn,
     CallUninst,
@@ -487,7 +488,11 @@ class FunctionEntries(Base):  # type: ignore
     entry: "DBFunctionEntry" = relationship("DBFunctionEntry", uselist=False)
 
 
-class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
+class DBFunctionEvent(DBTraceEvent, FunctionEvent):
+    pass
+
+
+class DBFunctionEntry(DBFunctionEvent, FunctionEntry):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}  # type: ignore
 
     @property
@@ -501,12 +506,19 @@ class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
             return None
 
 
-class DBCallUninst(DBTraceEvent, CallUninst):  # type: ignore
+class DBCallUninst(DBFunctionEvent, CallUninst):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_UNINST}  # type: ignore
 
 
-class DBCallIndirect(DBTraceEvent, CallIndirect):  # type: ignore
+class DBCallIndirect(DBFunctionEvent, CallIndirect):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_INDIRECT}  # type: ignore
+
+
+class DBUninstFunc(Base):  # type: ignore
+    __tablename__ = "uninst_func_entries"
+    event_id: int = Column(BigInteger, ForeignKey("events.event_id"), primary_key=True)
+    fname: str = Column(Text)
+    call_event: "DBCallUninst" = relationship("DBCallUninst", uselist=False)
 
 
 class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
@@ -676,8 +688,8 @@ class DBProgramTrace(ProgramTrace):
     def __iter__(self) -> Iterator[TraceEvent]:
         yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
 
-    def function_trace(self) -> Iterator[DBFunctionEntry]:
-        yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
+    def function_trace(self) -> Iterator[FunctionEvent]:
+        yield from stream_results(self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc()))
 
     def num_function_calls(self) -> int:
         return self.session.query(DBFunctionEntry).count()
@@ -827,7 +839,7 @@ class DBTaintedChunk(Base, TaintedChunk):  # type: ignore
 
 
 # TODO (Carson) we should merge ^ these two together after initial PoC
-class DBTaintedOutputChunk(Base, TaintedChunk): # type: ignore
+class DBTaintedOutputChunk(Base, TaintedChunk):  # type: ignore
     __tablename__ = "output_tainted_chunks"
     input_id = Column(Integer, ForeignKey("input.id"))
     start_offset = Column(BigInteger)
