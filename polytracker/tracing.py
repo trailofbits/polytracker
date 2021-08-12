@@ -607,10 +607,12 @@ class ControlFlowEvent(TraceEvent):
 class FunctionEvent(ControlFlowEvent):
     pass
 
+
 class CallUninst(FunctionEvent):
     """ A trace event associated with calling an uninstrumented function
     """
 
+    # TODO (Carson) don't rely on database
     @property
     def basic_block(self) -> BasicBlock:
         """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
@@ -620,6 +622,7 @@ class CallUninst(FunctionEvent):
 class CallIndirect(FunctionEvent):
     """ A trace event associated with making an indirect call (ex: function pointers)
     """
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.uid!r})"
 
@@ -631,6 +634,7 @@ class CallIndirect(FunctionEvent):
 
 class FunctionEntry(FunctionEvent):
     """An abstract class representing the entry into a function."""
+
     @property
     def caller(self) -> Optional["BasicBlockEntry"]:
         """The :class:`BasicBlockEntry` event associated with the basic block that called this function."""
