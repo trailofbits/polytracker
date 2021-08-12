@@ -688,8 +688,11 @@ class DBProgramTrace(ProgramTrace):
     def __iter__(self) -> Iterator[TraceEvent]:
         yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
 
-    def function_trace(self) -> Iterator[FunctionEvent]:
+    def call_trace(self) -> Iterator[FunctionEvent]:
         yield from stream_results(self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc()))
+
+    def function_trace(self) -> Iterator[DBFunctionEntry]:
+        yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
 
     def num_function_calls(self) -> int:
         return self.session.query(DBFunctionEntry).count()
@@ -723,10 +726,7 @@ class DBProgramTrace(ProgramTrace):
     @property
     def entrypoint(self) -> Optional[DBFunctionInvocation]:
         try:
-            for event in self.function_trace():
-                if isinstance(event, DBFunctionEntry):
-                    return DBFunctionInvocation(event, trace=self)
-            return None
+            return DBFunctionInvocation(next(iter(self.function_trace())), trace=self)
         except StopIteration:
             return None
 

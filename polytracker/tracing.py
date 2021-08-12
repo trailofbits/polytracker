@@ -1075,7 +1075,7 @@ class ProgramTrace(ABC):
         """The taint forest associated with this trace."""
         raise NotImplementedError()
 
-    def function_trace(self) -> Iterator[FunctionEvent]:
+    def function_trace(self) -> Iterator[FunctionEntry]:
         """Iterates over all of the :class:`FunctionEntry` events in this trace.
 
         This is equivalent to::
