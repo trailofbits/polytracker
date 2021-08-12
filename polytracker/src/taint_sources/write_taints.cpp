@@ -17,19 +17,30 @@ inline const dfsan_label *shadow_for(const void *ptr) {
 }
 
 ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
-
 */
+extern sqlite3 *output_db;
+extern std::unordered_map<int, input_id_t> fd_input_map;
+
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
                                 dfsan_label fd_label, dfsan_label buff_label,
                                 dfsan_label count_label,
                                 dfsan_label *ret_label) {
-  // We don't really care about the buf label exactly, what we want is for
-  // every tainted byte we are writing, store the output offset taint pair.
-  for (auto i = 0; i < count; i++) {
-    auto taint_label = dfsan_read_label(buf, sizeof(char));
-    std::cout << "Taint for: " << i << " is: " << taint_label << std::endl;
+  std::cout << "WRITING" << std::endl;
+  auto current_offset = lseek(fd, 0, SEEK_CUR);
+  auto write_count = write(fd, buf, count);
+  if (auto &input_id = fd_input_map[fd]) {
+    std::cout << "STORING TAINTED OUTPUT CHUNK" << std::endl;
+    storeTaintedOutputChunk(output_db, input_id, current_offset,
+                            current_offset + write_count);
+    for (auto i = 0; i < write_count; i++) {
+      auto taint_label = dfsan_read_label((char *)buf + i, sizeof(char));
+      std::cout << "storing tainted output: " << i << " " << taint_label
+                << std::endl;
+      storeTaintedOutput(output_db, input_id, current_offset, taint_label);
+      current_offset += 1;
+    }
   }
   *ret_label = 0;
-  return write(fd, buf, count);
+  return write_count;
 }
