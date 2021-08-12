@@ -48,11 +48,13 @@ void logOperation(const dfsan_label label, const function_id_t findex,
   storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
 }
 
-void logCallUninst(const function_id_t func_id, const block_id_t block_id) {
+void logCallUninst(const function_id_t func_id, const block_id_t block_id,
+                   const char *fname) {
   const auto this_event_id = event_id++;
   storeEvent(output_db, input_id, thread_id, this_event_id, thread_event_id++,
              EventType::CALL_UNINST, func_id, block_id,
              function_stack.back().func_event_id);
+  storeUninstFuncEntry(output_db, this_event_id, fname);
 }
 
 void logCallIndirect(const function_id_t func_id, const block_id_t block_id) {

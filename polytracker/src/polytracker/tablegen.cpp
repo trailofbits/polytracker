@@ -148,6 +148,14 @@ static constexpr const char *createFuncEntryTable() {
          ") WITHOUT ROWID;";
 }
 
+static constexpr const char *createUninstTable() {
+  return "CREATE TABLE IF NOT EXISTS uninst_func_entries ("
+         "event_id BIGINT,"
+         " name TEXT, "
+         "PRIMARY KEY(event_id, name)"
+         ") WITHOUT ROWID;";
+}
+
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
       std::string(createInputTable()) + std::string(createFuncTable()) +
@@ -161,6 +169,6 @@ void createDBTables(sqlite3 *output_db) {
       std::string(createEventsTable()) + std::string(createBlockEntryTable()) +
       std::string(createFuncEntryTable()) +
       std::string(createChunksOutputTable()) +
-      std::string(createTaintOutputTable());
+      std::string(createTaintOutputTable()) + std::string(createUninstTable());
   sql_exec(output_db, table_gen.c_str());
 }

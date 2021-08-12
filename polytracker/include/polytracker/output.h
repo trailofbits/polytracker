@@ -70,6 +70,9 @@ void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
 void storeTaintedOutputChunk(sqlite3 *output_db, const input_id_t input_id,
                              const uint64_t start, const uint64_t end);
 
+void storeUninstFuncEntry(sqlite3 *output_db, const event_id_t &event_id,
+                          const char *fname);
+
 void storeTaintedOutput(sqlite3 *output_db, const input_id_t input_id,
                         const uint64_t offset, const dfsan_label label);
 

@@ -127,8 +127,9 @@ void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
         // This doesnt affect the runtime function stack at all, it just notes
         // that we are calling something uninstrumented.
         llvm::IRBuilder<> IRB(inst);
-        IRB.CreateCall(call_uninst_log,
-                       {func_block_indicies.first, func_block_indicies.second});
+        llvm::Value *fname = IRB.CreateGlobalStringPtr(name);
+        IRB.CreateCall(call_uninst_log, {func_block_indicies.first,
+                                         func_block_indicies.second, fname});
       }
     }
     // Indirect call
@@ -338,10 +339,13 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   call_exit_log =
       mod.getOrInsertFunction("__polytracker_log_call_exit", exit_fn_ty);
 
+  auto call_log_uninst_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context),
+      {shadow_type, shadow_type, llvm::Type::getInt8PtrTy(context)}, false);
   auto call_log_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(context), {shadow_type, shadow_type}, false);
-  call_uninst_log =
-      mod.getOrInsertFunction("__polytracker_log_call_uninst", call_log_type);
+  call_uninst_log = mod.getOrInsertFunction("__polytracker_log_call_uninst",
+                                            call_log_uninst_type);
   call_indirect_log =
       mod.getOrInsertFunction("__polytracker_log_call_indirect", call_log_type);
 
