@@ -610,8 +610,6 @@ class FunctionEvent(ControlFlowEvent):
 class CallUninst(FunctionEvent):
     """ A trace event associated with calling an uninstrumented function
     """
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
 
     @property
     def basic_block(self) -> BasicBlock:

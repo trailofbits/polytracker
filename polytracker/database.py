@@ -509,6 +509,17 @@ class DBFunctionEntry(DBFunctionEvent, FunctionEntry):  # type: ignore
 class DBCallUninst(DBFunctionEvent, CallUninst):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_UNINST}  # type: ignore
 
+    @property
+    def function_name(self) -> Optional[str]:
+        try:
+            item = Session.object_session(self).query(DBUninstFunc).filter(DBUninstFunc.event_id == self.uid).one()
+            return item.name
+        except NoResultFound:
+            return None
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})(func:{self.function_name})"
+
 
 class DBCallIndirect(DBFunctionEvent, CallIndirect):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_INDIRECT}  # type: ignore
@@ -517,7 +528,7 @@ class DBCallIndirect(DBFunctionEvent, CallIndirect):  # type: ignore
 class DBUninstFunc(Base):  # type: ignore
     __tablename__ = "uninst_func_entries"
     event_id: int = Column(BigInteger, ForeignKey("events.event_id"), primary_key=True)
-    fname: str = Column(Text)
+    name: str = Column(Text)
     call_event: "DBCallUninst" = relationship("DBCallUninst", uselist=False)
 
 
@@ -688,7 +699,8 @@ class DBProgramTrace(ProgramTrace):
     def __iter__(self) -> Iterator[TraceEvent]:
         yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
 
-    def call_trace(self) -> Iterator[FunctionEvent]:
+    @property
+    def call_trace(self) -> Iterator[DBFunctionEvent]:
         yield from stream_results(self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc()))
 
     def function_trace(self) -> Iterator[DBFunctionEntry]:
