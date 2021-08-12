@@ -813,6 +813,11 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTaintedOutputChunk).all()
 
     @property
+    def outputs(self) -> Iterable[Input]:
+        for input_id in self.session.query(DBTaintOutput.input_id).distinct():
+            return self.session.query(DBInput).filter(DBInput.uid == input_id[0])
+
+    @property
     def output_taints(self) -> Iterable[TaintOutput]:
         return self.session.query(DBTaintOutput).all()
 
