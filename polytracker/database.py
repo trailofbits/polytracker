@@ -827,7 +827,7 @@ class DBTaintedChunk(Base, TaintedChunk):  # type: ignore
 
 
 # TODO (Carson) we should merge ^ these two together after initial PoC
-class DBTaintedOutputChunk(Base, TaintedChunk):
+class DBTaintedOutputChunk(Base, TaintedChunk): # type: ignore
     __tablename__ = "output_tainted_chunks"
     input_id = Column(Integer, ForeignKey("input.id"))
     start_offset = Column(BigInteger)
@@ -835,7 +835,7 @@ class DBTaintedOutputChunk(Base, TaintedChunk):
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
 
 
-class DBTaintOutput(Base, TaintOutput):
+class DBTaintOutput(Base, TaintOutput):  # type: ignore
     __tablename__ = "output_taint"
     input_id = Column(Integer, ForeignKey("input.id"))
     offset = Column(BigInteger)
