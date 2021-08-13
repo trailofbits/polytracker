@@ -58,6 +58,12 @@ fun:__polytracker_log_call_indirect=uninstrumented
 fun:__polytracker_log_call_indirect=discard
 fun:__dfsan_update_label_count=uninstrumented
 fun:__dfsan_update_label_count=discard
+fun:__remill_jump=uninstrumented
+fun:__remill_jump=discard
+fun:__remill_function_call=uninstrumented
+fun:__remill_function_call=discard
+fun:_init=uninstrumented
+fun:_init=discard
 
 ###############################################################################
 # DFSan interface functions
