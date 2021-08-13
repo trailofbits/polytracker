@@ -15,6 +15,15 @@ PolyBuild
    :inherited-members:
    :show-inheritance:
 
+PolyInst
+********
+
+.. autoclass:: PolyInst
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 build functions
 ---------------
 

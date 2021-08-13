@@ -78,6 +78,15 @@ DBFunctionEntry
    :inherited-members:
    :show-inheritance:
 
+DBFunctionEvent
+***************
+
+.. autoclass:: DBFunctionEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 DBFunctionInvocation
 ********************
 
@@ -141,10 +150,46 @@ DBTaintForestNode
    :inherited-members:
    :show-inheritance:
 
+DBTaintOutput
+*************
+
+.. autoclass:: DBTaintOutput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintedChunk
+**************
+
+.. autoclass:: DBTaintedChunk
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintedOutputChunk
+********************
+
+.. autoclass:: DBTaintedOutputChunk
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 DBTraceEvent
 ************
 
 .. autoclass:: DBTraceEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBUninstFunc
+************
+
+.. autoclass:: DBUninstFunc
    :members:
    :undoc-members:
    :inherited-members:
@@ -190,15 +235,6 @@ PolytrackerItem
 ***************
 
 .. autoclass:: PolytrackerItem
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-TaintedChunksItem
-*****************
-
-.. autoclass:: TaintedChunksItem
    :members:
    :undoc-members:
    :inherited-members:

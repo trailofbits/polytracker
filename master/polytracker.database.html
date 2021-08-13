@@ -9,7 +9,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>polytracker.database &mdash; PolyTracker 3.0.2 documentation</title>
+  <title>polytracker.database &mdash; PolyTracker 3.1.0 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
           
 
           
-<a href="https://github.com/trailofbits/polytracker"><div class="version">3.0.2</div></a>
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -101,6 +101,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#dbcalluninst">DBCallUninst</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunction">DBFunction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunctionentry">DBFunctionEntry</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbfunctionevent">DBFunctionEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunctioninvocation">DBFunctionInvocation</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbfunctionreturn">DBFunctionReturn</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbinput">DBInput</a></li>
@@ -108,13 +109,16 @@
 <li class="toctree-l4"><a class="reference internal" href="#dbtaintaccess">DBTaintAccess</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbtaintforest">DBTaintForest</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbtaintforestnode">DBTaintForestNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbtaintoutput">DBTaintOutput</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbtaintedchunk">DBTaintedChunk</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbtaintedoutputchunk">DBTaintedOutputChunk</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#dbtraceevent">DBTraceEvent</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#dbuninstfunc">DBUninstFunc</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#edgetype">EdgeType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#eventtype">EventType</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#functioncfgedge">FunctionCFGEdge</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#functionentries">FunctionEntries</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#polytrackeritem">PolytrackerItem</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#taintedchunksitem">TaintedChunksItem</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#database-functions">database functions</a><ul>
@@ -585,7 +589,7 @@ for example, any mapped columns or relationships.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.database.DBCallIndirect">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBCallIndirect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallIndirect" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallIndirect" title="polytracker.tracing.CallIndirect"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallIndirect</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBFunctionEvent" title="polytracker.database.DBFunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBFunctionEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallIndirect" title="polytracker.tracing.CallIndirect"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallIndirect</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallIndirect.__init__" title="Permalink to this definition">¶</a></dt>
@@ -732,7 +736,7 @@ for example, any mapped columns or relationships.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.database.DBCallUninst">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBCallUninst</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallUninst" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallUninst" title="polytracker.tracing.CallUninst"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallUninst</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBFunctionEvent" title="polytracker.database.DBFunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBFunctionEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.CallUninst" title="polytracker.tracing.CallUninst"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.CallUninst</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBCallUninst.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBCallUninst.__init__" title="Permalink to this definition">¶</a></dt>
@@ -785,6 +789,11 @@ for example, any mapped columns or relationships.</p>
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.function_entry" title="Permalink to this definition">¶</a></dt>
 <dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
 </dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBCallUninst.function_name">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_name</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[str]</span></em><a class="headerlink" href="#polytracker.database.DBCallUninst.function_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.database.DBCallUninst.input">
@@ -965,7 +974,7 @@ for example, any mapped columns or relationships.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEntry">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBFunctionEntry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBFunctionEntry" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.FunctionEntry" title="polytracker.tracing.FunctionEntry"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.FunctionEntry</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBFunctionEvent" title="polytracker.database.DBFunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBFunctionEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.FunctionEntry" title="polytracker.tracing.FunctionEntry"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.FunctionEntry</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEntry.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBFunctionEntry.__init__" title="Permalink to this definition">¶</a></dt>
@@ -1022,7 +1031,7 @@ for example, any mapped columns or relationships.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEntry.function">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEntry.function" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the function that was entered</p>
+<dd><p>Returns the function that was called</p>
 </dd></dl>
 
 <dl class="py property">
@@ -1120,6 +1129,153 @@ for example, any mapped columns or relationships.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEntry.uid">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEntry.uid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbfunctionevent">
+<h3>DBFunctionEvent<a class="headerlink" href="#dbfunctionevent" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBFunctionEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBFunctionEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.database.DBTraceEvent" title="polytracker.database.DBTraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBTraceEvent</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.FunctionEvent" title="polytracker.tracing.FunctionEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.FunctionEvent</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.accessed_labels">
+<span class="sig-name descname"><span class="pre">accessed_labels</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.accessed_labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.basic_block">
+<span class="sig-name descname"><span class="pre">basic_block</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.basic_block" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.block_gid">
+<span class="sig-name descname"><span class="pre">block_gid</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.block_gid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.event_id">
+<span class="sig-name descname"><span class="pre">event_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.event_type">
+<span class="sig-name descname"><span class="pre">event_type</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.event_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.func_event_id">
+<span class="sig-name descname"><span class="pre">func_event_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.func_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.function">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.tracing.Function</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.function" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that was executing during which this event took place.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.function_entry">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_entry</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.FunctionEntry]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.function_entry" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function entry event associated with the stack frame in which this event occurred, if one exists.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.input">
+<span class="sig-name descname"><span class="pre">input</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.input" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.next_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.next_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.next_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.next_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the next event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.next_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.next_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">next_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.next_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The next event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.previous_control_flow_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_control_flow_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.ControlFlowEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.previous_control_flow_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous control flow event in the trace that occurred in the same thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.previous_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.previous_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event in the trace that occurred in the same thread, if one exists.</p>
+<p>For the previous event from <em>any</em> thread, see <code class="xref py py-meth docutils literal notranslate"><span class="pre">TraceEvent.previous_global_event()</span></code>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.previous_global_event">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">previous_global_event</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[polytracker.tracing.TraceEvent]</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.previous_global_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The previous event that occurred in the trace, regardless of thread, if one exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.taints">
+<span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>The set of taints operated on during this event.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.thread_event_id">
+<span class="sig-name descname"><span class="pre">thread_event_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.thread_event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.thread_id">
+<span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.thread_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.touched_taint">
+<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not this event touched taint.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.trace">
+<span class="sig-name descname"><span class="pre">trace</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><span class="pre">polytracker.database.DBProgramTrace</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.uid">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.uid" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -1513,6 +1669,11 @@ for example, any mapped columns or relationships.</p>
 </dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.call_trace">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">call_trace</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterator[polytracker.database.DBFunctionEvent]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.call_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.cfg">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">cfg</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.cfg.DiGraph[polytracker.tracing.BasicBlock]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.cfg" title="Permalink to this definition">¶</a></dt>
 <dd><p>The static control flow graph associated with this trace.</p>
@@ -1591,6 +1752,11 @@ implementations.</p>
 <span class="sig-name descname"><span class="pre">has_thread_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thread_event_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">thread_id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBProgramTrace.has_thread_event" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.input_chunks">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">input_chunks</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable[polytracker.tracing.TaintedChunk]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.input_chunks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.input_properties">
 <span class="sig-name descname"><span class="pre">input_properties</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.InputProperties" title="polytracker.inputs.InputProperties"><span class="pre">polytracker.inputs.InputProperties</span></a></span></span><a class="headerlink" href="#polytracker.database.DBProgramTrace.input_properties" title="Permalink to this definition">¶</a></dt>
@@ -1641,6 +1807,21 @@ implementations.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.num_function_calls_that_touched_taint">
 <span class="sig-name descname"><span class="pre">num_function_calls_that_touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#polytracker.database.DBProgramTrace.num_function_calls_that_touched_taint" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.output_chunks">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">output_chunks</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable[polytracker.tracing.TaintedChunk]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.output_chunks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.output_taints">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">output_taints</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable[polytracker.tracing.TaintOutput]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.output_taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.database.DBProgramTrace.outputs">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">outputs</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional[Iterable[polytracker.inputs.Input]]</span></em><a class="headerlink" href="#polytracker.database.DBProgramTrace.outputs" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1807,6 +1988,126 @@ for example, any mapped columns or relationships.</p>
 </dd></dl>
 
 </section>
+<section id="dbtaintoutput">
+<h3>DBTaintOutput<a class="headerlink" href="#dbtaintoutput" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBTaintOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintOutput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TaintOutput" title="polytracker.tracing.TaintOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TaintOutput</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintOutput.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBTaintOutput.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput.label">
+<span class="sig-name descname"><span class="pre">label</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintOutput.label" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBTaintOutput.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintOutput.offset">
+<span class="sig-name descname"><span class="pre">offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintOutput.offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbtaintedchunk">
+<h3>DBTaintedChunk<a class="headerlink" href="#dbtaintedchunk" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBTaintedChunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintedChunk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TaintedChunk" title="polytracker.tracing.TaintedChunk"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TaintedChunk</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintedChunk.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk.end_offset">
+<span class="sig-name descname"><span class="pre">end_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintedChunk.end_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBTaintedChunk.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBTaintedChunk.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedChunk.start_offset">
+<span class="sig-name descname"><span class="pre">start_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintedChunk.start_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbtaintedoutputchunk">
+<h3>DBTaintedOutputChunk<a class="headerlink" href="#dbtaintedoutputchunk" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBTaintedOutputChunk</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TaintedChunk" title="polytracker.tracing.TaintedChunk"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TaintedChunk</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk.end_offset">
+<span class="sig-name descname"><span class="pre">end_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk.end_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk.input_id">
+<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk.input_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBTaintedOutputChunk.start_offset">
+<span class="sig-name descname"><span class="pre">start_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBTaintedOutputChunk.start_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="dbtraceevent">
 <h3>DBTraceEvent<a class="headerlink" href="#dbtraceevent" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
@@ -1949,6 +2250,46 @@ for example, any mapped columns or relationships.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBTraceEvent.uid">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">uid</span></span><em class="property"><span class="pre">:</span> <span class="pre">int</span></em><a class="headerlink" href="#polytracker.database.DBTraceEvent.uid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="dbuninstfunc">
+<h3>DBUninstFunc<a class="headerlink" href="#dbuninstfunc" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">DBUninstFunc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBUninstFunc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.DBUninstFunc.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple constructor that allows initialization from kwargs.</p>
+<p>Sets attributes on the constructed instance using the names and
+values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
+<p>Only keys that are present as
+attributes of the instance’s class are allowed. These could be,
+for example, any mapped columns or relationships.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc.call_event">
+<span class="sig-name descname"><span class="pre">call_event</span></span><em class="property"><span class="pre">:</span> <a class="reference internal" href="#polytracker.database.DBCallUninst" title="polytracker.database.DBCallUninst"><span class="pre">polytracker.database.DBCallUninst</span></a></em><a class="headerlink" href="#polytracker.database.DBUninstFunc.call_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc.event_id">
+<span class="sig-name descname"><span class="pre">event_id</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.database.DBUninstFunc.event_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.DBUninstFunc.metadata" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.database.DBUninstFunc.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.database.DBUninstFunc.name" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -2159,46 +2500,6 @@ for example, any mapped columns or relationships.</p>
 </dd></dl>
 
 </section>
-<section id="taintedchunksitem">
-<h3>TaintedChunksItem<a class="headerlink" href="#taintedchunksitem" title="Permalink to this headline">¶</a></h3>
-<dl class="py class">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.database.</span></span><span class="sig-name descname"><span class="pre">TaintedChunksItem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.TaintedChunksItem" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sqlalchemy.ext.declarative.api.Base</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.database.TaintedChunksItem.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>A simple constructor that allows initialization from kwargs.</p>
-<p>Sets attributes on the constructed instance using the names and
-values in <code class="docutils literal notranslate"><span class="pre">kwargs</span></code>.</p>
-<p>Only keys that are present as
-attributes of the instance’s class are allowed. These could be,
-for example, any mapped columns or relationships.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem.end_offset">
-<span class="sig-name descname"><span class="pre">end_offset</span></span><a class="headerlink" href="#polytracker.database.TaintedChunksItem.end_offset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem.input_id">
-<span class="sig-name descname"><span class="pre">input_id</span></span><a class="headerlink" href="#polytracker.database.TaintedChunksItem.input_id" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem.metadata">
-<span class="sig-name descname"><span class="pre">metadata</span></span><em class="property"> <span class="pre">=</span> <span class="pre">MetaData(bind=None)</span></em><a class="headerlink" href="#polytracker.database.TaintedChunksItem.metadata" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.database.TaintedChunksItem.start_offset">
-<span class="sig-name descname"><span class="pre">start_offset</span></span><a class="headerlink" href="#polytracker.database.TaintedChunksItem.start_offset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-</section>
 </section>
 <section id="database-functions">
 <h2>database functions<a class="headerlink" href="#database-functions" title="Permalink to this headline">¶</a></h2>
@@ -2264,7 +2565,7 @@ for example, any mapped columns or relationships.</p>
     <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
       <span class="rst-current-version" data-toggle="rst-current-version">
         <span class="fa fa-book"> PolyTracker Documentation</span>
-        3.0.2
+        3.1.0
         <span class="fa fa-caret-down"></span>
       </span>
       <div class="rst-other-versions">

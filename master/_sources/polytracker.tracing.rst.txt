@@ -105,6 +105,15 @@ FunctionEntry
    :inherited-members:
    :show-inheritance:
 
+FunctionEvent
+*************
+
+.. autoclass:: FunctionEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 FunctionInvocation
 ******************
 
@@ -154,6 +163,24 @@ TaintDiff
 *********
 
 .. autoclass:: TaintDiff
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintOutput
+***********
+
+.. autoclass:: TaintOutput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TaintedChunk
+************
+
+.. autoclass:: TaintedChunk
    :members:
    :undoc-members:
    :inherited-members:
