@@ -604,7 +604,35 @@ class ControlFlowEvent(TraceEvent):
     pass
 
 
-class FunctionEntry(ControlFlowEvent):
+class FunctionEvent(ControlFlowEvent):
+    pass
+
+
+class CallUninst(FunctionEvent):
+    """ A trace event associated with calling an uninstrumented function
+    """
+
+    # TODO (Carson) don't rely on database
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return self.basic_block
+
+
+class CallIndirect(FunctionEvent):
+    """ A trace event associated with making an indirect call (ex: function pointers)
+    """
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})"
+
+    @property
+    def basic_block(self) -> BasicBlock:
+        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
+        return self.basic_block
+
+
+class FunctionEntry(FunctionEvent):
     """An abstract class representing the entry into a function."""
 
     @property
@@ -644,7 +672,7 @@ class FunctionEntry(ControlFlowEvent):
 
     @property
     def function(self) -> Function:
-        """Returns the function that was entered"""
+        """Returns the function that was called"""
         if self.entrypoint is None:
             raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
         return self.entrypoint.function
@@ -691,6 +719,42 @@ class TaintAccess:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.access_id!r}, {self.event!r}, {self.label}, {self.access_type!r})"
+
+
+class TaintOutput:
+    """An abstract class for representing tainted bytes written to an output (file, network socket, etc)."""
+
+    def __init__(self, output_offset: int, label: int):
+        """
+        Args:
+            output_offset: offset within the output file
+            label: The taint label of the output
+        """
+        self.offset: int = output_offset
+        self.label: int = label
+
+    def __lt__(self, other):
+        return hasattr(other, "offset") and self.offset < other.offset
+
+    def __hash__(self):
+        return {self.offset, self.label}
+
+    def __eq__(self, other):
+        return isinstance(other, TaintOutput) and self.offset == other.offset
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(Offset: {self.offset!r}, Taint label: {self.label!r})"
+
+
+class TaintedChunk:
+    """An abstract class for representing tainted input chunks."""
+
+    def __init__(self, start_offset: int, end_offset: int):
+        self.start_offset: int = start_offset
+        self.end_offset: int = end_offset
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.start_offset!r}, {self.end_offset!r})"
 
 
 class BasicBlockEntry(ControlFlowEvent):
@@ -757,38 +821,6 @@ class BasicBlockEntry(ControlFlowEvent):
 
     def __str__(self):
         return f"{self.basic_block!s}#{self.entry_count()}"
-
-
-class CallUninst(ControlFlowEvent):
-    """ A trace event associated with calling an uninstrumented function
-    """
-
-    def __init__(self, uid: int):
-        super().__init__(uid=uid)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
-
-    @property
-    def basic_block(self) -> BasicBlock:
-        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
-        return super().basic_block
-
-
-class CallIndirect(ControlFlowEvent):
-    """ A trace event associated with making an indirect call (ex: function pointers)
-    """
-
-    def __init__(self, uid: int):
-        super().__init__(uid=uid)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.uid!r})"
-
-    @property
-    def basic_block(self) -> BasicBlock:
-        """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
-        return super().basic_block
 
 
 class FunctionReturn(ControlFlowEvent):

@@ -67,6 +67,14 @@ void storeCanonicalMap(sqlite3 *output_db, const input_id_t input_id,
 
 void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
                        const uint64_t start, const uint64_t end);
+void storeTaintedOutputChunk(sqlite3 *output_db, const input_id_t input_id,
+                             const uint64_t start, const uint64_t end);
+
+void storeUninstFuncEntry(sqlite3 *output_db, const event_id_t &event_id,
+                          const char *fname);
+
+void storeTaintedOutput(sqlite3 *output_db, const input_id_t input_id,
+                        const uint64_t offset, const dfsan_label label);
 
 void storeTaintForestDisk(const std::string &outfile,
                           const dfsan_label &last_label);

@@ -91,10 +91,22 @@ sqlite3_stmt *chunk_stmt;
 const char *insert_chunk = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
                            "start_offset, end_offset) VALUES (?, ?, ?);";
 
+sqlite3_stmt *output_chunk_stmt;
+const char *output_chunk_insert = "INSERT INTO output_tainted_chunks(input_id, "
+                                  "start_offset, end_offset) VALUES (?, ?, ?);";
+
+sqlite3_stmt *output_taint_stmt;
+const char *output_taint_insert =
+    "INSERT INTO output_taint(input_id, offset, label) VALUES (?, ?, ?);";
+
 sqlite3_stmt *func_entry_stmt;
 const char *func_entry_insert =
     "INSERT OR REPLACE INTO func_entries (event_id, "
     "touched_taint) VALUES(?, 1);";
+
+sqlite3_stmt *func_uninst_stmt;
+const char *func_uninst_insert =
+    "INSERT INTO uninst_func_entries (event_id, name) VALUES (?, ?);";
 
 // Callback function for sql_exces
 static int sql_callback(void *debug, int count, char **data, char **columns) {
@@ -258,6 +270,30 @@ void storeTaintedChunk(sqlite3 *output_db, const input_id_t input_id,
   // sqlite3_finalize(chunk_stmt);
 }
 
+// TODO ^ Merge with above
+void storeTaintedOutputChunk(sqlite3 *output_db, const input_id_t input_id,
+                             const uint64_t start, const uint64_t end) {
+  sqlite3_bind_int64(output_chunk_stmt, 1, input_id);
+  sqlite3_bind_int64(output_chunk_stmt, 2, start);
+  sqlite3_bind_int64(output_chunk_stmt, 3, end);
+  sql_step(output_db, output_chunk_stmt);
+}
+
+void storeTaintedOutput(sqlite3 *output_db, const input_id_t input_id,
+                        const uint64_t offset, const dfsan_label label) {
+  sqlite3_bind_int64(output_taint_stmt, 1, input_id);
+  sqlite3_bind_int64(output_taint_stmt, 2, offset);
+  sqlite3_bind_int64(output_taint_stmt, 3, label);
+  sql_step(output_db, output_taint_stmt);
+}
+
+void storeUninstFuncEntry(sqlite3 *output_db, const event_id_t &event_id,
+                          const char *fname) {
+  sqlite3_bind_int64(func_uninst_stmt, 1, event_id);
+  sqlite3_bind_text(func_uninst_stmt, 2, fname, strlen(fname), SQLITE_STATIC);
+  sql_step(output_db, func_uninst_stmt);
+}
+
 void storeFunc(sqlite3 *output_db, const char *fname,
                const function_id_t func_id) {
   sqlite3_bind_int(insert_func_stmt, 1, func_id);
@@ -295,6 +331,9 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, insert_func, -1, &insert_func_stmt, NULL);
   sql_prep(output_db, bb_stmt_insert, -1, &bb_stmt, NULL);
   sql_prep(output_db, func_entry_insert, -1, &func_entry_stmt, NULL);
+  sql_prep(output_db, output_chunk_insert, -1, &output_chunk_stmt, NULL);
+  sql_prep(output_db, output_taint_insert, -1, &output_taint_stmt, NULL);
+  sql_prep(output_db, func_uninst_insert, -1, &func_uninst_stmt, NULL);
 }
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,

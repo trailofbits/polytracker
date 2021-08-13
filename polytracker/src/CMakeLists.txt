@@ -36,7 +36,8 @@ ${POLY_DIR}/sqlite3.c
 set (TAINT_SOURCES 
 ${TAINT_DIR}/taint_sources.cpp
 ${TAINT_DIR}/string_taints.cpp 
-${TAINT_DIR}/memory_taints.cpp 
+${TAINT_DIR}/memory_taints.cpp
+${TAINT_DIR}/write_taints.cpp
 )
 
 add_library(Polytracker STATIC 

@@ -48,6 +48,26 @@ class PolyBuild(Command):
             return DockerRun.run_on(self._container, args, interactive=False)
 
 
+class PolyInst(Command):
+    name = "lower"
+    help = "runs `polybuild` --lower-bitcode"
+    _container: Optional[DockerContainer] = None
+
+    def __init_arguments__(self, parser: argparse.ArgumentParser):
+        parser.add_argument("--input-file", type=str, help="input bitcode file")
+        parser.add_argument("--output-file", type=str, help="output bitcode file")
+
+    def run(self, args: argparse.Namespace):
+        cmd = "polybuild_script"
+        items = [cmd] + ["--lower-bitcode", "-i", args.input_file, "-o", args.output_file]
+        if CAN_RUN_NATIVELY:
+            return subprocess.call(items)
+        else:
+            if self._container is None:
+                self._container = DockerContainer()
+            return DockerRun.run_on(self._container, items, interactive=False)
+
+
 def main():
     PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": False}))
 

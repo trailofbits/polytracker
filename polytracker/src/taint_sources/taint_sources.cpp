@@ -1,5 +1,7 @@
 //#include "dfsan/dfsan.h"
 #include "polytracker/taint_sources.h"
+#include "polytracker/logging.h"
+#include "polytracker/output.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/taint.h"
 #include <algorithm>
@@ -21,6 +23,7 @@
 #include <thread>
 #include <time.h>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 #include <wchar.h>
 
@@ -29,6 +32,9 @@
 #ifdef DEBUG_INFO
 #include <iostream>
 #endif
+
+extern sqlite3 *output_db;
+extern std::unordered_map<int, input_id_t> fd_input_map;
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
@@ -51,6 +57,13 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
     // taint source So creating an object here is low-ish overhead.
     std::string track_path{path};
     addDerivedSource(track_path, fd);
+  } else if (fd >= 0 && ((oflags & O_WRONLY) || (oflags & O_RDWR))) {
+    // We're not tracking this source, but its writeable
+    // create a new input, range is 0->0 as we arent tracking anything for now.
+    // just need this input id in the database, todo, could be output id
+    auto input_id = storeNewInput(output_db, path, 0, 0, 0);
+    std::cout << "Storing outfile fd to map" << std::endl;
+    fd_input_map[fd] = input_id;
   }
   *ret_label = 0;
   return fd;

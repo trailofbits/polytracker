@@ -3,6 +3,7 @@
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
+#include "polytracker/write_taints.h"
 #include <atomic>
 #include <errno.h>
 #include <fcntl.h>
@@ -15,6 +16,7 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <unordered_set>
 
@@ -40,8 +42,12 @@ char *forest_mem;
 
 // DB for storing things
 sqlite3 *output_db;
+
 // Input id is unique document key
+// Change this for multiple taint sources
 input_id_t input_id;
+// Maps fds to associated input_ids.
+std::unordered_map<int, input_id_t> fd_input_map;
 
 /*
 Parse files deliminated by ; and add them to unordered set.

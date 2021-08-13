@@ -71,6 +71,24 @@ static constexpr const char *createChunksTable() {
          ") WITHOUT ROWID;";
 }
 
+static constexpr const char *createChunksOutputTable() {
+  return "CREATE TABLE IF NOT EXISTS output_tainted_chunks("
+         "input_id INTEGER, "
+         "start_offset BIGINT NOT NULL, "
+         "end_offset BIGINT NOT NULL,"
+         "PRIMARY KEY(input_id, start_offset, end_offset)"
+         ") WITHOUT ROWID;";
+}
+
+static constexpr const char *createTaintOutputTable() {
+  return "CREATE TABLE IF NOT EXISTS output_taint("
+         "input_id INTEGER, "
+         "offset BIGINT NOT NULL, "
+         "label BIGINT NOT NULL,"
+         "PRIMARY KEY(input_id, offset, label)"
+         ") WITHOUT ROWID;";
+}
+
 static constexpr const char *createCFGTable() {
   return "CREATE TABLE IF NOT EXISTS func_cfg("
          "dest INTEGER, "
@@ -130,6 +148,14 @@ static constexpr const char *createFuncEntryTable() {
          ") WITHOUT ROWID;";
 }
 
+static constexpr const char *createUninstTable() {
+  return "CREATE TABLE IF NOT EXISTS uninst_func_entries ("
+         "event_id BIGINT,"
+         " name TEXT, "
+         "PRIMARY KEY(event_id, name)"
+         ") WITHOUT ROWID;";
+}
+
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
       std::string(createInputTable()) + std::string(createFuncTable()) +
@@ -141,6 +167,8 @@ void createDBTables(sqlite3 *output_db) {
       std::string(createCanonicalTable()) + std::string(createChunksTable()) +
       std::string(createCFGTable()) + std::string(createTaintForestTable()) +
       std::string(createEventsTable()) + std::string(createBlockEntryTable()) +
-      std::string(createFuncEntryTable());
+      std::string(createFuncEntryTable()) +
+      std::string(createChunksOutputTable()) +
+      std::string(createTaintOutputTable()) + std::string(createUninstTable());
   sql_exec(output_db, table_gen.c_str());
 }

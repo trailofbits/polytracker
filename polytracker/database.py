@@ -36,6 +36,7 @@ from .tracing import (
     ByteOffset,
     Function,
     FunctionEntry,
+    FunctionEvent,
     FunctionInvocation,
     FunctionReturn,
     CallUninst,
@@ -44,6 +45,8 @@ from .tracing import (
     TaintAccess,
     Taints,
     TraceEvent,
+    TaintOutput,
+    TaintedChunk,
 )
 
 Base = declarative_base()
@@ -485,7 +488,11 @@ class FunctionEntries(Base):  # type: ignore
     entry: "DBFunctionEntry" = relationship("DBFunctionEntry", uselist=False)
 
 
-class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
+class DBFunctionEvent(DBTraceEvent, FunctionEvent):
+    pass
+
+
+class DBFunctionEntry(DBFunctionEvent, FunctionEntry):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.FUNC_ENTER}  # type: ignore
 
     @property
@@ -499,12 +506,30 @@ class DBFunctionEntry(DBTraceEvent, FunctionEntry):  # type: ignore
             return None
 
 
-class DBCallUninst(DBTraceEvent, CallUninst):  # type: ignore
+class DBCallUninst(DBFunctionEvent, CallUninst):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_UNINST}  # type: ignore
 
+    @property
+    def function_name(self) -> Optional[str]:
+        try:
+            item = Session.object_session(self).query(DBUninstFunc).filter(DBUninstFunc.event_id == self.uid).one()
+            return item.name
+        except NoResultFound:
+            return None
 
-class DBCallIndirect(DBTraceEvent, CallIndirect):  # type: ignore
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.uid!r})(func:{self.function_name})"
+
+
+class DBCallIndirect(DBFunctionEvent, CallIndirect):  # type: ignore
     __mapper_args__ = {"polymorphic_identity": EventType.CALL_INDIRECT}  # type: ignore
+
+
+class DBUninstFunc(Base):  # type: ignore
+    __tablename__ = "uninst_func_entries"
+    event_id: int = Column(BigInteger, ForeignKey("events.event_id"), primary_key=True)
+    name: str = Column(Text)
+    call_event: "DBCallUninst" = relationship("DBCallUninst", uselist=False)
 
 
 class DBFunctionReturn(DBTraceEvent, FunctionReturn):  # type: ignore
@@ -658,14 +683,14 @@ class DBProgramTrace(ProgramTrace):
 
             session.flush = abort_read_only
         db = DBProgramTrace(session)
-        if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
-            raise ValueError(
-                f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
-                "database was reused for more than one run of the instrumented binary.\nThis feature is "
-                "not yet fully implemented.\nPlease track this GitHub issue for further details and "
-                "progress:\n    https://github.com/trailofbits/polytracker/issues/6353\nIn the mean time, "
-                "you should use a separate database for every instrumented run of a binary."
-            )
+        # if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
+        #     raise ValueError(
+        #         f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
+        #         "database was reused for more than one run of the instrumented binary.\nThis feature is "
+        #         "not yet fully implemented.\nPlease track this GitHub issue for further details and "
+        #         "progress:\n    https://github.com/trailofbits/polytracker/issues/6353\nIn the mean time, "
+        #         "you should use a separate database for every instrumented run of a binary."
+        #     )
         return db
 
     def __len__(self) -> int:
@@ -673,6 +698,10 @@ class DBProgramTrace(ProgramTrace):
 
     def __iter__(self) -> Iterator[TraceEvent]:
         yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
+
+    @property
+    def call_trace(self) -> Iterator[DBFunctionEvent]:
+        yield from stream_results(self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc()))
 
     def function_trace(self) -> Iterator[DBFunctionEntry]:
         yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
@@ -776,6 +805,24 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTaintAccess).count()
 
     @property
+    def input_chunks(self) -> Iterable[TaintedChunk]:
+        return self.session.query(DBTaintedChunk).all()
+
+    @property
+    def output_chunks(self) -> Iterable[TaintedChunk]:
+        return self.session.query(DBTaintedOutputChunk).all()
+
+    @property
+    def outputs(self) -> Optional[Iterable[Input]]:
+        for input_id in self.session.query(DBTaintOutput.input_id).distinct():
+            return self.session.query(DBInput).filter(DBInput.uid == input_id[0])
+        return None
+
+    @property
+    def output_taints(self) -> Iterable[TaintOutput]:
+        return self.session.query(DBTaintOutput).all()
+
+    @property
     def inputs(self) -> Iterable[Input]:
         return self.session.query(DBInput)
 
@@ -804,12 +851,29 @@ class CanonicalMap(Base):  # type: ignore
     source = relationship("DBInput")
 
 
-class TaintedChunksItem(Base):  # type: ignore
+class DBTaintedChunk(Base, TaintedChunk):  # type: ignore
     __tablename__ = "tainted_chunks"
     input_id = Column(Integer, ForeignKey("input.id"))
     start_offset = Column(BigInteger)
     end_offset = Column(BigInteger)
     __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
+
+
+# TODO (Carson) we should merge ^ these two together after initial PoC
+class DBTaintedOutputChunk(Base, TaintedChunk):  # type: ignore
+    __tablename__ = "output_tainted_chunks"
+    input_id = Column(Integer, ForeignKey("input.id"))
+    start_offset = Column(BigInteger)
+    end_offset = Column(BigInteger)
+    __table_args__ = (PrimaryKeyConstraint("input_id", "start_offset", "end_offset"),)
+
+
+class DBTaintOutput(Base, TaintOutput):  # type: ignore
+    __tablename__ = "output_taint"
+    input_id = Column(Integer, ForeignKey("input.id"))
+    offset = Column(BigInteger)
+    label = Column(BigInteger)
+    __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
 
 
 class DBTaintForestNode(Base, TaintForestNode):  # type: ignore

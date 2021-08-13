@@ -188,7 +188,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
     if (byte_end < 0 ||
         (curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
       dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
-      dfsan_set_label(new_label, curr_byte, TAINT_GRANULARITY);
+      dfsan_set_label(new_label, curr_byte, sizeof(char));
 
       // Log that we tainted data within this function from a taint source etc.
       // logOperation(new_label);

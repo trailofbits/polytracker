@@ -78,8 +78,9 @@ extern "C" void __polytracker_log_call_exit(uint32_t func_index,
 }
 
 extern "C" void __polytracker_log_call_uninst(uint32_t func_index,
-                                              uint32_t block_index) {
-  logCallUninst(func_index, block_index);
+                                              uint32_t block_index,
+                                              char *fname) {
+  logCallUninst(func_index, block_index, fname);
 }
 
 extern "C" void __polytracker_log_call_indirect(uint32_t func_index,
