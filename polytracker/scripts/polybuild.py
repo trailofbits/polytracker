@@ -66,6 +66,7 @@ if not COMPILER_DIR.is_dir():
 POLY_PASS_PATH: Path = ensure_exists(
     COMPILER_DIR / "pass" / "libPolytrackerPass.so")
 POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
+META_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libMetadataPass.so")
 DFSAN_ABI_LIST_PATH: Path = ensure_exists(
     COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
 POLY_ABI_LIST_PATH: Path = ensure_exists(
@@ -149,6 +150,11 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(META_PASS_PATH), "-meta", str(bitcode_file), "-o", str(bitcode_file)]
+    ret = subprocess.call(opt_command)
+    if ret != 0:
+        print("Metadata pass failed! Exiting!")
+        exit(1)
     opt_command = ["opt", "-enable-new-pm=0", "-load",
                    str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
