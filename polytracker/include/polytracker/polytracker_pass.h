@@ -19,7 +19,7 @@ struct PolytrackerPass : public llvm::ModulePass,
                          public llvm::InstVisitor<PolytrackerPass> {
   static char ID;
   PolytrackerPass() : ModulePass(ID) {}
-  bool runOnModule(llvm::Module &function) override;
+  bool runOnModule(llvm::Module &module) override;
   bool analyzeFunction(llvm::Function *f, const func_index_t &index);
   bool analyzeBlock(llvm::Function *func, const func_index_t &func_index,
                     llvm::BasicBlock *curr_bb, const bb_index_t &bb_index,
