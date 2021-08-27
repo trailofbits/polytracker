@@ -12,10 +12,12 @@
 
 using namespace llvm;
 
-class MetadataPass : public ModulePass {
+namespace polymeta {
+struct MetadataPass : public ModulePass {
   static char ID;
   MetadataPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &module) override;
 };
 
+}; // namespace polymeta
 #endif
