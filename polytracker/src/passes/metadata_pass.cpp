@@ -5,9 +5,12 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Metadata.h"
+#include <iostream>
 #include <string>
 
 using namespace llvm;
+
+namespace polymeta {
 
 bool MetadataPass::runOnModule(Module &mod) {
   LLVMContext &context = mod.getContext();
@@ -19,6 +22,7 @@ bool MetadataPass::runOnModule(Module &mod) {
         auto str_val = std::to_string(inst_num++);
         llvm::MDNode *node =
             llvm::MDNode::get(context, llvm::MDString::get(context, str_val));
+        std::cout << "SETTING METADATA: " << str_val << std::endl;
         inst.setMetadata("__poly_inst_num", node);
       }
     }
@@ -26,3 +30,8 @@ bool MetadataPass::runOnModule(Module &mod) {
 
   return false;
 }
+char MetadataPass::ID = 0;
+} // namespace polymeta
+static llvm::RegisterPass<polymeta::MetadataPass>
+    X("meta", "Adds runtime monitoring calls to polytracker runtime",
+      false /* Only looks at CFG */, false /* Analysis Pass */);
