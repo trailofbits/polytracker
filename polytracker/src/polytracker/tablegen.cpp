@@ -155,6 +155,12 @@ static constexpr const char *createUninstTable() {
          "PRIMARY KEY(event_id, name)"
          ") WITHOUT ROWID;";
 }
+static constexpr const char *createBinaryTable() {
+  return "CREATE TABLE IF NOT EXISTS blobs ("
+         "binary BLOB NOT NULL, "
+         "PRIMARY KEY(binary)"
+         ");";
+}
 
 void createDBTables(sqlite3 *output_db) {
   std::string table_gen =
@@ -169,6 +175,7 @@ void createDBTables(sqlite3 *output_db) {
       std::string(createEventsTable()) + std::string(createBlockEntryTable()) +
       std::string(createFuncEntryTable()) +
       std::string(createChunksOutputTable()) +
-      std::string(createTaintOutputTable()) + std::string(createUninstTable());
+      std::string(createTaintOutputTable()) + std::string(createUninstTable()) +
+      std::string(createBinaryTable());
   sql_exec(output_db, table_gen.c_str());
 }

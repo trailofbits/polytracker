@@ -1,5 +1,6 @@
 #include "polytracker/polytracker.h"
 #include "polytracker/logging.h"
+#include "polytracker/output.h"
 #include "polytracker/taint.h"
 #include <atomic>
 #include <inttypes.h>
@@ -9,6 +10,7 @@
 extern bool polytracker_trace_func;
 extern bool polytracker_trace;
 extern thread_local FunctionStack function_stack;
+extern sqlite3 *output_db;
 
 // extern std::atomic_bool done;
 
@@ -126,6 +128,20 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
 extern "C" int __polytracker_size() { return function_stack.size(); }
 
 extern "C" void __polytracker_start() { polytracker_start(); }
+
+extern "C" void __polytracker_store_blob(char **argv) {
+  const char *current_prog = argv[0];
+  fprintf(stderr, "prog name is: %s \n", current_prog);
+  char *data;
+  FILE *prog_fd = fopen(current_prog, "rb");
+  fseek(prog_fd, 0, SEEK_END);
+  int size = ftell(prog_fd);
+  fseek(prog_fd, 0, SEEK_SET);
+  data = (char *)malloc(sizeof(*data) * size);
+  fread(data, 1, size, prog_fd);
+  storeBlob(output_db, data, size);
+  free(data);
+}
 
 extern "C" void dfs$__polytracker_log_call_exit(uint32_t func_index,
                                                 uint32_t block_index,

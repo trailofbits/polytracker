@@ -267,6 +267,9 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   std::string fname = f->getName().str();
   if (fname == "main") {
     llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+    IRB.SetInsertPoint(call->getNextNode());
+    auto val = f->getArg(1);
+    llvm::Instruction *store_prog_call = IRB.CreateCall(store_blob, {val});
     // IRB.SetInsertPoint(call->getNextNode());
   }
 
@@ -365,6 +368,13 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       llvm::FunctionType::get(shadow_type, shadow_type, false);
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
+
+  llvm::Type *blob_args = {llvm::Type::getInt8PtrTy(context)->getPointerTo()};
+  auto polytracker_store_blob_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), blob_args, false);
+
+  store_blob = mod.getOrInsertFunction("__polytracker_store_blob",
+                                       polytracker_store_blob_ty);
 }
 
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
@@ -438,7 +448,7 @@ static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
   return casted;
 }
 
-static llvm::Constant *
+static llvm::GlobalVariable *
 create_globals(llvm::Module &mod,
                std::unordered_map<std::string, uint32_t> &func_index_map) {
   llvm::LLVMContext &context = mod.getContext();
@@ -556,7 +566,8 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
   std::cerr << std::endl;
-  create_globals(mod, func_index_map);
+  llvm::GlobalVariable *global = create_globals(mod, func_index_map);
+  // auto it = global->getIterator();
   return true;
 }
 
