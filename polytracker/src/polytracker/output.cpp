@@ -109,7 +109,7 @@ const char *func_uninst_insert =
     "INSERT INTO uninst_func_entries (event_id, name) VALUES (?, ?);";
 
 sqlite3_stmt *blob_insert_stmt;
-const char *blob_insert = "INSERT INTO blobs (binary) VALUES (?);";
+const char *blob_insert = "INSERT INTO targets (binary) VALUES (?);";
 
 // Callback function for sql_exces
 static int sql_callback(void *debug, int count, char **data, char **columns) {
@@ -341,6 +341,7 @@ void prepSQLInserts(sqlite3 *output_db) {
 }
 
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
+  fprintf(stderr, "Storing blob, size: %d\n", size);
   sqlite3_bind_blob(blob_insert_stmt, 1, blob, size, SQLITE_STATIC);
   sql_step(output_db, blob_insert_stmt);
 }

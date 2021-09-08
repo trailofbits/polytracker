@@ -156,7 +156,7 @@ static constexpr const char *createUninstTable() {
          ") WITHOUT ROWID;";
 }
 static constexpr const char *createBinaryTable() {
-  return "CREATE TABLE IF NOT EXISTS blobs ("
+  return "CREATE TABLE IF NOT EXISTS targets ("
          "binary BLOB NOT NULL, "
          "PRIMARY KEY(binary)"
          ");";
