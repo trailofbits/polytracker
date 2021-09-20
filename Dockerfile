@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:851cca46f066c7cbbc3cd0c876bb5e602c99afca
+FROM trailofbits/polytracker-llvm:latest
 
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>

@@ -323,7 +323,18 @@ An example on how to use Xray lives [here.](https://chromium.googlesource.com/ex
 
 PolyTracker currently only runs on Linux, because that is the only system supported by the DataFlow Santizer. This
 limitation is just due to a lack of support for semantics for other OSes system calls, which could be added in the
-future. However, this means that running PolyTracker on a non-Linux system will require Docker to be installed.
+future. However, this means that running PolyTracker on a non-Linux system will require Docker to be installed. PolyTracker has been verified to run on amd64 and arm64 architectures.
+
+If you experience the following error message
+
+```
+failed to solve with frontend dockerfile.v1: failed to create LLB definition: pull access denied, repository does not exist or may require authorization: server message: insufficient_scope: authorization failed
+```
+
+when building the local docker image, try building with BuildKit disabled:
+```commandline
+$ DOCKER_BUILDKIT=0 docker build -t trailofbits/polytracker .
+```
 
 Taints will not propagate through dynamically loaded libraries unless
 those libraries were compiled from source using PolyTracker, _or_
