@@ -445,8 +445,12 @@ sqlite3 *db_init(const std::string &db_path) {
   createDBTables(output_db);
   storeVersion(output_db);
   prepSQLInserts(output_db);
+  sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
   return output_db;
-  // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
 
-void db_fini(sqlite3 *output_db) { sqlite3_close(output_db); }
+void db_fini(sqlite3 *output_db) { 
+  char *errorMessage; 
+  sqlite3_exec(output_db, "END TRANSACTION", NULL, NULL, &errorMessage);
+  sqlite3_close(output_db);
+}
