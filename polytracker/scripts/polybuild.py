@@ -106,12 +106,30 @@ db_conn.close()
 CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
 CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
+
+LLVM_LIBS = ['-lLLVMWindowsManifest', '-lLLVMXRay', '-lLLVMLibDriver', '-lLLVMDlltoolDriver', '-lLLVMCoverage',
+             '-lLLVMLineEditor', '-lLLVMX86Disassembler', '-lLLVMX86AsmParser', '-lLLVMX86CodeGen', '-lLLVMX86Desc',
+             '-lLLVMX86Info', '-lLLVMOrcJIT', '-lLLVMMCJIT', '-lLLVMJITLink', '-lLLVMInterpreter',
+             '-lLLVMExecutionEngine', '-lLLVMRuntimeDyld', '-lLLVMOrcTargetProcess', '-lLLVMOrcShared',
+             '-lLLVMSymbolize', '-lLLVMDebugInfoPDB', '-lLLVMDebugInfoGSYM', '-lLLVMOption', '-lLLVMObjectYAML',
+             '-lLLVMMCA', '-lLLVMMCDisassembler', '-lLLVMLTO', '-lLLVMPasses', '-lLLVMCFGuard', '-lLLVMCoroutines',
+             '-lLLVMObjCARCOpts', '-lLLVMipo', '-lLLVMVectorize', '-lLLVMLinker', '-lLLVMInstrumentation',
+             '-lLLVMFrontendOpenMP', '-lLLVMFrontendOpenACC', '-lLLVMExtensions', '-lLLVMDWARFLinker',
+             '-lLLVMGlobalISel', '-lLLVMMIRParser', '-lLLVMAsmPrinter', '-lLLVMDebugInfoMSF',
+             '-lLLVMDebugInfoDWARF', '-lLLVMSelectionDAG', '-lLLVMCodeGen', '-lLLVMIRReader', '-lLLVMAsmParser',
+             '-lLLVMInterfaceStub', '-lLLVMFileCheck', '-lLLVMFuzzMutate', '-lLLVMTarget', '-lLLVMScalarOpts',
+             '-lLLVMInstCombine', '-lLLVMAggressiveInstCombine', '-lLLVMTransformUtils', '-lLLVMBitWriter',
+             '-lLLVMAnalysis', '-lLLVMProfileData', '-lLLVMObject', '-lLLVMTextAPI', '-lLLVMMCParser', '-lLLVMMC',
+             '-lLLVMDebugInfoCodeView', '-lLLVMBitReader', '-lLLVMCore', '-lLLVMRemarks', '-lLLVMBitstreamReader',
+             '-lLLVMBinaryFormat', '-lLLVMTableGen', '-lLLVMSupport', '-lLLVMDemangle']
 POLYCXX_LIBS: List[str] = [
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
     str(POLY_LIB_PATH),
     "-lm",
-]
+    "-ltinfo",
+    "-lstdc++"
+] + LLVM_LIBS
 # TODO (Carson), double check, also maybe need -ldl?
 LINK_LIBS: List[str] = [str(CXX_LIB_PATH / "libc++.a"),
                         str(CXX_LIB_PATH / "libc++abi.a"), "-lpthread"]
@@ -331,7 +349,6 @@ def do_everything(argv: List[str]):
             "-fxray-instruction-threshold=1",
             "-pie",
             f"-L{CXX_LIB_PATH!s}",
-            "-g",
             "-o",
             str(output_file),
             str(obj_file),
@@ -344,7 +361,6 @@ def do_everything(argv: List[str]):
             compiler,
             "-pie",
             f"-L{CXX_LIB_PATH!s}",
-            "-g",
             "-o",
             str(output_file),
             str(obj_file),
@@ -395,7 +411,6 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
                 "-fxray-instrument",
                 "-fxray-instruction-threshold=1",
                 f"-L{CXX_LIB_PATH!s}",
-                "-g",
                 "-o",
                 str(output_file),
                 str(obj_file),
@@ -409,7 +424,6 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
             [
                 "-pie",
                 f"-L{CXX_LIB_PATH!s}",
-                "-g",
                 "-o",
                 str(output_file),
                 str(obj_file),
