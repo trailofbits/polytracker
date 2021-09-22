@@ -180,7 +180,6 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [str(bitcode_file), "-o", str(output_bc)]
-    print(opt_command)
     ret = subprocess.call(opt_command)
     assert ret == 0
     opt_command = ["opt", "-enable-new-pm=0", "-dfsan",
