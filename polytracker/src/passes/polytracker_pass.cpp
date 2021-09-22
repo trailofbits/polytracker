@@ -17,6 +17,10 @@
 #include <fstream>
 #include <iomanip> /* for std::setw */
 #include <iostream>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -375,6 +379,12 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
 
   store_blob = mod.getOrInsertFunction("__polytracker_store_blob",
                                        polytracker_store_blob_ty);
+
+  llvm::Type *map_args = {llvm::Type::getInt8PtrTy(context)};
+  auto polytracker_map_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), map_args, false);
+  preserve_map =
+      mod.getOrInsertFunction("__polytracker_preserve_map", polytracker_map_ty);
 }
 
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
@@ -451,6 +461,10 @@ static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
 static llvm::GlobalVariable *
 create_globals(llvm::Module &mod,
                std::unordered_map<std::string, uint32_t> &func_index_map) {
+  std::cout << "DEBUG INDEX MAP" << std::endl;
+  for (auto &pair : func_index_map) {
+    std::cout << pair.first << " " << pair.second << std::endl;
+  }
   llvm::LLVMContext &context = mod.getContext();
   auto int64_type = llvm::IntegerType::getInt64Ty(mod.getContext());
   auto int32_type = llvm::IntegerType::getInt32Ty(mod.getContext());
@@ -567,6 +581,17 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   }
   std::cerr << std::endl;
   llvm::GlobalVariable *global = create_globals(mod, func_index_map);
+  for (auto &func : mod) {
+    if (func.hasName() && func.getName().str() == "main") {
+      llvm::BasicBlock &bb = func.getEntryBlock();
+      llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
+      llvm::IRBuilder<> IRB(&insert_point);
+      llvm::Value *save_map = IRB.CreateCall(
+          preserve_map,
+          IRB.CreateBitOrPointerCast(
+              global, llvm::Type::getInt8PtrTy(mod.getContext())));
+    }
+  }
   // auto it = global->getIterator();
   return true;
 }
