@@ -352,8 +352,8 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, func_uninst_insert, -1, &func_uninst_stmt, NULL);
   sql_prep(output_db, blob_insert, -1, &blob_insert_stmt, NULL);
 }
-llvm::Module *load_test_data(llvm::LLVMContext &context,
-                             const std::string &file_path) {
+llvm::Module *load_bc_data(llvm::LLVMContext &context,
+                           const std::string &file_path) {
   llvm::SMDiagnostic error;
   // NOTE Because Polytracker uses its own standard library
   // Any API that has reference to C++ types like std::string will reference
@@ -399,7 +399,7 @@ llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
   }
   temp_file.write(data, num_bytes);
   temp_file.close();
-  std::string cmd_string = "get-bc -b -o ";
+  std::string cmd_string = "get-bc -l poly-link -b -o ";
   cmd_string += POLY_BC_FILE;
   cmd_string += " ";
   cmd_string += POLY_TEMP_FILE;
@@ -408,7 +408,7 @@ llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
     std::cerr << "Error extracting bitcode!" << std::endl;
     return nullptr;
   }
-  auto mod = load_test_data(context, POLY_BC_FILE);
+  auto mod = load_bc_data(context, POLY_BC_FILE);
   res = system("rm " POLY_BC_FILE "; rm " POLY_TEMP_FILE);
   if (res != 0) {
     std::cerr << "Error cleaning up temp files!" << std::endl;
