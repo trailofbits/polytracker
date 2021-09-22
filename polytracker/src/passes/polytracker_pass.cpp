@@ -461,10 +461,6 @@ static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
 static llvm::GlobalVariable *
 create_globals(llvm::Module &mod,
                std::unordered_map<std::string, uint32_t> &func_index_map) {
-  std::cout << "DEBUG INDEX MAP" << std::endl;
-  for (auto &pair : func_index_map) {
-    std::cout << pair.first << " " << pair.second << std::endl;
-  }
   llvm::LLVMContext &context = mod.getContext();
   auto int64_type = llvm::IntegerType::getInt64Ty(mod.getContext());
   auto int32_type = llvm::IntegerType::getInt32Ty(mod.getContext());
