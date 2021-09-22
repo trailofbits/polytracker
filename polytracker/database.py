@@ -52,7 +52,6 @@ from .tracing import (
     TaintedChunk,
 )
 from pathlib import Path
-from bitcode import BCModule
 
 Base = declarative_base()
 
@@ -699,11 +698,10 @@ class DBBinary(Base): # type: ignore
 
 
 class DBProgramTrace(ProgramTrace):
-    def __init__(self, session: Session, bitcode: Optional[BCModule] = None, event_cache_size: Optional[int] = 15000000):
+    def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
         self.session: Session = session
         self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
         self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
-        self.bitcode = bitcode
         @event.listens_for(session, "pending_to_persistent")
         @event.listens_for(session, "deleted_to_persistent")
         @event.listens_for(session, "detached_to_persistent")
@@ -742,38 +740,6 @@ class DBProgramTrace(ProgramTrace):
 
             session.flush = abort_read_only
         db = DBProgramTrace(session)
-        # if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
-        #     raise ValueError(
-        #         f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
-        #         "database was reused for more than one run of the instrumented binary.\nThis feature is "
-        #         "not yet fully implemented.\nPlease track this GitHub issue for further details and "
-        #         "progress:\n    https://github.com/trailofbits/polytracker/issues/6353\nIn the mean time, "
-        #         "you should use a separate database for every instrumented run of a binary."
-        #     )
-        return db
-
-    @staticmethod
-    @PolyTrackerREPL.register("load_trace_bc")
-    def load_bc(db_path: Union[str, Path], bitcode: Path, read_only: bool = True):
-        """loads a trace from the database and bitcode to map traces <--> LLVM IR"""
-        bc_mod = BCModule(bitcode)
-        engine = create_engine(f"sqlite:///{db_path!s}")
-        if read_only:
-            session_maker = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-        else:
-            session_maker = sessionmaker(bind=engine)
-        session = session_maker()
-
-        if read_only:
-            def abort_read_only(*_, **__):
-                raise ValueError(
-                    f"Database {db_path} was loaded as read only! To write to the database, make sure "
-                    "PolyTrackerTrace.load is called with the `read_only` argument set to True."
-                )
-
-            session.flush = abort_read_only
-
-        db = DBProgramTrace(session, bc_mod)
         # if db_path != ":memory:" and sum(1 for _ in db.inputs) > 1:
         #     raise ValueError(
         #         f"{db_path} contains traces from multiple inputs.\nIt is likely the case that the same "
