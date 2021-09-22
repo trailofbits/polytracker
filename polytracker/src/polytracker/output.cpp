@@ -8,12 +8,25 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <llvm/IR/Verifier.h>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
 #include <thread>
+//#include <llvm/IRReader/IRReader.h>
+#include <llvm-c/BitReader.h>
+#include <llvm-c/BitWriter.h>
+#include <llvm-c/Core.h>
+#include <llvm-c/Support.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/SourceMgr.h>
+
+#define POLY_TEMP_FILE "/tmp/polytracker_temp.binary"
+#define POLY_BC_FILE "/tmp/polytracker_temp.bc"
 
 /*
 This file contains code responsible for outputting PolyTracker runtime
@@ -339,11 +352,135 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, func_uninst_insert, -1, &func_uninst_stmt, NULL);
   sql_prep(output_db, blob_insert, -1, &blob_insert_stmt, NULL);
 }
+llvm::Module *load_test_data(llvm::LLVMContext &context,
+                             const std::string &file_path) {
+  llvm::SMDiagnostic error;
+  // NOTE Because Polytracker uses its own standard library
+  // Any API that has reference to C++ types like std::string will reference
+  // internal polytracker version This can cause conflicts. To link externally,
+  // I'm using the C API. LLVMContextRef context_ref;
+  LLVMModuleRef c_mod;
+  LLVMMemoryBufferRef mem_buff;
+  char *err_message;
+  if (LLVMCreateMemoryBufferWithContentsOfFile(file_path.c_str(), &mem_buff,
+                                               &err_message)) {
+    fprintf(stderr, "%s\n", err_message);
+    free(err_message);
+    return nullptr;
+  }
+
+  if (0 != LLVMParseBitcode2(mem_buff, &c_mod)) {
+    fprintf(stderr, "Invalid bitcode detected!\n");
+    LLVMDisposeMemoryBuffer(mem_buff);
+    return nullptr;
+  }
+  // Convert C API to C++ API using some obscure API I found in the source code
+  // auto new_context = llvm::unwrap(context_ref);
+  auto llvm_module = llvm::unwrap(c_mod);
+
+  /*
+  auto llvm_module = std::unique_ptr<llvm::Module>(
+      llvm::parseIRFile(file_path, error, context));
+*/
+  if (llvm_module == nullptr) {
+    std::cerr << "Failed to load module " + file_path << std::endl;
+    return nullptr;
+  }
+
+  return llvm_module;
+}
+
+llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
+                         const size_t num_bytes) {
+  std::ofstream temp_file(POLY_TEMP_FILE);
+  if (!temp_file.is_open()) {
+    std::cerr << "Error! Temp file failed to open" << std::endl;
+    return nullptr;
+  }
+  temp_file.write(data, num_bytes);
+  temp_file.close();
+  std::string cmd_string = "get-bc -b -o ";
+  cmd_string += POLY_BC_FILE;
+  cmd_string += " ";
+  cmd_string += POLY_TEMP_FILE;
+  int res = system(cmd_string.c_str());
+  if (res != 0) {
+    std::cerr << "Error extracting bitcode!" << std::endl;
+    return nullptr;
+  }
+  auto mod = load_test_data(context, POLY_BC_FILE);
+  res = system("rm " POLY_BC_FILE "; rm " POLY_TEMP_FILE);
+  if (res != 0) {
+    std::cerr << "Error cleaning up temp files!" << std::endl;
+    return nullptr;
+  }
+  return mod;
+}
+
+static bool store_dictionary(llvm::Module *mod, const std::string &global_name,
+                             sqlite3 *output_db) {
+  auto global = mod->getNamedGlobal(global_name);
+  if (!global) {
+    std::cerr << "Error! Unable to find named global: " << global_name
+              << std::endl;
+    return false;
+  }
+
+  auto init = global->getInitializer();
+  for (int i = 0; i < init->getNumOperands(); i++) {
+    std::string func_name;
+    uint64_t func_val;
+    llvm::Value *item = init->getOperand(i);
+    if (auto const_struct = llvm::dyn_cast<llvm::ConstantStruct>(item)) {
+      // Get the first operand, gep --> str ptr --> str bytes
+      auto const_op = const_struct->getOperand(0);
+      auto str_ptr = const_op->getOperand(0);
+      llvm::Constant *const_ptr = llvm::dyn_cast<llvm::Constant>(str_ptr);
+      if (!const_ptr) {
+        std::cerr << "Error! GEP Operand is not a constant" << std::endl;
+        return false;
+      }
+      // Deref the string pointer
+      auto str_bytes = const_ptr->getOperand(0);
+      // Cast the string to the constant data array
+      if (auto arr_ty = llvm::dyn_cast<llvm::ConstantDataArray>(str_bytes)) {
+        func_name = arr_ty->getRawDataValues().str();
+      } else {
+        std::cerr << "Error! Expected string to be constant data array"
+                  << std::endl;
+        return false;
+      }
+      auto func_id =
+          llvm::dyn_cast<llvm::ConstantInt>(const_struct->getOperand(1));
+      if (!func_id) {
+        std::cerr << "Error! Unable to cast to constant struct" << std::endl;
+        return false;
+      }
+      func_val = func_id->getZExtValue();
+    } else {
+      std::cerr << "Error! Unable to cast to constant struct" << std::endl;
+      return false;
+    }
+    // Store
+    storeFunc(output_db, func_name.c_str(), func_val);
+  }
+  return true;
+}
 
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
-  fprintf(stderr, "Storing blob, size: %d\n", size);
   sqlite3_bind_blob(blob_insert_stmt, 1, blob, size, SQLITE_STATIC);
   sql_step(output_db, blob_insert_stmt);
+  // Read
+  llvm::LLVMContext context;
+  auto mod = extract_bc(context, (const char *)blob, size);
+  if (!mod) {
+    std::cerr << "Storing blob: unable to extract bc" << std::endl;
+    exit(1);
+  }
+  if (!store_dictionary(mod, "func_index_map", output_db)) {
+    std::cerr << "Storing function mapping failed" << std::endl;
+    exit(1);
+  }
 }
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,

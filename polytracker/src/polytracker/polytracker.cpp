@@ -101,14 +101,16 @@ extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
 extern "C" atomic_dfsan_label *
 __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
   // if (LIKELY(!done)) {
-  try {
-    return getUnionEntry(l1, l2);
-  } catch (std::exception &e) {
-    return nullptr;
-  }
+  // try {
+  return getUnionEntry(l1, l2);
+  //} catch (std::exception &e) {
+  // return nullptr;
+  //}
   //}
   // return nullptr;
 }
+
+extern "C" void __polytracker_preserve_map(char *map) {}
 
 extern "C" dfsan_label_info
 __polytracker_get_label_info(const dfsan_label &l1) {
@@ -131,7 +133,6 @@ extern "C" void __polytracker_start() { polytracker_start(); }
 
 extern "C" void __polytracker_store_blob(char **argv) {
   const char *current_prog = argv[0];
-  fprintf(stderr, "prog name is: %s \n", current_prog);
   char *data;
   FILE *prog_fd = fopen(current_prog, "rb");
   fseek(prog_fd, 0, SEEK_END);
