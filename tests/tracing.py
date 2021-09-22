@@ -46,7 +46,6 @@ def polyclang_compile_target(target_name: str) -> int:
         build_cmd,
         "--instrument-target",
         "-g",
-        "-fPIC",
         "-o",
         to_native_path(bin_path),
         to_native_path(source_path),

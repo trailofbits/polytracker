@@ -191,6 +191,7 @@ def modify_exec_args(argv: List[str]):
         elif is_cxx:
             compile_command.extend(
                 ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}"])
+        compile_command.append("-fPIC")
 
     if not building and linking and is_cxx:
         compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH!s}"])
