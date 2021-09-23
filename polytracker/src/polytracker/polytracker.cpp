@@ -104,7 +104,6 @@ __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
   // try {
   return getUnionEntry(l1, l2);
   //}
-  //}
   // return nullptr;
 }
 
