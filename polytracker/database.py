@@ -642,60 +642,6 @@ class DBFunctionInvocation(FunctionInvocation):
                 .all()
         )
 
-class DBBinary(Base): # type: ignore
-    __tablename__ = "targets"
-    binary: str = Column(BLOB, primary_key=True)
-
-    def __init__(self):
-        self.bitcode: Optional[bytes] = None
-        self._func_map: Optional[Dict[int, str]] = None
-        self._block_map: Optional[Dict[int, str]] = None
-        self._nomina_map: Optional[Dict[int, str]] = None
-
-    def extract_func_map(self) -> Dict[int, str]:
-        if self.bitcode is None:
-            self.bitcode = self.extract_llvm()
-
-        if self._func_map is None:
-            temp = NamedTemporaryFile()
-            temp.write(self.bitcode)
-            # Call to C++ BC parser
-            # bc_parser = BCParser.load(bc_file)
-            # func_map = bc_parser.func_map
-            temp.close()
-            return {}
-        return {}
-
-    def func_name(self, id: int) -> str:
-        if self._func_map is None:
-            self._func_map = self.extract_func_map()
-        if id not in self._func_map:
-            raise ValueError(f"Function id: {id} not in func map!")
-        return self._func_map[id]
-
-    @property
-    def block_map(self):
-        pass
-
-    @property
-    def nomina_map(self):
-        pass
-
-    def extract_llvm(self):
-        # Write to temporary location
-        temp = NamedTemporaryFile()
-        # Try to write and extract llvm bitcode
-        temp.write(self.binary)
-        bc_name = temp.name + ".bc"
-        ret_code = subprocess.call(["get-bc", "-o", bc_name, "-b", temp.name])
-        if ret_code != 0 or not os.path.exists(bc_name):
-            raise FileNotFoundError("LLVM Bitcode file not extracted!")
-        bc_file = open(bc_name, "rb")
-        data = bc_file.read()
-        bc_file.close()
-        temp.close()
-        return data
-
 
 class DBProgramTrace(ProgramTrace):
     def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
