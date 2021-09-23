@@ -103,7 +103,6 @@ __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
   // if (LIKELY(!done)) {
   // try {
   return getUnionEntry(l1, l2);
-  //}
 }
 
 extern "C" void __polytracker_preserve_map(char *map) {}
