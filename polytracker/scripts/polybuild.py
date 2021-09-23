@@ -158,7 +158,7 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
     opt_command = ["opt", "-enable-new-pm=0", "-load", str(META_PASS_PATH), "-meta", str(bitcode_file), "-o", str(bitcode_file)]
     ret = subprocess.call(opt_command)
     if ret != 0:
-        print("Metadata pass failed! Exiting!")
+        print(f"Metadata pass exited with code {ret}:\n{' '.join(opt_command)}")
         exit(1)
     opt_command = ["opt", "-enable-new-pm=0", "-load",
                    str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
