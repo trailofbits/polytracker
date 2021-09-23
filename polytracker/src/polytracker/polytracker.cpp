@@ -100,7 +100,6 @@ extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
 
 extern "C" atomic_dfsan_label *
 __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
-  // try {
   return getUnionEntry(l1, l2);
 }
 
