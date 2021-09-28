@@ -25,9 +25,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
 
-#define POLY_TEMP_FILE "/tmp/polytracker_temp.binary"
-#define POLY_BC_FILE "/tmp/polytracker_temp.bc"
-
 /*
 This file contains code responsible for outputting PolyTracker runtime
 information to disk. Currently, this is in the form of a JSON file and a binary
@@ -390,9 +387,29 @@ llvm::Module *load_bc_data(llvm::LLVMContext &context,
   return llvm_module;
 }
 
+/*
+For execing/getting cmd results
+Currently used for mktemp
+*/
+static std::string exec(const char *cmd) {
+  std::array<char, 128> buffer;
+  std::string result;
+  std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+  if (!pipe) {
+    throw std::runtime_error("popen() failed!");
+  }
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+  return result;
+}
+
 llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
                          const size_t num_bytes) {
-  std::ofstream temp_file(POLY_TEMP_FILE);
+  // Create temp file
+  std::string tempfile = exec("mktemp");
+  std::string tempfile_bc = tempfile + ".bc";
+  std::ofstream temp_file(tempfile);
   if (!temp_file.is_open()) {
     std::cerr << "Error! Temp file failed to open" << std::endl;
     return nullptr;
@@ -400,16 +417,17 @@ llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
   temp_file.write(data, num_bytes);
   temp_file.close();
   std::string cmd_string = "get-bc -l poly-link -b -o ";
-  cmd_string += POLY_BC_FILE;
+  cmd_string += tempfile_bc;
   cmd_string += " ";
-  cmd_string += POLY_TEMP_FILE;
+  cmd_string += tempfile;
   int res = system(cmd_string.c_str());
   if (res != 0) {
     std::cerr << "Error extracting bitcode!" << std::endl;
     return nullptr;
   }
-  auto mod = load_bc_data(context, POLY_BC_FILE);
-  res = system("rm " POLY_BC_FILE "; rm " POLY_TEMP_FILE);
+  auto mod = load_bc_data(context, tempfile_bc);
+  std::string sys_cmd = "rm " + tempfile_bc + "; rm " + tempfile;
+  res = system(sys_cmd.c_str());
   if (res != 0) {
     std::cerr << "Error cleaning up temp files!" << std::endl;
     return nullptr;
