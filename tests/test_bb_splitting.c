@@ -20,7 +20,7 @@ void func1(volatile int* choice) {
   func5();
 }
 
-int main() {
+int main(int argc, char* argv[]) {
   volatile int choice = 0;
   func1(&choice);
   choice = 2;

@@ -26,17 +26,13 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
                                 dfsan_label fd_label, dfsan_label buff_label,
                                 dfsan_label count_label,
                                 dfsan_label *ret_label) {
-  std::cout << "WRITING" << std::endl;
   auto current_offset = lseek(fd, 0, SEEK_CUR);
   auto write_count = write(fd, buf, count);
   if (auto &input_id = fd_input_map[fd]) {
-    std::cout << "STORING TAINTED OUTPUT CHUNK" << std::endl;
     storeTaintedOutputChunk(output_db, input_id, current_offset,
                             current_offset + write_count);
     for (auto i = 0; i < write_count; i++) {
       auto taint_label = dfsan_read_label((char *)buf + i, sizeof(char));
-      std::cout << "storing tainted output: " << i << " " << taint_label
-                << std::endl;
       storeTaintedOutput(output_db, input_id, current_offset, taint_label);
       current_offset += 1;
     }

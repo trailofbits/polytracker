@@ -21,7 +21,7 @@ thread_local FunctionStack function_stack;
 thread_local int thread_id = -1;
 thread_local event_id_t thread_event_id = 0;
 thread_local event_id_t last_bb_event_id = 0;
-std::atomic<event_id_t> event_id = 0;
+std::atomic<event_id_t> event_id{0};
 std::atomic<size_t> last_thread_id{0};
 
 static void inline assignThreadID() {
@@ -64,11 +64,8 @@ void logCallIndirect(const function_id_t func_id, const block_id_t block_id) {
              function_stack.back().func_event_id);
 }
 
-int logFunctionEntry(const char *fname, const function_id_t func_id) {
+int logFunctionEntry(const function_id_t func_id) {
   assignThreadID();
-  // We store this in the binary now at compile time. We can remove this
-  // eventually
-  storeFunc(output_db, fname, func_id);
   // Func CFG edges added by funcExit (as it knows the return location)
   const auto this_event_id = event_id++;
   // FIXME (Evan): the function CFG shouldn't store event IDs because we can
@@ -107,8 +104,8 @@ void logFunctionExit(const function_id_t index, const int stack_loc) {
   curr_func_index = index;
 }
 
-void logBBEntry(const char *fname, const function_id_t findex,
-                const block_id_t bindex, const uint8_t btype) {
+void logBBEntry(const function_id_t findex, const block_id_t bindex,
+                const uint8_t btype) {
   assignThreadID();
   // NOTE (Carson) we could cache this to prevent repeated calls for loop
   // blocks

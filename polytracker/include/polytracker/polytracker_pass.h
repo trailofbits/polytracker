@@ -19,7 +19,7 @@ struct PolytrackerPass : public llvm::ModulePass,
                          public llvm::InstVisitor<PolytrackerPass> {
   static char ID;
   PolytrackerPass() : ModulePass(ID) {}
-  bool runOnModule(llvm::Module &function) override;
+  bool runOnModule(llvm::Module &module) override;
   bool analyzeFunction(llvm::Function *f, const func_index_t &index);
   bool analyzeBlock(llvm::Function *func, const func_index_t &func_index,
                     llvm::BasicBlock *curr_bb, const bb_index_t &bb_index,
@@ -53,6 +53,8 @@ struct PolytrackerPass : public llvm::ModulePass,
   llvm::FunctionCallee taint_op_log;
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee dfsan_get_label;
+  llvm::FunctionCallee store_blob;
+  llvm::FunctionCallee preserve_map;
 
   std::unordered_map<llvm::BasicBlock *, uint64_t> block_global_map;
   std::unordered_map<std::string, func_index_t> func_index_map;

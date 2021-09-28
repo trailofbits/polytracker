@@ -14,7 +14,7 @@ void func1() {
     printf("exiting func1\n");
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     printf("in main\n");
     func1();
     printf("exiting main\n");

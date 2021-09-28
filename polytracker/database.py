@@ -1,6 +1,9 @@
 from enum import IntEnum
 from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union, Dict
+from tempfile import NamedTemporaryFile
+import subprocess
+import os
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -48,6 +51,7 @@ from .tracing import (
     TaintOutput,
     TaintedChunk,
 )
+from pathlib import Path
 
 Base = declarative_base()
 
@@ -644,7 +648,6 @@ class DBProgramTrace(ProgramTrace):
         self.session: Session = session
         self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
         self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
-
         @event.listens_for(session, "pending_to_persistent")
         @event.listens_for(session, "deleted_to_persistent")
         @event.listens_for(session, "detached_to_persistent")
