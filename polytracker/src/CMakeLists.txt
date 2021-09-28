@@ -25,7 +25,7 @@ set_target_properties(LLVMPassConfig PROPERTIES
 set(POLY_DIR "polytracker")
 set(TAINT_DIR "taint_sources")
 
-# set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if (XRAY_ON)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fxray-instrument -fxray-instruction-threshold=1 -Wall -Werror -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -g -O3")
