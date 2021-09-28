@@ -350,11 +350,9 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   call_indirect_log =
       mod.getOrInsertFunction("__polytracker_log_call_indirect", call_log_type);
 
-  llvm::Type *bb_func_args[4] = {shadow_type, shadow_type,
-                                 llvm::IntegerType::getInt8Ty(context)};
-
-  auto entry_bb_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                             bb_func_args, false);
+  auto entry_bb_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context),
+      {shadow_type, shadow_type, llvm::IntegerType::getInt8Ty(context)}, false);
   bb_entry_log =
       mod.getOrInsertFunction("__polytracker_log_bb_entry", entry_bb_ty);
 
