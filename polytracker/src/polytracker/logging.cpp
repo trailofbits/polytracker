@@ -107,10 +107,11 @@ void logFunctionExit(const function_id_t index, const int stack_loc) {
 void logBBEntry(const function_id_t findex, const block_id_t bindex,
                 const uint8_t btype) {
   assignThreadID();
-  // NOTE (Carson) we could cache this to prevent repeated calls for loop
-  // blocks
-  storeBlock(output_db, findex, bindex, btype);
   last_bb_event_id = event_id++;
+  uint64_t gid = static_cast<uint64_t>(findex) << 32 | bindex;
+  std::cout << "RT hit fid: " << findex << " bid: " << bindex << " gid: " << gid
+            << std::endl;
+
   auto entryCount = function_stack.back().bb_entry_count[bindex]++;
   storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
                   thread_event_id++, findex, bindex,
