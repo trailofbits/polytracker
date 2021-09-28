@@ -4,6 +4,7 @@
 #include "polytracker/sqlite3.h"
 #include "polytracker/tablegen.h"
 #include "polytracker/taint.h"
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -396,17 +397,20 @@ static std::string exec(const char *cmd) {
   std::string result;
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
   if (!pipe) {
-    throw std::runtime_error("popen() failed!");
+    std::cerr << "Error with exec, unable to open pipe to new process"
+              << std::endl;
+    exit(1);
   }
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     result += buffer.data();
   }
+  result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
   return result;
 }
 
 llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
                          const size_t num_bytes) {
-  // Create temp file
+  // Create temp file (custom exec function)
   std::string tempfile = exec("mktemp");
   std::string tempfile_bc = tempfile + ".bc";
   std::ofstream temp_file(tempfile);
