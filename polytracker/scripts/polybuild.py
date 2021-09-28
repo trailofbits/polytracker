@@ -168,7 +168,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [str(bitcode_file), "-o", str(output_bc)]
     ret = subprocess.call(opt_command)
-    assert ret == 0
+    if ret != 0:
+        print(f"PolyTracker pass exited with code {ret}:\n{' '.join(opt_command)}")
     opt_command = ["opt", "-enable-new-pm=0", "-dfsan",
                    f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}"]
     for item in ignore_lists:

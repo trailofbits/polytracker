@@ -99,8 +99,6 @@ extern "C" void __polytracker_log_bb_entry(uint32_t findex, uint32_t bindex,
 
 extern "C" atomic_dfsan_label *
 __polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
-  // if (LIKELY(!done)) {
-  // try {
   return getUnionEntry(l1, l2);
 }
 
