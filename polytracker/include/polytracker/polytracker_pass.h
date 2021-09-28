@@ -57,6 +57,7 @@ struct PolytrackerPass : public llvm::ModulePass,
   llvm::FunctionCallee preserve_map;
 
   std::unordered_map<llvm::BasicBlock *, uint64_t> block_global_map;
+  std::unordered_map<uint64_t, uint8_t> block_type_map;
   std::unordered_map<std::string, func_index_t> func_index_map;
   const int shadow_width = 32;
   llvm::IntegerType *shadow_type;
