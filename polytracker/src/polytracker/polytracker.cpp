@@ -57,10 +57,9 @@ extern "C" void __dfsw___polytracker_log_taint_cmp(
   __polytracker_log_taint_cmp(arg1_label, arg2_label, findex, bindex);
 }
 
-extern "C" int __polytracker_log_func_entry(char *fname, uint32_t index,
-                                            uint32_t block_index) {
+extern "C" int __polytracker_log_func_entry(uint32_t index) {
   // if (LIKELY(!done)) {
-  return logFunctionEntry(fname, index);
+  return logFunctionEntry(index);
   // }
 }
 
@@ -90,11 +89,11 @@ extern "C" void __polytracker_log_call_indirect(uint32_t func_index,
   logCallIndirect(func_index, block_index);
 }
 
-extern "C" void __polytracker_log_bb_entry(char *name, uint32_t findex,
-                                           uint32_t bindex, uint8_t btype) {
+extern "C" void __polytracker_log_bb_entry(uint32_t findex, uint32_t bindex,
+                                           uint8_t btype) {
   // if (polytracker_trace && LIKELY(!done)) {
   if (polytracker_trace) {
-    logBBEntry(name, findex, bindex, btype);
+    logBBEntry(findex, bindex, btype);
   }
 }
 

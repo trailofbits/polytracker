@@ -234,8 +234,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), findex, false);
 
-  auto res =
-      new_IRB.CreateCall(bb_entry_log, {func_name, FuncIndex, BBIndex, BBType});
+  auto res = new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
   uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
   block_global_map[curr_bb] = gid;
   return true;
@@ -277,15 +276,11 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
     // IRB.SetInsertPoint(call->getNextNode());
   }
 
-  llvm::Value *bindex_val =
-      llvm::ConstantInt::get(shadow_type, bb_index, false);
-
   // Instance variable, changes everytime we visit a new function
   // this creates a call on function entry which stores the current function
   // stack size after pushing down the item so the entrypoint of a program,
   // main, would have size 1 stored in stack_loc.
-  stack_loc =
-      IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
+  stack_loc = IRB.CreateCall(func_entry_log, {index_val});
 
   // Collect basic blocks/insts, so we don't modify the container while iterate
   std::unordered_set<llvm::BasicBlock *> blocks;
@@ -331,9 +326,8 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       mod.getOrInsertFunction("__polytracker_log_taint_cmp", taint_log_fn_ty);
 
   // Should pass in func_name and uint32_t function index.
-  func_entry_type = llvm::FunctionType::get(
-      llvm::Type::getInt32Ty(context),
-      {llvm::Type::getInt8PtrTy(context), shadow_type, shadow_type}, false);
+  func_entry_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(context),
+                                            {shadow_type}, false);
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
@@ -356,8 +350,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   call_indirect_log =
       mod.getOrInsertFunction("__polytracker_log_call_indirect", call_log_type);
 
-  llvm::Type *bb_func_args[4] = {llvm::Type::getInt8PtrTy(context), shadow_type,
-                                 shadow_type,
+  llvm::Type *bb_func_args[4] = {shadow_type, shadow_type,
                                  llvm::IntegerType::getInt8Ty(context)};
 
   auto entry_bb_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
