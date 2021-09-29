@@ -439,6 +439,79 @@ llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
   return mod;
 }
 
+bool extract_operand(llvm::ConstantStruct *const_struct, int operand_id,
+                     uint64_t &out) {
+  auto val =
+      llvm::dyn_cast<llvm::ConstantInt>(const_struct->getOperand(operand_id));
+  if (!val) {
+    std::cerr << "Error! Unable to cast to constant struct" << std::endl;
+    return false;
+  }
+  out = val->getZExtValue();
+  return true;
+}
+
+bool extract_operand(llvm::ConstantStruct *const_struct, int operand_id,
+                     std::string &out) {
+  // Get the first operand, gep --> str ptr --> str bytes
+  auto const_op = const_struct->getOperand(operand_id);
+  auto str_ptr = const_op->getOperand(0);
+  llvm::Constant *const_ptr = llvm::dyn_cast<llvm::Constant>(str_ptr);
+  if (!const_ptr) {
+    std::cerr << "Error! GEP Operand is not a constant" << std::endl;
+    exit(1);
+  }
+  // Deref the string pointer
+  auto str_bytes = const_ptr->getOperand(0);
+  // Cast the string to the constant data array
+  if (auto arr_ty = llvm::dyn_cast<llvm::ConstantDataArray>(str_bytes)) {
+    out = arr_ty->getRawDataValues().str();
+  } else {
+    std::cerr << "Error! Expected string to be constant data array"
+              << std::endl;
+    exit(1);
+  }
+  return true;
+}
+
+template <typename Key, typename Val>
+static std::unordered_map<Key, Val>
+extract_dict(llvm::Module *mod, const std::string &global_name) {
+  auto global = mod->getNamedGlobal(global_name);
+  if (!global) {
+    std::cerr << "Error! Unable to find named global: " << global_name
+              << std::endl;
+    exit(1);
+  }
+
+  std::unordered_map<Key, Val> ret_map;
+  auto init = global->getInitializer();
+  for (int i = 0; i < init->getNumOperands(); i++) {
+    Key dict_key;
+    Val dict_val;
+
+    // Peel the boilerplate.
+    llvm::Value *item = init->getOperand(i);
+    if (auto const_struct = llvm::dyn_cast<llvm::ConstantStruct>(item)) {
+      if (!extract_operand(const_struct, 0, dict_key)) {
+        std::cerr << "Extracting operand 0 failed!" << std::endl;
+        exit(1);
+      }
+      if (!extract_operand(const_struct, 1, dict_val)) {
+        std::cerr << "Extracting operand 1 failed!" << std::endl;
+        exit(1);
+      }
+      ret_map[dict_key] = dict_val;
+    } else {
+      std::cerr << "Error! Unable to cast to constant struct" << std::endl;
+      exit(1);
+    }
+    // Store
+    // storeFunc(output_db, func_name.c_str(), func_val);
+  }
+  return ret_map;
+}
+/*
 static bool store_dictionary(llvm::Module *mod, const std::string &global_name,
                              sqlite3 *output_db) {
   auto global = mod->getNamedGlobal(global_name);
@@ -488,7 +561,13 @@ static bool store_dictionary(llvm::Module *mod, const std::string &global_name,
   }
   return true;
 }
+*/
+/*
+static bool store_block_map(llvm::Module*, const char* block_map_name, sqlite3*
+output_db) {
 
+}
+*/
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
   sqlite3_bind_blob(blob_insert_stmt, 1, blob, size, SQLITE_STATIC);
   sql_step(output_db, blob_insert_stmt);
@@ -499,10 +578,29 @@ void storeBlob(sqlite3 *output_db, void *blob, int size) {
     std::cerr << "Storing blob: unable to extract bc" << std::endl;
     exit(1);
   }
+  std::unordered_map<std::string, uint64_t> func_map =
+      extract_dict<std::string, uint64_t>(mod, "func_index_map");
+  for (auto item : func_map) {
+    storeFunc(output_db, item.first.c_str(), item.second);
+  }
+  std::unordered_map<uint64_t, uint64_t> block_map =
+      extract_dict<uint64_t, uint64_t>(mod, "block_index_map");
+  for (auto item : block_map) {
+    uint64_t func_id = item.first >> 32;
+    // Higher 32 bits (4 bytes) are func_id, so remove them
+    uint64_t block_id = item.first & 0x00000000FFFFFFFF;
+    storeBlock(output_db, func_id, block_id, item.second);
+  }
+  /*
   if (!store_dictionary(mod, "func_index_map", output_db)) {
     std::cerr << "Storing function mapping failed" << std::endl;
     exit(1);
   }
+  if (!store_block_map(mod, "block_index_map", output_db)) {
+    std::cerr << "Storing block map failed" << std::endl;
+    exit(1);
+  }
+  */
 }
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
