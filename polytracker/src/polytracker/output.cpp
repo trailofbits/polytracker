@@ -441,7 +441,8 @@ llvm::Module *extract_bc(llvm::LLVMContext &context, const char *data,
 
 bool extract_operand(llvm::ConstantStruct *const_struct, int operand_id,
                      uint64_t &out) {
-  auto val = llvm::dyn_cast<llvm::ConstantInt>(const_struct->getOperand(1));
+  auto val =
+      llvm::dyn_cast<llvm::ConstantInt>(const_struct->getOperand(operand_id));
   if (!val) {
     std::cerr << "Error! Unable to cast to constant struct" << std::endl;
     return false;
@@ -588,8 +589,6 @@ void storeBlob(sqlite3 *output_db, void *blob, int size) {
     uint64_t func_id = item.first >> 32;
     // Higher 32 bits (4 bytes) are func_id, so remove them
     uint64_t block_id = item.first & 0x00000000FFFFFFFF;
-    std::cout << "Storing fid: " << func_id << " bid: " << block_id
-              << " gid: " << item.first << std::endl;
     storeBlock(output_db, func_id, block_id, item.second);
   }
   /*

@@ -236,8 +236,6 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   auto res = new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
   uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
   block_global_map[curr_bb] = gid;
-  std::cout << "Loading fid: " << findex << " bid " << bb_index
-            << " gid: " << gid << std::endl;
   block_type_map[gid] = bb_type;
   return true;
 }
@@ -478,7 +476,7 @@ create_globals(llvm::Module &mod,
 
 static llvm::GlobalVariable *
 create_block_map(llvm::Module &mod,
-                 std::unordered_map<uint64_t, uint8_t> blocks) {
+                 std::unordered_map<uint64_t, uint8_t> &blocks) {
   llvm::LLVMContext &context = mod.getContext();
   auto int64_type = llvm::IntegerType::getInt64Ty(context);
   auto int8_type = llvm::IntegerType::getInt8Ty(context);
