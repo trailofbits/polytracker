@@ -121,12 +121,13 @@ POLYCXX_LIBS: List[str] = [
 LINK_LIBS: List[str] = [str(CXX_LIB_PATH / "libc++.a"),
                         str(CXX_LIB_PATH / "libc++abi.a"), "-lpthread"]
 
-XRAY_BUILD: bool = (
-    "--xray-instrument-target" or "--xray-lower-bitcode") in sys.argv
+XRAY_BUILD: bool = False
+if "--xray-instrument-target" in sys.argv:
+    XRAY_BUILD = True
+elif "--xray-lower-bitcode" in sys.argv:
+    XRAY_BUILD = True
 
 # Helper function, check to see if non linking options are present.
-
-
 def is_linking(argv) -> bool:
     nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
     for option in argv:
