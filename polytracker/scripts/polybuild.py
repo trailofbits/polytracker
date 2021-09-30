@@ -527,7 +527,7 @@ def main():
         do_everything(new_argv)
 
     elif sys.argv[1] == "--xray-lower-bitcode":
-        args = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(sys.argv[2:])
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
