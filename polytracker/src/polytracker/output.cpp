@@ -103,12 +103,14 @@ const char *insert_chunk = "INSERT OR IGNORE INTO tainted_chunks(input_id, "
                            "start_offset, end_offset) VALUES (?, ?, ?);";
 
 sqlite3_stmt *output_chunk_stmt;
-const char *output_chunk_insert = "INSERT INTO output_tainted_chunks(input_id, "
-                                  "start_offset, end_offset) VALUES (?, ?, ?);";
+const char *output_chunk_insert =
+    "INSERT OR IGNORE INTO output_tainted_chunks(input_id, "
+    "start_offset, end_offset) VALUES (?, ?, ?);";
 
 sqlite3_stmt *output_taint_stmt;
 const char *output_taint_insert =
-    "INSERT INTO output_taint(input_id, offset, label) VALUES (?, ?, ?);";
+    "INSERT OR IGNORE INTO output_taint(input_id, offset, label) VALUES (?, ?, "
+    "?);";
 
 sqlite3_stmt *func_entry_stmt;
 const char *func_entry_insert =
@@ -117,7 +119,7 @@ const char *func_entry_insert =
 
 sqlite3_stmt *func_uninst_stmt;
 const char *func_uninst_insert =
-    "INSERT INTO uninst_func_entries (event_id, name) VALUES (?, ?);";
+    "INSERT OR IGNORE INTO uninst_func_entries (event_id, name) VALUES (?, ?);";
 
 sqlite3_stmt *blob_insert_stmt;
 const char *blob_insert = "INSERT INTO targets (binary) VALUES (?);";
@@ -167,6 +169,20 @@ static int sql_fetch_input_id_callback(void *res, int argc, char **data,
     *temp = atoi(data[0]);
   }
   return 0;
+}
+static input_id_t check_blob(sqlite3 *output_db) {
+  const char *fetch_query = "SELECT * FROM targets ORDER BY id DESC LIMIT 1;";
+  char *err;
+  size_t count = 0;
+  int rc = sqlite3_exec(output_db, fetch_query, sql_fetch_input_id_callback,
+                        &count, &err);
+  if (rc != SQLITE_OK) {
+    fprintf(stderr, "SQL error: %s\n", err);
+    sqlite3_free(err);
+    exit(1);
+  }
+  std::cout << "COUNT IS: " << count << std::endl;
+  return count;
 }
 
 static input_id_t get_input_id(sqlite3 *output_db) {
@@ -486,6 +502,8 @@ extract_dict(llvm::Module *mod, const std::string &global_name) {
 
   std::unordered_map<Key, Val> ret_map;
   auto init = global->getInitializer();
+  std::cout << "Extracting: " << init->getNumOperands() << " items"
+            << std::endl;
   for (int i = 0; i < init->getNumOperands(); i++) {
     Key dict_key;
     Val dict_val;
@@ -511,64 +529,11 @@ extract_dict(llvm::Module *mod, const std::string &global_name) {
   }
   return ret_map;
 }
-/*
-static bool store_dictionary(llvm::Module *mod, const std::string &global_name,
-                             sqlite3 *output_db) {
-  auto global = mod->getNamedGlobal(global_name);
-  if (!global) {
-    std::cerr << "Error! Unable to find named global: " << global_name
-              << std::endl;
-    return false;
-  }
 
-  auto init = global->getInitializer();
-  for (int i = 0; i < init->getNumOperands(); i++) {
-    std::string func_name;
-    uint64_t func_val;
-    llvm::Value *item = init->getOperand(i);
-    if (auto const_struct = llvm::dyn_cast<llvm::ConstantStruct>(item)) {
-      // Get the first operand, gep --> str ptr --> str bytes
-      auto const_op = const_struct->getOperand(0);
-      auto str_ptr = const_op->getOperand(0);
-      llvm::Constant *const_ptr = llvm::dyn_cast<llvm::Constant>(str_ptr);
-      if (!const_ptr) {
-        std::cerr << "Error! GEP Operand is not a constant" << std::endl;
-        return false;
-      }
-      // Deref the string pointer
-      auto str_bytes = const_ptr->getOperand(0);
-      // Cast the string to the constant data array
-      if (auto arr_ty = llvm::dyn_cast<llvm::ConstantDataArray>(str_bytes)) {
-        func_name = arr_ty->getRawDataValues().str();
-      } else {
-        std::cerr << "Error! Expected string to be constant data array"
-                  << std::endl;
-        return false;
-      }
-      auto func_id =
-          llvm::dyn_cast<llvm::ConstantInt>(const_struct->getOperand(1));
-      if (!func_id) {
-        std::cerr << "Error! Unable to cast to constant struct" << std::endl;
-        return false;
-      }
-      func_val = func_id->getZExtValue();
-    } else {
-      std::cerr << "Error! Unable to cast to constant struct" << std::endl;
-      return false;
-    }
-    // Store
-    storeFunc(output_db, func_name.c_str(), func_val);
-  }
-  return true;
-}
-*/
-/*
-static bool store_block_map(llvm::Module*, const char* block_map_name, sqlite3*
-output_db) {
-
-}
-*/
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
+  if (check_blob(output_db)) {
+    return;
+  }
   sqlite3_bind_blob(blob_insert_stmt, 1, blob, size, SQLITE_STATIC);
   sql_step(output_db, blob_insert_stmt);
   // Read
@@ -591,6 +556,7 @@ void storeBlob(sqlite3 *output_db, void *blob, int size) {
     uint64_t block_id = item.first & 0x00000000FFFFFFFF;
     storeBlock(output_db, func_id, block_id, item.second);
   }
+  std::cout << "Done storing compile-time artifacts" << std::endl;
   /*
   if (!store_dictionary(mod, "func_index_map", output_db)) {
     std::cerr << "Storing function mapping failed" << std::endl;
@@ -712,8 +678,12 @@ sqlite3 *db_init(const std::string &db_path) {
   createDBTables(output_db);
   storeVersion(output_db);
   prepSQLInserts(output_db);
+  sqlite3_exec(output_db, "BEGIN TRANSACTION;", NULL, NULL, &errorMessage);
   return output_db;
-  // sqlite3_exec(output_db, "BEGIN TRANSACTION", NULL, NULL, &errorMessage);
 }
 
-void db_fini(sqlite3 *output_db) { sqlite3_close(output_db); }
+void db_fini(sqlite3 *output_db) {
+  char *errorMessage;
+  sqlite3_exec(output_db, "COMMIT;", NULL, NULL, &errorMessage);
+  sqlite3_close(output_db);
+}
