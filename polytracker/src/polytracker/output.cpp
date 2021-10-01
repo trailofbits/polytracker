@@ -530,7 +530,7 @@ extract_dict(llvm::Module *mod, const std::string &global_name) {
 }
 
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
-  if (check_blob(output_db)) {
+  if (blob_exists(output_db)) {
     return;
   }
   sqlite3_bind_blob(blob_insert_stmt, 1, blob, size, SQLITE_STATIC);
