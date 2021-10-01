@@ -170,7 +170,7 @@ static int sql_fetch_input_id_callback(void *res, int argc, char **data,
   }
   return 0;
 }
-static input_id_t check_blob(sqlite3 *output_db) {
+static bool blob_exists(sqlite3 *output_db) {
   const char *fetch_query = "SELECT * FROM targets ORDER BY id DESC LIMIT 1;";
   char *err;
   size_t count = 0;
