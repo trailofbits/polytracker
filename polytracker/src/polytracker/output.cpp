@@ -181,7 +181,6 @@ static input_id_t check_blob(sqlite3 *output_db) {
     sqlite3_free(err);
     exit(1);
   }
-  std::cout << "COUNT IS: " << count << std::endl;
   return count;
 }
 
