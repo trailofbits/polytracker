@@ -181,7 +181,7 @@ static input_id_t check_blob(sqlite3 *output_db) {
     sqlite3_free(err);
     exit(1);
   }
-  return count;
+  return count > 0;
 }
 
 static input_id_t get_input_id(sqlite3 *output_db) {
