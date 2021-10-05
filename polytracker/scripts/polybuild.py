@@ -121,12 +121,13 @@ POLYCXX_LIBS: List[str] = [
 LINK_LIBS: List[str] = [str(CXX_LIB_PATH / "libc++.a"),
                         str(CXX_LIB_PATH / "libc++abi.a"), "-lpthread"]
 
-XRAY_BUILD: bool = (
-    "--xray-instrument-target" or "--xray-lower-bitcode") in sys.argv
+XRAY_BUILD: bool = False
+if "--xray-instrument-target" in sys.argv:
+    XRAY_BUILD = True
+elif "--xray-lower-bitcode" in sys.argv:
+    XRAY_BUILD = True
 
 # Helper function, check to see if non linking options are present.
-
-
 def is_linking(argv) -> bool:
     nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
     for option in argv:
@@ -527,7 +528,7 @@ def main():
         do_everything(new_argv)
 
     elif sys.argv[1] == "--xray-lower-bitcode":
-        args = parser.parse_args(sys.argv[1:])
+        args = parser.parse_args(sys.argv[2:])
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)

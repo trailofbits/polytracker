@@ -157,8 +157,8 @@ static constexpr const char *createUninstTable() {
 }
 static constexpr const char *createBinaryTable() {
   return "CREATE TABLE IF NOT EXISTS targets ("
-         "binary BLOB NOT NULL, "
-         "PRIMARY KEY(binary)"
+         "id INTEGER PRIMARY KEY,"
+         "binary BLOB NOT NULL "
          ");";
 }
 
