@@ -374,11 +374,11 @@ void storeBlob(sqlite3 *output_db, void *blob, int size) {
   sql_step(output_db, blob_insert_stmt);
 
   // Enumerate function/block mappings and store in db
-  for (auto fm = func_mappings;fm < func_mappings + func_mapping_count;fm++)
+  for (auto fm = func_mappings; fm < func_mappings + func_mapping_count; fm++)
     storeFunc(output_db, fm->func_name, fm->id);
-  
-  for (auto bm = block_mappings;bm < block_mappings + block_mapping_count;bm++)
-  {
+
+  for (auto bm = block_mappings; bm < block_mappings + block_mapping_count;
+       bm++) {
     uint64_t func_id = bm->func_bb >> 32;
     // Higher 32 bits (4 bytes) are func_id, so remove them
     uint64_t block_id = bm->func_bb & 0x00000000FFFFFFFF;

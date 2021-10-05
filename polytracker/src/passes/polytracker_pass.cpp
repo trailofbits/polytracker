@@ -476,14 +476,16 @@ create_globals(llvm::Module &mod,
   return global_structs;
 }
 
-// Create a global variable having compile time value 'uint64_t var_name = map.size()'
-template<typename T>
-static llvm::GlobalVariable*
-create_global_count(llvm::Module &mod,const char* var_name, T const& map) {
-  auto& ctx = mod.getContext();
+// Create a global variable having compile time value 'uint64_t var_name =
+// map.size()'
+template <typename T>
+static llvm::GlobalVariable *
+create_global_count(llvm::Module &mod, const char *var_name, T const &map) {
+  auto &ctx = mod.getContext();
   auto int64_ty = llvm::IntegerType::getInt64Ty(ctx);
-  return new llvm::GlobalVariable(mod, int64_ty, true, llvm::GlobalVariable::InternalLinkage,
-                      llvm::ConstantInt::get(int64_ty, map.size()), var_name);
+  return new llvm::GlobalVariable(
+      mod, int64_ty, true, llvm::GlobalVariable::InternalLinkage,
+      llvm::ConstantInt::get(int64_ty, map.size()), var_name);
 }
 
 static llvm::GlobalVariable *
@@ -601,20 +603,27 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   }
   std::cerr << std::endl;
 
-  // Store function/block to id mappings (and corresponding counts) as global variables
+  // Store function/block to id mappings (and corresponding counts) as global
+  // variables
   llvm::GlobalVariable *global = create_globals(mod, func_index_map);
-  llvm::GlobalVariable *global_count = create_global_count(mod, "func_index_map_count", func_index_map);
+  llvm::GlobalVariable *global_count =
+      create_global_count(mod, "func_index_map_count", func_index_map);
   llvm::GlobalVariable *block_map = create_block_map(mod, block_type_map);
-  llvm::GlobalVariable *block_count = create_global_count(mod, "block_index_map_count", block_type_map);
+  llvm::GlobalVariable *block_count =
+      create_global_count(mod, "block_index_map_count", block_type_map);
 
   // Prepare function calls to report on the function/block to id mappings
-  auto polytracker_function_mapping_ty = 
-    llvm::FunctionType::get(llvm::Type::getVoidTy(mod.getContext()), {global->getType(), global_count->getType()}, false);
-  auto polytracker_block_mapping_ty = 
-    llvm::FunctionType::get(llvm::Type::getVoidTy(mod.getContext()), {block_map->getType(), block_count->getType()}, false);
+  auto polytracker_function_mapping_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(mod.getContext()),
+      {global->getType(), global_count->getType()}, false);
+  auto polytracker_block_mapping_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(mod.getContext()),
+      {block_map->getType(), block_count->getType()}, false);
 
-  auto store_function_mapping = mod.getOrInsertFunction("__polytracker_store_function_mapping", polytracker_function_mapping_ty);
-  auto store_block_mapping = mod.getOrInsertFunction("__polytracker_store_block_mapping", polytracker_block_mapping_ty);
+  auto store_function_mapping = mod.getOrInsertFunction(
+      "__polytracker_store_function_mapping", polytracker_function_mapping_ty);
+  auto store_block_mapping = mod.getOrInsertFunction(
+      "__polytracker_store_block_mapping", polytracker_block_mapping_ty);
 
   for (auto &func : mod) {
     if (func.hasName() && func.getName().str() == "main") {
@@ -623,10 +632,10 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       llvm::IRBuilder<> IRB(&insert_point);
 
       // "callback" into polytracker lib, provide function/block to id mappings
-      llvm::Value* function_mapping_store_call = IRB.CreateCall(
-          store_function_mapping, {global, global_count});
-      llvm::Value* block_mapping_store_call = IRB.CreateCall(
-          store_block_mapping, {block_map, block_count});
+      llvm::Value *function_mapping_store_call =
+          IRB.CreateCall(store_function_mapping, {global, global_count});
+      llvm::Value *block_mapping_store_call =
+          IRB.CreateCall(store_block_mapping, {block_map, block_count});
 
       llvm::Value *save_map = IRB.CreateCall(
           preserve_map,

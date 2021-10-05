@@ -12,10 +12,10 @@ extern bool polytracker_trace;
 extern thread_local FunctionStack function_stack;
 extern sqlite3 *output_db;
 
-const func_mapping* func_mappings;
+const func_mapping *func_mappings;
 uint64_t func_mapping_count;
 
-const block_mapping* block_mappings;
+const block_mapping *block_mappings;
 uint64_t block_mapping_count;
 
 // extern std::atomic_bool done;
@@ -129,18 +129,19 @@ extern "C" int __polytracker_size() { return function_stack.size(); }
 
 extern "C" void __polytracker_start() { polytracker_start(); }
 
-extern "C" void __polytracker_store_function_mapping(const func_mapping* func_map, uint64_t* count)
-{
+extern "C" void
+__polytracker_store_function_mapping(const func_mapping *func_map,
+                                     uint64_t *count) {
   func_mappings = func_map;
   func_mapping_count = *count;
 }
 
-extern "C" void __polytracker_store_block_mapping(const block_mapping* block_map, uint64_t* count)
-{
+extern "C" void
+__polytracker_store_block_mapping(const block_mapping *block_map,
+                                  uint64_t *count) {
   block_mappings = block_map;
   block_mapping_count = *count;
 }
-
 
 extern "C" void __polytracker_store_blob(char **argv) {
   const char *current_prog = argv[0];
