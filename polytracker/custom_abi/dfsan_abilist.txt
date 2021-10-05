@@ -58,6 +58,10 @@ fun:__polytracker_log_call_indirect=uninstrumented
 fun:__polytracker_log_call_indirect=discard
 fun:__polytracker_store_blob=uninstrumented
 fun:__polytracker_store_blob=discard
+fun:__polytracker_store_function_mapping=uninstrumented
+fun:__polytracker_store_function_mapping=discard
+fun:__polytracker_store_block_mapping=uninstrumented
+fun:__polytracker_store_block_mapping=discard
 fun:__polytracker_preserve_map=uninstrumented
 fun:__polytracker_preserve_map=discard
 
