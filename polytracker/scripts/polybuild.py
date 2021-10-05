@@ -66,6 +66,7 @@ if not COMPILER_DIR.is_dir():
 POLY_PASS_PATH: Path = ensure_exists(
     COMPILER_DIR / "pass" / "libPolytrackerPass.so")
 POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
+META_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libMetadataPass.so")
 DFSAN_ABI_LIST_PATH: Path = ensure_exists(
     COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
 POLY_ABI_LIST_PATH: Path = ensure_exists(
@@ -105,12 +106,17 @@ db_conn.close()
 CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
 CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
+lib_str = subprocess.check_output(["llvm-config", "--libs"]).decode("utf-8").strip()
+LLVM_LIBS = lib_str.split(" ")
 POLYCXX_LIBS: List[str] = [
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
     str(POLY_LIB_PATH),
     "-lm",
-]
+    "-ltinfo",
+    "-lstdc++"
+] + LLVM_LIBS
+
 # TODO (Carson), double check, also maybe need -ldl?
 LINK_LIBS: List[str] = [str(CXX_LIB_PATH / "libc++.a"),
                         str(CXX_LIB_PATH / "libc++abi.a"), "-lpthread"]
@@ -149,6 +155,11 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
     subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(META_PASS_PATH), "-meta", str(bitcode_file), "-o", str(bitcode_file)]
+    ret = subprocess.call(opt_command)
+    if ret != 0:
+        print(f"Metadata pass exited with code {ret}:\n{' '.join(opt_command)}")
+        exit(1)
     opt_command = ["opt", "-enable-new-pm=0", "-load",
                    str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
@@ -156,9 +167,9 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [str(bitcode_file), "-o", str(output_bc)]
-    print(opt_command)
     ret = subprocess.call(opt_command)
-    assert ret == 0
+    if ret != 0:
+        print(f"PolyTracker pass exited with code {ret}:\n{' '.join(opt_command)}")
     opt_command = ["opt", "-enable-new-pm=0", "-dfsan",
                    f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}"]
     for item in ignore_lists:
@@ -326,7 +337,6 @@ def do_everything(argv: List[str]):
             "-fxray-instruction-threshold=1",
             "-pie",
             f"-L{CXX_LIB_PATH!s}",
-            "-g",
             "-o",
             str(output_file),
             str(obj_file),
@@ -339,7 +349,6 @@ def do_everything(argv: List[str]):
             compiler,
             "-pie",
             f"-L{CXX_LIB_PATH!s}",
-            "-g",
             "-o",
             str(output_file),
             str(obj_file),
@@ -390,7 +399,6 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
                 "-fxray-instrument",
                 "-fxray-instruction-threshold=1",
                 f"-L{CXX_LIB_PATH!s}",
-                "-g",
                 "-o",
                 str(output_file),
                 str(obj_file),
@@ -404,7 +412,6 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
             [
                 "-pie",
                 f"-L{CXX_LIB_PATH!s}",
-                "-g",
                 "-o",
                 str(output_file),
                 str(obj_file),

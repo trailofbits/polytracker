@@ -17,6 +17,10 @@
 #include <fstream>
 #include <iomanip> /* for std::setw */
 #include <iostream>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -178,14 +182,13 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   bool wasSplit = std::find(split_bbs.cbegin(), split_bbs.cend(), curr_bb) !=
                   split_bbs.cend();
   // bool wasSplit = false;
+  auto bb_type = static_cast<uint8_t>(
+      polytracker::getType(curr_bb, DT) |
+      (wasSplit ? polytracker::BasicBlockType::FUNCTION_RETURN
+                : polytracker::BasicBlockType::UNKNOWN));
 
   llvm::Value *BBType = llvm::ConstantInt::get(
-      llvm::IntegerType::getInt8Ty(context),
-      static_cast<uint8_t>(polytracker::getType(curr_bb, DT) |
-                           (wasSplit
-                                ? polytracker::BasicBlockType::FUNCTION_RETURN
-                                : polytracker::BasicBlockType::UNKNOWN)),
-      false);
+      llvm::IntegerType::getInt8Ty(context), bb_type, false);
 
   // llvm::Value *BBType =
   // llvm::ConstantInt::get(llvm::IntegerType::getInt8Ty(context),
@@ -230,10 +233,10 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), findex, false);
 
-  auto res =
-      new_IRB.CreateCall(bb_entry_log, {func_name, FuncIndex, BBIndex, BBType});
+  auto res = new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
   uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
   block_global_map[curr_bb] = gid;
+  block_type_map[gid] = bb_type;
   return true;
 }
 
@@ -267,18 +270,17 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   std::string fname = f->getName().str();
   if (fname == "main") {
     llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
+    IRB.SetInsertPoint(call->getNextNode());
+    auto val = f->getArg(1);
+    llvm::Instruction *store_prog_call = IRB.CreateCall(store_blob, {val});
     // IRB.SetInsertPoint(call->getNextNode());
   }
-
-  llvm::Value *bindex_val =
-      llvm::ConstantInt::get(shadow_type, bb_index, false);
 
   // Instance variable, changes everytime we visit a new function
   // this creates a call on function entry which stores the current function
   // stack size after pushing down the item so the entrypoint of a program,
   // main, would have size 1 stored in stack_loc.
-  stack_loc =
-      IRB.CreateCall(func_entry_log, {func_name, index_val, bindex_val});
+  stack_loc = IRB.CreateCall(func_entry_log, {index_val});
 
   // Collect basic blocks/insts, so we don't modify the container while iterate
   std::unordered_set<llvm::BasicBlock *> blocks;
@@ -324,9 +326,8 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       mod.getOrInsertFunction("__polytracker_log_taint_cmp", taint_log_fn_ty);
 
   // Should pass in func_name and uint32_t function index.
-  func_entry_type = llvm::FunctionType::get(
-      llvm::Type::getInt32Ty(context),
-      {llvm::Type::getInt8PtrTy(context), shadow_type, shadow_type}, false);
+  func_entry_type = llvm::FunctionType::get(llvm::Type::getInt32Ty(context),
+                                            {shadow_type}, false);
   func_entry_log =
       mod.getOrInsertFunction("__polytracker_log_func_entry", func_entry_type);
 
@@ -349,12 +350,9 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   call_indirect_log =
       mod.getOrInsertFunction("__polytracker_log_call_indirect", call_log_type);
 
-  llvm::Type *bb_func_args[4] = {llvm::Type::getInt8PtrTy(context), shadow_type,
-                                 shadow_type,
-                                 llvm::IntegerType::getInt8Ty(context)};
-
-  auto entry_bb_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(context),
-                                             bb_func_args, false);
+  auto entry_bb_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context),
+      {shadow_type, shadow_type, llvm::IntegerType::getInt8Ty(context)}, false);
   bb_entry_log =
       mod.getOrInsertFunction("__polytracker_log_bb_entry", entry_bb_ty);
 
@@ -365,6 +363,19 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       llvm::FunctionType::get(shadow_type, shadow_type, false);
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
+
+  llvm::Type *blob_args = {llvm::Type::getInt8PtrTy(context)->getPointerTo()};
+  auto polytracker_store_blob_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), blob_args, false);
+
+  store_blob = mod.getOrInsertFunction("__polytracker_store_blob",
+                                       polytracker_store_blob_ty);
+
+  llvm::Type *map_args = {llvm::Type::getInt8PtrTy(context)};
+  auto polytracker_map_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), map_args, false);
+  preserve_map =
+      mod.getOrInsertFunction("__polytracker_preserve_map", polytracker_map_ty);
 }
 
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
@@ -438,23 +449,20 @@ static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
   return casted;
 }
 
-static llvm::Constant *
+static llvm::GlobalVariable *
 create_globals(llvm::Module &mod,
                std::unordered_map<std::string, uint32_t> &func_index_map) {
   llvm::LLVMContext &context = mod.getContext();
-  auto int64_type = llvm::IntegerType::getInt64Ty(mod.getContext());
-  auto int32_type = llvm::IntegerType::getInt32Ty(mod.getContext());
-  auto int8_ty = llvm::IntegerType::getInt8Ty(context);
-  auto str_type = llvm::IntegerType::getInt8PtrTy(mod.getContext());
-  llvm::StructType *func_struct = llvm::StructType::create(
-      mod.getContext(), {str_type, int32_type}, "func_struct");
+  auto int32_type = llvm::IntegerType::getInt32Ty(context);
+  auto str_type = llvm::IntegerType::getInt8PtrTy(context);
+  llvm::StructType *func_struct =
+      llvm::StructType::create(context, {str_type, int32_type}, "func_struct");
   std::vector<llvm::Constant *> const_structs;
   for (auto pair : func_index_map) {
     auto key = pair.first;
     auto val = pair.second;
     auto key_const = create_str(mod, key);
-    auto val_const = llvm::ConstantInt::get(
-        llvm::IntegerType::getInt32Ty(mod.getContext()), val);
+    auto val_const = llvm::ConstantInt::get(int32_type, val);
     auto struct_const =
         llvm::ConstantStruct::get(func_struct, {key_const, val_const});
     const_structs.push_back(struct_const);
@@ -463,6 +471,30 @@ create_globals(llvm::Module &mod,
   auto global_structs = new llvm::GlobalVariable(
       mod, arr_type, true, llvm::GlobalVariable::InternalLinkage,
       llvm::ConstantArray::get(arr_type, const_structs), "func_index_map");
+  return global_structs;
+}
+
+static llvm::GlobalVariable *
+create_block_map(llvm::Module &mod,
+                 std::unordered_map<uint64_t, uint8_t> &blocks) {
+  llvm::LLVMContext &context = mod.getContext();
+  auto int64_type = llvm::IntegerType::getInt64Ty(context);
+  auto int8_type = llvm::IntegerType::getInt8Ty(context);
+  llvm::StructType *block_struct = llvm::StructType::create(
+      context, {int64_type, int8_type}, "block_struct");
+  std::vector<llvm::Constant *> const_structs;
+  for (auto item : blocks) {
+    auto block_id_const = llvm::ConstantInt::get(int64_type, item.first);
+    auto block_type_const = llvm::ConstantInt::get(int8_type, item.second);
+    auto block_struct_const = llvm::ConstantStruct::get(
+        block_struct, {block_id_const, block_type_const});
+    const_structs.push_back(block_struct_const);
+  }
+  auto arr_type = llvm::ArrayType::get(block_struct, const_structs.size());
+  auto global_structs = new llvm::GlobalVariable(
+      mod, arr_type, true, llvm::GlobalVariable::InternalLinkage,
+      llvm::ConstantArray::get(arr_type, const_structs), "block_index_map");
+
   return global_structs;
 }
 
@@ -556,7 +588,25 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
   std::cerr << std::endl;
-  create_globals(mod, func_index_map);
+  llvm::GlobalVariable *global = create_globals(mod, func_index_map);
+  llvm::GlobalVariable *block_map = create_block_map(mod, block_type_map);
+  for (auto &func : mod) {
+    if (func.hasName() && func.getName().str() == "main") {
+      llvm::BasicBlock &bb = func.getEntryBlock();
+      llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
+      llvm::IRBuilder<> IRB(&insert_point);
+
+      llvm::Value *save_map = IRB.CreateCall(
+          preserve_map,
+          IRB.CreateBitOrPointerCast(
+              global, llvm::Type::getInt8PtrTy(mod.getContext())));
+      llvm::Value *save_block_map = IRB.CreateCall(
+          preserve_map,
+          IRB.CreateBitOrPointerCast(
+              block_map, llvm::Type::getInt8PtrTy(mod.getContext())));
+    }
+  }
+  // auto it = global->getIterator();
   return true;
 }
 
