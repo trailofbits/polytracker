@@ -44,6 +44,7 @@ ${POLY_DIR}/output.cpp
 ${POLY_DIR}/tablegen.cpp 
 ${POLY_DIR}/polytracker.cpp
 ${POLY_DIR}/sqlite3.c
+${POLY_DIR}/gigatracer.cpp
 )
 
 set (TAINT_SOURCES 
