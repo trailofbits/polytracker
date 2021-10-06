@@ -29,6 +29,11 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
 
   for (Instruction &inst : basicBlock) {
     if (auto call = dyn_cast<CallInst>(&inst)) {
+      // This checks to split if its at the end of the block, or
+      // if its followed by an unconditional
+      // I'm changing the split to split all calls, so its easier to inline
+      // block lists later.
+      /*
       // Is the call immediately followed by an unconditional branch?
       // if so, that's the only case that is okay:
       Instruction *next = inst.getNextNode();
@@ -40,7 +45,8 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
           // so it's okay to leave it.
           continue;
         }
-      }
+      }*/
+
       std::string fname;
       if (auto function = call->getCalledFunction()) {
         if (function->hasName()) {
@@ -53,6 +59,7 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
           fname = v->getName().data();
         }
       }
+      Instruction *next = inst.getNextNode();
       // We need to split this BB into a new one after the call
       auto bb = next->getParent();
       // Don't bother logging these common functions, but still split for them
