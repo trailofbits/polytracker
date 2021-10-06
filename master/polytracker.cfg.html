@@ -297,7 +297,7 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -600,13 +600,13 @@ the graph.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.adjlist_inner_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_inner_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.adjlist_inner_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.adjlist_outer_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_outer_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.adjlist_outer_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -711,7 +711,7 @@ structure without requiring any memory for copying the information.</p>
 and deep copies, <a class="reference external" href="https://docs.python.org/3/library/copy.html">https://docs.python.org/3/library/copy.html</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
+<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
 of the original graph without actually copying any data.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -748,7 +748,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -780,7 +780,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.depth">
-<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.depth" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.depth" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -796,7 +796,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.edge_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">edge_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.edge_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -855,7 +855,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -947,7 +947,7 @@ But it is safe to assign attributes <cite>G[u][v][‘foo’]</cite></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.graph_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">graph_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.graph_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -968,7 +968,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 <dd class="field-even"><p><strong>edge_ind</strong> – True if edge is in the graph, False otherwise.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -1017,7 +1017,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.has_one_predecessor">
-<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.CFG.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.CFG.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns whether the given node has exactly one predecessor</p>
 </dd></dl>
 
@@ -1048,7 +1048,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -1087,7 +1087,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -1192,13 +1192,13 @@ edge from n to m.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.node_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">node_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.node_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.node_dict_factory">
 <span class="sig-name descname"><span class="pre">node_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.CFG.node_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py property">
@@ -1217,7 +1217,7 @@ provides a default for nodes that do not have attribute <cite>foo</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
 If True, return entire node attribute dict as (n, ddict).
 If False, return just the nodes n.</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for nodes that don’t have the requested attribute.
@@ -1313,7 +1313,7 @@ the graph is directed, this only returns the number of edges
 from <cite>u</cite> to <cite>v</cite>.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -1354,7 +1354,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -1383,7 +1383,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -1416,7 +1416,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -1464,7 +1464,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -1507,7 +1507,7 @@ For directed graphs this returns the out-edges.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.path_length">
-<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.path_length" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.path_length" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -1584,7 +1584,7 @@ edge from m to n.</p>
 <dd><p>Remove all edges specified in ebunch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
+<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
 from the graph. The edges can be:</p>
 <blockquote>
 <div><ul class="simple">
@@ -1698,7 +1698,7 @@ the original graph.</p>
 <dd><p>Returns the number of edges or total of all edge weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
+<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
 as a weight. If None, then each edge has weight 1.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1741,7 +1741,7 @@ as a weight. If None, then each edge has weight 1.</p>
 and the edges between those nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
+<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>G</strong> – A subgraph view of the graph. The graph structure cannot be
@@ -1879,7 +1879,7 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.to_dot">
-<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'PolyTracker</span> <span class="pre">Program</span> <span class="pre">Trace'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.cfg.FunctionInfo" title="polytracker.cfg.FunctionInfo"><span class="pre">polytracker.cfg.FunctionInfo</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.to_dot" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">'PolyTracker</span> <span class="pre">Program</span> <span class="pre">Trace'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.cfg.FunctionInfo" title="polytracker.cfg.FunctionInfo"><span class="pre">polytracker.cfg.FunctionInfo</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.CFG.to_dot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -1889,9 +1889,9 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
+<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
 in the original digraph.</p></li>
-<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
+<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1960,14 +1960,14 @@ should yield 2-tuples (u, v) or 3-tuples (u, v, datadict).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
+<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
 attributes <cite>nodes</cite> and <cite>edges</cite>, then it is taken to be a
 Graph-like object and those attributes are used as collections
 of nodes and edges to be added to the graph.
 If the first parameter does not have those attributes, it is
 treated as a collection of edges and added to the graph.
 If the first argument is None, no edges are added.</p></li>
-<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
+<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
 to be added to the graph unless it is None.
 If <cite>edges is None</cite> and <cite>nodes is None</cite> an exception is raised.
 If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
@@ -2058,7 +2058,7 @@ be slightly different and require tweaks of these examples:</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cfg.</span></span><span class="sig-name descname"><span class="pre">DAG</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DAG" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#polytracker.cfg.DiGraph" title="polytracker.cfg.DiGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.cfg.DiGraph</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>], <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>]</p>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.cfg.DiGraph" title="polytracker.cfg.DiGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.cfg.DiGraph</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>], <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.__contains__">
 <span class="sig-name descname"><span class="pre">__contains__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DAG.__contains__" title="Permalink to this definition">¶</a></dt>
@@ -2163,7 +2163,7 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -2466,13 +2466,13 @@ the graph.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.adjlist_inner_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_inner_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.adjlist_inner_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.adjlist_outer_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_outer_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.adjlist_outer_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -2577,7 +2577,7 @@ structure without requiring any memory for copying the information.</p>
 and deep copies, <a class="reference external" href="https://docs.python.org/3/library/copy.html">https://docs.python.org/3/library/copy.html</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
+<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
 of the original graph without actually copying any data.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -2614,7 +2614,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -2646,7 +2646,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.depth">
-<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.depth" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.depth" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -2662,7 +2662,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.edge_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">edge_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.edge_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -2721,7 +2721,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -2813,7 +2813,7 @@ But it is safe to assign attributes <cite>G[u][v][‘foo’]</cite></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.graph_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">graph_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.graph_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -2834,7 +2834,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 <dd class="field-even"><p><strong>edge_ind</strong> – True if edge is in the graph, False otherwise.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -2883,7 +2883,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.has_one_predecessor">
-<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.DAG.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.DAG.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns whether the given node has exactly one predecessor</p>
 </dd></dl>
 
@@ -2914,7 +2914,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -2953,7 +2953,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -3058,13 +3058,13 @@ edge from n to m.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.node_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">node_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.node_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.node_dict_factory">
 <span class="sig-name descname"><span class="pre">node_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DAG.node_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py property">
@@ -3083,7 +3083,7 @@ provides a default for nodes that do not have attribute <cite>foo</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
 If True, return entire node attribute dict as (n, ddict).
 If False, return just the nodes n.</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for nodes that don’t have the requested attribute.
@@ -3179,7 +3179,7 @@ the graph is directed, this only returns the number of edges
 from <cite>u</cite> to <cite>v</cite>.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -3220,7 +3220,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -3249,7 +3249,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -3282,7 +3282,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -3330,7 +3330,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -3373,7 +3373,7 @@ For directed graphs this returns the out-edges.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.path_length">
-<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.path_length" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.path_length" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -3450,7 +3450,7 @@ edge from m to n.</p>
 <dd><p>Remove all edges specified in ebunch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
+<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
 from the graph. The edges can be:</p>
 <blockquote>
 <div><ul class="simple">
@@ -3564,7 +3564,7 @@ the original graph.</p>
 <dd><p>Returns the number of edges or total of all edge weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
+<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
 as a weight. If None, then each edge has weight 1.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3607,7 +3607,7 @@ as a weight. If None, then each edge has weight 1.</p>
 and the edges between those nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
+<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>G</strong> – A subgraph view of the graph. The graph structure cannot be
@@ -3745,7 +3745,7 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DAG.to_dot">
-<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.cfg.N</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.to_dot" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.cfg.N</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.DAG.to_dot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -3755,9 +3755,9 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
+<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
 in the original digraph.</p></li>
-<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
+<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -3826,14 +3826,14 @@ should yield 2-tuples (u, v) or 3-tuples (u, v, datadict).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
+<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
 attributes <cite>nodes</cite> and <cite>edges</cite>, then it is taken to be a
 Graph-like object and those attributes are used as collections
 of nodes and edges to be added to the graph.
 If the first parameter does not have those attributes, it is
 treated as a collection of edges and added to the graph.
 If the first argument is None, no edges are added.</p></li>
-<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
+<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
 to be added to the graph unless it is None.
 If <cite>edges is None</cite> and <cite>nodes is None</cite> an exception is raised.
 If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
@@ -3929,7 +3929,7 @@ be slightly different and require tweaks of these examples:</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cfg.</span></span><span class="sig-name descname"><span class="pre">DiGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DiGraph" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">networkx.classes.digraph.DiGraph</span></code>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>]</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">networkx.classes.digraph.DiGraph</span></code>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.cfg.N</span></code>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.__contains__">
 <span class="sig-name descname"><span class="pre">__contains__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.DiGraph.__contains__" title="Permalink to this definition">¶</a></dt>
@@ -4034,7 +4034,7 @@ or 2d ndarray, a SciPy sparse matrix, or a PyGraphviz graph.</p></li>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -4337,13 +4337,13 @@ the graph.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.adjlist_inner_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_inner_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.adjlist_inner_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.adjlist_outer_dict_factory">
 <span class="sig-name descname"><span class="pre">adjlist_outer_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.adjlist_outer_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -4448,7 +4448,7 @@ structure without requiring any memory for copying the information.</p>
 and deep copies, <a class="reference external" href="https://docs.python.org/3/library/copy.html">https://docs.python.org/3/library/copy.html</a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
+<dd class="field-odd"><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – If True, the returned graph-view provides a read-only view
 of the original graph without actually copying any data.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -4485,7 +4485,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -4517,7 +4517,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.depth">
-<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.depth" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">depth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.depth" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -4533,7 +4533,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.edge_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">edge_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.edge_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -4592,7 +4592,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -4684,7 +4684,7 @@ But it is safe to assign attributes <cite>G[u][v][‘foo’]</cite></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.graph_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">graph_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.graph_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -4705,7 +4705,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 <dd class="field-even"><p><strong>edge_ind</strong> – True if edge is in the graph, False otherwise.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)">bool</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -4754,7 +4754,7 @@ Nodes must be hashable (and not None) Python objects.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.has_one_predecessor">
-<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">has_one_predecessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.has_one_predecessor" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns whether the given node has exactly one predecessor</p>
 </dd></dl>
 
@@ -4785,7 +4785,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -4824,7 +4824,7 @@ The degree is the sum of the edge weights adjacent to the node.</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -4929,13 +4929,13 @@ edge from n to m.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.node_attr_dict_factory">
 <span class="sig-name descname"><span class="pre">node_attr_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.node_attr_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.node_dict_factory">
 <span class="sig-name descname"><span class="pre">node_dict_factory</span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.node_dict_factory" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code></a></p>
 </dd></dl>
 
 <dl class="py property">
@@ -4954,7 +4954,7 @@ provides a default for nodes that do not have attribute <cite>foo</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The node attribute returned in 2-tuple (n, ddict[data]).
 If True, return entire node attribute dict as (n, ddict).
 If False, return just the nodes n.</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for nodes that don’t have the requested attribute.
@@ -5050,7 +5050,7 @@ the graph is directed, this only returns the number of edges
 from <cite>u</cite> to <cite>v</cite>.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -5091,7 +5091,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -5120,7 +5120,7 @@ directed edges from <cite>u</cite> to <cite>v</cite>:</p>
 <dd class="field-odd"><p><strong>nnodes</strong> – The number of nodes in the graph.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)">int</a></p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -5153,7 +5153,7 @@ lookup for the degree for a single node.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
+<li><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The name of an edge attribute that holds the numerical value used
 as a weight.  If None, then each edge has weight 1.
 The degree is the sum of the edge weights adjacent to the node.</p></li>
 </ul>
@@ -5201,7 +5201,7 @@ with default <cite>‘red’</cite> if no color attribute exists.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>nbunch</strong> (<em>single node</em><em>, </em><em>container</em><em>, or </em><em>all nodes</em><em> (</em><em>default= all nodes</em><em>)</em>) – The view will only report edges incident to these nodes.</p></li>
-<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
+<li><p><strong>data</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em>, </em><em>optional</em><em> (</em><em>default=False</em><em>)</em>) – The edge attribute returned in 3-tuple (u, v, ddict[data]).
 If True, return edge attribute dict in 3-tuple (u, v, ddict).
 If False, return 2-tuple (u, v).</p></li>
 <li><p><strong>default</strong> (<em>value</em><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – Value used for edges that don’t have the requested attribute.
@@ -5244,7 +5244,7 @@ For directed graphs this returns the out-edges.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.path_length">
-<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.9)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.path_length" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">path_length</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">from_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.cfg.N</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.10)"><span class="pre">float</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.path_length" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -5321,7 +5321,7 @@ edge from m to n.</p>
 <dd><p>Remove all edges specified in ebunch.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
+<dd class="field-odd"><p><strong>ebunch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em> or </em><em>container of edge tuples</em>) – <p>Each edge given in the list or container will be removed
 from the graph. The edges can be:</p>
 <blockquote>
 <div><ul class="simple">
@@ -5435,7 +5435,7 @@ the original graph.</p>
 <dd><p>Returns the number of edges or total of all edge weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
+<dd class="field-odd"><p><strong>weight</strong> (<em>string</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a><em>, </em><em>optional</em><em> (</em><em>default=None</em><em>)</em>) – The edge attribute that holds the numerical value used
 as a weight. If None, then each edge has weight 1.</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -5478,7 +5478,7 @@ as a weight. If None, then each edge has weight 1.</p>
 and the edges between those nodes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
+<dd class="field-odd"><p><strong>nodes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.10)"><em>list</em></a><em>, </em><em>iterable</em>) – A container of nodes which will be iterated through once.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p><strong>G</strong> – A subgraph view of the graph. The graph structure cannot be
@@ -5616,7 +5616,7 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.DiGraph.to_dot">
-<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.cfg.N</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.to_dot" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">to_dot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">comment</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeler</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.cfg.N</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">graphviz.dot.Digraph</span></span></span><a class="headerlink" href="#polytracker.cfg.DiGraph.to_dot" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -5626,9 +5626,9 @@ what directed class to use for <cite>to_directed()</cite> copies.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
+<li><p><strong>reciprocal</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>)</em>) – If True only keep edges that appear in both directions
 in the original digraph.</p></li>
-<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
+<li><p><strong>as_view</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a><em> (</em><em>optional</em><em>, </em><em>default=False</em><em>)</em>) – If True return an undirected view of the original directed graph.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -5697,14 +5697,14 @@ should yield 2-tuples (u, v) or 3-tuples (u, v, datadict).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
+<li><p><strong>edges</strong> (<em>Graph object</em><em>, </em><em>collection of edges</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The first parameter can be a graph or some edges. If it has
 attributes <cite>nodes</cite> and <cite>edges</cite>, then it is taken to be a
 Graph-like object and those attributes are used as collections
 of nodes and edges to be added to the graph.
 If the first parameter does not have those attributes, it is
 treated as a collection of edges and added to the graph.
 If the first argument is None, no edges are added.</p></li>
-<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
+<li><p><strong>nodes</strong> (<em>collection of nodes</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.10)"><em>None</em></a>) – The second parameter is treated as a collection of nodes
 to be added to the graph unless it is None.
 If <cite>edges is None</cite> and <cite>nodes is None</cite> an exception is raised.
 If the first parameter is a Graph, then <cite>nodes</cite> is ignored.</p></li>
@@ -5794,61 +5794,61 @@ be slightly different and require tweaks of these examples:</p>
 <h3>FunctionInfo<a class="headerlink" href="#functioninfo" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cfg.</span></span><span class="sig-name descname"><span class="pre">FunctionInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmp_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">called_from</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.FunctionInfo" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.cfg.</span></span><span class="sig-name descname"><span class="pre">FunctionInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmp_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">called_from</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.FunctionInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmp_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">called_from</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmp_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_bytes</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">called_from</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.cmp_bytes">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">cmp_bytes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.cmp_bytes" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">cmp_bytes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.cmp_bytes" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.cmp_chunks">
-<span class="sig-name descname"><span class="pre">cmp_chunks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.cmp_chunks" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">cmp_chunks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.cmp_chunks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.demangled_name">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">demangled_name</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.demangled_name" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">demangled_name</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.demangled_name" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.input_bytes">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">input_bytes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.input_bytes" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">input_bytes</span></span><em class="property"><span class="pre">:</span> <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.input_bytes" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.input_chunks">
-<span class="sig-name descname"><span class="pre">input_chunks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.input_chunks" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">input_chunks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.input_chunks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.items">
-<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ItemsView</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.items" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">items</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ItemsView</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.items" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.source_size">
-<span class="sig-name descname"><span class="pre">source_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.source_size" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">source_size</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.source_size" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.taint_source_sizes">
-<span class="sig-name descname"><span class="pre">taint_source_sizes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.taint_source_sizes" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">taint_source_sizes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.taint_source_sizes" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.taint_sources">
-<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">taint_sources</span></span><em class="property"><span class="pre">:</span> <span class="pre">KeysView</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.taint_sources" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">taint_sources</span></span><em class="property"><span class="pre">:</span> <span class="pre">KeysView</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.cfg.FunctionInfo.taint_sources" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.FunctionInfo.tainted_chunks">
-<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">tainted_chunks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">byte_offsets</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.tainted_chunks" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span> </em><span class="sig-name descname"><span class="pre">tainted_chunks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">byte_offsets</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.cfg.FunctionInfo.tainted_chunks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
