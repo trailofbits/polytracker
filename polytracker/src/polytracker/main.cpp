@@ -5,7 +5,6 @@
 #include "polytracker/taint.h"
 #include "polytracker/write_taints.h"
 #include <atomic>
-#include <errno.h>
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
@@ -24,7 +23,6 @@ using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
 
-extern int errno;
 std::string polytracker_forest_name = "";
 std::string polytracker_db_name = "";
 uint64_t byte_start = 0;

@@ -32,22 +32,10 @@ information to disk. Currently, this is in the form of a JSON file and a binary
 object. Information about the two files can be found in the polytracker/doc
 directory
  */
-extern bool polytracker_trace;
 extern bool polytracker_save_input_file;
 
 extern thread_local event_id_t last_bb_event_id;
 extern thread_local FunctionStack function_stack;
-
-// Could there be a race condition here?
-// TODO Check if input_table/taint_forest tables already filled
-extern std::unordered_map<std::string, std::unordered_map<dfsan_label, int>>
-    canonical_mapping;
-extern std::unordered_map<std::string, std::vector<std::pair<int, int>>>
-    tainted_input_chunks;
-std::mutex thread_id_lock;
-
-extern bool polytracker_trace;
-extern bool polytracker_trace_func;
 
 /*
 SQL statements to prepare
