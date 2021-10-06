@@ -67,6 +67,7 @@ POLY_PASS_PATH: Path = ensure_exists(
     COMPILER_DIR / "pass" / "libPolytrackerPass.so")
 POLY_LIB_PATH: Path = ensure_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
 META_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libMetadataPass.so")
+BBTRACK_PASS_PATH: Path = ensure_exists(COMPILER_DIR / "pass" / "libBBTrackPass.so")
 DFSAN_ABI_LIST_PATH: Path = ensure_exists(
     COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt")
 POLY_ABI_LIST_PATH: Path = ensure_exists(
@@ -143,7 +144,16 @@ def is_building(argv) -> bool:
             return True
     return False
 
-
+def giga_instrument_bitcode(bitcode_file: Path, output_bc: Path,
+                       ignore_lists=None, file_id=None) -> Path:
+    opt_command = ["opt", "-O3", str(bitcode_file), "-o", str(bitcode_file)]
+    subprocess.check_call(opt_command)
+    if ignore_lists is None:
+        ignore_lists = []
+    opt_command = ["opt", "-enable-new-pm=0", "-load", str(BBTRACK_PASS_PATH), "-bbtrack", str(bitcode_file), "-o", str(bitcode_file)]
+    ret = subprocess.check_call(opt_command)
+    subprocess.check_call(opt_command)
+    return output_bc
 # (2)
 def instrument_bitcode(bitcode_file: Path, output_bc: Path,
                        ignore_lists=None, file_id=None) -> Path:
@@ -292,6 +302,65 @@ def handle_cmd(argv: List[str]) -> Optional[Path]:
     conn.close()
     return output_file
 
+def giga_do_everything(argv: List[str]):
+    output_file = handle_cmd(argv)
+    if output_file is None:
+        raise ValueError("Could not determine output file")
+    assert output_file.exists()
+    bc_file = output_file.with_suffix(".bc")
+    get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
+    subprocess.check_call(get_bc)
+    assert bc_file.exists()
+    temp_bc = append_to_stem(bc_file, "_instrumented")
+    giga_instrument_bitcode(bc_file, temp_bc)
+    assert temp_bc.exists()
+
+    # Lower bitcode. Creates a .o
+    obj_file = temp_bc.with_suffix(".o")
+    if is_cxx:
+        compiler = "gclang++"
+    else:
+        compiler = "gclang"
+    if XRAY_BUILD:
+        result = subprocess.check_call(
+            [compiler, "-fxray-instrument", "-fxray-instruction-threshold=1",
+                "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
+        )
+    else:
+        result = subprocess.check_call(
+            [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)])
+    re_comp: List[str]
+    # Compile into executable
+    if XRAY_BUILD:
+        re_comp = [
+            compiler,
+            "-fxray-instrument",
+            "-fxray-instruction-threshold=1",
+            "-pie",
+            f"-L{CXX_LIB_PATH!s}",
+            "-o",
+            str(output_file),
+            str(obj_file),
+            "-Wl,--allow-multiple-definition",
+            "-Wl,--start-group",
+            "-lc++abi",
+        ]
+    else:
+        re_comp = [
+            compiler,
+            "-pie",
+            f"-L{CXX_LIB_PATH!s}",
+            "-o",
+            str(output_file),
+            str(obj_file),
+            "-Wl,--allow-multiple-definition",
+            "-Wl,--start-group",
+            "-lc++abi",
+        ]
+    re_comp.extend(POLYCXX_LIBS)
+    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread",
+                   "-ldl", "-Wl,--end-group"])
+    ret = subprocess.check_call(re_comp)
 
 # (1)
 def do_everything(argv: List[str]):
@@ -359,8 +428,7 @@ def do_everything(argv: List[str]):
     re_comp.extend(POLYCXX_LIBS)
     re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread",
                    "-ldl", "-Wl,--end-group"])
-    ret = subprocess.call(re_comp)
-    assert ret == 0
+    ret = subprocess.check_call(re_comp)
 
 
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
@@ -509,6 +577,10 @@ def main():
         new_argv = [x for x in sys.argv if x != "--instrument-target"]
         do_everything(new_argv)
 
+    elif sys.argv[1] == "--giga-instrument-target":
+        new_argv = [x for x in sys.argv if x != "--giga-instrument-target"]
+        giga_do_everything(new_argv)
+
     elif sys.argv[1] == "--lower-bitcode":
         args = parser.parse_args(sys.argv[1:])
         if not args.input_file or not args.output_file:
@@ -536,6 +608,10 @@ def main():
             args.input_file, args.output_file.with_suffix(".bc"), args.lists)
         lower_bc(bc_file, args.output_file, args.libs)
 
+    elif sys.argv[1] == "--giga-lower-bitcode":
+        args = parser.parse_args(sys.argv[2:])
+        bc_file = giga_instrument_bitcode(args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+        lower_bc(bc_file, args.output_file, args.libs)
     # Do gllvm build
     else:
         handle_cmd(sys.argv)
