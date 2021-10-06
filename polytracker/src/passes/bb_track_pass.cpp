@@ -111,6 +111,19 @@ bool BBTrack::analyzeFunction(llvm::Function *f) {
 void BBTrack::initializeTypes(llvm::Module &mod) {
   this->mod = &mod;
   llvm::LLVMContext &context = mod.getContext();
+  auto gigatracer_start_fn_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
+  track_start = mod.getOrInsertFunction("__gigatracer_track_start",
+                                        gigatracer_start_fn_ty);
+
+  auto block_entry_log_ty =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(context),
+                              {llvm::IntegerType::getInt64Ty(context),
+                               llvm::IntegerType::getInt8Ty(context)},
+                              false);
+
+  block_entry_log =
+      mod.getOrInsertFunction("__gigatracer_block_entry", block_entry_log_ty);
 }
 
 bool BBTrack::runOnModule(llvm::Module &mod) {
