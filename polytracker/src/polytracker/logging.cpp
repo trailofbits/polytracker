@@ -15,7 +15,6 @@
 extern char *forest_mem;
 extern input_id_t input_id;
 extern sqlite3 *output_db;
-thread_local block_id_t curr_block_index = -1;
 thread_local function_id_t curr_func_index = -1;
 thread_local FunctionStack function_stack;
 thread_local int thread_id = -1;
@@ -117,5 +116,4 @@ void logBBEntry(const function_id_t findex, const block_id_t bindex,
   storeBlockEntry(output_db, input_id, thread_id, last_bb_event_id,
                   thread_event_id++, findex, bindex,
                   function_stack.back().func_event_id, entryCount);
-  curr_block_index = bindex;
 }

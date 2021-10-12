@@ -16,10 +16,6 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
-std::unordered_map<dfsan_label, std::unordered_map<dfsan_label, dfsan_label>>
-    union_table;
-std::mutex union_table_lock;
-
 std::unordered_map<uint64_t, atomic_dfsan_label> new_table;
 std::mutex new_table_lock;
 
@@ -30,13 +26,6 @@ std::mutex track_target_map_lock;
 
 extern sqlite3 *output_db;
 extern input_id_t input_id;
-extern thread_local int thread_id;
-extern thread_local block_id_t curr_block_index;
-extern thread_local function_id_t curr_func_index;
-extern std::atomic<event_id_t> event_id;
-extern thread_local event_id_t thread_event_id;
-extern thread_local FunctionStack function_stack;
-extern char *forest_mem;
 extern std::unordered_set<std::string> target_sources;
 extern uint64_t byte_start;
 extern uint64_t byte_end;
