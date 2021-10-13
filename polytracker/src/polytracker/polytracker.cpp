@@ -127,7 +127,10 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
 
 extern "C" int __polytracker_size() { return function_stack.size(); }
 
-extern "C" void __polytracker_start() { polytracker_start(); }
+extern "C" void __polytracker_start(func_mapping const* globals, uint64_t globals_count,
+                       block_mapping const* block_map, uint64_t block_map_count) {
+  polytracker_start(globals, globals_count, block_map, block_map_count); 
+}
 
 extern "C" void
 __polytracker_store_function_mapping(const func_mapping *func_map,
@@ -166,9 +169,10 @@ extern "C" void dfs$__polytracker_log_call_exit(uint32_t func_index,
 // These two dfs$ functions exist for testing
 // If polytracker-llvm needs an update but it's too time consuming to
 // rebuild/wait
-extern "C" void dfs$__polytracker_start() {
+extern "C" void dfs$__polytracker_start(func_mapping const* globals, uint64_t globals_count,
+                       block_mapping const* block_map, uint64_t block_map_count) {
   fprintf(stderr, "WARNING Using instrumented internal start func\n");
-  __polytracker_start();
+  __polytracker_start(globals, globals_count, block_map, block_map_count);
 }
 extern "C" int dfs$__polytracker_size() {
   fprintf(stderr, "WARNING Using instrumented internal size func\n");

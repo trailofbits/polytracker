@@ -1,9 +1,11 @@
 #include "polytracker/dfsan_types.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
 #include "polytracker/write_taints.h"
+#include "polytracker/polytracker.h"
 #include <atomic>
 #include <fcntl.h>
 #include <fstream>
@@ -23,8 +25,7 @@ using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
 
-std::string polytracker_forest_name = "";
-std::string polytracker_db_name = "";
+DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
 uint64_t byte_start = 0;
 uint64_t byte_end = 0;
 bool polytracker_trace = false;
@@ -35,7 +36,7 @@ bool polytracker_trace_func = false;
 bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
 // If this is empty, taint everything.
-std::unordered_set<std::string> target_sources;
+DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 char *forest_mem;
 
 // DB for storing things
@@ -45,7 +46,14 @@ sqlite3 *output_db;
 // Change this for multiple taint sources
 input_id_t input_id;
 // Maps fds to associated input_ids.
-std::unordered_map<int, input_id_t> fd_input_map;
+EARLY_CONSTRUCT_STORAGE(fd_input_map_t, fd_input_map);
+
+EARLY_CONSTRUCT_EXTERN_STORAGE(new_table_t, new_table);
+EARLY_CONSTRUCT_EXTERN_STORAGE(std::mutex, new_table_lock);
+EARLY_CONSTRUCT_EXTERN_STORAGE(fd_name_map_t, fd_name_map);
+EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_name_map_t, track_target_name_map);
+EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_fd_map_t, track_target_fd_map);
+EARLY_CONSTRUCT_EXTERN_STORAGE(std::mutex, track_target_map_lock);
 
 /*
 Parse files deliminated by ; and add them to unordered set.
@@ -56,7 +64,7 @@ void parse_target_files(const std::string polypath) {
     if (j == ':') {
       if (curr_str.length()) {
         // ignore empty strings
-        target_sources.insert(curr_str);
+        get_target_sources().insert(curr_str);
       }
       curr_str = "";
     } else if (curr_str.length() > 0 ||
@@ -68,7 +76,7 @@ void parse_target_files(const std::string polypath) {
   // Last file does not need a :, like test_data;other_data
   // insert it
   if (!curr_str.empty()) {
-    target_sources.insert(curr_str);
+    get_target_sources().insert(curr_str);
   }
 }
 
@@ -81,8 +89,8 @@ void set_defaults() {
   if (taint_node_ttl <= 0) {
     taint_node_ttl = DEFAULT_TTL;
   }
-  if (polytracker_db_name.empty()) {
-    polytracker_db_name = "polytracker.db";
+  if (get_polytracker_db_name().empty()) {
+    get_polytracker_db_name() = "polytracker.db";
   }
 }
 
@@ -105,10 +113,7 @@ void polytracker_parse_config(std::ifstream &config_file) {
     byte_end = config_json["POLYEND"].get<int>();
   }
   if (config_json.contains("POLYDB")) {
-    polytracker_db_name = config_json["POLYDB"].get<std::string>();
-  }
-  if (config_json.contains("POLYFOREST")) {
-    polytracker_forest_name = config_json["POLYFOREST"].get<std::string>();
+    get_polytracker_db_name() = config_json["POLYDB"].get<std::string>();
   }
   if (config_json.contains("POLYTRACE")) {
     std::string trace_str = config_json["POLYTRACE"].get<std::string>();
@@ -182,10 +187,7 @@ void polytracker_parse_env() {
     byte_end = atoi(getenv("POLYEND"));
   }
   if (auto pdb = getenv("POLYDB")) {
-    polytracker_db_name = pdb;
-  }
-  if (auto pforest = getenv("POLYFOREST")) {
-    polytracker_forest_name = pforest;
+    get_polytracker_db_name() = pdb;
   }
   if (getenv("POLYSAVEINPUT")) {
     std::string trace_str = getenv("POLYSAVEINPUT");
@@ -242,7 +244,7 @@ void polytracker_get_settings() {
   polytracker_parse_env();
   set_defaults();
 
-  for (auto target_source : target_sources) {
+  for (auto target_source : get_target_sources()) {
     // Add named source for polytracker
     addInitialTaintSource(target_source, byte_start, byte_end, target_source);
   }
@@ -255,9 +257,6 @@ void polytracker_end() {
   }
   done.store(true);
   const dfsan_label last_label = dfsan_get_label_count();
-  if (!polytracker_forest_name.empty()) {
-    storeTaintForestDisk(polytracker_forest_name, last_label);
-  }
   */
   db_fini(output_db);
 }
@@ -278,27 +277,66 @@ char *mmap_taint_forest(unsigned long size) {
 }
 
 void polytracker_print_settings() {
-  for (auto target_source : target_sources) {
-    std::cout << "POLYPATH:      " << target_source << std::endl;
+  for (auto target_source : get_target_sources()) {
+    printf("POLYPATH:      %s\n", target_source.c_str());
   }
-  if (target_sources.empty()) {
-    std::cout << "POLYPATH:      *" << std::endl;
+  if (get_target_sources().empty()) {
+    printf("POLYPATH:      *\n");
   }
-  std::cout << "POLYDB:        " << polytracker_db_name << std::endl;
-  std::cout << "POLYFUNC:      " << polytracker_trace_func << std::endl;
-  std::cout << "POLYTRACE:     " << polytracker_trace << std::endl;
-  std::cout << "POLYSTART:     " << byte_start << std::endl;
-  std::cout << "POLYEND:       " << byte_end << std::endl;
-  std::cout << "POLYTTL:       " << taint_node_ttl << std::endl;
-  std::cout << "POLYSAVEINPUT: " << polytracker_save_input_file << std::endl;
+  printf("POLYDB:        %s\n", get_polytracker_db_name().c_str());
+  printf("POLYFUNC:      %u\n", polytracker_trace_func);
+  printf("POLYTRACE:     %u\n", polytracker_trace);
+  printf("POLYSTART:     %lu\n", byte_start);
+  printf("POLYEND:       %lu\n", byte_end);
+  printf("POLYTTL:       %u\n", taint_node_ttl);
+  printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
 }
 
-void polytracker_start() {
+static void storeBinaryMetadata(sqlite3* output_db) {
+  std::vector<uint8_t> data;
+  std::unique_ptr<FILE, decltype(&fclose)> fd(fopen("/proc/self/exe", "rb"), fclose); 
+  fseek(fd.get(), 0, SEEK_END);
+  long size = ftell(fd.get());
+  assert(size > 0);
+  auto data_size = static_cast<size_t>(size);
+  fseek(fd.get(), 0, SEEK_SET);
+  data.reserve(data_size); // TODO (hbrodin): Is this guaranteed to work? is memory always allocated, should resize be used instead?
+  auto read_len = fread(data.data(), data_size, 1, fd.get());
+  assert(read_len == 1u);
+  storeBlob(output_db, data.data(), data_size);
+}
+
+
+void polytracker_start(func_mapping const* globals, uint64_t globals_count,
+                       block_mapping const* block_map, uint64_t block_map_count) {
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
+  DO_EARLY_DEFAULT_CONSTRUCT(fd_input_map_t, fd_input_map);
+  DO_EARLY_DEFAULT_CONSTRUCT(track_target_name_map_t, track_target_name_map);
+
+  DO_EARLY_DEFAULT_CONSTRUCT(new_table_t, new_table);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, new_table_lock);
+  DO_EARLY_DEFAULT_CONSTRUCT(fd_name_map_t, fd_name_map);
+  DO_EARLY_DEFAULT_CONSTRUCT(track_target_name_map_t, track_target_name_map);
+  DO_EARLY_DEFAULT_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, track_target_map_lock);
+
+  // TODO (hbrodin): Pass these as arguments to storeBinaryMetadata instead of keeping global vars.
+  func_mappings = globals;
+  func_mapping_count = globals_count;
+
+  block_mappings = block_map;
+  block_mapping_count = block_map_count;
+
   polytracker_get_settings();
   polytracker_print_settings();
-  output_db = db_init(polytracker_db_name);
+  output_db = db_init(get_polytracker_db_name());
+
+  // Store binary metadata (block + functions + blocks)
+  storeBinaryMetadata(output_db);
+
   // Store new file
-  for (auto target_source : target_sources) {
+  for (auto target_source : get_target_sources()) {
     input_id = storeNewInput(output_db, target_source, byte_start, byte_end,
                              polytracker_trace);
   }

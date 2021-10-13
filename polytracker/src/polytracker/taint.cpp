@@ -1,4 +1,4 @@
-
+#include "polytracker/early_construct.h"
 #include "polytracker/taint.h"
 #include "polytracker/dfsan_types.h"
 #include "polytracker/logging.h"
@@ -16,17 +16,17 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
-std::unordered_map<uint64_t, atomic_dfsan_label> new_table;
-std::mutex new_table_lock;
+DECLARE_EARLY_CONSTRUCT(new_table_t, new_table);
+DECLARE_EARLY_CONSTRUCT(std::mutex, new_table_lock);
+DECLARE_EARLY_CONSTRUCT(fd_name_map_t, fd_name_map);
+DECLARE_EARLY_CONSTRUCT(track_target_name_map_t, track_target_name_map);
+DECLARE_EARLY_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
+DECLARE_EARLY_CONSTRUCT(std::mutex, track_target_map_lock);
 
-std::unordered_map<int, std::string> fd_name_map;
-std::unordered_map<std::string, std::pair<int, int>> track_target_name_map;
-std::unordered_map<int, std::pair<int, int>> track_target_fd_map;
-std::mutex track_target_map_lock;
+EARLY_CONSTRUCT_EXTERN_GETTER(std::unordered_set<std::string>, target_sources);
 
 extern sqlite3 *output_db;
 extern input_id_t input_id;
-extern std::unordered_set<std::string> target_sources;
 extern uint64_t byte_start;
 extern uint64_t byte_end;
 extern bool polytracker_trace;
@@ -40,41 +40,41 @@ void checkMaxLabel(dfsan_label label) {
 }
 
 [[nodiscard]] bool isTrackingSource(const std::string &fd) {
-  if (target_sources.empty()) {
+  if (get_target_sources().empty()) {
     return true;
   }
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_name_map.find(fd) != track_target_name_map.end()) {
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  if (get_track_target_name_map().find(fd) != get_track_target_name_map().end()) {
     return true;
   }
   return false;
 }
 
 [[nodiscard]] bool isTrackingSource(const int &fd) {
-  if (target_sources.empty()) {
+  if (get_target_sources().empty()) {
     return true;
   }
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  if (get_track_target_fd_map().find(fd) != get_track_target_fd_map().end()) {
     return true;
   }
   return false;
 }
 
 void closeSource(const std::string &fd) {
-  if (!target_sources.empty()) {
-    const std::lock_guard<std::mutex> guard(track_target_map_lock);
-    if (track_target_name_map.find(fd) != track_target_name_map.end()) {
-      track_target_name_map.erase(fd);
+  if (!get_target_sources().empty()) {
+    const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+    if (get_track_target_name_map().find(fd) != get_track_target_name_map().end()) {
+      get_track_target_name_map().erase(fd);
     }
   }
 }
 
 void closeSource(const int &fd) {
-  if (!target_sources.empty()) {
-    const std::lock_guard<std::mutex> guard(track_target_map_lock);
-    if (track_target_fd_map.find(fd) != track_target_fd_map.end()) {
-      track_target_fd_map.erase(fd);
+  if (!get_target_sources().empty()) {
+    const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+    if (get_track_target_fd_map().find(fd) != get_track_target_fd_map().end()) {
+      get_track_target_fd_map().erase(fd);
     }
   }
 }
@@ -82,47 +82,48 @@ void closeSource(const int &fd) {
 // This will be called by polytracker to add new taint source info.
 void addInitialTaintSource(std::string &fd, const int start, const int end,
                            std::string &name) {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  track_target_name_map[fd] = std::make_pair(start, end);
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  get_track_target_name_map()[fd] = std::make_pair(start, end);
 }
 
 void addInitialTaintSource(int fd, const int start, const int end,
                            std::string &name) {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  track_target_fd_map[fd] = std::make_pair(start, end);
-  track_target_name_map[name] = std::make_pair(start, end);
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  get_track_target_fd_map()[fd] = std::make_pair(start, end);
+  get_track_target_name_map()[name] = std::make_pair(start, end);
 }
 
 void addDerivedSource(std::string &track_path, const int &new_fd) {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  track_target_fd_map[new_fd] = track_target_name_map[track_path];
-  fd_name_map[new_fd] = track_path;
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  get_track_target_fd_map()[new_fd] = get_track_target_name_map()[track_path];
+  get_fd_name_map()[new_fd] = track_path;
   // Store input if no taints have been specified/no input id has been created.
-  if (target_sources.empty()) {
+  if (get_target_sources().empty()) {
     input_id = storeNewInput(output_db, track_path, byte_start, byte_end,
                              polytracker_trace);
   }
 }
 
 auto getSourceName(const int &fd) -> std::string & {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  if (fd_name_map.find(fd) == fd_name_map.end()) {
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  if (get_fd_name_map().find(fd) == get_fd_name_map().end()) {
+    // TODO (hbrodin): This will most likely segfault is called to early.
     std::cerr << "Error: source name for fd " << fd << "not found" << std::endl;
     // Kill the run, somethings gone pretty wrong
     abort();
   }
-  return fd_name_map[fd];
+  return get_fd_name_map()[fd];
 }
 
 [[nodiscard]] inline auto getTargetTaintRange(const std::string &fd)
     -> std::pair<int, int> & {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  return track_target_name_map[fd];
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  return get_track_target_name_map()[fd];
 }
 [[nodiscard]] inline auto getTargetTaintRange(const int &fd)
     -> std::pair<int, int> & {
-  const std::lock_guard<std::mutex> guard(track_target_map_lock);
-  return track_target_fd_map[fd];
+  const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
+  return get_track_target_fd_map()[fd];
 }
 
 [[nodiscard]] static inline dfsan_label
@@ -211,13 +212,13 @@ void logUnion(const dfsan_label &l1, const dfsan_label &l2,
 // Can we do this without locking?
 atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
                                   const dfsan_label &l2) {
-  std::lock_guard<std::mutex> guard(new_table_lock);
+  std::lock_guard<std::mutex> guard(get_new_table_lock());
   uint64_t key = (static_cast<uint64_t>(l1) << 32) | l2;
-  if (new_table.find(key) == new_table.end()) {
-    new_table[key] = {0};
-    return &new_table[key];
+  if (get_new_table().find(key) == get_new_table().end()) {
+    get_new_table()[key] = {0};
+    return &get_new_table()[key];
   }
-  return &new_table[key];
+  return &get_new_table()[key];
 }
 
 [[nodiscard]] bool taintData(const int &fd, const char *mem, int offset,
