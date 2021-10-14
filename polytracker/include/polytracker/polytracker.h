@@ -26,3 +26,21 @@
 
 void polytracker_end();
 void polytracker_start();
+
+// Mapping from function name to id, created by polytracker-pass
+struct func_mapping {
+  char *func_name;
+  uint32_t id;
+};
+
+// Block function-id and type representations, created by polytracker-pass
+struct block_mapping {
+  uint64_t func_bb;
+  uint8_t btype;
+};
+
+extern const func_mapping *func_mappings;
+extern uint64_t func_mapping_count;
+
+extern const block_mapping *block_mappings;
+extern uint64_t block_mapping_count;
