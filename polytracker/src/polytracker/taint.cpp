@@ -112,8 +112,7 @@ void addDerivedSource(std::string &track_path, const int &new_fd) {
 auto getSourceName(const int &fd) -> std::string & {
   const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
   if (get_fd_name_map().find(fd) == get_fd_name_map().end()) {
-    // TODO (hbrodin): This will most likely segfault is called to early.
-    std::cerr << "Error: source name for fd " << fd << "not found" << std::endl;
+    printf("Error: source name for fd %d not found", fd);
     // Kill the run, somethings gone pretty wrong
     abort();
   }
