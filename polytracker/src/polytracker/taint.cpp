@@ -94,8 +94,13 @@ void addInitialTaintSource(int fd, const int start, const int end,
 }
 
 void addDerivedSource(std::string &track_path, const int &new_fd) {
+  auto &name_namp = get_track_target_name_map();
   const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
-  get_track_target_fd_map()[new_fd] = get_track_target_name_map()[track_path];
+  // hbrodin: If POLYPATH is not set e.g. *, there is no info in the  get_track_target_name_map().
+  // When fopen is invoked, we end up here and need to update the name map as well to ensure
+  // consistent view of sources.
+  auto [name_info, _] = name_namp.emplace(track_path, std::make_pair(byte_start, byte_end));
+  get_track_target_fd_map()[new_fd] = name_info->second;
   get_fd_name_map()[new_fd] = track_path;
   // Store input if no taints have been specified/no input id has been created.
   if (get_target_sources().empty()) {
