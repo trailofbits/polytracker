@@ -3,9 +3,9 @@
 #include "polytracker/json.hpp"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
+#include "polytracker/polytracker.h"
 #include "polytracker/taint.h"
 #include "polytracker/write_taints.h"
-#include "polytracker/polytracker.h"
 #include <atomic>
 #include <fcntl.h>
 #include <fstream>
@@ -292,23 +292,26 @@ void polytracker_print_settings() {
   printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
 }
 
-static void storeBinaryMetadata(sqlite3* output_db) {
+static void storeBinaryMetadata(sqlite3 *output_db) {
   std::vector<uint8_t> data;
-  std::unique_ptr<FILE, decltype(&fclose)> fd(fopen("/proc/self/exe", "rb"), fclose); 
+  std::unique_ptr<FILE, decltype(&fclose)> fd(fopen("/proc/self/exe", "rb"),
+                                              fclose);
   fseek(fd.get(), 0, SEEK_END);
   long size = ftell(fd.get());
   assert(size > 0);
   auto data_size = static_cast<size_t>(size);
   fseek(fd.get(), 0, SEEK_SET);
-  data.reserve(data_size); // TODO (hbrodin): Is this guaranteed to work? is memory always allocated, should resize be used instead?
+  data.reserve(
+      data_size); // TODO (hbrodin): Is this guaranteed to work? is memory
+                  // always allocated, should resize be used instead?
   auto read_len = fread(data.data(), data_size, 1, fd.get());
   assert(read_len == 1u);
   storeBlob(output_db, data.data(), data_size);
 }
 
-
-void polytracker_start(func_mapping const* globals, uint64_t globals_count,
-                       block_mapping const* block_map, uint64_t block_map_count) {
+void polytracker_start(func_mapping const *globals, uint64_t globals_count,
+                       block_mapping const *block_map,
+                       uint64_t block_map_count) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
   DO_EARLY_DEFAULT_CONSTRUCT(fd_input_map_t, fd_input_map);
@@ -321,7 +324,8 @@ void polytracker_start(func_mapping const* globals, uint64_t globals_count,
   DO_EARLY_DEFAULT_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
   DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, track_target_map_lock);
 
-  // TODO (hbrodin): Pass these as arguments to storeBinaryMetadata instead of keeping global vars.
+  // TODO (hbrodin): Pass these as arguments to storeBinaryMetadata instead of
+  // keeping global vars.
   func_mappings = globals;
   func_mapping_count = globals_count;
 

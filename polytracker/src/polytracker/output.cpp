@@ -471,7 +471,8 @@ sqlite3 *db_init(const std::string &db_path) {
   const std::string db_name = db_path;
   sqlite3 *output_db;
   if (sqlite3_open(db_name.c_str(), &output_db)) {
-    std::cout << "Error! Could not open output db " << db_path << std::endl; // TODO (hbrodin): Remove std::cout 
+    std::cout << "Error! Could not open output db " << db_path
+              << std::endl; // TODO (hbrodin): Remove std::cout
     exit(1);
   }
   char *errorMessage;

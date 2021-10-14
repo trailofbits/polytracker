@@ -1,6 +1,6 @@
-#include "polytracker/early_construct.h"
 #include "polytracker/taint.h"
 #include "polytracker/dfsan_types.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include <iostream>
@@ -44,7 +44,8 @@ void checkMaxLabel(dfsan_label label) {
     return true;
   }
   const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
-  if (get_track_target_name_map().find(fd) != get_track_target_name_map().end()) {
+  if (get_track_target_name_map().find(fd) !=
+      get_track_target_name_map().end()) {
     return true;
   }
   return false;
@@ -64,7 +65,8 @@ void checkMaxLabel(dfsan_label label) {
 void closeSource(const std::string &fd) {
   if (!get_target_sources().empty()) {
     const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
-    if (get_track_target_name_map().find(fd) != get_track_target_name_map().end()) {
+    if (get_track_target_name_map().find(fd) !=
+        get_track_target_name_map().end()) {
       get_track_target_name_map().erase(fd);
     }
   }
@@ -96,10 +98,11 @@ void addInitialTaintSource(int fd, const int start, const int end,
 void addDerivedSource(std::string &track_path, const int &new_fd) {
   auto &name_namp = get_track_target_name_map();
   const std::lock_guard<std::mutex> guard(get_track_target_map_lock());
-  // hbrodin: If POLYPATH is not set e.g. *, there is no info in the  get_track_target_name_map().
-  // When fopen is invoked, we end up here and need to update the name map as well to ensure
-  // consistent view of sources.
-  auto [name_info, _] = name_namp.emplace(track_path, std::make_pair(byte_start, byte_end));
+  // hbrodin: If POLYPATH is not set e.g. *, there is no info in the
+  // get_track_target_name_map(). When fopen is invoked, we end up here and need
+  // to update the name map as well to ensure consistent view of sources.
+  auto [name_info, _] =
+      name_namp.emplace(track_path, std::make_pair(byte_start, byte_end));
   get_track_target_fd_map()[new_fd] = name_info->second;
   get_fd_name_map()[new_fd] = track_path;
   // Store input if no taints have been specified/no input id has been created.
@@ -174,14 +177,21 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
 
   // Range to taint give byte_start/end constraints. If byte_end < 0 we ignore
   // those constraints.
-  auto taint_offset_start = (byte_end < 0) ? offset : std::max(offset, byte_start);
-  auto taint_offset_end = (byte_end < 0) ? offset+len : std::min(offset+len, byte_end+1); // +1 since byte_end is inclusive
+  auto taint_offset_start =
+      (byte_end < 0) ? offset : std::max(offset, byte_start);
+  auto taint_offset_end =
+      (byte_end < 0) ? offset + len
+                     : std::min(offset + len,
+                                byte_end + 1); // +1 since byte_end is inclusive
   if (taint_offset_start >= taint_offset_end)
     return;
 
-  for (auto curr_offset = taint_offset_start; curr_offset < taint_offset_end; curr_offset++) {
+  for (auto curr_offset = taint_offset_start; curr_offset < taint_offset_end;
+       curr_offset++) {
     dfsan_label new_label = createCanonicalLabel(curr_offset, name);
-    dfsan_set_label(new_label, const_cast<char*>(mem+(curr_offset-taint_offset_start)), sizeof(char));
+    dfsan_set_label(
+        new_label, const_cast<char *>(mem + (curr_offset - taint_offset_start)),
+        sizeof(char));
 
     // Log that we tainted data within this function from a taint source etc.
     // logOperation(new_label);
@@ -189,8 +199,7 @@ void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                      ByteAccessType::READ_ACCESS);
   }
 
-  storeTaintedChunk(output_db, input_id, taint_offset_start,
-                    taint_offset_end);
+  storeTaintedChunk(output_db, input_id, taint_offset_start, taint_offset_end);
 }
 
 void logUnion(const dfsan_label &l1, const dfsan_label &l2,

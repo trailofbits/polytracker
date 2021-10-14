@@ -486,40 +486,48 @@ create_block_map(llvm::Module &mod,
   return global_structs;
 }
 
-
 /*
-Implements a constructor function that initializes polytracker before any C++ ctors get to run.
-Constructs a function resembling:
+Implements a constructor function that initializes polytracker before any C++
+ctors get to run. Constructs a function resembling:
 
 __attribute__((constructor)) void early_polytracker_start()
 {
-  __polytracker_start(array_of_functions, length(array_of_functions), array_of_blocks, length(array_of_blocks));
+  __polytracker_start(array_of_functions, length(array_of_functions),
+array_of_blocks, length(array_of_blocks));
 }
 */
-static void createStartPolytrackerCall(llvm::Module& mod, llvm::GlobalVariable* global, uint64_t global_count,
-                                   llvm::GlobalVariable* block_map, uint64_t block_count)
-{
+static void createStartPolytrackerCall(llvm::Module &mod,
+                                       llvm::GlobalVariable *global,
+                                       uint64_t global_count,
+                                       llvm::GlobalVariable *block_map,
+                                       uint64_t block_count) {
 
   auto &ctx = mod.getContext();
   // polytracker_start declaration
   auto i64_type = llvm::IntegerType::get(ctx, 64);
-  auto polytracker_start_type = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx),
-                                                        {global->getType(), i64_type, block_map->getType(), i64_type}, false);
+  auto polytracker_start_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(ctx),
+      {global->getType(), i64_type, block_map->getType(), i64_type}, false);
   auto polytracker_start_func =
       mod.getOrInsertFunction("__polytracker_start", polytracker_start_type);
 
   // Create the constructor function that will invoke __polytracker_start
-  auto early_start_type = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx),{}, false);
-  auto func = llvm::Function::Create(early_start_type, llvm::Function::InternalLinkage, "early_polytracker_start", mod);
-  BasicBlock* block = BasicBlock::Create(ctx, "entry", func);
+  auto early_start_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), {}, false);
+  auto func =
+      llvm::Function::Create(early_start_type, llvm::Function::InternalLinkage,
+                             "early_polytracker_start", mod);
+  BasicBlock *block = BasicBlock::Create(ctx, "entry", func);
   llvm::IRBuilder<> IRB(block);
 
-  llvm::Instruction *call = IRB.CreateCall(polytracker_start_func, {global, llvm::ConstantInt::get(i64_type, global_count), block_map, llvm::ConstantInt::get(i64_type, block_count)});
+  llvm::Instruction *call = IRB.CreateCall(
+      polytracker_start_func,
+      {global, llvm::ConstantInt::get(i64_type, global_count), block_map,
+       llvm::ConstantInt::get(i64_type, block_count)});
   IRB.CreateRetVoid();
 
   llvm::appendToGlobalCtors(mod, func, 0);
 }
-
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (ignore_file_path.getNumOccurrences()) {
@@ -618,12 +626,11 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   llvm::GlobalVariable *block_map = create_block_map(mod, block_type_map);
 
   // Prepare function calls to report on the function/block to id mappings
-  createStartPolytrackerCall(mod, global, func_index_map.size(), block_map, block_type_map.size());
+  createStartPolytrackerCall(mod, global, func_index_map.size(), block_map,
+                             block_type_map.size());
 
   return true;
 }
-
-
 
 char PolytrackerPass::ID = 0;
 

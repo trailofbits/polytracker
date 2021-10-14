@@ -1,6 +1,6 @@
 //#include "dfsan/dfsan.h"
-#include "polytracker/early_construct.h"
 #include "polytracker/taint_sources.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/polytracker.h"

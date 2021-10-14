@@ -28,13 +28,12 @@ auto getSourceName(const int &fd) -> std::string &;
 [[nodiscard]] bool isTrackingSource(const std::string &fd);
 [[nodiscard]] bool isTrackingSource(const int &fd);
 
-
-
 // This map associates with derived sources to initial names
 using fd_name_map_t = std::unordered_map<int, std::string>;
 
 // This map associates initial sources with their range
-using track_target_name_map_t = std::unordered_map<std::string, std::pair<int, int>>;
+using track_target_name_map_t =
+    std::unordered_map<std::string, std::pair<int, int>>;
 
 // This map associates derived sources with their range
 using track_target_fd_map_t = std::unordered_map<int, std::pair<int, int>>;
