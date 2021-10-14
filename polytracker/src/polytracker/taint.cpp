@@ -171,36 +171,26 @@ createCanonicalLabel(const int file_byte_offset, std::string &name) {
  */
 void taintTargetRange(const char *mem, int offset, int len, int byte_start,
                       int byte_end, std::string &name) {
-  int curr_byte_num = offset;
-  int taint_offset_start = -1, taint_offset_end = -1;
-  bool processed_bytes = false;
-  // Iterate through the memory region marked as tatinted by [base + start, base
-  // + end]
-  for (char *curr_byte = (char *)mem; curr_byte_num < offset + len;
-       curr_byte_num++, curr_byte++) {
-    // If byte end is < 0, then we don't care about ranges.
-    if (byte_end < 0 ||
-        (curr_byte_num >= byte_start && curr_byte_num <= byte_end)) {
-      dfsan_label new_label = createCanonicalLabel(curr_byte_num, name);
-      dfsan_set_label(new_label, curr_byte, sizeof(char));
 
-      // Log that we tainted data within this function from a taint source etc.
-      // logOperation(new_label);
-      storeTaintAccess(output_db, new_label, input_id,
-                       ByteAccessType::READ_ACCESS);
-      if (taint_offset_start == -1) {
-        taint_offset_start = curr_byte_num;
-        taint_offset_end = curr_byte_num;
-      } else if (curr_byte_num > taint_offset_end) {
-        taint_offset_end = curr_byte_num;
-      }
-      processed_bytes = true;
-    }
+  // Range to taint give byte_start/end constraints. If byte_end < 0 we ignore
+  // those constraints.
+  auto taint_offset_start = (byte_end < 0) ? offset : std::max(offset, byte_start);
+  auto taint_offset_end = (byte_end < 0) ? offset+len : std::min(offset+len, byte_end+1); // +1 since byte_end is inclusive
+  if (taint_offset_start >= taint_offset_end)
+    return;
+
+  for (auto curr_offset = taint_offset_start; curr_offset < taint_offset_end; curr_offset++) {
+    dfsan_label new_label = createCanonicalLabel(curr_offset, name);
+    dfsan_set_label(new_label, const_cast<char*>(mem+(curr_offset-taint_offset_start)), sizeof(char));
+
+    // Log that we tainted data within this function from a taint source etc.
+    // logOperation(new_label);
+    storeTaintAccess(output_db, new_label, input_id,
+                     ByteAccessType::READ_ACCESS);
   }
-  if (processed_bytes) {
-    storeTaintedChunk(output_db, input_id, taint_offset_start,
-                      taint_offset_end);
-  }
+
+  storeTaintedChunk(output_db, input_id, taint_offset_start,
+                    taint_offset_end);
 }
 
 void logUnion(const dfsan_label &l1, const dfsan_label &l2,
