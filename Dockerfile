@@ -14,7 +14,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       vim                                             \
       gdb                                             \
       sqlite3                                         \
-      libncurses5-dev
+      libncurses5-dev                                 \
+      apt-transport-https                             \
+      ca-certificates
+RUN update-ca-certificates
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
 RUN python3 -m pip install pip && python3 -m pip install pytest
