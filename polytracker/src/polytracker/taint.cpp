@@ -16,6 +16,7 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
+
 DECLARE_EARLY_CONSTRUCT(new_table_t, new_table);
 DECLARE_EARLY_CONSTRUCT(std::mutex, new_table_lock);
 DECLARE_EARLY_CONSTRUCT(fd_name_map_t, fd_name_map);
@@ -27,6 +28,7 @@ EARLY_CONSTRUCT_EXTERN_GETTER(std::unordered_set<std::string>, target_sources);
 
 extern sqlite3 *output_db;
 extern input_id_t input_id;
+
 extern uint64_t byte_start;
 extern uint64_t byte_end;
 extern bool polytracker_trace;
