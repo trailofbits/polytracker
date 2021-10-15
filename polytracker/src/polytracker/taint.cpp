@@ -16,7 +16,6 @@
 extern decay_val taint_node_ttl;
 #define TAINT_GRANULARITY 1
 
-
 DECLARE_EARLY_CONSTRUCT(new_table_t, new_table);
 DECLARE_EARLY_CONSTRUCT(std::mutex, new_table_lock);
 DECLARE_EARLY_CONSTRUCT(fd_name_map_t, fd_name_map);
