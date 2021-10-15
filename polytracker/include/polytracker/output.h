@@ -3,6 +3,7 @@
 #include "polytracker/dfsan_types.h"
 #include <sqlite3.h>
 #include <string>
+#include <unordered_map>
 // #include "polytracker/logging.h"
 typedef uint32_t input_id_t;
 typedef uint32_t function_id_t;
@@ -10,6 +11,7 @@ typedef uint32_t block_id_t;
 typedef uint32_t block_entry_count_t;
 typedef uint64_t global_id_t;
 typedef uint64_t event_id_t;
+using fd_input_map_t = std::unordered_map<int, input_id_t>;
 
 // Powers of 2 with 0 being unknown
 enum class ByteAccessType : uint8_t {

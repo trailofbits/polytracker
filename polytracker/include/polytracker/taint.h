@@ -29,12 +29,14 @@ auto getSourceName(const int &fd) -> std::string &;
 [[nodiscard]] bool isTrackingSource(const int &fd);
 
 // This map associates with derived sources to initial names
-extern std::unordered_map<int, std::string> fd_name_map;
-// This map associates initial sources with their range
-extern std::unordered_map<std::string, std::pair<int, int>>
-    track_target_name_map;
-// This map associates derived sources with their range
-extern std::unordered_map<int, std::pair<int, int>> track_target_fd_map;
-extern std::mutex track_target_map_lock;
+using fd_name_map_t = std::unordered_map<int, std::string>;
 
+// This map associates initial sources with their range
+using track_target_name_map_t =
+    std::unordered_map<std::string, std::pair<int, int>>;
+
+// This map associates derived sources with their range
+using track_target_fd_map_t = std::unordered_map<int, std::pair<int, int>>;
+
+using new_table_t = std::unordered_map<uint64_t, atomic_dfsan_label>;
 #endif

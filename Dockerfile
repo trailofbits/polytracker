@@ -9,6 +9,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       python3-pip                                     \
       python3.8-dev                                   \
       libgraphviz-dev                                 \
+      libjpeg-dev                                     \
       graphviz										  \
       libsqlite3-dev                                  \
       vim                                             \

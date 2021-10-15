@@ -24,9 +24,6 @@
 
 #endif
 
-void polytracker_end();
-void polytracker_start();
-
 // Mapping from function name to id, created by polytracker-pass
 struct func_mapping {
   char *func_name;
@@ -38,6 +35,11 @@ struct block_mapping {
   uint64_t func_bb;
   uint8_t btype;
 };
+
+void polytracker_end();
+void polytracker_start(func_mapping const *globals, uint64_t globals_count,
+                       block_mapping const *block_map,
+                       uint64_t block_map_count);
 
 extern const func_mapping *func_mappings;
 extern uint64_t func_mapping_count;

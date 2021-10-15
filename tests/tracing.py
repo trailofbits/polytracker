@@ -59,6 +59,7 @@ def validate_execute_target(
     config_path: Optional[Union[str, Path]],
     input_bytes: Optional[bytes] = None,
     return_exceptions: bool = False,
+    taint_all: bool = False
 ) -> Union[ProgramTrace, CalledProcessError]:
     target_bin_path = BUILD_DIR / f"{target_name}.bin"
     if CAN_RUN_NATIVELY:
@@ -75,6 +76,8 @@ def validate_execute_target(
         input_path = to_native_path(tmp_input_file.name)
         tmp_input_file.close()
     env = {"POLYPATH": input_path, "POLYDB": to_native_path(db_path), "POLYTRACE": "1", "POLYFUNC": "1"}
+    if taint_all:
+        del env["POLYPATH"]
     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
     if config_path is not None:
         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
@@ -126,10 +129,15 @@ def program_trace(request):
             raise ValueError(f"Invalid input argument: {input_val!r}")
     else:
         input_bytes = None
+    if "taint_all" in marker.kwargs and marker.kwargs["taint_all"] == True:
+        taint_all = True
+    else:
+        taint_all = False
+    
     return_exceptions = "return_exceptions" in marker.kwargs and marker.kwargs["return_exceptions"]
 
     assert polyclang_compile_target(target_name) == 0
 
     return validate_execute_target(
-        target_name, config_path=config_path, input_bytes=input_bytes, return_exceptions=return_exceptions
+        target_name, config_path=config_path, input_bytes=input_bytes, return_exceptions=return_exceptions, taint_all=taint_all
     )

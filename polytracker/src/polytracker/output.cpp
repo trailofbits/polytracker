@@ -373,7 +373,7 @@ void storeBlob(sqlite3 *output_db, void *blob, int size) {
     storeBlock(output_db, func_id, block_id, bm->btype);
   }
 
-  std::cout << "Done storing compile-time artifacts" << std::endl;
+  printf("Done storing compile-time artifacts\n");
 }
 
 void storeBlockEntry(sqlite3 *output_db, const input_id_t &input_id,
@@ -471,7 +471,8 @@ sqlite3 *db_init(const std::string &db_path) {
   const std::string db_name = db_path;
   sqlite3 *output_db;
   if (sqlite3_open(db_name.c_str(), &output_db)) {
-    std::cout << "Error! Could not open output db " << db_path << std::endl;
+    std::cout << "Error! Could not open output db " << db_path
+              << std::endl; // TODO (hbrodin): Remove std::cout
     exit(1);
   }
   char *errorMessage;
