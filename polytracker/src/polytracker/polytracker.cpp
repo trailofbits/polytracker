@@ -12,6 +12,12 @@ extern bool polytracker_trace;
 extern thread_local FunctionStack function_stack;
 extern sqlite3 *output_db;
 
+const func_mapping *func_mappings;
+uint64_t func_mapping_count;
+
+const block_mapping *block_mappings;
+uint64_t block_mapping_count;
+
 // extern std::atomic_bool done;
 
 extern "C" void __polytracker_log_taint_op(dfsan_label arg1, dfsan_label arg2,
@@ -121,7 +127,26 @@ extern "C" void __polytracker_log_union(const dfsan_label &l1,
 
 extern "C" int __polytracker_size() { return function_stack.size(); }
 
-extern "C" void __polytracker_start() { polytracker_start(); }
+extern "C" void __polytracker_start(func_mapping const *globals,
+                                    uint64_t globals_count,
+                                    block_mapping const *block_map,
+                                    uint64_t block_map_count) {
+  polytracker_start(globals, globals_count, block_map, block_map_count);
+}
+
+extern "C" void
+__polytracker_store_function_mapping(const func_mapping *func_map,
+                                     uint64_t *count) {
+  func_mappings = func_map;
+  func_mapping_count = *count;
+}
+
+extern "C" void
+__polytracker_store_block_mapping(const block_mapping *block_map,
+                                  uint64_t *count) {
+  block_mappings = block_map;
+  block_mapping_count = *count;
+}
 
 extern "C" void __polytracker_store_blob(char **argv) {
   const char *current_prog = argv[0];
@@ -146,9 +171,12 @@ extern "C" void dfs$__polytracker_log_call_exit(uint32_t func_index,
 // These two dfs$ functions exist for testing
 // If polytracker-llvm needs an update but it's too time consuming to
 // rebuild/wait
-extern "C" void dfs$__polytracker_start() {
+extern "C" void dfs$__polytracker_start(func_mapping const *globals,
+                                        uint64_t globals_count,
+                                        block_mapping const *block_map,
+                                        uint64_t block_map_count) {
   fprintf(stderr, "WARNING Using instrumented internal start func\n");
-  __polytracker_start();
+  __polytracker_start(globals, globals_count, block_map, block_map_count);
 }
 extern "C" int dfs$__polytracker_size() {
   fprintf(stderr, "WARNING Using instrumented internal size func\n");

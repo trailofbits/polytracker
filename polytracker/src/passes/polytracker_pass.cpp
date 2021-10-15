@@ -267,15 +267,6 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   bb_index_t bb_index = 0;
 
-  std::string fname = f->getName().str();
-  if (fname == "main") {
-    llvm::Instruction *call = IRB.CreateCall(polytracker_start, {});
-    IRB.SetInsertPoint(call->getNextNode());
-    auto val = f->getArg(1);
-    llvm::Instruction *store_prog_call = IRB.CreateCall(store_blob, {val});
-    // IRB.SetInsertPoint(call->getNextNode());
-  }
-
   // Instance variable, changes everytime we visit a new function
   // this creates a call on function entry which stores the current function
   // stack size after pushing down the item so the entrypoint of a program,
@@ -310,11 +301,6 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   this->mod = &mod;
   llvm::LLVMContext &context = mod.getContext();
   shadow_type = llvm::IntegerType::get(context, this->shadow_width);
-
-  auto polytracker_start_fn_ty =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(context), {}, false);
-  polytracker_start =
-      mod.getOrInsertFunction("__polytracker_start", polytracker_start_fn_ty);
 
   // Return type, arg types, is vararg
   auto taint_log_fn_ty = llvm::FunctionType::get(
@@ -439,6 +425,8 @@ static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
     auto new_const = llvm::ConstantInt::get(int8_ty, str[i]);
     vals.push_back(new_const);
   }
+  auto null_const = llvm::ConstantInt::get(int8_ty, 0);
+  vals.push_back(null_const);
   auto int8ptr_ty = llvm::IntegerType::getInt8PtrTy(mod.getContext());
   auto init = llvm::ConstantArray::get(arr_ty, vals);
   // Not int8_ptr, arr_ty
@@ -496,6 +484,49 @@ create_block_map(llvm::Module &mod,
       llvm::ConstantArray::get(arr_type, const_structs), "block_index_map");
 
   return global_structs;
+}
+
+/*
+Implements a constructor function that initializes polytracker before any C++
+ctors get to run. Constructs a function resembling:
+
+__attribute__((constructor)) void early_polytracker_start()
+{
+  __polytracker_start(array_of_functions, length(array_of_functions),
+array_of_blocks, length(array_of_blocks));
+}
+*/
+static void createStartPolytrackerCall(llvm::Module &mod,
+                                       llvm::GlobalVariable *global,
+                                       uint64_t global_count,
+                                       llvm::GlobalVariable *block_map,
+                                       uint64_t block_count) {
+
+  auto &ctx = mod.getContext();
+  // polytracker_start declaration
+  auto i64_type = llvm::IntegerType::get(ctx, 64);
+  auto polytracker_start_type = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(ctx),
+      {global->getType(), i64_type, block_map->getType(), i64_type}, false);
+  auto polytracker_start_func =
+      mod.getOrInsertFunction("__polytracker_start", polytracker_start_type);
+
+  // Create the constructor function that will invoke __polytracker_start
+  auto early_start_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), {}, false);
+  auto func =
+      llvm::Function::Create(early_start_type, llvm::Function::InternalLinkage,
+                             "early_polytracker_start", mod);
+  BasicBlock *block = BasicBlock::Create(ctx, "entry", func);
+  llvm::IRBuilder<> IRB(block);
+
+  llvm::Instruction *call = IRB.CreateCall(
+      polytracker_start_func,
+      {global, llvm::ConstantInt::get(i64_type, global_count), block_map,
+       llvm::ConstantInt::get(i64_type, block_count)});
+  IRB.CreateRetVoid();
+
+  llvm::appendToGlobalCtors(mod, func, 0);
 }
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
@@ -588,25 +619,16 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
   }
   std::cerr << std::endl;
+
+  // Store function/block to id mappings (and corresponding counts) as global
+  // variables
   llvm::GlobalVariable *global = create_globals(mod, func_index_map);
   llvm::GlobalVariable *block_map = create_block_map(mod, block_type_map);
-  for (auto &func : mod) {
-    if (func.hasName() && func.getName().str() == "main") {
-      llvm::BasicBlock &bb = func.getEntryBlock();
-      llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
-      llvm::IRBuilder<> IRB(&insert_point);
 
-      llvm::Value *save_map = IRB.CreateCall(
-          preserve_map,
-          IRB.CreateBitOrPointerCast(
-              global, llvm::Type::getInt8PtrTy(mod.getContext())));
-      llvm::Value *save_block_map = IRB.CreateCall(
-          preserve_map,
-          IRB.CreateBitOrPointerCast(
-              block_map, llvm::Type::getInt8PtrTy(mod.getContext())));
-    }
-  }
-  // auto it = global->getIterator();
+  // Prepare function calls to report on the function/block to id mappings
+  createStartPolytrackerCall(mod, global, func_index_map.size(), block_map,
+                             block_type_map.size());
+
   return true;
 }
 

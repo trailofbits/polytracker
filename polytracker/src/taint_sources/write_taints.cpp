@@ -1,4 +1,5 @@
 #include "polytracker/dfsan_types.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include <iostream>
@@ -19,7 +20,7 @@ inline const dfsan_label *shadow_for(const void *ptr) {
 ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
 */
 extern sqlite3 *output_db;
-extern std::unordered_map<int, input_id_t> fd_input_map;
+EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
 
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
@@ -28,7 +29,7 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
                                 dfsan_label *ret_label) {
   auto current_offset = lseek(fd, 0, SEEK_CUR);
   auto write_count = write(fd, buf, count);
-  if (auto &input_id = fd_input_map[fd]) {
+  if (auto &input_id = get_fd_input_map()[fd]) {
     storeTaintedOutputChunk(output_db, input_id, current_offset,
                             current_offset + write_count);
     for (auto i = 0; i < write_count; i++) {

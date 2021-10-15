@@ -1,5 +1,6 @@
 //#include "dfsan/dfsan.h"
 #include "polytracker/taint_sources.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/polytracker.h"
@@ -32,7 +33,7 @@
 #endif
 
 extern sqlite3 *output_db;
-extern std::unordered_map<int, input_id_t> fd_input_map;
+EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
@@ -60,7 +61,7 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
     // create a new input, range is 0->0 as we arent tracking anything for now.
     // just need this input id in the database, todo, could be output id
     auto input_id = storeNewInput(output_db, path, 0, 0, 0);
-    fd_input_map[fd] = input_id;
+    get_fd_input_map()[fd] = input_id;
   }
   *ret_label = 0;
   return fd;
