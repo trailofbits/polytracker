@@ -444,7 +444,7 @@ EXT_C_FUNC int __dfsw_munmap(void *addr, size_t length, dfsan_label addr_label,
 }
 
 EXT_C_FUNC int __dfsw__putc(int __c, FILE *__fp, dfsan_label c_label,
-                               dfsan_label fp_label, dfsan_label *ret_label) {
+                            dfsan_label fp_label, dfsan_label *ret_label) {
   *ret_label = 0;
   return putc(__c, __fp);
 }
