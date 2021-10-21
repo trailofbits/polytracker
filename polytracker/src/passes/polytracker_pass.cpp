@@ -38,6 +38,11 @@ static llvm::cl::opt<int> file_id(
     llvm::cl::desc(
         "When specified, adds a file id to the function_ids in the module"));
 
+static llvm::cl::opt<bool> no_control_flow_tracking(
+    "no-control-flow-tracking",
+    llvm::cl::desc(
+        "When specified, do not instrument for control flow tracking"));
+
 namespace polytracker {
 
 static bool op_check(llvm::Value *inst) {
