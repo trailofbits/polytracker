@@ -1,0 +1,3 @@
+[submodule "third_party/run-clang-format"]
+	path = third_party/run-clang-format
+	url = https://github.com/Sarcasm/run-clang-format.git

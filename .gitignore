@@ -1,0 +1,8 @@
+/build
+*~
+.cmake_init
+.venv
+__pycache__
+.mypy_cache
+.DS_Store
+/Default/
