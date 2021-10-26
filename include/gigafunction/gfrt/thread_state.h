@@ -7,7 +7,9 @@ namespace gigafunction {
   // Represent the storage used per thread for tracking basic block execution
   template<size_t N>
   struct thread_state {
-    using log_buffer_t = spsc_buffer<block_id, N>;
+    // Assumption: Reader thread will very seldom spin, only write threads
+    // Add a spin policy to the write threads to yield after 1000 spins
+    using log_buffer_t = spsc_buffer<block_id, N, gigafunction::spin_policies::none, gigafunction::spin_policies::yield_after_n_iter<1000>>;
     thread_id id;
 
     // To chain thread_states 

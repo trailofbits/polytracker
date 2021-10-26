@@ -9,9 +9,30 @@
 
 namespace gigafunction {
 
+namespace spin_policies {
+
+struct none {
+  // First time we start to spin, could be use to e.g. reset a counter
+  void initial_spin() {}
+
+  // Any spin iteration after inital
+  void spin() {}
+};
+
+template<size_t N>
+struct yield_after_n_iter {
+  // No need to have an atomic since spin always happens in the same thread
+  size_t counter;
+  void initial_spin() { counter = 0; }
+  void spin() { if (counter++ > N) sched_yield(); }
+};
+
+}
+
 
 // A very simple single producer single consumer lock free bounded buffer
-template<typename T, size_t N>
+// WS is the WriteSpinner, RS is the ReadSpinner
+template<typename T, size_t N, typename RS=spin_policies::none, typename WS=spin_policies::none>
 class spsc_buffer {
   static_assert(N > 2, "N must be larger than two");
   // TODO (hbrodin): Could allow copy-constructible as well. Just fix the get-functions.
@@ -46,11 +67,14 @@ private:
   aligned_storage_t buf_[N];
   std::atomic<size_t> write_{0};
   std::atomic<size_t> read_{0};
+
+  RS rs_;
+  WS ws_;
 };
 
 
-template<typename T, size_t N>
-size_t spsc_buffer<T,N>::wrapping_increment(size_t val) const {
+template<typename T, size_t N, typename RS, typename WS>
+size_t spsc_buffer<T,N,RS,WS>::wrapping_increment(size_t val) const {
   // If power of two N faster wrap
   if constexpr((N & (N-1)) == 0) {
     return (val + 1) & (N-1);
@@ -59,24 +83,28 @@ size_t spsc_buffer<T,N>::wrapping_increment(size_t val) const {
   }
 }
 
-template<typename T, size_t N>
-bool spsc_buffer<T,N>::empty() const {
+template<typename T, size_t N, typename RS, typename WS>
+bool spsc_buffer<T,N,RS,WS>::empty() const {
   return write_.load(std::memory_order_relaxed) == read_.load(std::memory_order_relaxed);
 }
 
-template<typename T, size_t N>
-bool spsc_buffer<T,N>::full() const {
+template<typename T, size_t N, typename RS, typename WS>
+bool spsc_buffer<T,N,RS,WS>::full() const {
   return wrapping_increment(write_.load(std::memory_order_relaxed)) == read_.load(std::memory_order_relaxed);
 }
 
-template<typename T, size_t N>
+template<typename T, size_t N, typename RS, typename WS>
 template<typename U>
-void spsc_buffer<T,N>::put(U&& u) {
+void spsc_buffer<T,N,RS,WS>::put(U&& u) {
   auto write = write_.load(std::memory_order_relaxed);
   auto next = wrapping_increment(write);
   // While queue full (synchronizes with read_ release in get)
-  while (next == read_.load(std::memory_order_acquire)) {} // Currently just spinning, consider yielding (perhaps via policy).
-  // TODO (hbrodin): See busy loop in get as well.
+  if (next == read_.load(std::memory_order_acquire)) { // TODO (hbrodin): Add unlikely?
+    ws_.initial_spin();
+    while (next == read_.load(std::memory_order_acquire)) {
+      ws_.spin();
+    } 
+  }
 
   // Construct
   ::new (&buf_[write]) T(std::forward<U>(u));
@@ -84,11 +112,16 @@ void spsc_buffer<T,N>::put(U&& u) {
   write_.store(next, std::memory_order_release);
 }
 
-template<typename T, size_t N>
-T spsc_buffer<T,N>::get() {
+template<typename T, size_t N, typename RS, typename WS>
+T spsc_buffer<T,N,RS,WS>::get() {
   auto read = read_.load(std::memory_order_relaxed);
   // While queue empty (synchronizes with write_ release in put)
-  while (read == write_.load(std::memory_order_acquire)) {} // TODO (hbrodin): Might be able to speed up with a relaxed load in the loop and an acquire load after...
+  if (read == write_.load(std::memory_order_acquire)) {
+    rs_.initial_spin();
+    while (read == write_.load(std::memory_order_acquire)) {// TODO (hbrodin): Might be able to speed up with a relaxed load in the loop and an acquire load after...
+      rs_.spin();
+    }
+  }
   // Move from/destroy in-buffer value
   T t = std::move(reinterpret_cast<T&>(buf_[read]));
   reinterpret_cast<T&>(buf_[read]).~T();
@@ -98,8 +131,8 @@ T spsc_buffer<T,N>::get() {
   return t;
 }
 
-template<typename T, size_t N>
-std::optional<T> spsc_buffer<T,N>::try_get() {
+template<typename T, size_t N, typename RS, typename WS>
+std::optional<T> spsc_buffer<T,N,RS,WS>::try_get() {
   auto read = read_.load(std::memory_order_relaxed);
   // If queue empty (synchronizes with write_ release in put)
   if (read == write_.load(std::memory_order_acquire))
@@ -113,8 +146,8 @@ std::optional<T> spsc_buffer<T,N>::try_get() {
   return t;
 }
 
-template<typename T, size_t N>
-size_t spsc_buffer<T,N>::get_n(T* dst, size_t n) {
+template<typename T, size_t N, typename RS, typename WS>
+size_t spsc_buffer<T,N,RS,WS>::get_n(T* dst, size_t n) {
   auto read = read_.load(std::memory_order_relaxed);
   auto write = write_.load(std::memory_order_acquire);
 
@@ -168,6 +201,7 @@ size_t spsc_buffer<T,N>::get_n(aligned_storage_t (&dst)[DstLen]) {
 }
 
 #endif
+
 
 }
 
