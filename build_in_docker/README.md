@@ -14,3 +14,11 @@ correct path to the PolyTracker root directory.
 
 The script will build a Docker container for compiling PolyTracker (if necessary), and then mount the root
 directory of this repo so all build artifacts will be in the `../build` directory.
+
+# Debugging from Docker in CLion
+
+Run:
+
+```console
+$ ./run_clion.sh
+```
