@@ -1,5 +1,5 @@
-#ifndef GIGAFUNC_TRACEBASICBLOCKS_H
-#define GIGAFUNC_TRACEBASICBLOCKS_H
+#ifndef GIGAFUNC_INSTRUMENT_BASIC_BLOCKS_H
+#define GIGAFUNC_INSTRUMENT_BASIC_BLOCKS_H
 
 #include <llvm/IR/PassManager.h>
 
@@ -9,12 +9,10 @@
 namespace gigafunction {
 
 
-  class BasicBlocksTracePass : public llvm::PassInfoMixin<BasicBlocksTracePass> {
+  class InstrumentBasicBlocksPass : public llvm::PassInfoMixin<InstrumentBasicBlocksPass> {
   public:
     llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &AM);
 
-  private:
-    block_id counter_;
   };
 
 }
