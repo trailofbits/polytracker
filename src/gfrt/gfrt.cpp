@@ -55,7 +55,7 @@ void start_consumer_thread() {
     gigafunction::block_id bid[max_consume];
     for (;;) {
       tstate* prev{nullptr};
-      for (auto ts = thread_states.load(std::memory_order_acquire);ts;ts = ts->next) {
+      for (auto ts = thread_states.load(std::memory_order_acquire);ts;) {
 
         auto n_consumed = ts->block_trace.get_n(bid, max_consume);
         // TODO (hbrodin): Here is where we would output the basic block trace to db/file/...
@@ -72,8 +72,10 @@ void start_consumer_thread() {
 
           // reclaim memory
           delete ts;
+          ts = prev->next;
         } else {
           prev = ts;
+          ts = ts->next;
         }
       }
       // TODO: Yield? Check is work was done? Probably no need to yield (this will be the slow thread)
