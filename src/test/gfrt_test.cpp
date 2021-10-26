@@ -1,4 +1,4 @@
-#include "gigafunction/librt/tracelib.h"
+#include "gigafunction/gfrt/tracelib.h"
 
 #include <list>
 #include <thread>
@@ -65,7 +65,7 @@ void short_lived_threads() {
 
 int main() {
   printf("Run para\n");
-  //run_parallell_threads();
+  run_parallell_threads();
 
   printf("Run short lived\n");
   short_lived_threads();

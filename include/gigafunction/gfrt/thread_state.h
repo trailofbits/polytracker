@@ -1,5 +1,5 @@
 #include <atomic>
-#include "gigafunction/librt/spsc_buffer.h"
+#include "gigafunction/gfrt/spsc_buffer.h"
 #include "gigafunction/types.h"
 
 namespace gigafunction {

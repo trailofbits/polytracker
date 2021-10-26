@@ -1,5 +1,5 @@
-#include "gigafunction/librt/tracelib.h"
-#include "gigafunction/librt/thread_state.h"
+#include "gigafunction/gfrt/tracelib.h"
+#include "gigafunction/gfrt/thread_state.h"
 #include <atomic>
 #include <cstddef>
 #include <thread>
