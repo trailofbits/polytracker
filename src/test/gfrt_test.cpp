@@ -7,7 +7,8 @@
 namespace {
 
 constexpr size_t num_shortlived_threads = 100000;
-constexpr size_t loop_iterations = 1024*1024;
+//constexpr size_t loop_iterations = 1024*1024;
+constexpr size_t loop_iterations = 1024;
 constexpr size_t num_function_enter = 100;
 constexpr size_t num_block_enter_per_function = 14;
 
@@ -69,5 +70,5 @@ int main() {
 
   printf("Run short lived\n");
   short_lived_threads();
-
+  // TODO: Clean up after test? Generates a large gigafunctrace.log file.
 }

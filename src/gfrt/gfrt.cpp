@@ -2,12 +2,13 @@
 #include "gigafunction/gfrt/thread_state.h"
 #include <atomic>
 #include <cstddef>
+#include <cstdio>
 #include <thread>
 
 namespace {
 // Can log 8192 (or 8191 due to impl details) basic block entries before
 // blocking a thread
-constexpr size_t LOG_CAPACITY = 8192;
+constexpr uint32_t LOG_CAPACITY = 8192;
 
 using tstate = gigafunction::thread_state<LOG_CAPACITY>;
 std::atomic<tstate *> thread_states;
@@ -42,31 +43,63 @@ tstate *create_thread_state() {
       ts->next, ts, std::memory_order_relaxed, std::memory_order_relaxed)) {
   }
   //release_ts.val;
-  printf("Create function state for threadid: %llu\n", ts->id);
+  printf("Create function state for threadid: %u\n", ts->id);
   return ts;
 }
+
+// Output filename for runtime trace. Filename is default 'gigafunctrace.log',
+// but can be customized via GIGAFUNC_TRACE_OUTPUT environment variable
+static char const *get_output_filename() {
+  char const *fn = getenv("GIGAFUNC_TRACE_OUTPUT");
+  if (!fn)
+    fn = "gigafunctrace.log";
+  return fn;
+}
+
+using output_fd = std::unique_ptr<FILE, decltype(&::fclose)>;
+output_fd get_output_fd() {
+  output_fd fd{::fopen(get_output_filename(), "w"), &::fclose };
+  if (!fd.get()) {
+    printf("Failed to open file: %s. Abort.\n", get_output_filename());
+    abort();
+  }
+  return fd;
+}
+
+
 
 __attribute__((constructor))
 void start_consumer_thread() {
   std::thread([]() {
-    // Consume at most 1024 events before moving to different thread
+
+    // Output file descriptor
+    auto log_fd = get_output_fd();
+
+    // Consume at most LOG_CAPACITY events before moving to different thread
     // ensures we do not get stuck on a single thread.
-    const size_t max_consume = 1024;
-    gigafunction::block_id bid[max_consume];
+    gigafunction::block_id bid[LOG_CAPACITY];
+
+    using output_pair = std::pair<gigafunction::thread_id, gigafunction::block_id>;
+    output_pair output_buffer[LOG_CAPACITY];
+
     for (;;) {
       tstate* prev{nullptr};
       for (auto ts = thread_states.load(std::memory_order_acquire);ts;) {
 
-        auto n_consumed = ts->block_trace.get_n(bid, max_consume);
-        // TODO (hbrodin): Here is where we would output the basic block trace to db/file/...
+        auto n_consumed = ts->block_trace.get_n(bid, LOG_CAPACITY);
+        // TOOD (hbrodin): Do proper output serialization to ensure robustness/platform independence.
+        // Consider varint representation to get more compact output.
 
+        fwrite(&ts->id, sizeof(ts->id), 1, log_fd.get());
+        fwrite(&n_consumed, sizeof(LOG_CAPACITY), 1, log_fd.get());
+        fwrite(bid, sizeof(gigafunction::block_id), n_consumed, log_fd.get());
 
         // If the thread state is done, we consumed all blocks and the thread state is not the current head
         // we unlink it and reclaim the memory. The reason we dont' reclaim current head is that it makes things
         // simpler, since we are the only ones traversing the list. But many compete for head.
         // TODO (hbrodin): It is probably not that hard to make it work for head as well...
-        if (prev && ts->done.load(std::memory_order_relaxed) && ts->block_trace.empty()) {
-          printf("Remove thread: %lld\n", ts->id);
+        if (prev && ts->done.load(std::memory_order_relaxed) == 1 && ts->block_trace.empty()) {
+          printf("Remove thread: %u\n", ts->id);
           // unlink
           prev->next = ts->next;
 

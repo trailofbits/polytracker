@@ -5,8 +5,8 @@
 namespace gigafunction {
 
 using thread_state_handle = void*;
-using thread_id = uint64_t;
-using block_id = uint64_t;
+using thread_id = uint32_t;
+using block_id = uint32_t;
 
 } // namespace gigafunction
 
