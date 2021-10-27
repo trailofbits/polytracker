@@ -1,0 +1,61 @@
+FROM ubuntu:bionic AS sources
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN mkdir -p /sources
+
+WORKDIR /sources
+
+RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
+
+RUN git clone --recursive git://git.ghostscript.com/mupdf.git
+WORKDIR /sources/mupdf
+RUN git submodule update --init
+
+FROM trailofbits/polytracker
+MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+
+WORKDIR /
+
+COPY --from=sources /sources /sources
+
+WORKDIR /sources/mupdf
+RUN git checkout d00de0e96a4a5ec90ffc30837d40cd624a6a89e0
+
+ARG UID=1001
+ARG GID=1001
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get install -y \
+    ssh \
+    rsync \
+    tar \
+    && apt-get clean
+
+RUN ( \
+    echo 'LogLevel DEBUG2'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+  ) > /etc/ssh/sshd_config_mutool \
+  && mkdir /run/sshd
+
+RUN groupadd -r --gid $GID user \
+ && useradd --no-log-init --create-home -g user -r --uid $UID user \
+ && yes password | passwd user \
+ && mkdir -p /etc/sudoers.d \
+ && echo "user ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/user \
+ && chmod 0440 /etc/sudoers.d/user
+
+WORKDIR /sources/mupdf
+RUN make -j$(($(nproc)+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
+WORKDIR /sources/mupdf/build/debug
+RUN get-bc -b mutool
+
+WORKDIR /
+
+COPY scripts/compile_mupdf.sh /
+
+CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_mutool"]
+
+ENV LLVM_DIR=/polytracker-llvm/llvm
