@@ -1,5 +1,6 @@
 #include "gigafunction/gfrt/tracelib.h"
 #include "gigafunction/gfrt/thread_state.h"
+#include "gigafunction/traceio/trace_writer.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdio>
@@ -42,8 +43,6 @@ tstate *create_thread_state() {
   while (!thread_states.compare_exchange_weak(
       ts->next, ts, std::memory_order_relaxed, std::memory_order_relaxed)) {
   }
-  //release_ts.val;
-  printf("Create function state for threadid: %u\n", ts->id);
   return ts;
 }
 
@@ -56,24 +55,15 @@ static char const *get_output_filename() {
   return fn;
 }
 
-using output_fd = std::unique_ptr<FILE, decltype(&::fclose)>;
-output_fd get_output_fd() {
-  output_fd fd{::fopen(get_output_filename(), "w"), &::fclose };
-  if (!fd.get()) {
-    printf("Failed to open file: %s. Abort.\n", get_output_filename());
-    abort();
-  }
-  return fd;
-}
-
-
+std::atomic<uint64_t> stop;
+std::atomic<uint64_t> have_stopped;
 
 __attribute__((constructor))
 void start_consumer_thread() {
   std::thread([]() {
 
-    // Output file descriptor
-    auto log_fd = get_output_fd();
+    // Trace writer
+    gigafunction::trace_writer tw(get_output_filename());
 
     // Consume at most LOG_CAPACITY events before moving to different thread
     // ensures we do not get stuck on a single thread.
@@ -83,23 +73,22 @@ void start_consumer_thread() {
     output_pair output_buffer[LOG_CAPACITY];
 
     for (;;) {
+
+       bool work_done = false;
       tstate* prev{nullptr};
       for (auto ts = thread_states.load(std::memory_order_acquire);ts;) {
 
         auto n_consumed = ts->block_trace.get_n(bid, LOG_CAPACITY);
-        // TOOD (hbrodin): Do proper output serialization to ensure robustness/platform independence.
-        // Consider varint representation to get more compact output.
 
-        fwrite(&ts->id, sizeof(ts->id), 1, log_fd.get());
-        fwrite(&n_consumed, sizeof(LOG_CAPACITY), 1, log_fd.get());
-        fwrite(bid, sizeof(gigafunction::block_id), n_consumed, log_fd.get());
+        for (size_t i=0;i<n_consumed;i++)
+          tw.write_trace(ts->id, bid[i]);
+        work_done = n_consumed > 0;
 
         // If the thread state is done, we consumed all blocks and the thread state is not the current head
         // we unlink it and reclaim the memory. The reason we dont' reclaim current head is that it makes things
         // simpler, since we are the only ones traversing the list. But many compete for head.
         // TODO (hbrodin): It is probably not that hard to make it work for head as well...
         if (prev && ts->done.load(std::memory_order_relaxed) == 1 && ts->block_trace.empty()) {
-          printf("Remove thread: %u\n", ts->id);
           // unlink
           prev->next = ts->next;
 
@@ -111,9 +100,25 @@ void start_consumer_thread() {
           ts = ts->next;
         }
       }
-      // TODO: Yield? Check is work was done? Probably no need to yield (this will be the slow thread)
+      // TODO (hbrodin): Yield? Probably no need to yield (this will be the slow thread)
+      if (stop.load(std::memory_order_relaxed) && !work_done)
+        break;
     }
+    have_stopped.store(1, std::memory_order_relaxed);
   }).detach();
+}
+
+
+// This exists only to ensure that the writer thread,
+// created in start_consumer_thread terminates and flushes
+// everything to disk.
+// First, signal that it should exist, then wait for exit to happen.
+__attribute__((destructor))
+void stop_consumer_thread() {
+  stop.store(1, std::memory_order_relaxed);
+  while (0 == have_stopped.load(std::memory_order_relaxed)) {
+    sched_yield();
+  }
 }
 
 } // namespace

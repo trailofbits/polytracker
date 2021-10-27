@@ -9,12 +9,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 # Unit tests
-add_executable(tests main.cpp spsc_buffer_test.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2)
+add_executable(tests main.cpp spsc_buffer_test.cpp trace_reader_writer_test.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2 traceio)
 target_compile_options(tests PUBLIC "-fsanitize=address,undefined")
 target_link_options(tests PUBLIC "-fsanitize=address,undefined")
 
 
 # Stress testing using threads
 add_executable(gfrt_tests gfrt_test.cpp)
-target_link_libraries(gfrt_tests gigafuncruntime)
+target_link_libraries(gfrt_tests gigafuncruntime traceio)
+target_compile_options(gfrt_tests PUBLIC "-fsanitize=thread")
+target_link_options(gfrt_tests PUBLIC "-fsanitize=thread")

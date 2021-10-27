@@ -1,0 +1,1 @@
+add_library(traceio STATIC trace_reader.cpp trace_writer.cpp)

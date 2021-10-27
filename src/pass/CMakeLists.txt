@@ -5,6 +5,7 @@ add_definitions(${LLVM_DEFINITIONS})
 
 add_library(InstrumentBasicBlocks SHARED instrument_basic_blocks.cpp)
 add_library(MarkBasicBlocks SHARED mark_basic_blocks.cpp)
+add_library(SplitBasicBlocks SHARED split_basic_blocks.cpp)
 
 # From: https://github.com/banach-space/llvm-tutor/blob/main/HelloWorld/CMakeLists.txt
 # Allow undefined symbols in shared objects on Darwin (this is the default
@@ -12,6 +13,8 @@ add_library(MarkBasicBlocks SHARED mark_basic_blocks.cpp)
 target_link_libraries(InstrumentBasicBlocks
   "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
 target_link_libraries(MarkBasicBlocks
+  "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
+target_link_libraries(SplitBasicBlocks
   "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
   
 
