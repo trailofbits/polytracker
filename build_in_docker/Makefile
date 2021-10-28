@@ -16,6 +16,10 @@ bin/mutool_track: $(POLYTRACKER_FILES)
 	./build.sh
 	./build_mutool.sh
 
+bin/mutool_track_no_control_flow: $(POLYTRACKER_FILES)
+	./build.sh
+	./build_mutool.sh mutool_track_no_control_flow --no-control-flow-tracking
+
 .PHONY: run_remote_debug_container
 run_remote_debug_container: bin/mutool_track
 	echo "Running the remote dev Docker container; ^C this process to end it."

@@ -146,7 +146,7 @@ def is_building(argv) -> bool:
 
 # (2)
 def instrument_bitcode(bitcode_file: Path, output_bc: Path,
-                       ignore_lists=None, file_id=None) -> Path:
+                       ignore_lists=None, file_id=None, no_control_flow_tracking: bool = False) -> Path:
     """
     Instruments bitcode with polytracker instrumentation
     Instruments that with dfsan instrumentation
@@ -165,6 +165,8 @@ def instrument_bitcode(bitcode_file: Path, output_bc: Path,
                    str(POLY_PASS_PATH), "-ptrack", f"-ignore-list={POLY_ABI_LIST_PATH!s}"]
     if file_id is not None:
         opt_command.append(f"-file-id={file_id}")
+    if no_control_flow_tracking:
+        opt_command.append("-no-control-flow-tracking")
     for item in ignore_lists:
         opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
     opt_command += [str(bitcode_file), "-o", str(output_bc)]
@@ -433,9 +435,9 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
 
 
 def replay_build_instance(input_bc: Path, file_id: int,
-                          ignore_lists, non_track_artifacts, bc_files):
+                          ignore_lists, non_track_artifacts, bc_files, no_control_flow_tracking: bool = False):
     output_bc = append_to_stem(input_bc, "_done")
-    bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id)
+    bc_file = instrument_bitcode(input_bc, output_bc, ignore_lists, file_id, no_control_flow_tracking)
     bc_files.append(os.path.realpath(bc_file))
 
 
@@ -473,6 +475,8 @@ def main():
                         help="Specify to compile bitcode into an object file")
     parser.add_argument("--file-id", type=int,
                         help="File id for lowering bitcode in parallel")
+    parser.add_argument("--no-control-flow-tracking", action="store_true", help="do not instrument the program with any"
+                                                                                " control flow tracking")
     parser.add_argument("--rebuild-track", type=str,
                         help="full path to artifact to auto rebuild with instrumentation")
     parser.add_argument(
@@ -500,9 +504,11 @@ def main():
             print("Error! Input file could not be found!")
             sys.exit(1)
         if args.output_file:
-            instrument_bitcode(args.input_file, args.output_file, args.lists)
+            instrument_bitcode(args.input_file, args.output_file, args.lists,
+                               no_control_flow_tracking=args.no_control_flow_tracking)
         else:
-            instrument_bitcode(args.input_file, Path("output.bc"), args.lists)
+            instrument_bitcode(args.input_file, Path("output.bc"), args.lists,
+                               no_control_flow_tracking=args.no_control_flow_tracking)
 
     # simple target.
     elif sys.argv[1] == "--instrument-target":
@@ -515,7 +521,8 @@ def main():
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
         bc_file = instrument_bitcode(
-            args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+            args.input_file, args.output_file.with_suffix(".bc"), args.lists,
+            no_control_flow_tracking=args.no_control_flow_tracking)
         lower_bc(bc_file, args.output_file, args.libs)
 
     elif sys.argv[1] == "--compile-bitcode":
@@ -533,7 +540,8 @@ def main():
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
         bc_file = instrument_bitcode(
-            args.input_file, args.output_file.with_suffix(".bc"), args.lists)
+            args.input_file, args.output_file.with_suffix(".bc"), args.lists,
+            no_control_flow_tracking=args.no_control_flow_tracking)
         lower_bc(bc_file, args.output_file, args.libs)
 
     # Do gllvm build
