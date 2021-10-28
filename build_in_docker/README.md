@@ -60,7 +60,7 @@ local directory. This allows you to run it on local files. For example:
 ```console
 $ file input.pdf
 input.pdf: PDF document, version 1.5
-$ rm -f polytracker.db && ./run_mutool info input.pdf
+$ rm -f polytracker.db && ./run_mutool.sh info input.pdf
 POLYPATH:      *
 POLYDB:        polytracker.db
 POLYFUNC:      0
