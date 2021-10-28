@@ -130,8 +130,10 @@ extern "C" int __polytracker_size() { return function_stack.size(); }
 extern "C" void __polytracker_start(func_mapping const *globals,
                                     uint64_t globals_count,
                                     block_mapping const *block_map,
-                                    uint64_t block_map_count) {
-  polytracker_start(globals, globals_count, block_map, block_map_count);
+                                    uint64_t block_map_count,
+                                    bool no_control_flow_tracing) {
+  polytracker_start(globals, globals_count, block_map, block_map_count,
+                    no_control_flow_tracing);
 }
 
 extern "C" void
@@ -174,9 +176,11 @@ extern "C" void dfs$__polytracker_log_call_exit(uint32_t func_index,
 extern "C" void dfs$__polytracker_start(func_mapping const *globals,
                                         uint64_t globals_count,
                                         block_mapping const *block_map,
-                                        uint64_t block_map_count) {
+                                        uint64_t block_map_count,
+                                        bool control_flow_tracking) {
   fprintf(stderr, "WARNING Using instrumented internal start func\n");
-  __polytracker_start(globals, globals_count, block_map, block_map_count);
+  __polytracker_start(globals, globals_count, block_map, block_map_count,
+                      control_flow_tracking);
 }
 extern "C" int dfs$__polytracker_size() {
   fprintf(stderr, "WARNING Using instrumented internal size func\n");

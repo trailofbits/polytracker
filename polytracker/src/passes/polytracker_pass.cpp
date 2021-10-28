@@ -499,7 +499,7 @@ ctors get to run. Constructs a function resembling:
 __attribute__((constructor)) void early_polytracker_start()
 {
   __polytracker_start(array_of_functions, length(array_of_functions),
-array_of_blocks, length(array_of_blocks));
+array_of_blocks, length(array_of_blocks), !no_control_flow_tracking);
 }
 */
 static void createStartPolytrackerCall(llvm::Module &mod,
@@ -511,9 +511,11 @@ static void createStartPolytrackerCall(llvm::Module &mod,
   auto &ctx = mod.getContext();
   // polytracker_start declaration
   auto i64_type = llvm::IntegerType::get(ctx, 64);
+  auto bool_type = llvm::IntegerType::get(ctx, 8);
   auto polytracker_start_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(ctx),
-      {global->getType(), i64_type, block_map->getType(), i64_type}, false);
+      {global->getType(), i64_type, block_map->getType(), i64_type, bool_type},
+      false);
   auto polytracker_start_func =
       mod.getOrInsertFunction("__polytracker_start", polytracker_start_type);
 
@@ -529,7 +531,8 @@ static void createStartPolytrackerCall(llvm::Module &mod,
   llvm::Instruction *call = IRB.CreateCall(
       polytracker_start_func,
       {global, llvm::ConstantInt::get(i64_type, global_count), block_map,
-       llvm::ConstantInt::get(i64_type, block_count)});
+       llvm::ConstantInt::get(i64_type, block_count),
+       llvm::ConstantInt::get(bool_type, !no_control_flow_tracking)});
   IRB.CreateRetVoid();
 
   llvm::appendToGlobalCtors(mod, func, 0);
