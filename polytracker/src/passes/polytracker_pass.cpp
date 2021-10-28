@@ -549,7 +549,10 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  if (!no_control_flow_tracking) {
+  if (no_control_flow_tracking) {
+    std::cout << "Omitting PolyTracker control flow instrumentation."
+              << std::endl;
+  } else {
     std::vector<llvm::Function *> functions;
     for (auto &func : mod) {
       // Ignore if its in our ignore list
