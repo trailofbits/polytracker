@@ -56,6 +56,8 @@ WORKDIR /
 
 COPY scripts/compile_mupdf.sh /
 
+WORKDIR /workdir
+
 CMD ["/usr/sbin/sshd", "-D", "-e", "-f", "/etc/ssh/sshd_config_mutool"]
 
 ENV LLVM_DIR=/polytracker-llvm/llvm
