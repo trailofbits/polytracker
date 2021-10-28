@@ -266,7 +266,7 @@ class DBTaintAccess(Base, TaintAccess):  # type: ignore
 
     event: "DBTraceEvent" = relationship("DBTraceEvent", back_populates="accessed_labels")
     taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
-                                                          back_populates="accesses")
+                                                          back_populates="accesses", sync_backref=False)
 
     def taints(self) -> Taints:
         return DBTaintForestNode.taints((self.taint_forest_node,))
@@ -875,21 +875,27 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     __tablename__ = "output_taint"
     input_id = Column(Integer, ForeignKey("input.id"))
     offset = Column(BigInteger)
-    label = Column(BigInteger)
+    label = Column(BigInteger, ForeignKey("taint_forest.label"))
+    taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
+                                                          back_populates="writes", sync_backref=False)
     __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
+
+    def taints(self) -> Taints:
+        return DBTaintForestNode.taints((self.taint_forest_node,))
 
 
 class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     __tablename__ = "taint_forest"
     parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
-    label = Column(Integer, ForeignKey("accessed_label.label"))
+    label = Column(Integer, ForeignKey("accessed_label.label"), ForeignKey("output_taint.label"))
     input_id = Column(Integer, ForeignKey("input.id"))
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
     source = relationship("DBInput")
-    accesses = relationship("DBTaintAccess", foreign_keys=[label])
+    accesses = relationship("DBTaintAccess", foreign_keys=[label], viewonly=True)
+    writes = relationship("DBTaintOutput", foreign_keys=[label], viewonly=True)
 
     def __hash__(self):
         return hash((self.input_id, self.label))

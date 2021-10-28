@@ -724,14 +724,19 @@ class TaintAccess:
 class TaintOutput:
     """An abstract class for representing tainted bytes written to an output (file, network socket, etc)."""
 
-    def __init__(self, output_offset: int, label: int):
+    def __init__(self, input_id: int, output_offset: int, label: int):
         """
         Args:
             output_offset: offset within the output file
             label: The taint label of the output
         """
+        self.input_id: int = input_id
         self.offset: int = output_offset
         self.label: int = label
+
+    @abstractmethod
+    def taints(self) -> Taints:
+        raise NotImplementedError()
 
     def __lt__(self, other):
         return hasattr(other, "offset") and self.offset < other.offset
@@ -1046,6 +1051,18 @@ class ProgramTrace(ABC):
     @abstractmethod
     def inputs(self) -> Iterable[Input]:
         """The taint sources operated on in this trace."""
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def outputs(self) -> Optional[Iterable[Input]]:
+        """The taint syncs written to in this trace."""
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def output_taints(self) -> Iterable[TaintOutput]:
+        """Iterates over all of the outputs written in the trace"""
         raise NotImplementedError()
 
     def input_properties(self, source: Input) -> InputProperties:
