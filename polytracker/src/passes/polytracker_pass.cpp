@@ -278,7 +278,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   // main, would have size 1 stored in stack_loc.
   stack_loc = IRB.CreateCall(func_entry_log, {index_val});
 
-  // Collect basic blocks/insts, so we don't modify the container while iterate
+  // Collect basic blocks/insts, so we don't modify the container while
+  // iterate
   std::unordered_set<llvm::BasicBlock *> blocks;
   std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
@@ -548,82 +549,84 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  std::vector<llvm::Function *> functions;
-  for (auto &func : mod) {
-    // Ignore if its in our ignore list
-    if (func.hasName()) {
-      std::string fname = func.getName().str();
-      if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+  if (!no_control_flow_tracking) {
+    std::vector<llvm::Function *> functions;
+    for (auto &func : mod) {
+      // Ignore if its in our ignore list
+      if (func.hasName()) {
+        std::string fname = func.getName().str();
+        if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+          continue;
+        }
+      }
+      functions.push_back(&func);
+      func_index_map[func.getName().str()] = function_index++;
+    }
+    const auto startTime = std::chrono::system_clock::now();
+    auto lastUpdateTime = startTime;
+    size_t i = 0;
+    int lastPercent = -1;
+    for (auto func : functions) {
+      int percent = static_cast<int>(static_cast<float>(i++) * 100.0 /
+                                         static_cast<float>(functions.size()) +
+                                     0.5);
+      auto currentTime = std::chrono::system_clock::now();
+      if (percent > lastPercent ||
+          std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                           lastUpdateTime)
+                  .count() >= 5.0 ||
+          i >= functions.size()) {
+        lastUpdateTime = currentTime;
+        auto totalElapsedSeconds =
+            std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                             startTime)
+                .count();
+        auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
+        std::cerr << '\r' << std::string(80, ' ') << '\r';
+        lastPercent = percent;
+        auto funcName = func->getName().str();
+        if (funcName.length() > 10) {
+          funcName = funcName.substr(0, 7) + "...";
+        }
+        std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3)
+                  << percent << "% |";
+        const int barWidth = 20;
+        const auto filledBars = static_cast<int>(
+            static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 +
+            0.5);
+        const auto unfilledBars = barWidth - filledBars;
+        for (size_t iter = 0; iter < filledBars; ++iter) {
+          std::cerr << "█";
+        }
+        std::cerr << std::string(unfilledBars, ' ');
+        std::cerr << "| " << i << "/" << functions.size() << " [";
+        if (functionsPerSecond == 0) {
+          std::cerr << "??:??";
+        } else {
+          auto remainingSeconds = static_cast<int>(
+              static_cast<float>(functions.size() - i) / functionsPerSecond +
+              0.5);
+          auto remainingMinutes = remainingSeconds / 60;
+          remainingSeconds %= 60;
+          if (remainingMinutes >= 60) {
+            std::cerr << (remainingMinutes / 60) << ":";
+            remainingMinutes %= 60;
+          }
+          std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes
+                    << ":";
+          std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
+        }
+        std::cerr << ", " << std::setprecision(4) << functionsPerSecond
+                  << " functions/s]" << std::flush;
+      }
+
+      if (!func || func->isDeclaration()) {
         continue;
       }
+      ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
     }
-    functions.push_back(&func);
-    func_index_map[func.getName().str()] = function_index++;
+    std::cerr << std::endl;
   }
-  const auto startTime = std::chrono::system_clock::now();
-  auto lastUpdateTime = startTime;
-  size_t i = 0;
-  int lastPercent = -1;
-  for (auto func : functions) {
-    int percent = static_cast<int>(static_cast<float>(i++) * 100.0 /
-                                       static_cast<float>(functions.size()) +
-                                   0.5);
-    auto currentTime = std::chrono::system_clock::now();
-    if (percent > lastPercent ||
-        std::chrono::duration_cast<std::chrono::seconds>(currentTime -
-                                                         lastUpdateTime)
-                .count() >= 5.0 ||
-        i >= functions.size()) {
-      lastUpdateTime = currentTime;
-      auto totalElapsedSeconds =
-          std::chrono::duration_cast<std::chrono::seconds>(currentTime -
-                                                           startTime)
-              .count();
-      auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
-      std::cerr << '\r' << std::string(80, ' ') << '\r';
-      lastPercent = percent;
-      auto funcName = func->getName().str();
-      if (funcName.length() > 10) {
-        funcName = funcName.substr(0, 7) + "...";
-      }
-      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3)
-                << percent << "% |";
-      const int barWidth = 20;
-      const auto filledBars = static_cast<int>(
-          static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 +
-          0.5);
-      const auto unfilledBars = barWidth - filledBars;
-      for (size_t iter = 0; iter < filledBars; ++iter) {
-        std::cerr << "█";
-      }
-      std::cerr << std::string(unfilledBars, ' ');
-      std::cerr << "| " << i << "/" << functions.size() << " [";
-      if (functionsPerSecond == 0) {
-        std::cerr << "??:??";
-      } else {
-        auto remainingSeconds = static_cast<int>(
-            static_cast<float>(functions.size() - i) / functionsPerSecond +
-            0.5);
-        auto remainingMinutes = remainingSeconds / 60;
-        remainingSeconds %= 60;
-        if (remainingMinutes >= 60) {
-          std::cerr << (remainingMinutes / 60) << ":";
-          remainingMinutes %= 60;
-        }
-        std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes
-                  << ":";
-        std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
-      }
-      std::cerr << ", " << std::setprecision(4) << functionsPerSecond
-                << " functions/s]" << std::flush;
-    }
-
-    if (!func || func->isDeclaration()) {
-      continue;
-    }
-    ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
-  }
-  std::cerr << std::endl;
 
   // Store function/block to id mappings (and corresponding counts) as global
   // variables
