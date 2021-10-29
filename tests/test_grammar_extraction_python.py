@@ -198,6 +198,10 @@ class Tracer(ProgramTrace):
     def taint_forest(self) -> TaintForest:
         raise NotImplementedError()
 
+    @property
+    def file_offset(self, node) -> ByteOffset:
+        raise NotImplementedError()
+
     def __getitem__(self, uid: int) -> TraceEvent:
         return self.events[uid]
 
