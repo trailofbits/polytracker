@@ -50,7 +50,8 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
                                 dfsan_label *ret_label) {
   auto current_offset = ftell(stream);
   auto write_count = fwrite(buf, size, count, stream);
-  if (auto &input_id = get_fd_input_map()[fileno(stream)]) {
+  auto fd = fileno(stream);
+  if (auto &input_id = get_fd_input_map()[fd]) {
     storeTaintedOutputChunk(output_db, input_id, current_offset,
                             current_offset + write_count);
     for (auto i = 0; i < write_count; i++) {
