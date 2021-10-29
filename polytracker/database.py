@@ -782,6 +782,19 @@ class DBProgramTrace(ProgramTrace):
     def taint_forest(self) -> TaintForest:
         return DBTaintForest(self)
 
+    def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        try:
+            file_offset = (
+                self.session.query(CanonicalMap)
+                    .filter(
+                        CanonicalMap.taint_label == node.label,
+                        CanonicalMap.input_id == node.source.uid,
+                    ).one().file_offset
+            )
+        except NoResultFound:
+            raise ValueError(f"Taint label {node.label} is not in the canonical mapping!")
+        return ByteOffset(source=node.source, offset=file_offset)
+
     @property
     def functions(self) -> Iterable[Function]:
         return self.session.query(DBFunction).all()

@@ -33,7 +33,7 @@ from .cfg import DiGraph
 from .inputs import Input, InputProperties
 from .plugins import Command, Subcommand
 from .repl import PolyTrackerREPL
-from .taint_forest import TaintForest
+from .taint_forest import TaintForest, TaintForestNode
 
 
 class BasicBlockType(IntFlag):
@@ -1092,6 +1092,11 @@ class ProgramTrace(ABC):
     @abstractmethod
     def taint_forest(self) -> TaintForest:
         """The taint forest associated with this trace."""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        """The file offset associated with a taint forest node"""
         raise NotImplementedError()
 
     def function_trace(self) -> Iterator[FunctionEntry]:

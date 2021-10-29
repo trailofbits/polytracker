@@ -32,6 +32,7 @@ class TaintForestNode:
 class TaintForest:
     @abstractmethod
     def nodes(self) -> Iterator[TaintForestNode]:
+        """Iterates over the nodes in order of decreasing label"""
         raise NotImplementedError()
 
     def __iter__(self):
