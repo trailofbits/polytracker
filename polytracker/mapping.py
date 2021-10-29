@@ -16,9 +16,8 @@ def map_inputs_to_outputs(trace: PolyTrackerTrace) -> Dict[ByteOffset, Set[ByteO
     ret: Dict[ByteOffset, Set[ByteOffset]] = defaultdict(set)
 
     for output_taint in trace.output_taints:
-        for taint in output_taint.taints():
-            for byte_offset in taint:
-                ret[byte_offset].add(inputs[output_taint.input_id])
+        for byte_offset in output_taint.taints():
+            ret[byte_offset].add(ByteOffset(source=inputs[output_taint.input_id], offset=output_taint.offset))
 
     return ret
 
