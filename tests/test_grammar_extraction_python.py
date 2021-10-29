@@ -4,7 +4,7 @@ from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import pytest
 
-from polytracker import BasicBlock, ByteOffset, Function, TaintForest, TaintAccess, Taints
+from polytracker import BasicBlock, ByteOffset, Function, TaintForest, TaintAccess, Taints, TaintOutput
 from polytracker.grammars import Grammar, parse_tree_to_grammar
 from polytracker.inputs import Input
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
@@ -247,6 +247,14 @@ class Tracer(ProgramTrace):
 
     def bb_entry(self, name: str) -> TracedBasicBlockEntry:
         return TracedBasicBlockEntry(self, name)
+
+    @property
+    def outputs(self) -> Optional[Iterable[Input]]:
+        raise NotImplementedError()
+
+    @property
+    def output_taints(self) -> Iterable[TaintOutput]:
+        raise NotImplementedError()
 
 
 def traced(func):
