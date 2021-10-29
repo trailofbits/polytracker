@@ -164,7 +164,7 @@ TEST_CASE("Spin policy", "spsc_buffer") {
 
     // Wait for the put to complete
     t.join();
-    REQUIRE(b.get() == -1);
+    REQUIRE(b.get() == static_cast<size_t>(-1));
 
 
   }

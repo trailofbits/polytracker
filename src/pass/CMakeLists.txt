@@ -3,6 +3,9 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
+# To prevent complaints on LLVM-code
+add_compile_options(-Wno-unused-parameter)
+
 add_library(InstrumentBasicBlocks SHARED instrument_basic_blocks.cpp)
 add_library(MarkBasicBlocks SHARED mark_basic_blocks.cpp)
 add_library(SplitBasicBlocks SHARED split_basic_blocks.cpp)

@@ -13,7 +13,6 @@ PreservedAnalyses BasicBlocksMarkPass::run(Function &f,
                                             FunctionAnalysisManager & /*fam*/) {
 
   auto &ctx = f.getContext();
-  auto &mod = *f.getParent();
   auto i32_ty = IntegerType::get(ctx, 32);
   for (auto &bb : f) {
     auto counter = ConstantInt::get(i32_ty, ++counter_, false);
