@@ -69,9 +69,6 @@ void start_consumer_thread() {
     // ensures we do not get stuck on a single thread.
     gigafunction::block_id bid[LOG_CAPACITY];
 
-    using output_pair = std::pair<gigafunction::thread_id, gigafunction::block_id>;
-    output_pair output_buffer[LOG_CAPACITY];
-
     for (;;) {
 
        bool work_done = false;
@@ -104,6 +101,7 @@ void start_consumer_thread() {
       if (stop.load(std::memory_order_relaxed) && !work_done)
         break;
     }
+    printf("Stop called\n");
     have_stopped.store(1, std::memory_order_relaxed);
   }).detach();
 }
@@ -119,6 +117,14 @@ void stop_consumer_thread() {
   while (0 == have_stopped.load(std::memory_order_relaxed)) {
     sched_yield();
   }
+  // TODO (hbrodin): Without this printf the function does not work. This is clearly a bad sign.
+  // Investigate to ensure it can be guaranteed that this method is run.
+  // Use the printf in the consumer thread.
+  // It seems as if we don't have a dependency to any visible effect this function is discared.
+  // In a way, it makes sense since we are terminating the program and if the code don't "do" anything
+  // we might as welll discard it.
+  // Still, this needs to be understood and a clean solution should be implemented.
+  //printf("exit gigafunc\n");
 }
 
 } // namespace
