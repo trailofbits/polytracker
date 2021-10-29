@@ -41,3 +41,24 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
   *ret_label = 0;
   return write_count;
 }
+
+#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
+EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
+                                FILE *stream, dfsan_label buff_label,
+                                dfsan_label size_label, dfsan_label count_label,
+                                dfsan_label stream_label,
+                                dfsan_label *ret_label) {
+  auto current_offset = ftell(stream);
+  auto write_count = fwrite(buf, size, count, stream);
+  if (auto &input_id = get_fd_input_map()[fileno(stream)]) {
+    storeTaintedOutputChunk(output_db, input_id, current_offset,
+                            current_offset + write_count);
+    for (auto i = 0; i < write_count; i++) {
+      auto taint_label = dfsan_read_label((char *)buf + i, sizeof(char));
+      storeTaintedOutput(output_db, input_id, current_offset, taint_label);
+      current_offset += 1;
+    }
+  }
+  *ret_label = 0;
+  return write_count;
+}

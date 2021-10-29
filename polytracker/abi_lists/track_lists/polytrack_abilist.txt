@@ -39,6 +39,9 @@ fun:getdelim=custom
 #Is this right?
 fun:__getdelim=custom
 
+# Write
+fun:fwrite=custom
+
 #mmap stuff
 fun:mmap=custom
 fun:munmap=custom

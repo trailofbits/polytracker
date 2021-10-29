@@ -191,6 +191,7 @@ fun:strstr=custom
 # Functions which take action based on global state, such as running a callback
 # set by a sepperate function.
 fun:write=custom
+fun:fwrite=custom
 
 # Functions that take a callback (wrap the callback manually).
 fun:dl_iterate_phdr=custom

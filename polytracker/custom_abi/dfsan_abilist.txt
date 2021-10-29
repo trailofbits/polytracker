@@ -2208,6 +2208,7 @@ fun:futimesat=uninstrumented
 fun:fwide=uninstrumented
 fun:fwprintf=uninstrumented
 fun:fwrite=uninstrumented
+fun:fwrite=custom
 fun:fwrite_unlocked=uninstrumented
 fun:fwscanf=uninstrumented
 fun:gai_cancel=uninstrumented
