@@ -881,7 +881,11 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((self.taint_forest_node,))
+        if self.taint_forest_node is None:
+            # this will sometimes happen if self.label == 0
+            return DBTaintForestNode.taints(())
+        else:
+            return DBTaintForestNode.taints((self.taint_forest_node,))
 
 
 class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
