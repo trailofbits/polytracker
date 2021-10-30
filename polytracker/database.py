@@ -1,9 +1,5 @@
 from enum import IntEnum
-from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union, Dict
-from tempfile import NamedTemporaryFile
-import subprocess
-import os
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -13,6 +9,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy import (
     BigInteger,
     BLOB,
+    Boolean,
     Column,
     create_engine,
     Enum as SQLEnum,
@@ -907,6 +904,7 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
     label = Column(Integer, ForeignKey("accessed_label.label"), ForeignKey("output_taint.label"))
     input_id = Column(Integer, ForeignKey("input.id"))
+    affected_control_flow = Column(Boolean)
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 

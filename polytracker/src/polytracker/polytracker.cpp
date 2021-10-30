@@ -116,6 +116,18 @@ __polytracker_get_label_info(const dfsan_label &l1) {
   return {node->p1, node->p2, nullptr, nullptr};
 }
 
+extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
+  if (label > 0) {
+    logConditionalBranch(label);
+  }
+}
+
+extern "C" void
+__dfsw___polytracker_log_conditional_branch(uint64_t conditional,
+                                            dfsan_label conditional_label) {
+  __polytracker_log_conditional_branch(conditional_label);
+}
+
 extern "C" void __polytracker_log_union(const dfsan_label &l1,
                                         const dfsan_label &l2,
                                         const dfsan_label &union_label) {

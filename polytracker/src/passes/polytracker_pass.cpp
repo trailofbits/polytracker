@@ -117,6 +117,21 @@ void PolytrackerPass::visitReturnInst(llvm::ReturnInst &RI) {
                                      func_block_index.second, stack_loc});
 }
 
+void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
+  if (BI.isUnconditional()) {
+    return;
+  } else if (auto condition = BI.getCondition()) {
+    if (!op_check(condition)) {
+      llvm::IRBuilder<> IRB(&BI);
+      llvm::LLVMContext &context = mod->getContext();
+
+      llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
+
+      CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+    }
+  }
+}
+
 void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
   llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(&ci);
   auto func_block_indicies = getIndicies(inst);
@@ -368,6 +383,11 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       llvm::FunctionType::get(llvm::Type::getVoidTy(context), map_args, false);
   preserve_map =
       mod.getOrInsertFunction("__polytracker_preserve_map", polytracker_map_ty);
+
+  auto conditional_branch_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context), {shadow_type}, false);
+  conditional_branch_log = mod.getOrInsertFunction(
+      "__polytracker_log_conditional_branch", conditional_branch_ty);
 }
 
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
@@ -555,6 +575,24 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (no_control_flow_tracking) {
     std::cout << "Omitting PolyTracker control flow instrumentation."
               << std::endl;
+    // We still want to visit comparison functions because they are useful
+    // for detecting file cavities:
+    for (auto &func : mod) {
+      // Ignore if the func is in our ignore list
+      if (func.hasName()) {
+        std::string fname = func.getName().str();
+        if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+          continue;
+        }
+      }
+      for (auto &bb : func) {
+        for (auto &inst : bb) {
+          if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
+            visitBranchInst(*BI);
+          }
+        }
+      }
+    }
   } else {
     std::vector<llvm::Function *> functions;
     for (auto &func : mod) {

@@ -41,6 +41,8 @@ fun:__polytracker_log_taint_cmp=uninstrumented
 fun:__polytracker_log_taint_cmp=custom
 fun:__polytracker_log_taint_op=uninstrumented
 fun:__polytracker_log_taint_op=custom
+fun:__polytracker_log_conditional_branch=uninstrumented
+fun:__polytracker_log_conditional_branch=custom
 # -- end
 fun:__polytracker_dump=uninstrumented
 fun:__polytracker_dump=discard
