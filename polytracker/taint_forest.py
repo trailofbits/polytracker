@@ -26,6 +26,9 @@ class TaintForestNode:
     def __eq__(self, other):
         return isinstance(other, TaintForestNode) and other.label == self.label and other.source == self.source
 
+    def __lt__(self, other):
+        return isinstance(other, TaintForestNode) and self.label < other.label
+
     def __hash__(self):
         return hash((self.label, self.source))
 

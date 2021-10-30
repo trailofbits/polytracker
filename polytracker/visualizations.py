@@ -56,7 +56,7 @@ def temporal_animation(
         else:
             enhancer = ImageEnhance.Brightness(images[-1])
             image = enhancer.enhance(1.1)
-        for offset in access.taints():
+        for offset in access.get_taints():
             row = offset.offset // width
             col = offset.offset % width
             image.putpixel((col, row), 0)

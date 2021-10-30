@@ -112,7 +112,7 @@ class DBFunction(Base, Function):  # type: ignore
     )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
 
     @property
     def function_index(self) -> int:  # type: ignore
@@ -183,7 +183,7 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
         )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
 
     def _discover_neighbors(self):
         if self._children is not None and self._predecessors is not None:
@@ -266,7 +266,7 @@ class DBTaintAccess(Base, TaintAccess):  # type: ignore
                                                           back_populates="accesses", sync_backref=False)
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((self.taint_forest_node,))
+        return DBTaintForestNode.get_taints((self.taint_forest_node,))
 
 
 class DBTraceEvent(Base, TraceEvent):  # type: ignore
@@ -404,7 +404,7 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
             return None
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((access.taint_forest_node for access in self.accessed_labels))
+        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.accessed_labels))
 
 
 class BlockEntries(Base):  # type: ignore
@@ -585,7 +585,7 @@ class DBFunctionInvocation(FunctionInvocation):
         return stream_results(query.order_by(DBTaintAccess.access_id.asc()))
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((access.taint_forest_node for access in self.taint_accesses()))
+        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.taint_accesses()))
 
     def calls(self) -> Iterator["DBFunctionInvocation"]:
         event = self.function_return
@@ -893,9 +893,9 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     def taints(self) -> Taints:
         if self.taint_forest_node is None:
             # this will sometimes happen if self.label == 0
-            return DBTaintForestNode.taints(())
+            return DBTaintForestNode.get_taints(())
         else:
-            return DBTaintForestNode.taints((self.taint_forest_node,))
+            return DBTaintForestNode.get_taints((self.taint_forest_node,))
 
 
 class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
@@ -917,9 +917,6 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
 
     def __eq__(self, other):
         return isinstance(other, DBTaintForestNode) and self.input_id == other.input_id and self.label == other.label
-
-    def __lt__(self, other):
-        return isinstance(other, DBTaintForestNode) and self.label < other.label
 
     def __str__(self):
         return f"I{self.input_id}L{self.label}"
@@ -963,7 +960,7 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
         return self._parent_two
 
     @staticmethod
-    def taints(labels: Iterable["DBTaintForestNode"]) -> Taints:
+    def get_taints(labels: Iterable["DBTaintForestNode"]) -> Taints:
         # reverse the labels to reduce the likelihood of reproducing work
         history: Set[DBTaintForestNode] = set(labels)
         node_stack: List[DBTaintForestNode] = sorted(list(set(history)), reverse=True)

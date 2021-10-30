@@ -29,7 +29,7 @@ class InputOutputMapping:
         for output_taint in tqdm(self.trace.output_taints, unit=" output taints", leave=False):
             written_to = self.inputs[output_taint.input_id]
             output_byte_offset = ByteOffset(source=written_to, offset=output_taint.offset)
-            for byte_offset in output_taint.taints():
+            for byte_offset in output_taint.get_taints():
                 self._mapping[byte_offset].add(output_byte_offset)
 
         self._mapping_is_complete = True
