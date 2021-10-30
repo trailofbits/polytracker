@@ -71,6 +71,9 @@ class InputOutputMapping:
         sources: Dict[Input, IntervalTree] = defaultdict(IntervalTree)
         for offset in self.written_input_bytes():
             sources[offset.source].addi(offset.offset, offset.offset + offset.length)
+        # also add any input bytes that affected control flow:
+        for offset in self.trace.inputs_affecting_control_flow():
+            sources[offset.source].addi(offset.offset, offset.offset + offset.length)
         for source, tree in sources.items():
             unused_bytes = IntervalTree([Interval(0, source.size)])
             for interval in tree:
@@ -87,11 +90,33 @@ class MapInputsToOutputs(Command):
         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
 
     def run(self, args):
-        from . import PolyTrackerTrace
-
         mapping = InputOutputMapping(PolyTrackerTrace.load(args.POLYTRACKER_DB)).mapping
 
         print(mapping)
+
+
+def bytes_to_ascii(b: bytes) -> str:
+    ret = []
+    for i in b:
+        if i == ord('\\'):
+            ret.append("\\\\")
+        elif i == ord('"'):
+            ret.append("\\\"")
+        elif ord(' ') <= i <= ord('~'):
+            ret.append(chr(i))
+        elif i == 0:
+            ret.append("\\0")
+        elif i == ord('\n'):
+            ret.append("\\n")
+        elif i == ord('\t'):
+            ret.append("\\t")
+        elif i == ord('\r'):
+            ret.append("\\r")
+        elif i < 10:
+            ret.append(f"\\{i}")
+        else:
+            ret.append(f"\\x{i:x}")
+    return "".join(ret)
 
 
 class FileCavities(Command):
@@ -100,9 +125,16 @@ class FileCavities(Command):
 
     def __init_arguments__(self, parser):
         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("--print-context", "-c", action="store_true", help="print the context for each file cavity")
 
     def run(self, args):
-        from . import PolyTrackerTrace
-
         for cavity in InputOutputMapping(PolyTrackerTrace.load(args.POLYTRACKER_DB)).file_cavities():
             print(f"{cavity.source.path}\t{cavity.offset}–{cavity.offset + cavity.length - 1}")
+            if args.print_context:
+                content = cavity.source.content
+                if content:
+                    bytes_before = bytes_to_ascii(content[max(cavity.offset-10, 0):cavity.offset])
+                    bytes_after = bytes_to_ascii(content[cavity.offset+cavity.length:cavity.offset+cavity.length+10])
+                    cavity_content = bytes_to_ascii(content[cavity.offset:cavity.offset+cavity.length])
+                    print(f"\t\"{bytes_before}{cavity_content}{bytes_after}\"")
+                    print(f"\t {' ' * len(bytes_before)}{'^' * len(cavity_content)}")
