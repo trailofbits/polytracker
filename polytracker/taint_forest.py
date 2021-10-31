@@ -39,6 +39,14 @@ class TaintForest:
         """Iterates over the nodes in order of decreasing label"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_node(self, label: int, source: Input) -> TaintForestNode:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
+        raise NotImplementedError()
+
     def __iter__(self):
         return self.nodes()
 

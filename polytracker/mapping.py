@@ -3,6 +3,7 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
+import itertools
 from typing import Dict, Iterator, Set
 
 from intervaltree import Interval, IntervalTree
@@ -47,6 +48,12 @@ class InputOutputMapping:
 
     def written_input_bytes(self) -> Iterator[ByteOffset]:
         """Yields all of the input byte offsets from input files that are written to an output file"""
+        # forest = self.trace.taint_forest
+        # yield from self.trace.taints(itertools.chain(*(
+        #     forest[output.label] for output in tqdm(self.trace.output_taints, unit=" output taints", leave=False)
+        #     if output.label > 0
+        # )))
+        # return
         output_labels = {
             output_taint.label
             for output_taint in tqdm(self.trace.output_taints, unit=" output taints", leave=False)

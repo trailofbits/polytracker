@@ -725,13 +725,13 @@ class TaintAccess:
 class TaintOutput:
     """An abstract class for representing tainted bytes written to an output (file, network socket, etc)."""
 
-    def __init__(self, input_id: int, output_offset: int, label: int):
+    def __init__(self, source: Input, output_offset: int, label: int):
         """
         Args:
             output_offset: offset within the output file
             label: The taint label of the output
         """
-        self.input_id: int = input_id
+        self.source: Input = source
         self.offset: int = output_offset
         self.label: int = label
 

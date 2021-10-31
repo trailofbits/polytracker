@@ -888,6 +888,7 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     label = Column(BigInteger, ForeignKey("taint_forest.label"))
     taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
                                                           back_populates="writes", sync_backref=False)
+    source = relationship("DBInput")
     __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
 
     def taints(self) -> Taints:
@@ -1017,6 +1018,15 @@ class DBTaintForest(TaintForest):
 
     def nodes(self) -> Iterator[TaintForestNode]:
         yield from stream_results(self.trace.session.query(DBTaintForestNode).order_by(DBTaintForestNode.label.desc()))
+
+    def get_node(self, label: int, source: Input) -> TaintForestNode:
+        try:
+            return self.trace.session.query(DBTaintForestNode).filter(label == label, source == source.uid).one()
+        except NoResultFound:
+            raise ValueError(f"Taint label {label} is not in the taint forest!")
+
+    def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
+        yield from stream_results(self.trace.session.query(DBTaintForestNode).filter(label == label))
 
     def __len__(self):
         return self.trace.session.query(DBTaintForestNode).count()
