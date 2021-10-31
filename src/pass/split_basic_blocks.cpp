@@ -37,26 +37,3 @@ PreservedAnalyses SplitBasicBlocksPass::run(Function &f, FunctionAnalysisManager
 }
 
 } // namespace gigafunction
-
-PassPluginLibraryInfo getSplitBasicBlocksPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "splitbasicblocks", LLVM_VERSION_STRING,
-          [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, FunctionPassManager &FPM,
-                   ArrayRef<PassBuilder::PipelineElement>) {
-                  if (Name == "splitbasicblocks") {
-                    FPM.addPass(gigafunction::SplitBasicBlocksPass());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
-}
-
-// This is the core interface for pass plugins. It guarantees that 'opt' will
-// be able to recognize HelloWorld when added to the pass pipeline on the
-// command line, i.e. via '-passes=hello-world'
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-  return getSplitBasicBlocksPluginInfo();
-}

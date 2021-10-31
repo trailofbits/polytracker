@@ -12,11 +12,11 @@ namespace {
 
 
 ConstantInt* read_block_id(BasicBlock &bb) {
-  if (MDNode* n = bb.front().getMetadata(gigafunction::metadata_tag)) {
+  if (MDNode* n = bb.front().getMetadata(gigafunction::get_metadata_tag())) {
     auto n0 = cast<ConstantAsMetadata>(n->getOperand(0))->getValue();
     return cast<ConstantInt>(n0);
   }
-  errs() << "Warning did not find metadata tag '" << gigafunction::metadata_tag << 
+  errs() << "Warning did not find metadata tag '" << gigafunction::get_metadata_tag() << 
         "' for block in function " << bb.getParent()->getName() << "\n" <<
         " ensure the markbasicblocks-pass have been run previously.";
   return nullptr;
@@ -115,26 +115,3 @@ PreservedAnalyses InstrumentBasicBlocksPass::run(Function &f,
 }
 
 } // namespace gigafunction
-
-PassPluginLibraryInfo getBasicBlocksTracePluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "instrumentbasicblocks", LLVM_VERSION_STRING,
-          [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, FunctionPassManager &FPM,
-                   ArrayRef<PassBuilder::PipelineElement>) {
-                  if (Name == "instrumentbasicblocks") {
-                    FPM.addPass(gigafunction::InstrumentBasicBlocksPass());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
-}
-
-// This is the core interface for pass plugins. It guarantees that 'opt' will
-// be able to recognize HelloWorld when added to the pass pipeline on the
-// command line, i.e. via '-passes=hello-world'
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-  return getBasicBlocksTracePluginInfo();
-}

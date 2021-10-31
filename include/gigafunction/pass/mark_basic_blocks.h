@@ -8,7 +8,7 @@
 
 namespace gigafunction {
 
-  llvm::StringRef metadata_tag = "gigafunc.blockid";
+  inline llvm::StringRef get_metadata_tag() { return "gigafunc.blockid"; }
 
   // Marks each basic block with a number.
   // The idea is to be able to recover specific blocks after a run by just using their id.

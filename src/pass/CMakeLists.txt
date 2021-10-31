@@ -6,20 +6,17 @@ add_definitions(${LLVM_DEFINITIONS})
 # To prevent complaints on LLVM-code
 add_compile_options(-Wno-unused-parameter)
 
-add_library(InstrumentBasicBlocks SHARED instrument_basic_blocks.cpp)
-add_library(MarkBasicBlocks SHARED mark_basic_blocks.cpp)
-add_library(SplitBasicBlocks SHARED split_basic_blocks.cpp)
+add_library(GigaFuncPass SHARED 
+            instrument_basic_blocks.cpp
+            mark_basic_blocks.cpp
+            split_basic_blocks.cpp
+            gigafuncpass.cpp)
 
 # From: https://github.com/banach-space/llvm-tutor/blob/main/HelloWorld/CMakeLists.txt
 # Allow undefined symbols in shared objects on Darwin (this is the default
 # behaviour on Linux)
-target_link_libraries(InstrumentBasicBlocks
+target_link_libraries(GigaFuncPass
   "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
-target_link_libraries(MarkBasicBlocks
-  "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
-target_link_libraries(SplitBasicBlocks
-  "$<$<PLATFORM_ID:Darwin>:-undefined dynamic_lookup>")
-  
 
 
 # TODO (hbrodin): Drop this, just for convenience now.
