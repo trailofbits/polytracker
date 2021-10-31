@@ -1,10 +1,12 @@
 
+#include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 #include<algorithm>
@@ -195,9 +197,6 @@ caller-bb/postcall: replace the call with a load from arg-alloca (return value)
 */
 void create_gigafunction_direct(LLVMContext &ctx, Module &mod, char const *fname, blockindex_t const &bi) {
 
-  //auto void_ty = Type::getVoidTy(ctx);
-  //auto gigafunction_ty = FunctionType::get(void_ty, {}, false);
-  //auto gf = Function::Create(gigafunction_ty, llvm::Function::ExternalLinkage, "gigafunction", mod);
   Function *gf{nullptr};
 
   trace_reader tr(fname);
@@ -245,7 +244,6 @@ void create_gigafunction_direct(LLVMContext &ctx, Module &mod, char const *fname
     prev_bb = handle_ret(prev_bb, callstack);
 
   }
-  gf->print(outs());
 }
 
 blockindex_t build_block_index(Module &m) {
@@ -266,6 +264,10 @@ int main(int argc, char *argv[]) {
   SMDiagnostic error;
   LLVMContext ctx;
   auto mod = parseIRFile(argv[1], error, ctx);
+  if (!mod) {
+    errs() << "Failed to load module from " << argv[1] << "\n";
+    return 1;
+  }
   outs() << "Loaded module " << mod.get() << "\n";
 
   auto blockindex = gigafunction::build_block_index(*mod);
@@ -273,6 +275,15 @@ int main(int argc, char *argv[]) {
 
   gigafunction::create_gigafunction_direct(ctx, *mod, argv[2], blockindex);
   
+  if (argc == 4) {
+    std::error_code ec;
+    raw_fd_ostream os(argv[2], ec, sys::fs::CD_CreateAlways);
+    if (ec) { 
+      errs() << ec.message() << "\n";
+    }
+    WriteBitcodeToFile(*mod, os);
+    outs() << "Gigafunction module written to " << argv[3] << "\n";
+  }
 
   return 0;
 
