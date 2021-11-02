@@ -38,7 +38,7 @@ class InputOutputMapping:
         return self._mapping
 
     def read_from(self, output: TaintOutput) -> Set[ByteOffset]:
-        written_to = self.inputs[output.input_id]
+        written_to = self.inputs[output.source.uid]
         output_byte_offset = ByteOffset(source=written_to, offset=output.offset)
         ret: Set[ByteOffset] = set()
         for byte_offset in output.taints():
