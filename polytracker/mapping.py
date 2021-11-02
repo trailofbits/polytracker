@@ -3,7 +3,6 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
-import itertools
 from typing import Dict, Iterator, Set
 
 from intervaltree import Interval, IntervalTree
