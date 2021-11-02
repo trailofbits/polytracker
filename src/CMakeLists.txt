@@ -4,4 +4,5 @@ add_subdirectory(gfrt)
 add_subdirectory(traceio)
 add_subdirectory(gfanalyze)
 # TODO: Add option for building with tests
+enable_testing()
 add_subdirectory(test)
