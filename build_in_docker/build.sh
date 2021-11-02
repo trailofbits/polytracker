@@ -10,4 +10,8 @@ fi
 
 mkdir -p "${SCRIPTPATH}/../build"
 
-docker run -ti --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
+if [ -t 1 ] ; then
+  docker run -ti --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
+else
+  docker run --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
+fi
