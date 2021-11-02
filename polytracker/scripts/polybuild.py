@@ -104,6 +104,7 @@ db_conn.commit()
 db_conn.close()
 
 CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
+CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
 CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
 # POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
 lib_str = subprocess.check_output(["llvm-config", "--libs"]).decode("utf-8").strip()
@@ -201,10 +202,10 @@ def modify_exec_args(argv: List[str]):
     if building:
         if linking and is_cxx:
             compile_command.extend(
-                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-L{CXX_LIB_PATH!s}"])
+                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-I{CXX_INCLUDE_PATH_ABI!s}", f"-L{CXX_LIB_PATH!s}"])
         elif is_cxx:
             compile_command.extend(
-                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}"])
+                ["-stdlib=libc++", f"-I{CXX_INCLUDE_PATH!s}", f"-I{CXX_INCLUDE_PATH_ABI!s}"])
 
     if not building and linking and is_cxx:
         compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH!s}"])
