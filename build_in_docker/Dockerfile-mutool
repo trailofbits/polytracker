@@ -1,4 +1,4 @@
-FROM ubuntu:bionic AS sources
+FROM ubuntu:focal AS sources
 
 ENV DEBIAN_FRONTEND=noninteractive
 
