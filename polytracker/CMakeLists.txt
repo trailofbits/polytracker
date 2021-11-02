@@ -9,7 +9,7 @@ set(POLYTRACK_TESTS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/tests")
 set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/pass")
 
 add_subdirectory(src)
-install(DIRECTORY "./abi_lists" DESTINATION ${POLYTRACK_CXX_DIR})
+install(DIRECTORY "./custom_abi" DESTINATION ${POLYTRACK_RULE_DIR})
 add_subdirectory(custom_abi)
 
 install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR})
