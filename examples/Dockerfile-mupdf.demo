@@ -1,9 +1,10 @@
-FROM ubuntu:bionic AS sources
+FROM ubuntu:focal AS sources
 
 RUN mkdir -p /polytracker/the_klondike
 
 WORKDIR /polytracker/the_klondike
 
+ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
 
 RUN git clone --recursive git://git.ghostscript.com/mupdf.git
