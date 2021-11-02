@@ -44,6 +44,9 @@ public:
   template<typename U>
   void put(U&& u);
 
+  template<typename... Args>
+  void emplace(Args&&... args);
+
   T get();
   std::optional<T> try_get();
 
@@ -62,6 +65,9 @@ public:
 private:
   // Increment a value and wrap by N
   size_t wrapping_increment(size_t val) const;
+
+  // Returns a pair, of write_index + next that is ready for writing
+  std::pair<size_t, size_t> get_write_index();
 
   // Uninitialized storage
   aligned_storage_t buf_[N];
@@ -94,8 +100,7 @@ bool spsc_buffer<T,N,RS,WS>::full() const {
 }
 
 template<typename T, size_t N, typename RS, typename WS>
-template<typename U>
-void spsc_buffer<T,N,RS,WS>::put(U&& u) {
+std::pair<size_t, size_t> spsc_buffer<T,N,RS,WS>::get_write_index() {
   auto write = write_.load(std::memory_order_relaxed);
   auto next = wrapping_increment(write);
   // While queue full (synchronizes with read_ release in get)
@@ -105,6 +110,13 @@ void spsc_buffer<T,N,RS,WS>::put(U&& u) {
       ws_.spin();
     } 
   }
+  return {write, next};
+}
+
+template<typename T, size_t N, typename RS, typename WS>
+template<typename U>
+void spsc_buffer<T,N,RS,WS>::put(U&& u) {
+  auto [write, next] = get_write_index();
 
   // Construct
   ::new (&buf_[write]) T(std::forward<U>(u));
@@ -113,9 +125,20 @@ void spsc_buffer<T,N,RS,WS>::put(U&& u) {
 }
 
 template<typename T, size_t N, typename RS, typename WS>
+template<typename... Args>
+void spsc_buffer<T,N,RS,WS>::emplace(Args&&... args) {
+  auto [write, next] = get_write_index();
+
+  // Construct
+  ::new (&buf_[write]) T(std::forward<Args>(args)...);
+  // and then publish
+  write_.store(next, std::memory_order_release);
+}
+
+template<typename T, size_t N, typename RS, typename WS>
 T spsc_buffer<T,N,RS,WS>::get() {
   auto read = read_.load(std::memory_order_relaxed);
-  // While queue empty (synchronizes with write_ release in put)
+  // While queue empty (synchronizes with write_ release in get_write_index)
   if (read == write_.load(std::memory_order_acquire)) {
     rs_.initial_spin();
     while (read == write_.load(std::memory_order_acquire)) {// TODO (hbrodin): Might be able to speed up with a relaxed load in the loop and an acquire load after...
@@ -134,7 +157,7 @@ T spsc_buffer<T,N,RS,WS>::get() {
 template<typename T, size_t N, typename RS, typename WS>
 std::optional<T> spsc_buffer<T,N,RS,WS>::try_get() {
   auto read = read_.load(std::memory_order_relaxed);
-  // If queue empty (synchronizes with write_ release in put)
+  // If queue empty (synchronizes with write_ release in get_write_index)
   if (read == write_.load(std::memory_order_acquire))
     return {};
   // Move from/destroy in-buffer value

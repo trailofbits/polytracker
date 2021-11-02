@@ -63,6 +63,17 @@ TEST_CASE("Can store move-only objects", "spsc_buffer") {
   }
 }
 
+TEST_CASE("Emplace construction", "spsc_buffer") {
+  using buf = gigafunction::spsc_buffer<std::pair<std::unique_ptr<int>, std::unique_ptr<int>>, 16>;
+  buf b;
+  SECTION("emplace/get ok") {
+    b.emplace(new int{3}, new int{4});
+    auto [f,s] = b.get();
+    REQUIRE(*f == 3);
+    REQUIRE(*s == 4);
+  }
+}
+
 TEST_CASE("Can read multiple", "spsc_buffer") {
   using buf = gigafunction::spsc_buffer<std::unique_ptr<size_t>, 1024>;
   buf b;
@@ -165,8 +176,6 @@ TEST_CASE("Spin policy", "spsc_buffer") {
     // Wait for the put to complete
     t.join();
     REQUIRE(b.get() == static_cast<size_t>(-1));
-
-
   }
 
 }
