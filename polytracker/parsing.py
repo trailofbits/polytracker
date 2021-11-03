@@ -5,7 +5,7 @@ from typing import Generic, Iterable, Iterator, List, Optional, Tuple, Type, Typ
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
 
-from .cfg import DAG
+from .graphs import DAG
 from .tracing import BasicBlockEntry, FunctionInvocation, ProgramTrace, TraceEvent
 
 
