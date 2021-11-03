@@ -29,7 +29,7 @@ import weakref
 
 from cxxfilt import demangle
 
-from . import DiGraph
+from .graphs import DiGraph
 from .inputs import Input, InputProperties
 from .plugins import Command, Subcommand
 from .repl import PolyTrackerREPL

@@ -23,7 +23,8 @@ import graphviz
 import networkx as nx
 from tqdm import tqdm, trange
 
-from . import PolyTrackerTrace, DiGraph
+from . import PolyTrackerTrace
+from .graphs import DiGraph
 from .parsing import (
     highlight_offset,
     ImmutableParseTree,
