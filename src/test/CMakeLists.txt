@@ -14,7 +14,7 @@ include(CTest)
 include(Catch)
 
 # Unit tests
-add_executable(tests main.cpp spsc_buffer_test.cpp trace_reader_writer_test.cpp)
+add_executable(tests main.cpp spsc_buffer_test.cpp trace_reader_writer_test.cpp varint_test.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2 traceio)
 target_compile_options(tests PUBLIC "-fsanitize=address,undefined")
 target_link_options(tests PUBLIC "-fsanitize=address,undefined")

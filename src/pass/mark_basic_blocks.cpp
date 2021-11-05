@@ -10,13 +10,13 @@ using namespace llvm;
 namespace gigafunction {
 
 PreservedAnalyses BasicBlocksMarkPass::run(Function &f,
-                                            FunctionAnalysisManager & /*fam*/) {
+                                           FunctionAnalysisManager & /*fam*/) {
 
   auto &ctx = f.getContext();
   auto i32_ty = IntegerType::get(ctx, 32);
   for (auto &bb : f) {
     auto counter = ConstantInt::get(i32_ty, ++counter_, false);
-    MDNode* n = MDNode::get(ctx, ConstantAsMetadata::get(counter));
+    MDNode *n = MDNode::get(ctx, ConstantAsMetadata::get(counter));
     bb.front().setMetadata(get_metadata_tag(), n);
   }
 

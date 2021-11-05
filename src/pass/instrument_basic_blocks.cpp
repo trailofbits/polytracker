@@ -10,15 +10,15 @@ using namespace llvm;
 
 namespace {
 
-
-ConstantInt* read_block_id(BasicBlock &bb) {
-  if (MDNode* n = bb.front().getMetadata(gigafunction::get_metadata_tag())) {
+ConstantInt *read_block_id(BasicBlock &bb) {
+  if (MDNode *n = bb.front().getMetadata(gigafunction::get_metadata_tag())) {
     auto n0 = cast<ConstantAsMetadata>(n->getOperand(0))->getValue();
     return cast<ConstantInt>(n0);
   }
-  errs() << "Warning did not find metadata tag '" << gigafunction::get_metadata_tag() << 
-        "' for block in function " << bb.getParent()->getName() << "\n" <<
-        " ensure the markbasicblocks-pass have been run previously.";
+  errs() << "Warning did not find metadata tag '"
+         << gigafunction::get_metadata_tag() << "' for block in function "
+         << bb.getParent()->getName() << "\n"
+         << " ensure the markbasicblocks-pass have been run previously.";
   return nullptr;
 }
 
@@ -27,7 +27,7 @@ ConstantInt* read_block_id(BasicBlock &bb) {
 // a in the same function frame and bid is the block id (globally unique)
 void insert_log_block_enter(Instruction *thread_id_instr, LLVMContext &ctx,
                             Module &mod, Instruction *firstins,
-                            ConstantInt* bid) {
+                            ConstantInt *bid) {
   auto thread_state_ty = IntegerType::get(ctx, 8)->getPointerTo();
   auto block_id_ty = IntegerType::get(ctx, sizeof(gigafunction::block_id) * 8);
   auto void_ty = Type::getVoidTy(ctx);
@@ -39,7 +39,8 @@ void insert_log_block_enter(Instruction *thread_id_instr, LLVMContext &ctx,
   IRBuilder<> irb(firstins);
   irb.CreateCall(enter_block_function, {thread_id_instr, bid});
 
-  outs() << "{block: " << bid->getZExtValue() << ", function: \"" << firstins->getFunction()->getName() << "\"}\n";
+  outs() << "{block: " << bid->getZExtValue() << ", function: \""
+         << firstins->getFunction()->getName() << "\"}\n";
 }
 
 // Inserts the following call first in the function
@@ -75,24 +76,24 @@ Instruction *insert_get_thread_id_call(LLVMContext &ctx, Module &mod,
 
 namespace gigafunction {
 
-  /*
-  Insert the following into the function
-  void function() {
-    ...
-    uint64_t thread_state = gigafunction_get_thread_state();
-    gigafunction_basic_block_enter(thread_state, 1);
-    ...
-    gigafunction_basic_block_enter(thread_state, 2);
-    ...
-    gigafunction_basic_block_enter(thread_state, 3);
-    ...
-  }
+/*
+Insert the following into the function
+void function() {
+  ...
+  uint64_t thread_state = gigafunction_get_thread_state();
+  gigafunction_basic_block_enter(thread_state, 1);
+  ...
+  gigafunction_basic_block_enter(thread_state, 2);
+  ...
+  gigafunction_basic_block_enter(thread_state, 3);
+  ...
+}
 
-  as a minor optimization the thread_state is not explicitly stored on the stack
-  See the files in src/librt for implementation details of invoked functions.
-  */
-PreservedAnalyses InstrumentBasicBlocksPass::run(Function &f,
-                                            FunctionAnalysisManager & /*fam*/) {
+as a minor optimization the thread_state is not explicitly stored on the stack
+See the files in src/librt for implementation details of invoked functions.
+*/
+PreservedAnalyses
+InstrumentBasicBlocksPass::run(Function &f, FunctionAnalysisManager & /*fam*/) {
 
   auto &ctx = f.getContext();
   auto &mod = *f.getParent();

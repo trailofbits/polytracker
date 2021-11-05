@@ -1,6 +1,6 @@
-#include <array>
 #include <cstdio>
 #include <optional>
+#include <vector>
 #include "gigafunction/types.h"
 
 
@@ -25,12 +25,8 @@ namespace gigafunction {
     using input_fd = std::unique_ptr<FILE, decltype(&::fclose)>;
     input_fd fd_;
 
-    using bid_cache = std::array<block_id, 128>;
-    bid_cache cache_;
-    bid_cache::const_iterator it_;
-    bid_cache::const_iterator end_;
-    size_t remaining_to_read_{0};
-    thread_id tid_;
-    
+    std::vector<uint8_t> buff_;
+    std::vector<uint8_t>::iterator read_pos_;
+    std::vector<uint8_t>::iterator end_pos_;
   };
 }

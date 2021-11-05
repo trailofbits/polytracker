@@ -9,10 +9,11 @@ using namespace llvm;
 
 namespace gigafunction {
 
-PreservedAnalyses SplitBasicBlocksPass::run(Function &f, FunctionAnalysisManager & /*fam*/) {
+PreservedAnalyses SplitBasicBlocksPass::run(Function &f,
+                                            FunctionAnalysisManager & /*fam*/) {
   PreservedAnalyses ret = PreservedAnalyses::all();
-  for (auto& bb : f) {
-    for (auto& ins : bb) {
+  for (auto &bb : f) {
+    for (auto &ins : bb) {
       if (auto call = dyn_cast<CallInst>(&ins)) {
         // This is a call, the only call that shall not be followed by
         // a block split is if there is an unconditional branch immediately

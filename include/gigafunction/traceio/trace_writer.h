@@ -15,11 +15,12 @@ namespace gigafunction {
     void write_trace(thread_id tid, block_id bid);
   private:
 
-    void flush_cache();
+    bool flush_cache();
 
     using output_fd = std::unique_ptr<FILE, decltype(&::fclose)>;
     output_fd fd_;
-    std::optional<thread_id> last_thread_id_;
-    std::vector<block_id> bid_cache_;
+    std::vector<uint8_t> write_cache_;
+    std::vector<uint8_t>::iterator write_pos_;
+    std::vector<uint8_t>::iterator end_pos_;
   };
 }
