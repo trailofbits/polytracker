@@ -127,18 +127,6 @@ __attribute__((destructor)) void stop_consumer_thread() {
   while (0 == have_stopped.load(std::memory_order_acquire)) {
     sched_yield();
   }
-  // TODO (hbrodin): Without this printf the function does not work. This is
-  // clearly a bad sign. Investigate to ensure it can be guaranteed that this
-  // method is run. Use the printf in the consumer thread. It seems as if we
-  // don't have a dependency to any visible effect this function is discared. In
-  // a way, it makes sense since we are terminating the program and if the code
-  // don't "do" anything we might as welll discard it. Still, this needs to be
-  // understood and a clean solution should be implemented. So far I've been
-  // exploring:
-  // - memory order (to prevent reordering)
-  // - linker options -Wl,--whole-archive -Wl,-force_load, -Wl,-all_load
-  // - keep a dummy volatile in stop_consumer_thread, whose value is returned
-  printf("Done\n");
 }
 
 } // namespace
