@@ -10,7 +10,8 @@ add_library(GigaFuncPass SHARED
             instrument_basic_blocks.cpp
             mark_basic_blocks.cpp
             split_basic_blocks.cpp
-            gigafuncpass.cpp)
+            gigafuncpass.cpp
+            detour_taint_functions.cpp)
 
 # From: https://github.com/banach-space/llvm-tutor/blob/main/HelloWorld/CMakeLists.txt
 # Allow undefined symbols in shared objects on Darwin (this is the default

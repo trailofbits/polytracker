@@ -12,7 +12,7 @@ namespace gigafunction {
     trace_writer(char const *filename);
     ~trace_writer();
 
-    void write_trace(thread_id tid, block_id bid);
+    void write_trace(event const &e);
   private:
 
     bool flush_cache();

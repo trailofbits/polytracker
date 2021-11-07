@@ -1,0 +1,6 @@
+fopen
+fread
+fclose
+_read
+_open
+_close

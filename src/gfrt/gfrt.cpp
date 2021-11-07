@@ -1,6 +1,7 @@
 #include "gigafunction/gfrt/thread_state.h"
 #include "gigafunction/gfrt/tracelib.h"
 #include "gigafunction/traceio/trace_writer.h"
+#include "gigafunction/types.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdio>
@@ -83,8 +84,7 @@ __attribute__((constructor)) void start_consumer_thread() {
           auto n_consumed = ts->block_trace.get_n(events, LOG_CAPACITY);
 
           for (size_t i = 0; i < n_consumed; i++) {
-            auto &be = std::get<gigafunction::block_enter>(events[i]);
-            tw.write_trace(ts->id, be.bid);
+            tw.write_trace(events[i]);
           }
           work_done = n_consumed > 0;
 
@@ -131,14 +131,12 @@ __attribute__((destructor)) void stop_consumer_thread() {
 
 } // namespace
 
-// TODO (hbrodin): Consider if there should be a global event id or if per
-// thread id's are sufficient.
 extern "C" void gigafunction_enter_block(gigafunction::thread_state_handle tsh,
                                          gigafunction::block_id bid) {
   auto eventid = ev_id.fetch_add(1, std::memory_order_relaxed);
   auto ts = reinterpret_cast<tstate *>(tsh);
-  ts->block_trace.emplace(std::in_place_type<gigafunction::block_enter>,
-                          eventid, bid);
+  ts->block_trace.emplace(std::in_place_type<gigafunction::events::block_enter>,
+                          ts->id, eventid, bid);
 }
 
 extern "C" gigafunction::thread_state_handle gigafunction_get_thread_state() {
@@ -148,6 +146,20 @@ extern "C" gigafunction::thread_state_handle gigafunction_get_thread_state() {
   return per_thread_state.ts;
 }
 namespace gigafunction {
+namespace {
+tstate &get_thread_state() {
+  return *static_cast<tstate *>(gigafunction_get_thread_state());
+}
+
+
+template<typename T, typename... Args>
+void log_event(Args&&... args) {
+  auto &ts = get_thread_state();
+  ts.block_trace.emplace(std::in_place_type<T>, ts.id,
+                         ev_id.fetch_add(1, std::memory_order_relaxed), std::forward<Args>(args)...);
+}
+
+} // namespace
 
 void env(char const *name, char const *value) {
   (void)name;
@@ -155,14 +167,11 @@ void env(char const *name, char const *value) {
 }
 
 void openfd(int fd, char const *path) {
-  (void)fd;
-  (void)path;
+  log_event<events::open>(fd, path);
 }
 
 void readfd(int fd, size_t pos, size_t len) {
-  (void)fd;
-  (void)pos;
-  (void)len;
+  log_event<events::read>(fd, pos, len);
 }
 
 void closefd(int fd) { (void)fd; }

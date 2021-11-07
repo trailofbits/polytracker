@@ -1,3 +1,5 @@
+#ifndef GIGAFUNCTION_VARINT_H
+#define GIGAFUNCTION_VARINT_H
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -114,3 +116,4 @@ namespace gigafunction {
     }
   } // namespace varint
 }
+#endif

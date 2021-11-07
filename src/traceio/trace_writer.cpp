@@ -1,5 +1,6 @@
 #include "gigafunction/traceio/trace_writer.h"
 #include "gigafunction/traceio/varint.h"
+#include "gigafunction/traceio/serialization.h"
 #include <cassert>
 
 namespace gigafunction {
@@ -12,20 +13,12 @@ trace_writer::trace_writer(char const *filename)
 
 trace_writer::~trace_writer() { flush_cache(); }
 
-void trace_writer::write_trace(thread_id tid, block_id bid) {
-  auto next = varint::encode(write_pos_, end_pos_, tid);
+void trace_writer::write_trace(event const &ev) {
+  auto next = serialize_event(write_pos_, end_pos_, ev);
   if (!next) {
     flush_cache();
-    next = varint::encode(write_pos_, end_pos_, tid);
+    next = serialize_event(write_pos_, end_pos_, ev);
     assert(next && "Failed to write tid even after flush_cache.");
-  }
-  write_pos_ = next.value();
-
-  next = varint::encode(write_pos_, end_pos_, bid);
-  if (!next) {
-    flush_cache();
-    next = varint::encode(write_pos_, end_pos_, bid);
-    assert(next && "Failed to write block id to cache even after flush_cache");
   }
   write_pos_ = next.value();
 }

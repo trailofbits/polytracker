@@ -181,11 +181,16 @@ void create_gigafunctions(LLVMContext &ctx, Module &mod, char const *fname,
   gigafunction_state state;
 
   for (auto e = tr.next(); e; e = tr.next()) {
-    auto [tid, bid] = e.value();
-    auto it = bi.find(bid);
+    auto evt = std::move(e.value());
+    if (!std::holds_alternative<events::block_enter>(evt)) {
+      // For now, just ignore the other events
+      continue;
+    }
+    auto const&be = std::get<events::block_enter>(evt);
+    auto it = bi.find(be.bid);
 
     if (it == bi.end()) {
-      errs() << "Broken analysis. Failed to find block " << bid
+      errs() << "Broken analysis. Failed to find block " << be.bid
              << " in the block index. Abort.\n";
       abort();
     }

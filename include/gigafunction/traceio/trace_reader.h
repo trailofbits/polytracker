@@ -9,15 +9,10 @@ namespace gigafunction {
   class trace_reader {
   public:
 
-    struct trace_entry {
-      thread_id tid;
-      block_id bid;
-    };
-
     trace_reader(char const *filename);
 
     // Reads the next trace_entry from the source
-    std::optional<trace_entry> next();
+    std::optional<event> next();
 
   private:
     void refill_cache();
