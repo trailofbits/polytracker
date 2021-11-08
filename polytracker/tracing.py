@@ -1128,9 +1128,9 @@ class ProgramTrace(ABC):
                     taints.add(self.file_offset(node))
                 else:
                     parent1, parent2 = node.parent_one, node.parent_two
-                    // a node will always have either zero or two parents.
-                    // labels that are reused will reuse their associated nodes.
-                    // all other nodes are unions.
+                    # a node will always have either zero or two parents.
+                    # labels that are reused will reuse their associated nodes.
+                    # all other nodes are unions.
                     assert parent1 is not None and parent2 is not None
                     if parent1 not in history:
                         history.add(parent1)
