@@ -575,7 +575,7 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
   if (no_control_flow_tracking) {
     std::cout << "Omitting PolyTracker control flow instrumentation."
               << std::endl;
-    // We still want to visit comparison functions because they are useful
+    // We still want to visit comparison instructions because they are useful
     // for detecting file cavities:
     for (auto &func : mod) {
       // Ignore if the func is in our ignore list
