@@ -20,6 +20,7 @@ thread_local FunctionStack function_stack;
 thread_local int thread_id = -1;
 thread_local event_id_t thread_event_id = 0;
 thread_local event_id_t last_bb_event_id = 0;
+thread_local TaintedConditionalLabelSet tainted_conditionals;
 std::atomic<event_id_t> event_id{0};
 std::atomic<size_t> last_thread_id{0};
 
@@ -45,6 +46,14 @@ void logCompare(const dfsan_label label, const function_id_t findex,
 void logOperation(const dfsan_label label, const function_id_t findex,
                   const block_id_t bindex) {
   storeTaintAccess(output_db, label, input_id, ByteAccessType::INPUT_ACCESS);
+}
+
+void logConditionalBranch(const dfsan_label label) {
+  if (tainted_conditionals.insert(label).second) {
+    // this is a label we have never before seen used in a conditional branch
+    // printf("New conditional branch label: %d\n", label);
+    storeTaintForestNodeAffectsControlFlow(output_db, label);
+  }
 }
 
 void logCallUninst(const function_id_t func_id, const block_id_t block_id,

@@ -1,9 +1,5 @@
 from enum import IntEnum
-from pathlib import Path
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union, Dict
-from tempfile import NamedTemporaryFile
-import subprocess
-import os
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -13,6 +9,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy import (
     BigInteger,
     BLOB,
+    Boolean,
     Column,
     create_engine,
     Enum as SQLEnum,
@@ -115,7 +112,7 @@ class DBFunction(Base, Function):  # type: ignore
     )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
 
     @property
     def function_index(self) -> int:  # type: ignore
@@ -186,7 +183,7 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
         )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
 
     def _discover_neighbors(self):
         if self._children is not None and self._predecessors is not None:
@@ -266,10 +263,10 @@ class DBTaintAccess(Base, TaintAccess):  # type: ignore
 
     event: "DBTraceEvent" = relationship("DBTraceEvent", back_populates="accessed_labels")
     taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
-                                                          back_populates="accesses")
+                                                          back_populates="accesses", sync_backref=False)
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((self.taint_forest_node,))
+        return DBTaintForestNode.get_taints((self.taint_forest_node,))
 
 
 class DBTraceEvent(Base, TraceEvent):  # type: ignore
@@ -407,7 +404,7 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
             return None
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((access.taint_forest_node for access in self.accessed_labels))
+        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.accessed_labels))
 
 
 class BlockEntries(Base):  # type: ignore
@@ -588,7 +585,7 @@ class DBFunctionInvocation(FunctionInvocation):
         return stream_results(query.order_by(DBTaintAccess.access_id.asc()))
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.taints((access.taint_forest_node for access in self.taint_accesses()))
+        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.taint_accesses()))
 
     def calls(self) -> Iterator["DBFunctionInvocation"]:
         event = self.function_return
@@ -782,6 +779,19 @@ class DBProgramTrace(ProgramTrace):
     def taint_forest(self) -> TaintForest:
         return DBTaintForest(self)
 
+    def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        try:
+            file_offset = (
+                self.session.query(CanonicalMap)
+                    .filter(
+                        CanonicalMap.taint_label == node.label,
+                        CanonicalMap.input_id == node.source.uid,
+                    ).one().file_offset
+            )
+        except NoResultFound:
+            raise ValueError(f"Taint label {node.label} is not in the canonical mapping!")
+        return ByteOffset(source=node.source, offset=file_offset)
+
     @property
     def functions(self) -> Iterable[Function]:
         return self.session.query(DBFunction).all()
@@ -875,30 +885,39 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     __tablename__ = "output_taint"
     input_id = Column(Integer, ForeignKey("input.id"))
     offset = Column(BigInteger)
-    label = Column(BigInteger)
+    label = Column(BigInteger, ForeignKey("taint_forest.label"))
+    taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
+                                                          back_populates="writes", sync_backref=False)
+    source = relationship("DBInput")
     __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
+
+    def taints(self) -> Taints:
+        if self.taint_forest_node is None:
+            # this will sometimes happen if self.label == 0
+            return DBTaintForestNode.get_taints(())
+        else:
+            return DBTaintForestNode.get_taints((self.taint_forest_node,))
 
 
 class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     __tablename__ = "taint_forest"
     parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
-    label = Column(Integer, ForeignKey("accessed_label.label"))
+    label = Column(Integer, ForeignKey("accessed_label.label"), ForeignKey("output_taint.label"))
     input_id = Column(Integer, ForeignKey("input.id"))
+    affected_control_flow = Column(Boolean)
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
     source = relationship("DBInput")
-    accesses = relationship("DBTaintAccess", foreign_keys=[label])
+    accesses = relationship("DBTaintAccess", foreign_keys=[label], viewonly=True)
+    writes = relationship("DBTaintOutput", foreign_keys=[label], viewonly=True)
 
     def __hash__(self):
         return hash((self.input_id, self.label))
 
     def __eq__(self, other):
         return isinstance(other, DBTaintForestNode) and self.input_id == other.input_id and self.label == other.label
-
-    def __lt__(self, other):
-        return isinstance(other, DBTaintForestNode) and self.label < other.label
 
     def __str__(self):
         return f"I{self.input_id}L{self.label}"
@@ -942,7 +961,7 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
         return self._parent_two
 
     @staticmethod
-    def taints(labels: Iterable["DBTaintForestNode"]) -> Taints:
+    def get_taints(labels: Iterable["DBTaintForestNode"]) -> Taints:
         # reverse the labels to reduce the likelihood of reproducing work
         history: Set[DBTaintForestNode] = set(labels)
         node_stack: List[DBTaintForestNode] = sorted(list(set(history)), reverse=True)
@@ -999,6 +1018,15 @@ class DBTaintForest(TaintForest):
 
     def nodes(self) -> Iterator[TaintForestNode]:
         yield from stream_results(self.trace.session.query(DBTaintForestNode).order_by(DBTaintForestNode.label.desc()))
+
+    def get_node(self, label: int, source: Input) -> TaintForestNode:
+        try:
+            return self.trace.session.query(DBTaintForestNode).filter(label == label, source == source.uid).one()
+        except NoResultFound:
+            raise ValueError(f"Taint label {label} is not in the taint forest!")
+
+    def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
+        yield from stream_results(self.trace.session.query(DBTaintForestNode).filter(label == label))
 
     def __len__(self):
         return self.trace.session.query(DBTaintForestNode).count()

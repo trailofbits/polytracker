@@ -174,7 +174,7 @@ class TraceDiff:
                 unit=" functions",
                 leave=False,
             ):
-                for region in func.taints().regions():
+                for region in func.get_taints().regions():
                     self._first_intervals[region.source].add(Interval(region.offset, region.offset + region.length))
             for interval in self._first_intervals.values():
                 interval.merge_overlaps()
@@ -185,7 +185,7 @@ class TraceDiff:
                 unit=" functions",
                 leave=False,
             ):
-                for region in func.taints().regions():
+                for region in func.get_taints().regions():
                     self._second_intervals[region.source].add(Interval(region.offset, region.offset + region.length))
             for interval in self._second_intervals.values():
                 interval.merge_overlaps()

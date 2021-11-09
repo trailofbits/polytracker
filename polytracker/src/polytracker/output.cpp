@@ -36,6 +36,7 @@ extern bool polytracker_save_input_file;
 
 extern thread_local event_id_t last_bb_event_id;
 extern thread_local FunctionStack function_stack;
+extern thread_local TaintedConditionalLabelSet tainted_conditionals;
 
 /*
 SQL statements to prepare
@@ -60,6 +61,11 @@ const char *insert_new_input = "INSERT INTO input(path, content, track_start, "
 const char *insert_forest_node =
     "INSERT INTO taint_forest (parent_one, parent_two, "
     "label, input_id) VALUES (?, ?, ?, ?);";
+
+sqlite3_stmt *make_affects_control_flow_stmt;
+const char *make_affects_control_flow =
+    "UPDATE taint_forest SET affected_control_flow = 1 "
+    "WHERE label = ?;";
 
 sqlite3_stmt *cfg_stmt;
 const char *cfg_insert =
@@ -352,6 +358,8 @@ void prepSQLInserts(sqlite3 *output_db) {
   sql_prep(output_db, output_taint_insert, -1, &output_taint_stmt, NULL);
   sql_prep(output_db, func_uninst_insert, -1, &func_uninst_stmt, NULL);
   sql_prep(output_db, blob_insert, -1, &blob_insert_stmt, NULL);
+  sql_prep(output_db, make_affects_control_flow, -1,
+           &make_affects_control_flow_stmt, NULL);
 }
 
 void storeBlob(sqlite3 *output_db, void *blob, int size) {
@@ -453,6 +461,12 @@ void storeTaintForestNode(sqlite3 *output_db, const input_id_t &input_id,
   sqlite3_bind_int(insert_node_stmt, 4, input_id);
   sql_step(output_db, insert_node_stmt);
   // sqlite3_finalize(insert_node_stmt);
+}
+
+void storeTaintForestNodeAffectsControlFlow(sqlite3 *output_db,
+                                            const dfsan_label &label) {
+  sqlite3_bind_int64(make_affects_control_flow_stmt, 1, label);
+  sql_step(output_db, make_affects_control_flow_stmt);
 }
 
 void storeVersion(sqlite3 *output_db) {

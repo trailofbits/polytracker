@@ -5,9 +5,10 @@ from .inputs import Input
 
 
 class TaintForestNode:
-    def __init__(self, label: int, source: Input):
+    def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
         self.label: int = label
         self.source: Input = source
+        self.affected_control_flow: bool = affected_control_flow
 
     @property
     @abstractmethod
@@ -25,6 +26,9 @@ class TaintForestNode:
     def __eq__(self, other):
         return isinstance(other, TaintForestNode) and other.label == self.label and other.source == self.source
 
+    def __lt__(self, other):
+        return isinstance(other, TaintForestNode) and self.label < other.label
+
     def __hash__(self):
         return hash((self.label, self.source))
 
@@ -32,6 +36,15 @@ class TaintForestNode:
 class TaintForest:
     @abstractmethod
     def nodes(self) -> Iterator[TaintForestNode]:
+        """Iterates over the nodes in order of decreasing label"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_node(self, label: int, source: Input) -> TaintForestNode:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
         raise NotImplementedError()
 
     def __iter__(self):
