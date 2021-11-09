@@ -1,0 +1,12 @@
+polytracker
+===========
+
+.. automodule:: polytracker
+
+polytracker functions
+---------------------
+
+version
+*******
+
+.. autofunction:: version

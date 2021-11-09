@@ -1,0 +1,188 @@
+polytracker.grammars
+====================
+
+.. automodule:: polytracker.grammars
+
+grammars classes
+----------------
+
+Completion
+**********
+
+.. autoclass:: Completion
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CorruptedGrammarError
+*********************
+
+.. autoclass:: CorruptedGrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DisconnectedGrammarError
+************************
+
+.. autoclass:: DisconnectedGrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyParser
+************
+
+.. autoclass:: EarleyParser
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyQueue
+***********
+
+.. autoclass:: EarleyQueue
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EarleyState
+***********
+
+.. autoclass:: EarleyState
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EmptyProduction
+***************
+
+.. autoclass:: EmptyProduction
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ExtractGrammarCommand
+*********************
+
+.. autoclass:: ExtractGrammarCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Grammar
+*******
+
+.. autoclass:: Grammar
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+GrammarError
+************
+
+.. autoclass:: GrammarError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Match
+*****
+
+.. autoclass:: Match
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+MissingProductionError
+**********************
+
+.. autoclass:: MissingProductionError
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+PartialMatch
+************
+
+.. autoclass:: PartialMatch
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Prediction
+**********
+
+.. autoclass:: Prediction
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Production
+**********
+
+.. autoclass:: Production
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Rule
+****
+
+.. autoclass:: Rule
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ScannedTerminal
+***************
+
+.. autoclass:: ScannedTerminal
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+grammars functions
+------------------
+
+extract
+*******
+
+.. autofunction:: extract
+
+parse_tree_to_grammar
+*********************
+
+.. autofunction:: parse_tree_to_grammar
+
+production_name
+***************
+
+.. autofunction:: production_name
+
+to_dot
+******
+
+.. autofunction:: to_dot
+
+trace_to_grammar
+****************
+
+.. autofunction:: trace_to_grammar

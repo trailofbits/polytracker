@@ -1,0 +1,646 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.parsing &mdash; PolyTracker 3.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.parsing.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.plugins" href="polytracker.plugins.html" />
+    <link rel="prev" title="polytracker.mapping" href="polytracker.mapping.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.mapping.html">polytracker.mapping</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.parsing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#parsing-classes">parsing classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#immutableparsetree">ImmutableParseTree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mutableparsetree">MutableParseTree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#nongeneralizedparsetree">NonGeneralizedParseTree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parsetree">ParseTree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#start">Start</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#terminal">Terminal</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#parsing-functions">parsing functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#escape-byte">escape_byte</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#highlight-offset">highlight_offset</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#trace-to-non-generalized-tree">trace_to_non_generalized_tree</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#trace-to-tree">trace_to_tree</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.parsing</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.parsing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-polytracker.parsing">
+<span id="polytracker-parsing"></span><h1>polytracker.parsing<a class="headerlink" href="#module-polytracker.parsing" title="Permalink to this headline">¶</a></h1>
+<section id="parsing-classes">
+<h2>parsing classes<a class="headerlink" href="#parsing-classes" title="Permalink to this headline">¶</a></h2>
+<section id="immutableparsetree">
+<h3>ImmutableParseTree<a class="headerlink" href="#immutableparsetree" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">ImmutableParseTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.parsing.V</span></code>], <a class="reference internal" href="#polytracker.parsing.ParseTree" title="polytracker.parsing.ParseTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.parsing.ParseTree</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.parsing.V</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.children">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.children" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.clone">
+<span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polytracker.parsing.IPT</span></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.clone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.descendants">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">descendants</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.descendants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.is_leaf">
+<span class="sig-name descname"><span class="pre">is_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.is_leaf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.leaves">
+<span class="sig-name descname"><span class="pre">leaves</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.leaves" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.postorder_traversal">
+<span class="sig-name descname"><span class="pre">postorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.postorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.preorder_traversal">
+<span class="sig-name descname"><span class="pre">preorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.preorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.to_dag">
+<span class="sig-name descname"><span class="pre">to_dag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DAG" title="polytracker.cfg.DAG"><span class="pre">polytracker.cfg.DAG</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.ParseTree" title="polytracker.parsing.ParseTree"><span class="pre">polytracker.parsing.ParseTree</span></a><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.to_dag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.parsing.ImmutableParseTree.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.parsing.V</span></em><a class="headerlink" href="#polytracker.parsing.ImmutableParseTree.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="mutableparsetree">
+<h3>MutableParseTree<a class="headerlink" href="#mutableparsetree" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">MutableParseTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.MutableParseTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.parsing.V</span></code>], <a class="reference internal" href="#polytracker.parsing.ImmutableParseTree" title="polytracker.parsing.ImmutableParseTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.parsing.ImmutableParseTree</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.parsing.V</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.add_child">
+<span class="sig-name descname"><span class="pre">add_child</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_child</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.MPT</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.add_child" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.children">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.parsing.MutableParseTree.children" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.clone">
+<span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polytracker.parsing.IPT</span></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.clone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.descendants">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">descendants</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.MutableParseTree.descendants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.is_leaf">
+<span class="sig-name descname"><span class="pre">is_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.is_leaf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.leaves">
+<span class="sig-name descname"><span class="pre">leaves</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.leaves" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.postorder_traversal">
+<span class="sig-name descname"><span class="pre">postorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.postorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.preorder_traversal">
+<span class="sig-name descname"><span class="pre">preorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.preorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.to_dag">
+<span class="sig-name descname"><span class="pre">to_dag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DAG" title="polytracker.cfg.DAG"><span class="pre">polytracker.cfg.DAG</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.ParseTree" title="polytracker.parsing.ParseTree"><span class="pre">polytracker.parsing.ParseTree</span></a><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.MutableParseTree.to_dag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.parsing.MutableParseTree.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.parsing.V</span></em><a class="headerlink" href="#polytracker.parsing.MutableParseTree.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="nongeneralizedparsetree">
+<h3>NonGeneralizedParseTree<a class="headerlink" href="#nongeneralizedparsetree" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">NonGeneralizedParseTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.Start" title="polytracker.parsing.Start"><span class="pre">polytracker.parsing.Start</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><span class="pre">polytracker.tracing.TraceEvent</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#polytracker.parsing.Terminal" title="polytracker.parsing.Terminal"><span class="pre">polytracker.parsing.Terminal</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.G</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.parsing.MutableParseTree" title="polytracker.parsing.MutableParseTree"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.parsing.MutableParseTree</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.10)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference internal" href="#polytracker.parsing.Start" title="polytracker.parsing.Start"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.parsing.Start</span></code></a>, <a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.tracing.TraceEvent</span></code></a>, <a class="reference internal" href="#polytracker.parsing.Terminal" title="polytracker.parsing.Terminal"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.parsing.Terminal</span></code></a>]]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.Start" title="polytracker.parsing.Start"><span class="pre">polytracker.parsing.Start</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.TraceEvent" title="polytracker.tracing.TraceEvent"><span class="pre">polytracker.tracing.TraceEvent</span></a><span class="p"><span class="pre">,</span> </span><a class="reference internal" href="#polytracker.parsing.Terminal" title="polytracker.parsing.Terminal"><span class="pre">polytracker.parsing.Terminal</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">children</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.G</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">()</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.add_child">
+<span class="sig-name descname"><span class="pre">add_child</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_child</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.MPT</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.add_child" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.begin_offset">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">begin_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.begin_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.best_partition">
+<span class="sig-name descname"><span class="pre">best_partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">right_sibling</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.parsing.NonGeneralizedParseTree" title="polytracker.parsing.NonGeneralizedParseTree"><span class="pre">polytracker.parsing.NonGeneralizedParseTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.best_partition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.best_subset">
+<span class="sig-name descname"><span class="pre">best_subset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.parsing.NonGeneralizedParseTree" title="polytracker.parsing.NonGeneralizedParseTree"><span class="pre">polytracker.parsing.NonGeneralizedParseTree</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.best_subset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.bottom_up_pass">
+<span class="sig-name descname"><span class="pre">bottom_up_pass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.bottom_up_pass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.children">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.IPT</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.children" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.clone">
+<span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polytracker.parsing.IPT</span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.clone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.deconflict_parent">
+<span class="sig-name descname"><span class="pre">deconflict_parent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.parsing.NonGeneralizedParseTree" title="polytracker.parsing.NonGeneralizedParseTree"><span class="pre">polytracker.parsing.NonGeneralizedParseTree</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.deconflict_parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.deconflict_sibling">
+<span class="sig-name descname"><span class="pre">deconflict_sibling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">right_sibling</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#polytracker.parsing.NonGeneralizedParseTree" title="polytracker.parsing.NonGeneralizedParseTree"><span class="pre">polytracker.parsing.NonGeneralizedParseTree</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.deconflict_sibling" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.descendants">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">descendants</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.descendants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.end_offset">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">end_offset</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.end_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.is_leaf">
+<span class="sig-name descname"><span class="pre">is_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.is_leaf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.leaves">
+<span class="sig-name descname"><span class="pre">leaves</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.leaves" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.matches">
+<span class="sig-name descname"><span class="pre">matches</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.10)"><span class="pre">bytes</span></a></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.matches" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.postorder_traversal">
+<span class="sig-name descname"><span class="pre">postorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.postorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.preorder_traversal">
+<span class="sig-name descname"><span class="pre">preorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.preorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.simplify">
+<span class="sig-name descname"><span class="pre">simplify</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.simplify" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.terminals">
+<span class="sig-name descname"><span class="pre">terminals</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.Terminal" title="polytracker.parsing.Terminal"><span class="pre">polytracker.parsing.Terminal</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.terminals" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.to_dag">
+<span class="sig-name descname"><span class="pre">to_dag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DAG" title="polytracker.cfg.DAG"><span class="pre">polytracker.cfg.DAG</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.ParseTree" title="polytracker.parsing.ParseTree"><span class="pre">polytracker.parsing.ParseTree</span></a><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.to_dag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.top_down_pass">
+<span class="sig-name descname"><span class="pre">top_down_pass</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.top_down_pass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.value">
+<span class="sig-name descname"><span class="pre">value</span></span><em class="property"><span class="pre">:</span> <span class="pre">polytracker.parsing.V</span></em><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.verify">
+<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.10)"><span class="pre">bytes</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.verify" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.NonGeneralizedParseTree.verify_bounds">
+<span class="sig-name descname"><span class="pre">verify_bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">check_overlap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_coverage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_missing_children</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.NonGeneralizedParseTree.verify_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="parsetree">
+<h3>ParseTree<a class="headerlink" href="#parsetree" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">ParseTree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.ParseTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">abc.ABC</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Generic" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code></a>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">polytracker.parsing.V</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">polytracker.parsing.V</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.ParseTree.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.children">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="pre">:</span> <span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.parsing.ParseTree.children" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.clone">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">clone</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polytracker.parsing.T</span></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.clone" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.descendants">
+<em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">descendants</span></span><em class="property"><span class="pre">:</span> <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></em><a class="headerlink" href="#polytracker.parsing.ParseTree.descendants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.is_leaf">
+<span class="sig-name descname"><span class="pre">is_leaf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.is_leaf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.leaves">
+<span class="sig-name descname"><span class="pre">leaves</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.leaves" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.postorder_traversal">
+<span class="sig-name descname"><span class="pre">postorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.postorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.preorder_traversal">
+<span class="sig-name descname"><span class="pre">preorder_traversal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.T</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.preorder_traversal" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.to_dag">
+<span class="sig-name descname"><span class="pre">to_dag</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DAG" title="polytracker.cfg.DAG"><span class="pre">polytracker.cfg.DAG</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.parsing.ParseTree" title="polytracker.parsing.ParseTree"><span class="pre">polytracker.parsing.ParseTree</span></a><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.V</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.to_dag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.parsing.ParseTree.value">
+<span class="sig-name descname"><span class="pre">value</span></span><a class="headerlink" href="#polytracker.parsing.ParseTree.value" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="start">
+<h3>Start<a class="headerlink" href="#start" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.Start">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">Start</span></span><a class="headerlink" href="#polytracker.parsing.Start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.Start.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.Start.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="terminal">
+<h3>Terminal<a class="headerlink" href="#terminal" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.parsing.Terminal">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">Terminal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terminal</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.10)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.Terminal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.parsing.Terminal.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">terminal</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.10)"><span class="pre">bytes</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.parsing.Terminal.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+<section id="parsing-functions">
+<h2>parsing functions<a class="headerlink" href="#parsing-functions" title="Permalink to this headline">¶</a></h2>
+<section id="escape-byte">
+<h3>escape_byte<a class="headerlink" href="#escape-byte" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="polytracker.parsing.escape_byte">
+<span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">escape_byte</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">byte_value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#polytracker.parsing.escape_byte" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="highlight-offset">
+<h3>highlight_offset<a class="headerlink" href="#highlight-offset" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="polytracker.parsing.highlight_offset">
+<span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">highlight_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.10)"><span class="pre">bytes</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">highlight_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#polytracker.parsing.highlight_offset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="trace-to-non-generalized-tree">
+<h3>trace_to_non_generalized_tree<a class="headerlink" href="#trace-to-non-generalized-tree" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="polytracker.parsing.trace_to_non_generalized_tree">
+<span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">trace_to_non_generalized_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">polytracker.tracing.ProgramTrace</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.parsing.NonGeneralizedParseTree" title="polytracker.parsing.NonGeneralizedParseTree"><span class="pre">polytracker.parsing.NonGeneralizedParseTree</span></a></span></span><a class="headerlink" href="#polytracker.parsing.trace_to_non_generalized_tree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="trace-to-tree">
+<h3>trace_to_tree<a class="headerlink" href="#trace-to-tree" title="Permalink to this headline">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="polytracker.parsing.trace_to_tree">
+<span class="sig-prename descclassname"><span class="pre">polytracker.parsing.</span></span><span class="sig-name descname"><span class="pre">trace_to_tree</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">polytracker.tracing.ProgramTrace</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">node_type</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">polytracker.parsing.N</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">polytracker.parsing.ParseTree[typing.Union[polytracker.parsing.Start,</span> <span class="pre">polytracker.tracing.TraceEvent,</span> <span class="pre">polytracker.parsing.Terminal]]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_terminals</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">polytracker.parsing.N</span></span></span><a class="headerlink" href="#polytracker.parsing.trace_to_tree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.plugins.html" class="btn btn-neutral float-right" title="polytracker.plugins" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.mapping.html" class="btn btn-neutral float-left" title="polytracker.mapping" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        3.1.0
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

@@ -1,0 +1,78 @@
+polytracker.plugins
+===================
+
+.. automodule:: polytracker.plugins
+
+plugins classes
+---------------
+
+AbstractCommand
+***************
+
+.. autoclass:: AbstractCommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Command
+*******
+
+.. autoclass:: Command
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CommandExtension
+****************
+
+.. autoclass:: CommandExtension
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CommandExtensionMeta
+********************
+
+.. autoclass:: CommandExtensionMeta
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Plugin
+******
+
+.. autoclass:: Plugin
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+PluginMeta
+**********
+
+.. autoclass:: PluginMeta
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Subcommand
+**********
+
+.. autoclass:: Subcommand
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+plugins functions
+-----------------
+
+add_command_subparsers
+**********************
+
+.. autofunction:: add_command_subparsers

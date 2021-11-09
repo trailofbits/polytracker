@@ -1,0 +1,249 @@
+polytracker.database
+====================
+
+.. automodule:: polytracker.database
+
+database classes
+----------------
+
+BlockEntries
+************
+
+.. autoclass:: BlockEntries
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+CanonicalMap
+************
+
+.. autoclass:: CanonicalMap
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBBasicBlock
+************
+
+.. autoclass:: DBBasicBlock
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBBasicBlockEntry
+*****************
+
+.. autoclass:: DBBasicBlockEntry
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBCallIndirect
+**************
+
+.. autoclass:: DBCallIndirect
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBCallUninst
+************
+
+.. autoclass:: DBCallUninst
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBFunction
+**********
+
+.. autoclass:: DBFunction
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBFunctionEntry
+***************
+
+.. autoclass:: DBFunctionEntry
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBFunctionEvent
+***************
+
+.. autoclass:: DBFunctionEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBFunctionInvocation
+********************
+
+.. autoclass:: DBFunctionInvocation
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBFunctionReturn
+****************
+
+.. autoclass:: DBFunctionReturn
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBInput
+*******
+
+.. autoclass:: DBInput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBProgramTrace
+**************
+
+.. autoclass:: DBProgramTrace
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintAccess
+*************
+
+.. autoclass:: DBTaintAccess
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintForest
+*************
+
+.. autoclass:: DBTaintForest
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintForestNode
+*****************
+
+.. autoclass:: DBTaintForestNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintOutput
+*************
+
+.. autoclass:: DBTaintOutput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintedChunk
+**************
+
+.. autoclass:: DBTaintedChunk
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTaintedOutputChunk
+********************
+
+.. autoclass:: DBTaintedOutputChunk
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBTraceEvent
+************
+
+.. autoclass:: DBTraceEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DBUninstFunc
+************
+
+.. autoclass:: DBUninstFunc
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EdgeType
+********
+
+.. autoclass:: EdgeType
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+EventType
+*********
+
+.. autoclass:: EventType
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+FunctionCFGEdge
+***************
+
+.. autoclass:: FunctionCFGEdge
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+FunctionEntries
+***************
+
+.. autoclass:: FunctionEntries
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+PolytrackerItem
+***************
+
+.. autoclass:: PolytrackerItem
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+database functions
+------------------
+
+stream_results
+**************
+
+.. autofunction:: stream_results
