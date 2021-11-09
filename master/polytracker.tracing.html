@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.mapping.html">polytracker.mapping</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
@@ -1477,6 +1478,12 @@ not including any basic blocks inside called functions.</p>
 <dd><p>Returns the entrypoint to this trace (<em>i.e.</em>, its first <a class="reference internal" href="#polytracker.tracing.FunctionInvocation" title="polytracker.tracing.FunctionInvocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionInvocation</span></code></a>, typically <code class="docutils literal notranslate"><span class="pre">main</span></code>).</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.file_offset">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">file_offset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode" title="polytracker.taint_forest.TaintForestNode"><span class="pre">polytracker.taint_forest.TaintForestNode</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.ByteOffset" title="polytracker.tracing.ByteOffset"><span class="pre">polytracker.tracing.ByteOffset</span></a></span></span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.file_offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>The file offset associated with a taint forest node</p>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.function_cfg">
 <em class="property"><span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">function_cfg</span></span><em class="property"><span class="pre">:</span> <a class="reference internal" href="polytracker.cfg.html#polytracker.cfg.DiGraph" title="polytracker.cfg.DiGraph"><span class="pre">polytracker.cfg.DiGraph</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.Function" title="polytracker.tracing.Function"><span class="pre">polytracker.tracing.Function</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.ProgramTrace.function_cfg" title="Permalink to this definition">¶</a></dt>
@@ -1541,6 +1548,12 @@ implementations.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.inputs_affecting_control_flow">
+<span class="sig-name descname"><span class="pre">inputs_affecting_control_flow</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.inputs_affecting_control_flow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the set of byte offsets that affected control flow</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.is_cfg_connected">
 <span class="sig-name descname"><span class="pre">is_cfg_connected</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.10)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.is_cfg_connected" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates whether the trace’s control flow graph is connected.</p>
@@ -1576,10 +1589,27 @@ implementations.</p>
 <dd></dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.output_taints">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">output_taints</span></span><em class="property"><span class="pre">:</span> <span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.TaintOutput" title="polytracker.tracing.TaintOutput"><span class="pre">polytracker.tracing.TaintOutput</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.ProgramTrace.output_taints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates over all of the outputs written in the trace</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.outputs">
+<em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">outputs</span></span><em class="property"><span class="pre">:</span> <span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.ProgramTrace.outputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>The taint syncs written to in this trace.</p>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.taint_forest">
 <em class="property"><span class="pre">abstract</span> <span class="pre">property</span> </em><span class="sig-name descname"><span class="pre">taint_forest</span></span><em class="property"><span class="pre">:</span> <a class="reference internal" href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest" title="polytracker.taint_forest.TaintForest"><span class="pre">polytracker.taint_forest.TaintForest</span></a></em><a class="headerlink" href="#polytracker.tracing.ProgramTrace.taint_forest" title="Permalink to this definition">¶</a></dt>
 <dd><p>The taint forest associated with this trace.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.taints">
+<span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode" title="polytracker.taint_forest.TaintForestNode"><span class="pre">polytracker.taint_forest.TaintForestNode</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -1789,12 +1819,12 @@ implementations.</p>
 <h3>TaintOutput<a class="headerlink" href="#taintoutput" title="Permalink to this headline">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.tracing.TaintOutput">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">TaintOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_offset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintOutput" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">TaintOutput</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_offset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintOutput" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>An abstract class for representing tainted bytes written to an output (file, network socket, etc).</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.tracing.TaintOutput.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_offset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintOutput.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="polytracker.inputs.html#polytracker.inputs.Input" title="polytracker.inputs.Input"><span class="pre">polytracker.inputs.Input</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_offset</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TaintOutput.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -1804,6 +1834,11 @@ implementations.</p>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.tracing.TaintOutput.taints">
+<em class="property"><span class="pre">abstract</span> </em><span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">polytracker.tracing.Taints</span></a></span></span><a class="headerlink" href="#polytracker.tracing.TaintOutput.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 

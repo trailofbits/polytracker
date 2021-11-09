@@ -14,6 +14,7 @@ PolyTracker API
    polytracker.diffing
    polytracker.grammars
    polytracker.inputs
+   polytracker.mapping
    polytracker.parsing
    polytracker.plugins
    polytracker.repl

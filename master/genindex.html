@@ -367,6 +367,12 @@
 </li>
         <li><a href="polytracker.inputs.html#polytracker.inputs.InputProperties.__init__">(polytracker.inputs.InputProperties method)</a>
 </li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.__init__">(polytracker.mapping.FileCavities method)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.__init__">(polytracker.mapping.InputOutputMapping method)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.__init__">(polytracker.mapping.MapInputsToOutputs method)</a>
+</li>
         <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.__init__">(polytracker.parsing.ImmutableParseTree method)</a>
 </li>
         <li><a href="polytracker.parsing.html#polytracker.parsing.MutableParseTree.__init__">(polytracker.parsing.MutableParseTree method)</a>
@@ -680,6 +686,8 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.adjlist_outer_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.affected_control_flow">affected_control_flow (polytracker.database.DBTaintForestNode attribute)</a>
+</li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.ancestors">ancestors() (polytracker.cfg.CFG method)</a>
 
       <ul>
@@ -811,6 +819,8 @@
       <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_first">bytes_only_in_first (polytracker.tracing.TaintDiff property)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_second">bytes_only_in_second (polytracker.tracing.TaintDiff property)</a>
+</li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.bytes_to_ascii">bytes_to_ascii() (in module polytracker.mapping)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1375,6 +1385,10 @@
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.extension_types">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
 </li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.extension_types">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.extension_types">(polytracker.mapping.MapInputsToOutputs attribute)</a>
+</li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.extension_types">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.Command.extension_types">(polytracker.plugins.Command attribute)</a>
@@ -1418,9 +1432,19 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.file_cavities">file_cavities() (polytracker.mapping.InputOutputMapping method)</a>
+</li>
       <li><a href="polytracker.visualizations.html#polytracker.visualizations.file_diff">file_diff() (in module polytracker.visualizations)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.CanonicalMap.file_offset">file_offset (polytracker.database.CanonicalMap attribute)</a>
+</li>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.file_offset">file_offset() (polytracker.database.DBProgramTrace method)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.file_offset">(polytracker.tracing.ProgramTrace method)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities">FileCavities (class in polytracker.mapping)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.find">find() (polytracker.tracing.Taints method)</a>
 </li>
@@ -1472,6 +1496,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.full_name">(polytracker.diffing.TraceDiffCommand property)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.full_name">(polytracker.grammars.ExtractGrammarCommand property)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.full_name">(polytracker.mapping.FileCavities property)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.full_name">(polytracker.mapping.MapInputsToOutputs property)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.full_name">(polytracker.plugins.AbstractCommand property)</a>
 </li>
@@ -1698,6 +1726,14 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.containerization.html#polytracker.containerization.Dockerfile.get_line">get_line() (polytracker.containerization.Dockerfile method)</a>
 </li>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.get_node">get_node() (polytracker.database.DBTaintForest method)</a>
+
+      <ul>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.get_node">(polytracker.taint_forest.TaintForest method)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.get_taints">get_taints() (polytracker.database.DBTaintForestNode static method)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.get_thread_event">get_thread_event() (polytracker.database.DBProgramTrace method)</a>
 </li>
       <li><a href="polytracker.datalog.html#polytracker.datalog.get_valid_datalog_name">get_valid_datalog_name() (in module polytracker.datalog)</a>
@@ -1776,10 +1812,10 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_successor">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.has_thread_event">has_thread_event() (polytracker.database.DBProgramTrace method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.build.html#polytracker.build.PolyBuild.help">help (polytracker.build.PolyBuild attribute)</a>
 
       <ul>
@@ -1802,6 +1838,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.help">(polytracker.diffing.TraceDiffCommand attribute)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.help">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.help">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.help">(polytracker.mapping.MapInputsToOutputs attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.help">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
@@ -1934,12 +1974,20 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.input_properties">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping">InputOutputMapping (class in polytracker.mapping)</a>
+</li>
       <li><a href="polytracker.inputs.html#polytracker.inputs.InputProperties">InputProperties (class in polytracker.inputs)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs">inputs (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.inputs">(polytracker.tracing.ProgramTrace property)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs_affecting_control_flow">inputs_affecting_control_flow() (polytracker.database.DBProgramTrace method)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.inputs_affecting_control_flow">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.is_canonical">is_canonical() (polytracker.database.DBTaintForestNode method)</a>
@@ -2062,6 +2110,10 @@
 </li>
       <li><a href="polytracker.build.html#polytracker.build.main_plus_plus">main_plus_plus() (in module polytracker.build)</a>
 </li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs">MapInputsToOutputs (class in polytracker.mapping)</a>
+</li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.mapping">mapping (polytracker.mapping.InputOutputMapping property)</a>
+</li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Match">Match (class in polytracker.grammars)</a>
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Grammar.match">match() (polytracker.grammars.Grammar method)</a>
@@ -2144,6 +2196,8 @@
 </li>
         <li><a href="polytracker.inputs.html#module-polytracker.inputs">polytracker.inputs</a>
 </li>
+        <li><a href="polytracker.mapping.html#module-polytracker.mapping">polytracker.mapping</a>
+</li>
         <li><a href="polytracker.parsing.html#module-polytracker.parsing">polytracker.parsing</a>
 </li>
         <li><a href="polytracker.plugins.html#module-polytracker.plugins">polytracker.plugins</a>
@@ -2207,6 +2261,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.name">(polytracker.diffing.TraceDiffCommand attribute)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.name">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.name">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.name">(polytracker.mapping.MapInputsToOutputs attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.name">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
@@ -2305,6 +2363,8 @@
         <li><a href="polytracker.grammars.html#polytracker.grammars.ScannedTerminal.next_element">(polytracker.grammars.ScannedTerminal property)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_event">next_event (polytracker.database.DBBasicBlockEntry property)</a>
 
       <ul>
@@ -2341,8 +2401,6 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.next_event">(polytracker.tracing.TraceEvent property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.next_function_entry">next_function_entry() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
@@ -2485,8 +2543,6 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.out_degree">(polytracker.cfg.DiGraph property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_edges">out_edges (polytracker.cfg.CFG property)</a>
 
       <ul>
@@ -2495,6 +2551,8 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.out_edges">(polytracker.cfg.DiGraph property)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.out_of_date_sources">out_of_date_sources() (polytracker.containerization.DockerContainer method)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBFunction.outgoing_edges">outgoing_edges (polytracker.database.DBFunction attribute)</a>
@@ -2502,9 +2560,17 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.output_chunks">output_chunks (polytracker.database.DBProgramTrace property)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.output_taints">output_taints (polytracker.database.DBProgramTrace property)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.output_taints">(polytracker.tracing.ProgramTrace property)</a>
 </li>
+      </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.outputs">outputs (polytracker.database.DBProgramTrace property)</a>
+
+      <ul>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.outputs">(polytracker.tracing.ProgramTrace property)</a>
 </li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -2535,6 +2601,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.parent">(polytracker.diffing.TraceDiffCommand attribute)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.parent">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.parent">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.parent">(polytracker.mapping.MapInputsToOutputs attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.parent">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
@@ -2611,6 +2681,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.parent_parsers">(polytracker.diffing.TraceDiffCommand attribute)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.parent_parsers">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.parent_parsers">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.parent_parsers">(polytracker.mapping.MapInputsToOutputs attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.parent_parsers">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
@@ -2772,6 +2846,8 @@
         <li><a href="polytracker.grammars.html#module-polytracker.grammars">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     polytracker.inputs
 
@@ -2779,8 +2855,13 @@
         <li><a href="polytracker.inputs.html#module-polytracker.inputs">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    polytracker.mapping
+
+      <ul>
+        <li><a href="polytracker.mapping.html#module-polytracker.mapping">module</a>
+</li>
+      </ul></li>
       <li>
     polytracker.parsing
 
@@ -3047,6 +3128,8 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType.READ_ACCESS">READ_ACCESS (polytracker.tracing.ByteAccessType attribute)</a>
 </li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.read_from">read_from() (polytracker.mapping.InputOutputMapping method)</a>
+</li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.rebuild">rebuild() (polytracker.containerization.DockerContainer method)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.regions">regions() (polytracker.tracing.Taints method)</a>
@@ -3139,8 +3222,6 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn.returning_to">(polytracker.tracing.FunctionReturn property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.reverse">reverse() (polytracker.cfg.CFG method)</a>
 
       <ul>
@@ -3149,6 +3230,8 @@
         <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.reverse">(polytracker.cfg.DiGraph method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.roots">roots (polytracker.cfg.CFG property)</a>
 
       <ul>
@@ -3191,6 +3274,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.run">(polytracker.diffing.TraceDiffCommand method)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.run">(polytracker.grammars.ExtractGrammarCommand method)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.run">(polytracker.mapping.FileCavities method)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.run">(polytracker.mapping.MapInputsToOutputs method)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.run">(polytracker.plugins.AbstractCommand method)</a>
 </li>
@@ -3264,6 +3351,8 @@
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.source">(polytracker.database.DBTaintForestNode attribute)</a>
 </li>
+        <li><a href="polytracker.database.html#polytracker.database.DBTaintOutput.source">(polytracker.database.DBTaintOutput attribute)</a>
+</li>
         <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.source">(polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
       </ul></li>
@@ -3315,6 +3404,10 @@
         <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiffCommand.subcommand_types">(polytracker.diffing.TraceDiffCommand attribute)</a>
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.subcommand_types">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.subcommand_types">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.subcommand_types">(polytracker.mapping.MapInputsToOutputs attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.subcommand_types">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
@@ -3378,6 +3471,10 @@
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.subparser">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
 </li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.subparser">(polytracker.mapping.FileCavities attribute)</a>
+</li>
+        <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.subparser">(polytracker.mapping.MapInputsToOutputs attribute)</a>
+</li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.AbstractCommand.subparser">(polytracker.plugins.AbstractCommand attribute)</a>
 </li>
         <li><a href="polytracker.plugins.html#polytracker.plugins.Command.subparser">(polytracker.plugins.Command attribute)</a>
@@ -3424,7 +3521,11 @@
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintAccess.taint_forest_node">taint_forest_node (polytracker.database.DBTaintAccess attribute)</a>
+
+      <ul>
+        <li><a href="polytracker.database.html#polytracker.database.DBTaintOutput.taint_forest_node">(polytracker.database.DBTaintOutput attribute)</a>
 </li>
+      </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.CanonicalMap.taint_label">taint_label (polytracker.database.CanonicalMap attribute)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.taint_source_sizes">taint_source_sizes() (polytracker.cfg.FunctionInfo method)</a>
@@ -3468,9 +3569,11 @@
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionReturn.taints">(polytracker.database.DBFunctionReturn method)</a>
 </li>
+        <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.taints">(polytracker.database.DBProgramTrace method)</a>
+</li>
         <li><a href="polytracker.database.html#polytracker.database.DBTaintAccess.taints">(polytracker.database.DBTaintAccess method)</a>
 </li>
-        <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.taints">(polytracker.database.DBTaintForestNode static method)</a>
+        <li><a href="polytracker.database.html#polytracker.database.DBTaintOutput.taints">(polytracker.database.DBTaintOutput method)</a>
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.taints">(polytracker.database.DBTraceEvent method)</a>
 </li>
@@ -3494,7 +3597,11 @@
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionReturn.taints">(polytracker.tracing.FunctionReturn method)</a>
 </li>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.taints">(polytracker.tracing.ProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.TaintAccess.taints">(polytracker.tracing.TaintAccess method)</a>
+</li>
+        <li><a href="polytracker.tracing.html#polytracker.tracing.TaintOutput.taints">(polytracker.tracing.TaintOutput method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.taints">(polytracker.tracing.TraceEvent method)</a>
 </li>
@@ -3819,6 +3926,12 @@
         <li><a href="polytracker.grammars.html#polytracker.grammars.MissingProductionError.with_traceback">(polytracker.grammars.MissingProductionError method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.writes">writes (polytracker.database.DBTaintForestNode attribute)</a>
+</li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.written_input_bytes">written_input_bytes() (polytracker.mapping.InputOutputMapping method)</a>
+</li>
   </ul></td>
 </tr></table>
 
