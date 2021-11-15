@@ -839,6 +839,39 @@ class DBProgramTrace(ProgramTrace):
     def inputs(self) -> Iterable[Input]:
         return self.session.query(DBInput)
 
+    def taints(self, labels: Union[Iterable[TaintForestNode], Iterable[int]]) -> Taints:
+        # It's much faster to use low-level SQL to traverse the taint forest
+        # Reverse the labels to reduce the likelihood of reproducing work
+        history: Set[int] = set()
+        for lbl in labels:
+            if isinstance(lbl, int):
+                history.add(lbl)
+            else:
+                history.add(lbl.label)
+        taints: Set[ByteOffset] = set()
+        forest = self.taint_forest
+        sources_by_id = {
+            source.uid: source for source in self.session.query(DBInput).all()
+        }
+        canonical_map = {
+            (mapping.input_id, mapping.taint_label): mapping.file_offset
+            for mapping in tqdm(self.session.query(CanonicalMap).all(), desc="caching the canonical map", leave=False)
+        }
+        for label, input_id, parent_one, parent_two in tqdm(self.session.execute(
+                "SELECT label, input_id, parent_one, parent_two FROM taint_forest ORDER BY label DESC"
+        ), desc="searching taint forest", unit=" nodes", leave=False, total=len(forest)):
+            # this is guaranteed to iterate over the nodes in order of decreasing label
+            if label in history:
+                if parent_one == parent_two == 0:
+                    # this is a canonical node that was written
+                    source = sources_by_id[input_id]
+                    offset = canonical_map[(input_id, label)]
+                    taints.add(ByteOffset(source=source, offset=offset))
+                else:
+                    history.add(parent_one)
+                    history.add(parent_two)
+        return Taints(taints)
+
     def __getitem__(self, uid: int) -> TraceEvent:
         raise NotImplementedError()
 
