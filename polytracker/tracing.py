@@ -1107,7 +1107,7 @@ class ProgramTrace(ABC):
     def taints(self, labels: Iterable[TaintForestNode]) -> Taints:
         # reverse the labels to reduce the likelihood of reproducing work
         history: Set[TaintForestNode] = set(labels)
-        node_stack: List[TaintForestNode] = sorted(list(set(history)), reverse=True)
+        node_stack: List[TaintForestNode] = sorted(list(history), reverse=True)
         taints: Set[ByteOffset] = set()
         if len(node_stack) < 10:
             labels_str = ", ".join(map(str, node_stack))
@@ -1141,7 +1141,6 @@ class ProgramTrace(ABC):
                         node_stack.append(parent2)
                         t.total += parent2.label
         return Taints(taints)
-
 
     def function_trace(self) -> Iterator[FunctionEntry]:
         """Iterates over all of the :class:`FunctionEntry` events in this trace.

@@ -910,8 +910,8 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
     source = relationship("DBInput")
-    accesses = relationship("DBTaintAccess", foreign_keys=[label], viewonly=True)
-    writes = relationship("DBTaintOutput", foreign_keys=[label], viewonly=True)
+    accesses = relationship("DBTaintAccess", foreign_keys=[label], viewonly=True, lazy="select")
+    writes = relationship("DBTaintOutput", foreign_keys=[label], viewonly=True, lazy="select")
 
     def __hash__(self):
         return hash((self.input_id, self.label))
