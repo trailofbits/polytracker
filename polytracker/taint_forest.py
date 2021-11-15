@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 
 from .inputs import Input
 
@@ -9,6 +9,11 @@ class TaintForestNode:
         self.label: int = label
         self.source: Input = source
         self.affected_control_flow: bool = affected_control_flow
+
+    @property
+    @abstractmethod
+    def parent_labels(self) -> Optional[Tuple[int, int]]:
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -40,7 +45,7 @@ class TaintForest:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_node(self, label: int, source: Input) -> TaintForestNode:
+    def get_node(self, label: int, source: Optional[Input] = None) -> TaintForestNode:
         raise NotImplementedError()
 
     @abstractmethod

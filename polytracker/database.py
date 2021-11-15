@@ -927,6 +927,13 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
         return self.parent_one_id == 0
 
     @property
+    def parent_labels(self) -> Optional[Tuple[int, int]]:
+        if self.is_canonical():
+            return None
+        else:
+            return self.parent_one_id, self.parent_two_id
+
+    @property
     def parent_one(self) -> Optional["DBTaintForestNode"]:
         if not hasattr(self, "_parent_one"):
             try:
@@ -1019,14 +1026,17 @@ class DBTaintForest(TaintForest):
     def nodes(self) -> Iterator[TaintForestNode]:
         yield from stream_results(self.trace.session.query(DBTaintForestNode).order_by(DBTaintForestNode.label.desc()))
 
-    def get_node(self, label: int, source: Input) -> TaintForestNode:
+    def get_node(self, label: int, source: Optional[Input] = None) -> TaintForestNode:
         try:
-            return self.trace.session.query(DBTaintForestNode).filter(label == label, source == source.uid).one()
+            constraints = [DBTaintForestNode.label == label]
+            if source is not None:
+                constraints.append(DBTaintForestNode.input_id == source.uid)
+            return self.trace.session.query(DBTaintForestNode).filter(*constraints).one()
         except NoResultFound:
             raise ValueError(f"Taint label {label} is not in the taint forest!")
 
     def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
-        yield from stream_results(self.trace.session.query(DBTaintForestNode).filter(label == label))
+        yield from stream_results(self.trace.session.query(DBTaintForestNode).filter(DBTaintForestNode.label == label))
 
     def __len__(self):
         return self.trace.session.query(DBTaintForestNode).count()
