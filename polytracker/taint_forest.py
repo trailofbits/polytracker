@@ -1,10 +1,13 @@
 from abc import abstractmethod
 from typing import Iterator, Optional, Tuple
 
+from graphviz.dot import Digraph
+
 from .graphs import DAG
 from .inputs import Input
 from .plugins import Command
 
+import networkx as nx
 
 class TaintForestNode:
     def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
@@ -55,8 +58,17 @@ class TaintForest:
         raise NotImplementedError()
 
     def to_graph(self) -> DAG[TaintForestNode]:
-        # TODO
-        raise NotImplementedError()
+        dag: nx.DiGraph = nx.DiGraph()
+
+        for node in self:
+            dag.add_node(node.label)
+            if node.parent_one:
+                dag.add_edge(node.parent_one.label, node.label)
+
+            if node.parent_two:
+                dag.add_edge(node.parent_two.label, node.label)
+
+        return DAG(dag)
 
     def __iter__(self):
         return self.nodes()
@@ -76,7 +88,6 @@ class ExportTaintForest(Command):
 
     def run(self, args):
         from . import PolyTrackerTrace
-
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
