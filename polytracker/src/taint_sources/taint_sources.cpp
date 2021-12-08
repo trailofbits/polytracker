@@ -84,6 +84,12 @@ EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
 #endif
     std::string track_path{path};
     addDerivedSource(track_path, fd);
+  } else if (fd >= 0 && ((oflags & O_WRONLY) || (oflags & O_RDWR))) {
+    // We're not tracking this source, but its writeable
+    // create a new input, range is 0->0 as we arent tracking anything for now.
+    // just need this input id in the database, todo, could be output id
+    auto input_id = storeNewInput(output_db, path, 0, 0, 0);
+    get_fd_input_map()[fd] = input_id;
   }
   *ret_label = 0;
   return fd;
@@ -103,6 +109,14 @@ EXT_C_FUNC FILE *__dfsw_fopen64(const char *filename, const char *mode,
 #endif
     std::string track_path{filename};
     addDerivedSource(track_path, fileno(fd));
+  } else {
+    auto fid = fileno(fd);
+    auto oflags = fcntl(fid, F_GETFL);
+    if ((oflags & O_WRONLY) || (oflags & O_RDWR)) {
+      // the file is writable
+      auto input_id = storeNewInput(output_db, filename, 0, 0, 0);
+      get_fd_input_map()[fid] = input_id;
+    }
   }
   *ret_label = 0;
   return fd;
@@ -121,6 +135,14 @@ EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
 #endif
     std::string track_path{filename};
     addDerivedSource(track_path, fileno(fd));
+  } else {
+    auto fid = fileno(fd);
+    auto oflags = fcntl(fid, F_GETFL);
+    if ((oflags & O_WRONLY) || (oflags & O_RDWR)) {
+      // the file is writable
+      auto input_id = storeNewInput(output_db, filename, 0, 0, 0);
+      get_fd_input_map()[fid] = input_id;
+    }
   }
 
   *ret_label = 0;

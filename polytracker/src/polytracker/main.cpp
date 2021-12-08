@@ -310,8 +310,8 @@ static void storeBinaryMetadata(sqlite3 *output_db) {
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
-                       block_mapping const *block_map,
-                       uint64_t block_map_count) {
+                       block_mapping const *block_map, uint64_t block_map_count,
+                       bool control_flow_tracking) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
   DO_EARLY_DEFAULT_CONSTRUCT(fd_input_map_t, fd_input_map);
@@ -336,8 +336,13 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
   polytracker_print_settings();
   output_db = db_init(get_polytracker_db_name());
 
-  // Store binary metadata (block + functions + blocks)
-  storeBinaryMetadata(output_db);
+  if (control_flow_tracking) {
+    // Store binary metadata (block + functions + blocks)
+    storeBinaryMetadata(output_db);
+  } else {
+    printf("Program compiled without PolyTracker control flow tracking "
+           "instrumentation.\n");
+  }
 
   // Store new file
   for (auto target_source : get_target_sources()) {

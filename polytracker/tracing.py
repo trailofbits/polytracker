@@ -28,12 +28,13 @@ from typing import (
 import weakref
 
 from cxxfilt import demangle
+from tqdm import tqdm
 
 from .graphs import DiGraph
 from .inputs import Input, InputProperties
 from .plugins import Command, Subcommand
 from .repl import PolyTrackerREPL
-from .taint_forest import TaintForest
+from .taint_forest import TaintForest, TaintForestNode
 
 
 class BasicBlockType(IntFlag):
@@ -724,14 +725,19 @@ class TaintAccess:
 class TaintOutput:
     """An abstract class for representing tainted bytes written to an output (file, network socket, etc)."""
 
-    def __init__(self, output_offset: int, label: int):
+    def __init__(self, source: Input, output_offset: int, label: int):
         """
         Args:
             output_offset: offset within the output file
             label: The taint label of the output
         """
+        self.source: Input = source
         self.offset: int = output_offset
         self.label: int = label
+
+    @abstractmethod
+    def taints(self) -> Taints:
+        raise NotImplementedError()
 
     def __lt__(self, other):
         return hasattr(other, "offset") and self.offset < other.offset
@@ -1048,6 +1054,18 @@ class ProgramTrace(ABC):
         """The taint sources operated on in this trace."""
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def outputs(self) -> Optional[Iterable[Input]]:
+        """The taint syncs written to in this trace."""
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def output_taints(self) -> Iterable[TaintOutput]:
+        """Iterates over all of the outputs written in the trace"""
+        raise NotImplementedError()
+
     def input_properties(self, source: Input) -> InputProperties:
         first_usages: List[Optional[int]] = [None] * source.size
         file_seeks: List[Tuple[int, int, int]] = []
@@ -1076,6 +1094,53 @@ class ProgramTrace(ABC):
     def taint_forest(self) -> TaintForest:
         """The taint forest associated with this trace."""
         raise NotImplementedError()
+
+    @abstractmethod
+    def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        """The file offset associated with a taint forest node"""
+        raise NotImplementedError()
+
+    def inputs_affecting_control_flow(self) -> Taints:
+        """Returns the set of byte offsets that affected control flow"""
+        return self.taints((node for node in self.taint_forest.nodes() if node.affected_control_flow))
+
+    def taints(self, labels: Iterable[TaintForestNode]) -> Taints:
+        # reverse the labels to reduce the likelihood of reproducing work
+        history: Set[TaintForestNode] = set(labels)
+        node_stack: List[TaintForestNode] = sorted(list(history), reverse=True)
+        taints: Set[ByteOffset] = set()
+        if len(node_stack) < 10:
+            labels_str = ", ".join(map(str, node_stack))
+        else:
+            labels_str = f"{len(node_stack)} labels"
+        with tqdm(
+                desc=f"finding canonical taints for {labels_str}",
+                leave=False,
+                delay=5.0,
+                bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
+                total=sum(node.label for node in node_stack),
+        ) as t:
+            while node_stack:
+                node = node_stack.pop()
+                t.update(node.label)
+                if node.parent_one is None:
+                    assert node.parent_two is None
+                    taints.add(self.file_offset(node))
+                else:
+                    parent1, parent2 = node.parent_one, node.parent_two
+                    # a node will always have either zero or two parents.
+                    # labels that are reused will reuse their associated nodes.
+                    # all other nodes are unions.
+                    assert parent1 is not None and parent2 is not None
+                    if parent1 not in history:
+                        history.add(parent1)
+                        node_stack.append(parent1)
+                        t.total += parent1.label
+                    if parent2 not in history:
+                        history.add(parent2)
+                        node_stack.append(parent2)
+                        t.total += parent2.label
+        return Taints(taints)
 
     def function_trace(self) -> Iterator[FunctionEntry]:
         """Iterates over all of the :class:`FunctionEntry` events in this trace.

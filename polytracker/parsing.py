@@ -257,7 +257,7 @@ def trace_to_tree(
                 child_node = node_type(bb)
                 node.children.append(child_node)
                 if include_terminals:
-                    for token in bb.taints().regions():
+                    for token in bb.get_taints().regions():
                         node.children.append(node_type(Terminal(token.value)))
                 func = bb.called_function
                 if func is not None:

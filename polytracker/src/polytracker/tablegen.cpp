@@ -107,6 +107,7 @@ static constexpr const char *createTaintForestTable() {
          "parent_two BIGINT,"
          "label BIGINT,"
          "input_id INTEGER,"
+         "affected_control_flow BOOLEAN DEFAULT 0,"
          "PRIMARY KEY(input_id, label)"
          ") WITHOUT ROWID;";
 }
@@ -155,6 +156,7 @@ static constexpr const char *createUninstTable() {
          "PRIMARY KEY(event_id, name)"
          ") WITHOUT ROWID;";
 }
+
 static constexpr const char *createBinaryTable() {
   return "CREATE TABLE IF NOT EXISTS targets ("
          "id INTEGER PRIMARY KEY,"

@@ -41,6 +41,8 @@ fun:__polytracker_log_taint_cmp=uninstrumented
 fun:__polytracker_log_taint_cmp=custom
 fun:__polytracker_log_taint_op=uninstrumented
 fun:__polytracker_log_taint_op=custom
+fun:__polytracker_log_conditional_branch=uninstrumented
+fun:__polytracker_log_conditional_branch=custom
 # -- end
 fun:__polytracker_dump=uninstrumented
 fun:__polytracker_dump=discard
@@ -183,7 +185,7 @@ fun:fputs=discard
 fun:fputs_unlocked=discard
 fun:fseek=discard
 fun:ftell=discard
-fun:fwrite=discard
+#fun:fwrite=discard
 fun:getenv=discard
 fun:getuid=discard
 fun:geteuid=discard
@@ -283,6 +285,7 @@ fun:strstr=custom
 # Functions which take action based on global state, such as running a callback
 # set by a separate function.
 fun:write=custom
+fun:fwrite=custom
 
 # Functions that take a callback (wrap the callback manually).
 fun:dl_iterate_phdr=custom
@@ -3114,6 +3117,7 @@ fun:readlinkat=uninstrumented
 fun:readv=uninstrumented
 fun:realloc=uninstrumented
 fun:realpath=uninstrumented
+fun:realpath=functional
 fun:reboot=uninstrumented
 fun:recv=uninstrumented
 fun:recvfrom=uninstrumented
@@ -3389,6 +3393,7 @@ fun:strncpy=uninstrumented
 fun:strndup=uninstrumented
 fun:strnlen=uninstrumented
 fun:strpbrk=uninstrumented
+fun:strpbrk=functional
 fun:strptime=uninstrumented
 fun:strptime_l=uninstrumented
 fun:strrchr=uninstrumented

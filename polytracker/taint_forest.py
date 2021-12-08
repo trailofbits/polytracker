@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 
 from .graphs import DAG
 from .inputs import Input
@@ -7,9 +7,15 @@ from .plugins import Command
 
 
 class TaintForestNode:
-    def __init__(self, label: int, source: Input):
+    def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
         self.label: int = label
         self.source: Input = source
+        self.affected_control_flow: bool = affected_control_flow
+
+    @property
+    @abstractmethod
+    def parent_labels(self) -> Optional[Tuple[int, int]]:
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -27,6 +33,9 @@ class TaintForestNode:
     def __eq__(self, other):
         return isinstance(other, TaintForestNode) and other.label == self.label and other.source == self.source
 
+    def __lt__(self, other):
+        return isinstance(other, TaintForestNode) and self.label < other.label
+
     def __hash__(self):
         return hash((self.label, self.source))
 
@@ -34,6 +43,15 @@ class TaintForestNode:
 class TaintForest:
     @abstractmethod
     def nodes(self) -> Iterator[TaintForestNode]:
+        """Iterates over the nodes in order of decreasing label"""
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_node(self, label: int, source: Optional[Input] = None) -> TaintForestNode:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
         raise NotImplementedError()
 
     def to_graph(self) -> DAG[TaintForestNode]:

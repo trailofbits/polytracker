@@ -1,6 +1,7 @@
 #ifndef POLYTRACKER_LOGGING
 #define POLYTRACKER_LOGGING
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "dfsan_types.h"
@@ -11,6 +12,7 @@
 
 void logCompare(const dfsan_label label, const function_id_t findex,
                 const block_id_t bindex);
+void logConditionalBranch(const dfsan_label label);
 void logOperation(const dfsan_label label, const function_id_t findex,
                   const block_id_t bindex);
 int logFunctionEntry(const function_id_t func_id);
@@ -30,6 +32,8 @@ struct FunctionStackFrame {
 };
 
 using FunctionStack = std::vector<FunctionStackFrame>;
+
+using TaintedConditionalLabelSet = std::unordered_set<dfsan_label>;
 
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)

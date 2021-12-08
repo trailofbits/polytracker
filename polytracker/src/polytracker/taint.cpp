@@ -24,6 +24,7 @@ DECLARE_EARLY_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
 DECLARE_EARLY_CONSTRUCT(std::mutex, track_target_map_lock);
 
 EARLY_CONSTRUCT_EXTERN_GETTER(std::unordered_set<std::string>, target_sources);
+EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
 
 extern sqlite3 *output_db;
 extern input_id_t input_id;
@@ -110,6 +111,7 @@ void addDerivedSource(std::string &track_path, const int &new_fd) {
   if (get_target_sources().empty()) {
     input_id = storeNewInput(output_db, track_path, byte_start, byte_end,
                              polytracker_trace);
+    get_fd_input_map()[new_fd] = input_id;
   }
 }
 

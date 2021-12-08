@@ -38,6 +38,11 @@ static llvm::cl::opt<int> file_id(
     llvm::cl::desc(
         "When specified, adds a file id to the function_ids in the module"));
 
+static llvm::cl::opt<bool> no_control_flow_tracking(
+    "no-control-flow-tracking",
+    llvm::cl::desc(
+        "When specified, do not instrument for control flow tracking"));
+
 namespace polytracker {
 
 static bool op_check(llvm::Value *inst) {
@@ -110,6 +115,21 @@ void PolytrackerPass::visitReturnInst(llvm::ReturnInst &RI) {
   CallInst *ExitCall =
       IRB.CreateCall(func_exit_log, {func_block_index.first,
                                      func_block_index.second, stack_loc});
+}
+
+void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
+  if (BI.isUnconditional()) {
+    return;
+  } else if (auto condition = BI.getCondition()) {
+    if (!op_check(condition)) {
+      llvm::IRBuilder<> IRB(&BI);
+      llvm::LLVMContext &context = mod->getContext();
+
+      llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
+
+      CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+    }
+  }
 }
 
 void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
@@ -273,7 +293,8 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   // main, would have size 1 stored in stack_loc.
   stack_loc = IRB.CreateCall(func_entry_log, {index_val});
 
-  // Collect basic blocks/insts, so we don't modify the container while iterate
+  // Collect basic blocks/insts, so we don't modify the container while
+  // iterate
   std::unordered_set<llvm::BasicBlock *> blocks;
   std::vector<llvm::Instruction *> insts;
   for (auto &bb : *f) {
@@ -362,6 +383,11 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
       llvm::FunctionType::get(llvm::Type::getVoidTy(context), map_args, false);
   preserve_map =
       mod.getOrInsertFunction("__polytracker_preserve_map", polytracker_map_ty);
+
+  auto conditional_branch_ty = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(context), {shadow_type}, false);
+  conditional_branch_log = mod.getOrInsertFunction(
+      "__polytracker_log_conditional_branch", conditional_branch_ty);
 }
 
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
@@ -493,7 +519,7 @@ ctors get to run. Constructs a function resembling:
 __attribute__((constructor)) void early_polytracker_start()
 {
   __polytracker_start(array_of_functions, length(array_of_functions),
-array_of_blocks, length(array_of_blocks));
+array_of_blocks, length(array_of_blocks), !no_control_flow_tracking);
 }
 */
 static void createStartPolytrackerCall(llvm::Module &mod,
@@ -505,9 +531,11 @@ static void createStartPolytrackerCall(llvm::Module &mod,
   auto &ctx = mod.getContext();
   // polytracker_start declaration
   auto i64_type = llvm::IntegerType::get(ctx, 64);
+  auto bool_type = llvm::IntegerType::get(ctx, 8);
   auto polytracker_start_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(ctx),
-      {global->getType(), i64_type, block_map->getType(), i64_type}, false);
+      {global->getType(), i64_type, block_map->getType(), i64_type, bool_type},
+      false);
   auto polytracker_start_func =
       mod.getOrInsertFunction("__polytracker_start", polytracker_start_type);
 
@@ -523,7 +551,8 @@ static void createStartPolytrackerCall(llvm::Module &mod,
   llvm::Instruction *call = IRB.CreateCall(
       polytracker_start_func,
       {global, llvm::ConstantInt::get(i64_type, global_count), block_map,
-       llvm::ConstantInt::get(i64_type, block_count)});
+       llvm::ConstantInt::get(i64_type, block_count),
+       llvm::ConstantInt::get(bool_type, !no_control_flow_tracking)});
   IRB.CreateRetVoid();
 
   llvm::appendToGlobalCtors(mod, func, 0);
@@ -543,82 +572,105 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  std::vector<llvm::Function *> functions;
-  for (auto &func : mod) {
-    // Ignore if its in our ignore list
-    if (func.hasName()) {
-      std::string fname = func.getName().str();
-      if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+  if (no_control_flow_tracking) {
+    std::cout << "Omitting PolyTracker control flow instrumentation."
+              << std::endl;
+    // We still want to visit comparison instructions because they are useful
+    // for detecting file cavities:
+    for (auto &func : mod) {
+      // Ignore if the func is in our ignore list
+      if (func.hasName()) {
+        std::string fname = func.getName().str();
+        if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+          continue;
+        }
+      }
+      for (auto &bb : func) {
+        for (auto &inst : bb) {
+          if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
+            visitBranchInst(*BI);
+          }
+        }
+      }
+    }
+  } else {
+    std::vector<llvm::Function *> functions;
+    for (auto &func : mod) {
+      // Ignore if its in our ignore list
+      if (func.hasName()) {
+        std::string fname = func.getName().str();
+        if (ignore_funcs.find(fname) != ignore_funcs.end()) {
+          continue;
+        }
+      }
+      functions.push_back(&func);
+      func_index_map[func.getName().str()] = function_index++;
+    }
+    const auto startTime = std::chrono::system_clock::now();
+    auto lastUpdateTime = startTime;
+    size_t i = 0;
+    int lastPercent = -1;
+    for (auto func : functions) {
+      int percent = static_cast<int>(static_cast<float>(i++) * 100.0 /
+                                         static_cast<float>(functions.size()) +
+                                     0.5);
+      auto currentTime = std::chrono::system_clock::now();
+      if (percent > lastPercent ||
+          std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                           lastUpdateTime)
+                  .count() >= 5.0 ||
+          i >= functions.size()) {
+        lastUpdateTime = currentTime;
+        auto totalElapsedSeconds =
+            std::chrono::duration_cast<std::chrono::seconds>(currentTime -
+                                                             startTime)
+                .count();
+        auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
+        std::cerr << '\r' << std::string(80, ' ') << '\r';
+        lastPercent = percent;
+        auto funcName = func->getName().str();
+        if (funcName.length() > 10) {
+          funcName = funcName.substr(0, 7) + "...";
+        }
+        std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3)
+                  << percent << "% |";
+        const int barWidth = 20;
+        const auto filledBars = static_cast<int>(
+            static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 +
+            0.5);
+        const auto unfilledBars = barWidth - filledBars;
+        for (size_t iter = 0; iter < filledBars; ++iter) {
+          std::cerr << "█";
+        }
+        std::cerr << std::string(unfilledBars, ' ');
+        std::cerr << "| " << i << "/" << functions.size() << " [";
+        if (functionsPerSecond == 0) {
+          std::cerr << "??:??";
+        } else {
+          auto remainingSeconds = static_cast<int>(
+              static_cast<float>(functions.size() - i) / functionsPerSecond +
+              0.5);
+          auto remainingMinutes = remainingSeconds / 60;
+          remainingSeconds %= 60;
+          if (remainingMinutes >= 60) {
+            std::cerr << (remainingMinutes / 60) << ":";
+            remainingMinutes %= 60;
+          }
+          std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes
+                    << ":";
+          std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
+        }
+        std::cerr << ", " << std::setprecision(4) << functionsPerSecond
+                  << " functions/s]" << std::flush;
+      }
+
+      if (!func || func->isDeclaration()) {
         continue;
       }
+      ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
     }
-    functions.push_back(&func);
-    func_index_map[func.getName().str()] = function_index++;
+    std::cerr << std::endl;
   }
-  const auto startTime = std::chrono::system_clock::now();
-  auto lastUpdateTime = startTime;
-  size_t i = 0;
-  int lastPercent = -1;
-  for (auto func : functions) {
-    int percent = static_cast<int>(static_cast<float>(i++) * 100.0 /
-                                       static_cast<float>(functions.size()) +
-                                   0.5);
-    auto currentTime = std::chrono::system_clock::now();
-    if (percent > lastPercent ||
-        std::chrono::duration_cast<std::chrono::seconds>(currentTime -
-                                                         lastUpdateTime)
-                .count() >= 5.0 ||
-        i >= functions.size()) {
-      lastUpdateTime = currentTime;
-      auto totalElapsedSeconds =
-          std::chrono::duration_cast<std::chrono::seconds>(currentTime -
-                                                           startTime)
-              .count();
-      auto functionsPerSecond = static_cast<float>(i) / totalElapsedSeconds;
-      std::cerr << '\r' << std::string(80, ' ') << '\r';
-      lastPercent = percent;
-      auto funcName = func->getName().str();
-      if (funcName.length() > 10) {
-        funcName = funcName.substr(0, 7) + "...";
-      }
-      std::cerr << "Instrumenting: " << std::setfill(' ') << std::setw(3)
-                << percent << "% |";
-      const int barWidth = 20;
-      const auto filledBars = static_cast<int>(
-          static_cast<float>(barWidth) * static_cast<float>(percent) / 100.0 +
-          0.5);
-      const auto unfilledBars = barWidth - filledBars;
-      for (size_t iter = 0; iter < filledBars; ++iter) {
-        std::cerr << "█";
-      }
-      std::cerr << std::string(unfilledBars, ' ');
-      std::cerr << "| " << i << "/" << functions.size() << " [";
-      if (functionsPerSecond == 0) {
-        std::cerr << "??:??";
-      } else {
-        auto remainingSeconds = static_cast<int>(
-            static_cast<float>(functions.size() - i) / functionsPerSecond +
-            0.5);
-        auto remainingMinutes = remainingSeconds / 60;
-        remainingSeconds %= 60;
-        if (remainingMinutes >= 60) {
-          std::cerr << (remainingMinutes / 60) << ":";
-          remainingMinutes %= 60;
-        }
-        std::cerr << std::setfill('0') << std::setw(2) << remainingMinutes
-                  << ":";
-        std::cerr << std::setfill('0') << std::setw(2) << remainingSeconds;
-      }
-      std::cerr << ", " << std::setprecision(4) << functionsPerSecond
-                << " functions/s]" << std::flush;
-    }
-
-    if (!func || func->isDeclaration()) {
-      continue;
-    }
-    ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
-  }
-  std::cerr << std::endl;
 
   // Store function/block to id mappings (and corresponding counts) as global
   // variables
