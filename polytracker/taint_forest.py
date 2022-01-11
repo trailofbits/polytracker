@@ -9,6 +9,7 @@ from .plugins import Command
 
 import networkx as nx
 
+
 class TaintForestNode:
     def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
         self.label: int = label
@@ -34,7 +35,11 @@ class TaintForestNode:
         return self.parent_one is None and self.parent_two is None
 
     def __eq__(self, other):
-        return isinstance(other, TaintForestNode) and other.label == self.label and other.source == self.source
+        return (
+            isinstance(other, TaintForestNode)
+            and other.label == self.label
+            and other.source == self.source
+        )
 
     def __lt__(self, other):
         return isinstance(other, TaintForestNode) and self.label < other.label
@@ -84,7 +89,9 @@ class ExportTaintForest(Command):
 
     def __init_arguments__(self, parser):
         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
-        parser.add_argument("OUTPUT_PATH", type=str, help="path to which to save the .dot file")
+        parser.add_argument(
+            "OUTPUT_PATH", type=str, help="path to which to save the .dot file"
+        )
 
     def run(self, args):
         from . import PolyTrackerTrace
@@ -92,4 +99,6 @@ class ExportTaintForest(Command):
         graph = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
-        print(f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`")
+        print(
+            f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`"
+        )
