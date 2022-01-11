@@ -113,20 +113,38 @@ class DiGraph(nx.DiGraph, Generic[N]):
         labeler: Optional[Callable[[N], str]] = None,
         node_filter=None,
     ) -> graphviz.Digraph:
-        if comment is not None:
-            dot = graphviz.Digraph(comment=comment)
-        else:
-            dot = graphviz.Digraph()
         if labeler is None:
             labeler = str
-        node_ids = {node: i for i, node in enumerate(self.nodes)}
-        for node in self.nodes:
-            if node_filter is None or node_filter(node):
-                dot.node(f"func{node_ids[node]}", label=labeler(node))
-        for caller, callee in self.edges:
-            if node_filter is None or (node_filter(caller) and node_filter(callee)):
-                dot.edge(f"func{node_ids[caller]}", f"func{node_ids[callee]}")
-        return dot
+
+        if node_filter is None:
+            node_filter = lambda x: True
+        # Sort nodes into roots and inner nodes
+        root_nodes = []
+        inner_nodes = []
+        for node in sorted(filter(node_filter, self.nodes)):
+            if node in self.roots:
+                root_nodes.append(node)
+            else:
+                inner_nodes.append(node)
+        # Add root nodes
+        roots = graphviz.Digraph(name="roots", graph_attr={"rank":"same"}, node_attr={"shape":"square"}, edge_attr={"style":"invis"})
+        for node in root_nodes:
+            roots.node(str(node), label=labeler(node))
+        # Add invisible edges to enforce root node ordering within a rank
+        for i in range(len(root_nodes) - 1):
+            roots.edge(str(root_nodes[i]), str(root_nodes[i + 1]))
+        # Add inner nodes
+        inner = graphviz.Digraph(name="inner")
+        for node in inner_nodes:
+            inner.node(str(node), label=labeler(node))
+        
+        result = graphviz.Digraph(comment=comment)
+        result.subgraph(roots)
+        result.subgraph(inner)
+        for src, dst in self.edges:
+            if node_filter(src) and node_filter(dst):
+                result.edge(str(src), str(dst))
+        return result
 
 
 class DAG(DiGraph[N], Generic[N]):
