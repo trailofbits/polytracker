@@ -3,6 +3,7 @@
 #include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
+#include "taintdag/polytracker.h"
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -25,6 +26,9 @@ DECLARE_EARLY_CONSTRUCT(std::mutex, track_target_map_lock);
 
 EARLY_CONSTRUCT_EXTERN_GETTER(std::unordered_set<std::string>, target_sources);
 EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
+
+
+EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 extern sqlite3 *output_db;
 extern input_id_t input_id;
@@ -218,6 +222,10 @@ void logUnion(const dfsan_label &l1, const dfsan_label &l2,
 // Can we do this without locking?
 atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
                                   const dfsan_label &l2) {
+
+  auto lbl = get_polytracker_tdag().union_labels(l1, l2);
+  printf("getUnionEntry l1 %u l2 %u -> %u\n", l1, l2, lbl);
+
   std::lock_guard<std::mutex> guard(get_new_table_lock());
   uint64_t key = (static_cast<uint64_t>(l1) << 32) | l2;
   if (get_new_table().find(key) == get_new_table().end()) {

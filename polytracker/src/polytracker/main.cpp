@@ -21,6 +21,9 @@
 #include <unistd.h>
 #include <unordered_set>
 
+
+#include "taintdag/polytracker.h"
+
 using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
@@ -54,6 +57,8 @@ EARLY_CONSTRUCT_EXTERN_STORAGE(fd_name_map_t, fd_name_map);
 EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_name_map_t, track_target_name_map);
 EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_fd_map_t, track_target_fd_map);
 EARLY_CONSTRUCT_EXTERN_STORAGE(std::mutex, track_target_map_lock);
+
+DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 
 /*
 Parse files deliminated by ; and add them to unordered set.
@@ -259,6 +264,9 @@ void polytracker_end() {
   const dfsan_label last_label = dfsan_get_label_count();
   */
   db_fini(output_db);
+
+  // Explicitly destroy the PolyTracker instance to flush mapping to disk
+  get_polytracker_tdag().~PolyTracker();
 }
 
 char *mmap_taint_forest(unsigned long size) {
@@ -323,6 +331,8 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
   DO_EARLY_DEFAULT_CONSTRUCT(track_target_name_map_t, track_target_name_map);
   DO_EARLY_DEFAULT_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
   DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, track_target_map_lock);
+
+  DO_EARLY_DEFAULT_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 
   // TODO (hbrodin): Pass these as arguments to storeBinaryMetadata instead of
   // keeping global vars.

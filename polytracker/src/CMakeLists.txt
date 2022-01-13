@@ -24,6 +24,7 @@ set_target_properties(LLVMPassConfig PROPERTIES
 
 set(POLY_DIR "polytracker")
 set(TAINT_DIR "taint_sources")
+set(TAINTDAG_DIR "taintdag")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -53,9 +54,16 @@ ${TAINT_DIR}/memory_taints.cpp
 ${TAINT_DIR}/write_taints.cpp
 )
 
+set (TAINTDAG_SOURCES
+${TAINTDAG_DIR}/encoding.cpp
+${TAINTDAG_DIR}/output.cpp
+${TAINTDAG_DIR}/polytracker.cpp
+)
+
 add_library(Polytracker STATIC 
 ${POLY_SOURCES} 
 ${TAINT_SOURCES} 
+${TAINTDAG_SOURCES}
 )
 target_link_libraries(Polytracker LLVMPassConfig)
 install (TARGETS Polytracker DESTINATION ${POLYTRACK_LIB_DIR})

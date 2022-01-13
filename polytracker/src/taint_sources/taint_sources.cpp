@@ -5,6 +5,9 @@
 #include "polytracker/output.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/taint.h"
+
+#include "taintdag/polytracker.h"
+
 #include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
@@ -35,6 +38,8 @@
 extern sqlite3 *output_db;
 EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
 
+EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
+
 // To create some label functions
 // Following the libc custom functions from custom.cc
 EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
@@ -63,6 +68,11 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
     auto input_id = storeNewInput(output_db, path, 0, 0, 0);
     get_fd_input_map()[fd] = input_id;
   }
+
+  if (fd >=0) {
+    get_polytracker_tdag().open_file(fd, path);
+  }
+
   *ret_label = 0;
   return fd;
 }
@@ -91,6 +101,11 @@ EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
     auto input_id = storeNewInput(output_db, path, 0, 0, 0);
     get_fd_input_map()[fd] = input_id;
   }
+
+  if (fd >=0) {
+    get_polytracker_tdag().open_file(fd, path);
+  }
+
   *ret_label = 0;
   return fd;
 }
@@ -118,6 +133,11 @@ EXT_C_FUNC FILE *__dfsw_fopen64(const char *filename, const char *mode,
       get_fd_input_map()[fid] = input_id;
     }
   }
+
+  if (fd) {
+    get_polytracker_tdag().open_file(fileno(fd), filename);
+  }
+
   *ret_label = 0;
   return fd;
 }
@@ -145,6 +165,10 @@ EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
     }
   }
 
+  if (fd) {
+    get_polytracker_tdag().open_file(fileno(fd), filename);
+  }
+
   *ret_label = 0;
   return fd;
 }
@@ -158,19 +182,27 @@ EXT_C_FUNC int __dfsw_close(int fd, dfsan_label fd_label,
   if (ret == 0 && isTrackingSource(fd)) {
     closeSource(fd);
   }
+  
+  if (ret == 0)
+    get_polytracker_tdag().close_file(fd);
+
   *ret_label = 0;
   return ret;
 }
 
 EXT_C_FUNC int __dfsw_fclose(FILE *fd, dfsan_label fd_label,
                              dfsan_label *ret_label) {
+  int fno = fileno(fd);
   int ret = fclose(fd);
 #ifdef DEBUG_INFO
   fprintf(stderr, "### close, fd is %p, ret is %d \n", fd, ret);
 #endif
-  if (ret == 0 && isTrackingSource(fileno(fd))) {
-    closeSource(fileno(fd));
+  if (ret == 0 && isTrackingSource(fno)) {
+    closeSource(fno);
   }
+
+  if (ret == 0)
+    get_polytracker_tdag().close_file(fno);
   *ret_label = 0;
   return ret;
 }
@@ -197,6 +229,11 @@ EXT_C_FUNC ssize_t __dfsw_read(int fd, void *buff, size_t size,
   } else {
     *ret_label = 0;
   }
+
+
+  if (ret_val > 0)
+    get_polytracker_tdag().source_taint(fd, buff, read_start, ret_val);
+
   return ret_val;
 }
 
@@ -217,6 +254,8 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
   } else {
     *ret_label = 0;
   }
+  if (ret> 0)
+    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
   return ret;
 }
 
@@ -240,6 +279,8 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
   } else {
     *ret_label = 0;
   }
+  if (ret> 0)
+    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
   return ret;
 }
 
@@ -269,6 +310,9 @@ EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
 #endif
     *ret_label = 0;
   }
+
+  if (ret> 0)
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret);
   return ret;
 }
 
@@ -295,6 +339,8 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
   } else {
     *ret_label = 0;
   }
+  if (ret> 0)
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret);
   return ret;
 }
 EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
@@ -307,6 +353,12 @@ EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
 #endif
   if (c != EOF && isTrackingSource(fileno(fd))) {
     *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
+  }
+
+  if (c != EOF) {
+    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
   }
   return c;
 }
@@ -322,6 +374,11 @@ EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
   if (c != EOF && isTrackingSource(fileno(fd))) {
     *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
   }
+  if (c != EOF) {
+    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
+  }
   return c;
 }
 EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
@@ -336,6 +393,11 @@ EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
   if (isTrackingSource(fileno(fd)) && c != EOF) {
     *ret_label = createReturnLabel(offset, getSourceName(fileno(fd)));
   }
+  if (c != EOF) {
+    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
+  }
   return c;
 }
 
@@ -348,6 +410,11 @@ EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
 #endif
   if (c != EOF) {
     *ret_label = createReturnLabel(offset, getSourceName(fileno(stdin)));
+  }
+  if (c != EOF) {
+    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
   }
   return c;
 }
@@ -375,6 +442,14 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
   } else {
     *ret_label = 0;
   }
+
+  if (ret) {
+    size_t len = strlen(ret);
+    get_polytracker_tdag().source_taint(fileno(fd), str, offset, len);
+    *ret_label = str_label;
+  } else {
+    *ret_label = 0;
+  }
   return ret;
 }
 EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
@@ -393,6 +468,15 @@ EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
   } else {
     *ret_label = 0;
   }
+
+  if (ret) {
+    size_t len = strlen(ret);
+    get_polytracker_tdag().source_taint(fileno(stdin), str, offset, len);
+    *ret_label = str_label;
+  } else {
+    *ret_label = 0;
+  }
+
   return ret;
 }
 
@@ -413,6 +497,11 @@ EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
       std::cerr << "### getdelim: error, data not tainted" << std::endl;
     }
   }
+
+  if (ret != -1) {
+    get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
+  }
+  
   *ret_label = 0;
   return ret;
 }
@@ -434,6 +523,9 @@ EXT_C_FUNC ssize_t __dfsw___getdelim(char **lineptr, size_t *n, int delim,
       std::cerr << "### __getdelim: error, data not tainted" << std::endl;
     }
   }
+  if (ret != -1) {
+    get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
+  }
   *ret_label = 0;
   return ret;
 }
@@ -450,6 +542,11 @@ EXT_C_FUNC void *__dfsw_mmap(void *start, size_t length, int prot, int flags,
       std::cerr << "### mmap: error, data not tainted" << std::endl;
     }
   }
+
+  if (ret != MAP_FAILED) {
+    get_polytracker_tdag().source_taint(fd, ret, offset, length);
+  }
+
   *ret_label = 0;
   return ret;
 }

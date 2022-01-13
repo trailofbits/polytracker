@@ -2,6 +2,7 @@
 #include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
+#include "taintdag/polytracker.h"
 #include <iostream>
 #include <sanitizer/dfsan_interface.h>
 #include <sys/types.h>
@@ -21,6 +22,7 @@ ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
 */
 extern sqlite3 *output_db;
 EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
+EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
@@ -38,6 +40,9 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
       current_offset += 1;
     }
   }
+  if (write_count > 0)
+    get_polytracker_tdag().taint_sink(fd, current_offset, buf, write_count);
+
   *ret_label = 0;
   return write_count;
 }
@@ -60,6 +65,8 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
       current_offset += 1;
     }
   }
+  if (write_count > 0)
+    get_polytracker_tdag().taint_sink(fd, current_offset, buf, write_count);
   *ret_label = 0;
   return write_count;
 }
