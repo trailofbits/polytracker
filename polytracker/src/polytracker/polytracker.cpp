@@ -1,7 +1,9 @@
+#include "polytracker/early_construct.h"
 #include "polytracker/polytracker.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
+#include "taintdag/polytracker.h"
 #include <atomic>
 #include <inttypes.h>
 #include <iostream>
@@ -17,6 +19,8 @@ uint64_t func_mapping_count;
 
 const block_mapping *block_mappings;
 uint64_t block_mapping_count;
+
+EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 // extern std::atomic_bool done;
 
@@ -119,6 +123,7 @@ __polytracker_get_label_info(const dfsan_label &l1) {
 extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
   if (label > 0) {
     logConditionalBranch(label);
+    get_polytracker_tdag().affects_control_flow(label);
   }
 }
 

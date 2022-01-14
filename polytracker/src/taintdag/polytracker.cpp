@@ -75,5 +75,9 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size
 }
 
 
+void PolyTracker::affects_control_flow(label_t lbl) {
+  tdag_.affects_control_flow(lbl);
+}
+
 
 }
