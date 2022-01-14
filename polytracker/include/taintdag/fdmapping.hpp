@@ -92,7 +92,7 @@ namespace taintdag {
 
       char* begin_;
       char* end_;
-      size_t offset_;
+      size_t offset_{0};
       mutable std::mutex m_;
 
   };
