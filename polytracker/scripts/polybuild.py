@@ -304,6 +304,12 @@ def do_everything(argv: List[str]):
     Instruments bitcode
     Recompiles executable.
     """
+
+    # If no control flow tracking, drop that arg because gclang have no idea what it means...
+    argv_nocf = [x for x in argv if x != '--no-control-flow-tracking']
+    no_cf_track = len(argv_nocf) != len(argv)
+    argv = argv_nocf
+
     output_file = handle_cmd(argv)
     if output_file is None:
         raise ValueError("Could not determine output file")
@@ -313,7 +319,7 @@ def do_everything(argv: List[str]):
     subprocess.check_call(get_bc)
     assert bc_file.exists()
     temp_bc = append_to_stem(bc_file, "_instrumented")
-    instrument_bitcode(bc_file, temp_bc)
+    instrument_bitcode(bc_file, temp_bc, no_control_flow_tracking=no_cf_track)
     assert temp_bc.exists()
 
     # Lower bitcode. Creates a .o
