@@ -1,3 +1,5 @@
+set(CMAKE_CXX_STANDARD 17)
+
 Include(FetchContent)
 
 FetchContent_Declare(
@@ -13,7 +15,7 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/contrib)
 include(CTest)
 include(Catch)
 
-add_executable(tests main.cpp basic.cpp output.cpp encoding.cpp fdmapping.cpp)
+add_executable(tests main.cpp basic.cpp output.cpp encoding.cpp fdmapping.cpp union.cpp)
 target_link_libraries(tests PRIVATE Catch2::Catch2 taintdag)
 
 catch_discover_tests(tests)

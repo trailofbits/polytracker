@@ -3,32 +3,180 @@
 
 #include "taintdag/taint.hpp"
 
-namespace taintdag {
+namespace taintdag::union_ {
 
+  using ReturnValue = std::variant<label_t, Taint>;
 
-  bool encloses(RangeTaint r, Taint const &other, label_t other_label) {
-    return std::visit(struct A {
-
-      bool operator()(RangeTaint o) const {
-        return r.
-      }
-
-      bool operator()(UnionTaint o) const {
-
-      }
-
-      bool operator()(SourceTaint s) const {
-
-      }
-
-      A(label_t other)  : other_label{other}{}
-
-      label_t other_label;
-    }(other_label), 
-    other);
-
+  inline bool encloses(UnionTaint const& t, label_t l) {
+    return t.higher == l || t.lower == l;
   }
 
+  inline bool encloses(RangeTaint const& t, label_t l) {
+    return t.begin <=l && t.end > l;
+  }
 
+  inline bool encloses(RangeTaint const& range, UnionTaint const &u) {
+    return range.begin <= u.lower && range.end > u.higher;
+  }
+
+  // Is r a subrange of l?
+  inline bool encloses(RangeTaint const& super, RangeTaint const& sub) {
+    return (super.begin <= sub.begin && super.end >= sub.end);
+  }
+
+  // The Visitor implementes the union of two labels.
+  // It either returns one of the labels, if either subsumes
+  // the other, or constructs a new Taint value representing
+  // the union of the two Taints.
+  // This class is intended to be used as a visitor for 
+  // Taints:
+  // auto ret = std::visit(Visitor{l,r}, taintleft, taintright);
+  // Assumption: Equal labels and zero-lables (non-tainted) is already
+  // covered elsewhere.
+  class Visitor {
+  public:
+
+
+    Visitor(label_t left, label_t right) : left_{left}, right_{right} {
+    }
+
+    ReturnValue operator()(SourceTaint const& l, SourceTaint const& r) const {
+      if (l.index == r.index && l.offset == r.offset)
+        return left_;
+
+      return union_labels();
+    }
+
+    ReturnValue operator()(UnionTaint const& l, UnionTaint const& r) const {
+      if (encloses(l, right_))
+        return left_;
+      if (encloses(r, left_))
+        return right_;
+      
+      // Do the unions represent the same labels?
+      // NOTE: No need to check for reverse since the labels are always stored
+      // with the highest label as left.
+      if (l.higher == r.higher && l.lower == r.lower)
+        return left_;
+      
+      return union_labels();
+    }
+
+    ReturnValue operator()(RangeTaint const& l, RangeTaint const& r) const {
+      if (encloses(l, right_))
+        return left_;
+      if (encloses(r, left_))
+        return right_;
+
+      if (encloses(l, r))
+        return left_;
+      if (encloses(r, l))
+        return right_;
+
+      // Are ranges adjacent? If so, create a larger range
+      if (l.end == r.begin)
+        return RangeTaint{l.begin, r.end};
+      if (r.end == l.begin)
+        return RangeTaint{r.begin, l.end};
+
+      return union_labels();
+    }
+
+    ReturnValue operator()(SourceTaint const& l, UnionTaint const& r) const {
+      return union_source(r, right_, left_);
+    }
+
+    ReturnValue operator()(SourceTaint const& l, RangeTaint const& r) const {
+      return range_source(r, right_, left_);
+    }
+
+    ReturnValue operator()(UnionTaint const& l, SourceTaint const& r) const {
+      return union_source(l, left_, right_);
+    }
+
+    ReturnValue operator()(UnionTaint const& l, RangeTaint const& r) const {
+      return union_range(l, left_, r, right_);
+    }
+
+    ReturnValue operator()(RangeTaint const& l, SourceTaint const& r) const {
+      return range_source(l, left_, right_);
+    }
+
+    ReturnValue operator()(RangeTaint const& l, UnionTaint const& r) const {
+      return union_range(r, right_, l, left_);
+    }
+
+  private:
+
+    ReturnValue range_source(RangeTaint const& r, label_t rlabel, label_t sourcelabel) const {
+      if (encloses(r, sourcelabel))
+        return rlabel;
+
+      // Source adjacent to range, just extend the range taint
+      if (sourcelabel+1 == r.begin)
+        return RangeTaint{sourcelabel, r.end};
+      if (r.end == sourcelabel)
+        return RangeTaint{r.begin, sourcelabel+1};
+
+      return union_labels();
+    }
+
+    ReturnValue union_source(UnionTaint const& u, label_t ulabel, label_t sourcelabel) const {
+      if (encloses(u, sourcelabel))
+        return ulabel;
+      return union_labels();
+    }
+
+    ReturnValue union_range(UnionTaint const& u, label_t ulabel, RangeTaint const& r, label_t rlabel) const {
+      if (encloses(r, ulabel))
+        return rlabel;
+      if (encloses(r, u))
+        return rlabel;
+      if (encloses(u, rlabel))
+        return ulabel;
+
+      if (u.lower+1 == r.begin) {
+        if (encloses(r, u.higher))
+          return RangeTaint(u.lower, r.end);
+        if (u.higher == r.end)
+          return RangeTaint(u.lower, r.end+1);
+      } else if (u.higher == r.end) {
+        if (encloses(r, u.lower))
+          return RangeTaint(r.begin, r.end+1);
+      }
+
+      // Union label adjacent to range?
+      if (ulabel+1 == r.begin)
+        return RangeTaint{ulabel, r.end};
+      if (r.end == ulabel)
+        return RangeTaint{r.begin, r.end+1};
+
+      return union_labels();
+    }
+
+    // Creates a range or union depending on labels. If the labels
+    // are adjacent a range is created, else a union is created.
+    Taint union_labels() const {
+      if (left_ + 1 == right_) {
+        return RangeTaint{left_, right_+1};
+      } else if (right_+1 == left_) {
+        return RangeTaint{right_, left_+1};
+      } else {
+        return UnionTaint{left_, right_};
+      }
+    }
+
+    label_t left_;
+    label_t right_;
+  };
+
+
+  // Computes the union of two taint labels/values. There are two types of returns:
+  // 1a. right encloses left -> right label
+  // 1b. left encloses right -> left label
+  // 2. No direct overlap -> new taint value (RangeTaint if adjacent labels, UnionTaint if not) 
+  inline ReturnValue compute(label_t left, Taint const& l, label_t right, Taint const& r) {
+    return std::visit(Visitor{left, right}, l, r);
+  }
 }
 #endif

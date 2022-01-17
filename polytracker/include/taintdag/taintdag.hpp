@@ -13,6 +13,7 @@
 #include "taintdag/encoding.hpp"
 #include "taintdag/fdmapping.hpp"
 #include "taintdag/taint.hpp"
+#include "taintdag/union.hpp"
 
 namespace taintdag {
 
@@ -64,6 +65,16 @@ public:
       return l;
 
     auto lval = decode(p_[l]);
+    auto rval = decode(p_[r]);
+    auto result = union_::compute(l, lval, r, rval);
+    if (std::holds_alternative<label_t>(result))
+      return std::get<label_t>(result);
+    auto idx = increment(1);
+    p_[idx] = encode(std::get<Taint>(result));
+    return idx;
+
+#if 0
+    auto lval = decode(p_[l]);
     if (UnionTaint *ut = std::get_if<UnionTaint>(&lval)) {
       if (ut->left == r || ut->right == r)
         return l;
@@ -80,6 +91,7 @@ public:
     UnionTaint ut{l, r};
     p_[idx] = encode(ut);
     return idx;
+    #endif
   }
 
 
@@ -113,8 +125,8 @@ public:
       Taint t = decode(td.p_[v]);
       if (std::holds_alternative<UnionTaint>(t)) {
         UnionTaint const& ut = std::get<UnionTaint>(t);
-        stack.push_back(ut.left);
-        stack.push_back(ut.right);
+        stack.push_back(ut.lower);
+        stack.push_back(ut.higher);
       }
 
       return *this;

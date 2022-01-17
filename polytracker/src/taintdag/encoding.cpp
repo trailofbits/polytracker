@@ -40,8 +40,8 @@ storage_t encode(Taint const &taint) {
     // ut.left > ut.right always holds
     auto val = static_cast<storage_t>(0) << source_taint_bit_shift;
     val |= static_cast<storage_t>(ut.affects_control_flow) << affects_control_flow_shift;
-    val |= (static_cast<storage_t>(label_mask & ut.left) << val1_shift);
-    val |= (ut.right & label_mask);
+    val |= (static_cast<storage_t>(label_mask & ut.higher) << val1_shift);
+    val |= (ut.lower & label_mask);
     return val;
   }
 }

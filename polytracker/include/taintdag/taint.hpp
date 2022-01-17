@@ -2,9 +2,11 @@
 #define POLYTRACKER_TAINTDAG_TAINT_H
 
 #include <cstdint>
+#include <iosfwd>
 #include <limits>
 #include <variant>
 #include <type_traits>
+
 
 namespace taintdag {
 
@@ -42,6 +44,12 @@ using source_offset_t = storage_t;
 const source_offset_t max_source_offset = (static_cast<source_offset_t>(1)<<source_offset_bits)-1;
 
 
+// NOTE (hbrodin): affects_control_flow is primarily a property of SourceTaint. 
+// It could be reflected by only using that bit in the SourceTaint type. An 
+// additional bit would then be available for RangeTaint and UnionTaint. I can't
+// see any gain of doing so atm. The option exists if we want to use it. In that
+// case, it would be required to traverse the taint structure to reach all 
+// SourceTaints to set the value. Now we can be lazy.
 struct TaintBase {
   bool affects_control_flow;
   TaintBase(bool affects_control_flow) : affects_control_flow(affects_control_flow) {}
@@ -63,8 +71,15 @@ inline bool operator==(SourceTaint const& l, SourceTaint const& r) {
   return static_cast<TaintBase const&>(l) == static_cast<TaintBase const&>(r) &&  l.index == r.index && l.offset == r.offset;
 }
 
+// RangeTaint represents a range of labels, where is the last label + 1,
+// much like iterator begin/end.
+// TODO (hbrodin): Prevent ranges of single label.
+// TODO (hbrodin): Consider if the range representation shall be inclusive? Do we need to represent empty ranges?
+// isn't that an invalid state?
+
 struct RangeTaint : TaintBase {
   RangeTaint(label_t argbegin, label_t argend, bool affects_control_flow=false) : TaintBase(affects_control_flow) {
+    assert((argbegin != argend) && "Expected non-equal labels in union");
     // Ensure begin is the smallest value
     if (argbegin < argend) {
       begin = argbegin;
@@ -74,7 +89,6 @@ struct RangeTaint : TaintBase {
       end = argbegin;
     }
   }
-
 
   label_t begin;
   label_t end; // begin < end
@@ -86,24 +100,31 @@ inline bool operator==(RangeTaint const& l, RangeTaint const& r) {
           l.begin == r.begin && l.end == r.end;
 }
 
+// TODO (hbrodin): Rename left, right to lower/higher (according to their label)
 struct UnionTaint : TaintBase {
+  // TODO (hbrodin): Prevent labels of equal value
+  // TODO (hbrodin): Prevent labels of adjacent value (should prefer RangeTaint)
   UnionTaint(label_t label1, label_t label2, bool affects_control_flow=false) : TaintBase(affects_control_flow) {
+    assert((label1 != label2) && "Expected non-equal labels in union");
+    assert((label1 != label2 + 1) && "Expected non-adjacent labels");
+    assert((label2 != label1 + 1) && "Expected non-adjacent labels");
+
     // Ensure left is the largest value
     if (label1 < label2) {
-      left = label2;
-      right = label1;
+      lower = label1;
+      higher = label2;
     } else {
-      left = label1;
-      right = label2;
+      lower = label2;
+      higher = label1;
     }
   }
-  label_t left;
-  label_t right;
+  label_t lower;
+  label_t higher;
 };
 
 inline bool operator==(UnionTaint const& l, UnionTaint const& r) {
   return static_cast<TaintBase const&>(l) == static_cast<TaintBase const&>(r) && 
-          l.left == r.left && l.right == r.right;
+          l.lower == r.lower && l.higher == r.higher;
 }
 
 using Taint = std::variant<SourceTaint, RangeTaint, UnionTaint>;
@@ -111,6 +132,15 @@ using Taint = std::variant<SourceTaint, RangeTaint, UnionTaint>;
 // Represents first label_t, one past last label_t
 // in spirit of begin()/end()
 using taint_range_t = std::pair<label_t, label_t>;
+
+
+
+
+
+std::ostream &operator<< (std::ostream &os, SourceTaint const& s);
+std::ostream &operator<< (std::ostream &os, UnionTaint const& u);
+std::ostream &operator<< (std::ostream &os, RangeTaint const& r);
+std::ostream &operator<< (std::ostream &os, Taint const& t);
 
 }
 #endif
