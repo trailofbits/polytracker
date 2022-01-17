@@ -2,11 +2,10 @@
 #define POLYTRACKER_TAINTDAG_TAINTDAG_H
 #include <atomic>
 #include <cassert>
-#include <filesystem>
 #include <limits>
 #include <numeric>
-#include <fstream>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 #include <sys/mman.h>

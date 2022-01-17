@@ -2,7 +2,6 @@
 
 #include "taintdag/fdmapping.hpp"
 
-namespace fs = std::filesystem;
 namespace td = taintdag;
 
 

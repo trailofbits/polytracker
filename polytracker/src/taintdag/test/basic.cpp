@@ -164,6 +164,6 @@ TEST_CASE("Serialize deserialize for different events") {
     for (size_t i=181202;i<850458;i++) {
       td.union_taint(i-3, i-4);
     }
-    REQUIRE(td.label_count() == 850458);
+    REQUIRE(td.label_count() == 850459);
   }
 }

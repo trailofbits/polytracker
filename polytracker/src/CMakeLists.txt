@@ -1,4 +1,7 @@
+set(CMAKE_CXX_STANDARD 17)
+
 add_subdirectory(passes)
+add_subdirectory(taintdag)
 
 # TODO Just do this here instead of in passes.
 find_package(LLVM 13 CONFIG)
@@ -26,7 +29,6 @@ set(POLY_DIR "polytracker")
 set(TAINT_DIR "taint_sources")
 set(TAINTDAG_DIR "taintdag")
 
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if (XRAY_ON)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fxray-instrument -fxray-instruction-threshold=1 -Wall -Werror -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -g -O3")

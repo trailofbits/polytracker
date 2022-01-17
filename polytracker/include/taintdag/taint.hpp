@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <limits>
 #include <variant>
+#include <type_traits>
 
 namespace taintdag {
 
