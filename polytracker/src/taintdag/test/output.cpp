@@ -99,9 +99,9 @@ TEST_CASE("OutputFile tests") {
 
   SECTION("Move is handled correctly") {
     OutputFile of{path};
-    auto fd_size = rand_limit(0xffffu);
-    auto sink_size = rand_limit(0xffffu);
-    auto tdag_size = rand_limit(0xffffffu);
+    auto fd_size = test::rand_limit(0xffffu);
+    auto sink_size = test::rand_limit(0xffffu);
+    auto tdag_size = test::rand_limit(0xffffffu);
     of.fileheader_fd_size(fd_size);
     of.fileheader_sink_size(sink_size);
     of.fileheader_tdag_size(tdag_size);

@@ -48,52 +48,9 @@ label_t max_test_source_offset = 16;
 size_t const test_iterations = 300000;
 
 
-// Produce a random taint label given max_test_label value
-// label zero is reserved for 'untainted' data
-label_t rand_label(label_t minlabel = 1, label_t maxlabel = max_test_label) {
-  return rand_limit<label_t>(maxlabel-minlabel+1) + minlabel;
-}
-
-// Create a random source taint using values from max_test_* above
-std::pair<SourceTaint, label_t> random_source_taint() {
-  return {SourceTaint(rand_limit(max_test_source_idx), rand_limit(max_test_source_offset)), rand_label()};
-}
-
-// Create a random union taint using values from max_test_* above
-std::pair<UnionTaint, label_t> random_union_taint() {
-  auto l1 = rand_label();
-  auto l2 = rand_label();
-  if (l1 == l2)
-    l2+=2;
-  else if (l2 == l1 + 1)
-    l2++; // NOTE Might push outside max_test_label but doesn't matter...
-  else if (l1 == l2+1)
-    l1++; // NOTE Might push outside max_test_label but doesn't matter...
-
-  auto hilbl = std::max(l1, l2);
-  return {UnionTaint{l1, l2}, rand_label(hilbl+1, hilbl+8)};
-}
-
-// Create a random range taint using values from max_test_* above
-std::pair<RangeTaint, label_t> random_range_taint() {
-  auto l1 = rand_label();
-  auto l2 = rand_label();
-  auto first = std::min(l1, l2);
-  auto last = std::max(l1, l2);
-
-  if (first == last)
-    last++; // NOTE Might push outside max_test_label but doesn't matter...
-  return {RangeTaint{first, last}, rand_label(last+1, last + 8)};
-}
-
 // Create a random taint value/label pair
 std::pair<Taint, label_t> rand_taint() {
-  auto i = rand_limit(3);
-  switch(i) {
-    case 0: return random_source_taint();
-    case 1: return random_union_taint();
-    default: return random_range_taint();
-  }
+  return test::rand_taint(max_test_label, max_test_source_idx, max_test_source_offset);
 }
 
 // Returns true if sub is included in super. Requires the ranges to be sorted

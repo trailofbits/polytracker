@@ -40,10 +40,10 @@ TEST_CASE("Serialize deserialize for different events") {
 
   SECTION("Source ranges are of correct size and sound") {
     for (size_t i=0;i<16;i++) {
-      auto n= rand_limit(0xffffu);
+      auto n= test::rand_limit(0xffffu);
 
-      source_offset_t ofs = rand_limit(max_source_offset);
-      source_index_t srcidx = rand_limit(max_source_index+1);
+      source_offset_t ofs = test::rand_limit(max_source_offset);
+      source_index_t srcidx = test::rand_limit(max_source_index+1);
       auto range = td.create_source_labels(srcidx, ofs, n);
 
       // Labels are monotonically increasing
@@ -55,10 +55,10 @@ TEST_CASE("Serialize deserialize for different events") {
   SECTION("Taints doesn't overlap") {
     std::vector<taint_range_t> ranges;
     for (size_t i=0;i<16;i++) {
-      auto n= rand_limit(0xffffu);
+      auto n= test::rand_limit(0xffffu);
 
-      source_offset_t ofs = rand_limit(max_source_offset);
-      source_index_t idx = rand_limit(max_source_index+1);
+      source_offset_t ofs = test::rand_limit(max_source_offset);
+      source_index_t idx = test::rand_limit(max_source_index+1);
       auto tr = td.create_source_labels(idx, ofs, n);
 
       REQUIRE(std::all_of(ranges.begin(), ranges.end(), [tr](auto &r) {
@@ -70,16 +70,19 @@ TEST_CASE("Serialize deserialize for different events") {
     }
   }
   SECTION("Taint affects control flow") {
-    source_offset_t ofs = rand_limit(max_source_offset);
-    source_index_t idx = rand_limit(max_source_index+1);
+    source_offset_t ofs = test::rand_limit(max_source_offset);
+    source_index_t idx = test::rand_limit(max_source_index+1);
     auto tr = td.create_source_labels(idx, ofs, 3);
 
     td.affects_control_flow(tr.first);
+
   }
 
+  // Covered by the test cases in union.cpp, but this tests the full
+  // union_taint method, not just the union-logic.
   SECTION("Union taints") {
-    source_offset_t ofs = rand_limit(max_source_offset);
-    source_index_t idx = rand_limit(max_source_index+1);
+    source_offset_t ofs = test::rand_limit(max_source_offset);
+    source_index_t idx = test::rand_limit(max_source_index+1);
     auto tr = td.create_source_labels(idx, ofs, 3);
 
 
@@ -124,8 +127,8 @@ TEST_CASE("Serialize deserialize for different events") {
 
 
   SECTION("Taint iteration") {
-    source_offset_t ofs = rand_limit(max_source_offset);
-    source_index_t idx = rand_limit(max_source_index+1);
+    source_offset_t ofs = test::rand_limit(max_source_offset);
+    source_index_t idx = test::rand_limit(max_source_index+1);
     auto tr = td.create_source_labels(idx, ofs, 3);
     auto t1 = tr.first;
     auto t2 = tr.first + 1;
@@ -157,8 +160,8 @@ TEST_CASE("Serialize deserialize for different events") {
   }
 
   SECTION("Capacity testing") {
-    source_offset_t ofs = rand_limit(max_source_offset);
-    source_index_t idx = rand_limit(max_source_index+1);
+    source_offset_t ofs = test::rand_limit(max_source_offset);
+    source_index_t idx = test::rand_limit(max_source_index+1);
     td.create_source_labels(idx, ofs, 181202);
 
     for (size_t i=181202;i<850458;i++) {
