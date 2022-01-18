@@ -81,16 +81,16 @@ public:
         td.affects_control_flow(u.higher);
       }
 
-      Visitor(TaintDAG &t, label_t l) : td{t}, lbl{l} {
+      Visitor(TaintDAG &t) : td{t} {
       }
       TaintDAG &td;
-      label_t lbl;
     };
 
-    if (!is_source_taint(encoded))
-      std::visit(Visitor{*this, label}, decode(encoded));
+    auto encoded_waffects = add_affects_control_flow(encoded);
+    p_[label] = encoded_waffects;
+    if (!is_source_taint(encoded_waffects))
+      std::visit(Visitor{*this}, decode(encoded_waffects));
 
-    p_[label] = add_affects_control_flow(encoded);
   }
 
   // Create a taint union
@@ -101,31 +101,11 @@ public:
     auto lval = decode(p_[l]);
     auto rval = decode(p_[r]);
     auto result = union_::compute(l, lval, r, rval);
-    if (std::holds_alternative<label_t>(result))
-      return std::get<label_t>(result);
+    if (auto lbl = std::get_if<label_t>(&result))
+      return *lbl;
     auto idx = increment(1);
     p_[idx] = encode(std::get<Taint>(result));
     return idx;
-
-#if 0
-    auto lval = decode(p_[l]);
-    if (UnionTaint *ut = std::get_if<UnionTaint>(&lval)) {
-      if (ut->left == r || ut->right == r)
-        return l;
-    }
-
-    auto rval = decode(p_[r]);
-    if (UnionTaint *ut = std::get_if<UnionTaint>(&rval)) {
-      if (ut->left == l || ut->right == l)
-        return r;
-    }
-
-    // TODO (hbrodin): Just aiming for something working, later make more sophisticated choices.
-    auto idx = increment(1);
-    UnionTaint ut{l, r};
-    p_[idx] = encode(ut);
-    return idx;
-    #endif
   }
 
 
