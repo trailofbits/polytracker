@@ -7,6 +7,7 @@
 #include <optional>
 #include <type_traits>
 #include <vector>
+#include <deque>
 
 #include <sys/mman.h>
 
@@ -61,36 +62,51 @@ public:
 
   // NOTE (hbrodin): Ideally, this should flow to all ancestor labels and ultimately sourcetaints
   void affects_control_flow(label_t label) {
-    auto encoded = p_[label];
+    using labelq = std::deque<label_t>;
 
     // Early out
-    if (check_affects_control_flow(encoded))
+    if (check_affects_control_flow(p_[label]))
       return;
+
+    labelq q;
+    q.push_back(label);
 
     struct Visitor {
       void operator()(SourceTaint s) { }
 
       void operator()(RangeTaint r) {
         for (auto curr = r.first;curr <= r.last;curr++) {
-          td.affects_control_flow(curr);
+          q.push_back(curr);
         }
       }
 
       void operator()(UnionTaint u) {
-        td.affects_control_flow(u.lower);
-        td.affects_control_flow(u.higher);
+        q.push_back(u.lower);
+        q.push_back(u.higher);
       }
 
-      Visitor(TaintDAG &t) : td{t} {
+      Visitor(labelq &q) : q{q} {
       }
-      TaintDAG &td;
+      labelq &q;
     };
 
-    auto encoded_waffects = add_affects_control_flow(encoded);
-    p_[label] = encoded_waffects;
-    if (!is_source_taint(encoded_waffects))
-      std::visit(Visitor{*this}, decode(encoded_waffects));
 
+    while (!q.empty()) {
+      auto l = q.front();
+      q.pop_front();
+
+      auto encoded = p_[l];
+
+      // Early out
+      if (check_affects_control_flow(encoded))
+        continue;
+
+      auto encoded_waffects = add_affects_control_flow(encoded);
+      p_[l] = encoded_waffects;
+      if (!is_source_taint(encoded_waffects)) {
+        std::visit(Visitor{q}, decode(encoded_waffects));
+      }
+    }
   }
 
   // Create a taint union
