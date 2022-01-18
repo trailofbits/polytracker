@@ -12,16 +12,16 @@ namespace taintdag::union_ {
   }
 
   inline bool encloses(RangeTaint const& t, label_t l) {
-    return t.begin <=l && t.end > l;
+    return t.first <=l && t.last >= l;
   }
 
   inline bool encloses(RangeTaint const& range, UnionTaint const &u) {
-    return range.begin <= u.lower && range.end > u.higher;
+    return range.first <= u.lower && range.last >= u.higher;
   }
 
   // Is r a subrange of l?
   inline bool encloses(RangeTaint const& super, RangeTaint const& sub) {
-    return (super.begin <= sub.begin && super.end >= sub.end);
+    return (super.first <= sub.first && super.last >= sub.last);
   }
 
   // The Visitor implementes the union of two labels.
@@ -74,10 +74,10 @@ namespace taintdag::union_ {
         return right_;
 
       // Are ranges adjacent? If so, create a larger range
-      if (l.end == r.begin)
-        return RangeTaint{l.begin, r.end};
-      if (r.end == l.begin)
-        return RangeTaint{r.begin, l.end};
+      if (l.last+1 == r.first)
+        return RangeTaint{l.first, r.last};
+      if (r.last+1 == l.first)
+        return RangeTaint{r.first, l.last};
 
       return union_labels();
     }
@@ -113,10 +113,10 @@ namespace taintdag::union_ {
         return rlabel;
 
       // Source adjacent to range, just extend the range taint
-      if (sourcelabel+1 == r.begin)
-        return RangeTaint{sourcelabel, r.end};
-      if (r.end == sourcelabel)
-        return RangeTaint{r.begin, sourcelabel+1};
+      if (sourcelabel+1 == r.first)
+        return RangeTaint{sourcelabel, r.last};
+      if (r.last +1 == sourcelabel)
+        return RangeTaint{r.first, sourcelabel};
 
       return union_labels();
     }
@@ -135,21 +135,21 @@ namespace taintdag::union_ {
       if (encloses(u, rlabel))
         return ulabel;
 
-      if (u.lower+1 == r.begin) {
+      if (u.lower+1 == r.first) {
         if (encloses(r, u.higher))
-          return RangeTaint(u.lower, r.end);
-        if (u.higher == r.end)
-          return RangeTaint(u.lower, r.end+1);
-      } else if (u.higher == r.end) {
+          return RangeTaint(u.lower, r.last);
+        if (u.higher == r.last+1)
+          return RangeTaint(u.lower, u.higher);
+      } else if (u.higher == r.last+1) {
         if (encloses(r, u.lower))
-          return RangeTaint(r.begin, r.end+1);
+          return RangeTaint(r.first, u.higher);
       }
 
       // Union label adjacent to range?
-      if (ulabel+1 == r.begin)
-        return RangeTaint{ulabel, r.end};
-      if (r.end == ulabel)
-        return RangeTaint{r.begin, r.end+1};
+      if (ulabel+1 == r.first)
+        return RangeTaint{ulabel, r.last};
+      if (r.last+1 == ulabel)
+        return RangeTaint{r.first, ulabel};
 
       return union_labels();
     }

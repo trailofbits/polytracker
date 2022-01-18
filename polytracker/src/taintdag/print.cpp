@@ -14,7 +14,7 @@ std::ostream &operator<< (std::ostream &os, UnionTaint const& u) {
 }
 
 std::ostream &operator<< (std::ostream &os, RangeTaint const& r) {
-  os << "{RangeTaint, " << r.affects_control_flow << ", " << r.begin << ", " << r.end << "}";
+  os << "{RangeTaint, " << r.affects_control_flow << ", " << r.first << ", " << r.last << "}";
   return os;
 }
 

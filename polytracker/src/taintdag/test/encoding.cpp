@@ -25,7 +25,7 @@ TEST_CASE("Encoding decoding") {
       t = SourceTaint{idx, ofs, affects_control_flow};
       break;
     case 1:
-      t = RangeTaint{label1, label2};
+      t = RangeTaint{std::min(label1, label2), std::max(label1, label2)};
       break;
     case 2:
       t = UnionTaint{label1, label2};

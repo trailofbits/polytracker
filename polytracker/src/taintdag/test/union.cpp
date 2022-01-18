@@ -20,9 +20,9 @@ label_set to_labels(Taint const &t) {
   
   label_set ls;
   auto rt = std::get<RangeTaint>(t);
-  auto n = rt.end - rt.begin; 
+  auto n = rt.last - rt.first + 1; 
   ls.resize(n);
-  std::iota(ls.begin(), ls.end(), rt.begin);
+  std::iota(ls.begin(), ls.end(), rt.first);
   return ls;
 }
 
@@ -45,13 +45,13 @@ label_t max_test_source_idx = 10;
 label_t max_test_source_offset = 16;
 
 // Number of test case iterations, higher takes longer but explores more paths/combinations
-size_t const test_iterations = 30000;
+size_t const test_iterations = 300000;
 
 
 // Produce a random taint label given max_test_label value
 // label zero is reserved for 'untainted' data
-label_t rand_label() {
-  return rand_limit<label_t>(max_test_label) +1;
+label_t rand_label(label_t minlabel = 1, label_t maxlabel = max_test_label) {
+  return rand_limit<label_t>(maxlabel-minlabel+1) + minlabel;
 }
 
 // Create a random source taint using values from max_test_* above
@@ -70,21 +70,20 @@ std::pair<UnionTaint, label_t> random_union_taint() {
   else if (l1 == l2+1)
     l1++; // NOTE Might push outside max_test_label but doesn't matter...
 
-  return {UnionTaint{l1, l2}, std::max(l1, l2) + rand_label()};
+  auto hilbl = std::max(l1, l2);
+  return {UnionTaint{l1, l2}, rand_label(hilbl+1, hilbl+8)};
 }
 
 // Create a random range taint using values from max_test_* above
 std::pair<RangeTaint, label_t> random_range_taint() {
   auto l1 = rand_label();
   auto l2 = rand_label();
-  auto begin = std::min(l1, l2);
-  auto end = std::max(l1, l2);
+  auto first = std::min(l1, l2);
+  auto last = std::max(l1, l2);
 
-  if (begin == end)
-    end+= 2;
-  else if (end == begin+1)
-    end++; // NOTE Might push outside max_test_label but doesn't matter...
-  return {RangeTaint{begin, end}, end+ rand_label()};
+  if (first == last)
+    last++; // NOTE Might push outside max_test_label but doesn't matter...
+  return {RangeTaint{first, last}, rand_label(last+1, last + 8)};
 }
 
 // Create a random taint value/label pair
@@ -170,7 +169,5 @@ TEST_CASE("Union Represents Same") {
     }
   }
 
-
   WARN("#labels " << nlabels << " #values " << nvalues);
-
 }

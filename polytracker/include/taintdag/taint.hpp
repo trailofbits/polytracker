@@ -1,6 +1,7 @@
 #ifndef POLYTRACKER_TAINTDAG_TAINT_H
 #define POLYTRACKER_TAINTDAG_TAINT_H
 
+#include <cassert>
 #include <cstdint>
 #include <iosfwd>
 #include <limits>
@@ -78,29 +79,20 @@ inline bool operator==(SourceTaint const& l, SourceTaint const& r) {
 // isn't that an invalid state?
 
 struct RangeTaint : TaintBase {
-  RangeTaint(label_t argbegin, label_t argend, bool affects_control_flow=false) : TaintBase(affects_control_flow) {
-    assert((argbegin != argend) && "Expected non-equal labels in union");
-    // Ensure begin is the smallest value
-    if (argbegin < argend) {
-      begin = argbegin;
-      end = argend;
-    } else {
-      begin = argend;
-      end = argbegin;
-    }
+  RangeTaint(label_t argfirst, label_t arglast, bool affects_control_flow=false) : TaintBase(affects_control_flow), first{argfirst}, last{arglast} {
+    assert((argfirst < arglast) && "Expected first arg < last args when creating RangeTaint");
   }
 
-  label_t begin;
-  label_t end; // begin < end
+  label_t first;
+  label_t last; // first < last
 };
 
 
 inline bool operator==(RangeTaint const& l, RangeTaint const& r) {
    return static_cast<TaintBase const&>(l) == static_cast<TaintBase const&>(r) && 
-          l.begin == r.begin && l.end == r.end;
+          l.first == r.first && l.last == r.last;
 }
 
-// TODO (hbrodin): Rename left, right to lower/higher (according to their label)
 struct UnionTaint : TaintBase {
   // TODO (hbrodin): Prevent labels of equal value
   // TODO (hbrodin): Prevent labels of adjacent value (should prefer RangeTaint)

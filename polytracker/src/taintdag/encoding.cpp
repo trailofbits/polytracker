@@ -31,8 +31,8 @@ storage_t encode(Taint const &taint) {
     // rt.begin < rt.end always holds
     auto val = static_cast<storage_t>(0) << source_taint_bit_shift;
     val |= static_cast<storage_t>(rt.affects_control_flow) << affects_control_flow_shift;
-    val |= rt.end;
-    val |= (static_cast<storage_t>(rt.begin & label_mask) << val1_shift);
+    val |= rt.last;
+    val |= (static_cast<storage_t>(rt.first & label_mask) << val1_shift);
     return val;
   } else {
     // UnionTaint
