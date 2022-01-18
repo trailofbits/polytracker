@@ -77,4 +77,8 @@ storage_t add_affects_control_flow(storage_t encoded) {
   return encoded | (static_cast<storage_t>(1) << affects_control_flow_shift);
 }
 
+bool check_affects_control_flow(storage_t encoded) {
+  return (encoded >> affects_control_flow_shift) & 1;
+}
+
 }

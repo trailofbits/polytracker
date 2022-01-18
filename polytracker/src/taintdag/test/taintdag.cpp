@@ -98,7 +98,44 @@ TEST_CASE("Serialize deserialize for different events") {
   SECTION("Taint affects control flow") {
     auto [_1, _2, _3, tr] = rand_source_labels(td, Count{3});
 
-    td.affects_control_flow(tr.first);
+    SECTION("Default does not affect control flow") {
+      for (auto lbl = tr.first;lbl<tr.second;lbl++) {
+        auto st = std::get<SourceTaint>(td.read_label(lbl));
+        REQUIRE(!st.affects_control_flow);
+      }
+    }
+
+    SECTION("Source taint") {
+      td.affects_control_flow(tr.first);
+
+      auto st = std::get<SourceTaint>(td.read_label(tr.first));
+      REQUIRE(st.affects_control_flow);
+    }
+
+    SECTION("Union affects source labels as well") {
+      auto ul = td.union_taint(tr.first, tr.second-1);
+      td.affects_control_flow(ul);
+
+      auto u = std::get<UnionTaint>(td.read_label(ul));
+      REQUIRE(u.affects_control_flow);
+
+      auto s1 = std::get<SourceTaint>(td.read_label(u.lower));
+      REQUIRE(s1.affects_control_flow);
+
+      auto s2 = std::get<SourceTaint>(td.read_label(u.higher));
+      REQUIRE(s2.affects_control_flow);
+    }
+
+    SECTION("Range affects soruce labels") {
+      auto rl = td.union_taint(tr.first, tr.first +1);
+      auto rl2 = td.union_taint(rl, tr.first+2);
+      td.affects_control_flow(rl2);
+
+      auto r = std::get<RangeTaint>(td.read_label(rl2));
+      for (auto lbl = r.first;lbl<=r.last;lbl++) {
+        REQUIRE(std::get<SourceTaint>(td.read_label(lbl)).affects_control_flow);
+      }
+    }
 
   }
 

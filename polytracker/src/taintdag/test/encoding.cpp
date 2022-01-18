@@ -14,3 +14,12 @@ TEST_CASE("Encoding decoding") {
     REQUIRE(decoded == t);
   }
 }
+
+TEST_CASE("Affects control flow") {
+  auto [t, _] = test::rand_taint();
+  auto encoded = encode(t);
+  REQUIRE(!check_affects_control_flow(encoded));
+
+  auto enc2 = add_affects_control_flow(encoded);
+  REQUIRE(check_affects_control_flow(enc2));
+}

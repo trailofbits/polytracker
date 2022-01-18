@@ -16,6 +16,9 @@ bool is_source_taint(storage_t encoded);
 // Add the affects control flow flag to an encoded taint value
 storage_t add_affects_control_flow(storage_t encoded);
 
+// Check if affects control flow bit is set (without decoding)
+bool check_affects_control_flow(storage_t encoded);
+
 }
 
 #endif

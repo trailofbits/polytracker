@@ -54,9 +54,43 @@ public:
     return {lbl, lbl + length};
   }
 
+  Taint read_label(label_t lbl) {
+    // TODO (hbrodin): Should include range check...
+    return decode(p_[lbl]);
+  }
+
   // NOTE (hbrodin): Ideally, this should flow to all ancestor labels and ultimately sourcetaints
   void affects_control_flow(label_t label) {
-    p_[label] = add_affects_control_flow(p_[label]);
+    auto encoded = p_[label];
+
+    // Early out
+    if (check_affects_control_flow(encoded))
+      return;
+
+    struct Visitor {
+      void operator()(SourceTaint s) { }
+
+      void operator()(RangeTaint r) {
+        for (auto curr = r.first;curr <= r.last;curr++) {
+          td.affects_control_flow(curr);
+        }
+      }
+
+      void operator()(UnionTaint u) {
+        td.affects_control_flow(u.lower);
+        td.affects_control_flow(u.higher);
+      }
+
+      Visitor(TaintDAG &t, label_t l) : td{t}, lbl{l} {
+      }
+      TaintDAG &td;
+      label_t lbl;
+    };
+
+    if (!is_source_taint(encoded))
+      std::visit(Visitor{*this, label}, decode(encoded));
+
+    p_[label] = add_affects_control_flow(encoded);
   }
 
   // Create a taint union
