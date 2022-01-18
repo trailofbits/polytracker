@@ -28,6 +28,39 @@ struct mem {
   }
 };
 
+namespace {
+  source_offset_t rand_source_offset() {
+    return test::rand_limit<source_offset_t>(max_source_offset);
+  }
+
+  source_index_t rand_source_index() {
+    return test::rand_limit<source_index_t>(max_source_index);
+  }
+
+
+  struct RandomCount {
+    label_t limit;
+  };
+
+  struct Count {
+    label_t n;
+  };
+
+  // Construct random source labels
+  // The tuple contains:
+  // number of labels requested
+  // source offset
+  // source index
+  // Returned taint_range_t
+  std::tuple<label_t, source_offset_t, source_index_t, taint_range_t> rand_source_labels(TaintDAG &td, std::variant<Count, RandomCount> n) {
+      auto nlabels= std::holds_alternative<Count>(n) ? std::get<Count>(n).n : test::rand_limit(std::get<RandomCount>(n).limit-1)+1;
+      auto ofs = rand_source_offset();
+      auto srcidx = rand_source_index();
+      auto range = td.create_source_labels(srcidx, ofs, nlabels);
+      return {nlabels, ofs, srcidx, range};
+  }
+}
+
 TEST_CASE("Serialize deserialize for different events") {
   srand(time(nullptr));
   auto seed = rand();
@@ -40,11 +73,7 @@ TEST_CASE("Serialize deserialize for different events") {
 
   SECTION("Source ranges are of correct size and sound") {
     for (size_t i=0;i<16;i++) {
-      auto n= test::rand_limit(0xffffu);
-
-      source_offset_t ofs = test::rand_limit(max_source_offset);
-      source_index_t srcidx = test::rand_limit(max_source_index+1);
-      auto range = td.create_source_labels(srcidx, ofs, n);
+      auto [n, _1, _2, range] = rand_source_labels(td, RandomCount{0xffff});
 
       // Labels are monotonically increasing
       REQUIRE(range.second > range.first);
@@ -55,11 +84,8 @@ TEST_CASE("Serialize deserialize for different events") {
   SECTION("Taints doesn't overlap") {
     std::vector<taint_range_t> ranges;
     for (size_t i=0;i<16;i++) {
-      auto n= test::rand_limit(0xffffu);
-
-      source_offset_t ofs = test::rand_limit(max_source_offset);
-      source_index_t idx = test::rand_limit(max_source_index+1);
-      auto tr = td.create_source_labels(idx, ofs, n);
+      auto [n, ofs, srcidx, tr_] = rand_source_labels(td, RandomCount{0xffff});
+      taint_range_t tr = tr_; // For some reason the lambda capture doesn't work with tr_???
 
       REQUIRE(std::all_of(ranges.begin(), ranges.end(), [tr](auto &r) {
         // We know from above that tr.last >= tr.first
@@ -70,9 +96,7 @@ TEST_CASE("Serialize deserialize for different events") {
     }
   }
   SECTION("Taint affects control flow") {
-    source_offset_t ofs = test::rand_limit(max_source_offset);
-    source_index_t idx = test::rand_limit(max_source_index+1);
-    auto tr = td.create_source_labels(idx, ofs, 3);
+    auto [_1, _2, _3, tr] = rand_source_labels(td, Count{3});
 
     td.affects_control_flow(tr.first);
 
@@ -81,9 +105,7 @@ TEST_CASE("Serialize deserialize for different events") {
   // Covered by the test cases in union.cpp, but this tests the full
   // union_taint method, not just the union-logic.
   SECTION("Union taints") {
-    source_offset_t ofs = test::rand_limit(max_source_offset);
-    source_index_t idx = test::rand_limit(max_source_index+1);
-    auto tr = td.create_source_labels(idx, ofs, 3);
+    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{3}));
 
 
     SECTION("Taint union of equal taints -> input taint") {
@@ -127,9 +149,7 @@ TEST_CASE("Serialize deserialize for different events") {
 
 
   SECTION("Taint iteration") {
-    source_offset_t ofs = test::rand_limit(max_source_offset);
-    source_index_t idx = test::rand_limit(max_source_index+1);
-    auto tr = td.create_source_labels(idx, ofs, 3);
+    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{3}));
     auto t1 = tr.first;
     auto t2 = tr.first + 1;
     auto t3 = tr.first + 2;
@@ -160,9 +180,7 @@ TEST_CASE("Serialize deserialize for different events") {
   }
 
   SECTION("Capacity testing") {
-    source_offset_t ofs = test::rand_limit(max_source_offset);
-    source_index_t idx = test::rand_limit(max_source_index+1);
-    td.create_source_labels(idx, ofs, 181202);
+    rand_source_labels(td, Count{181202});
 
     for (size_t i=181202;i<850458;i++) {
       td.union_taint(i-3, i-4);
