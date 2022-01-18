@@ -26,10 +26,10 @@ inline std::pair<SourceTaint, label_t> random_source_taint(source_index_t max_so
 
 // TODO (hbrodin): Analyze the ranges related to maxlbl to ensure it can't go out of bounds
 // Create a random union taint using values from max_test_* above
-inline std::pair<UnionTaint, label_t> random_union_taint(label_t maxlbl = max_label-1) {
-  assert((maxlbl <= max_label -1) && "maxlabel to high to generate random union taint");
-  auto l1 = lbl_inrange(1, maxlbl);
-  auto l2 = lbl_inrange(1, maxlbl);
+inline std::pair<UnionTaint, label_t> random_union_taint(label_t maxlbl = max_label) {
+  assert((maxlbl <= max_label) && "maxlabel to high to generate random union taint");
+  auto l1 = lbl_inrange(1, maxlbl-2);
+  auto l2 = lbl_inrange(1, maxlbl-2);
   if (l1 == l2)
     l2+=2;
   else if (l2 == l1 + 1)
@@ -42,10 +42,10 @@ inline std::pair<UnionTaint, label_t> random_union_taint(label_t maxlbl = max_la
 }
 
 // Create a random range taint using values from max_test_* above
-inline std::pair<RangeTaint, label_t> random_range_taint(label_t maxlbl = max_label-1) {
-  assert((maxlbl <= max_label -1) && "maxlabel to high to generate random range taint");
-  auto l1 = lbl_inrange(1, maxlbl);
-  auto l2 = lbl_inrange(1, maxlbl);
+inline std::pair<RangeTaint, label_t> random_range_taint(label_t maxlbl = max_label) {
+  assert((maxlbl <= max_label) && "maxlabel to high to generate random range taint");
+  auto l1 = lbl_inrange(1, maxlbl-2);
+  auto l2 = lbl_inrange(1, maxlbl-2);
   auto first = std::min(l1, l2);
   auto last = std::max(l1, l2);
 
