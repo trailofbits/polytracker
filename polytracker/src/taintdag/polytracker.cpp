@@ -77,9 +77,15 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size
 
   if (idx) {
     // TODO (hbrodin): Optimize this. Add a way of representing the entire write without calling log_single.
+    // Observations from writing png from pdf:
+    //  - there are a lot of outputs repeated once - could reuse highest label bit to indicate that the value should be repeated and only output offset should increase by one.
+    //  - writes come in chunks of 78, 40-70k of data. Could write [fileindex, offset, len, label1, label2, ...label-len]  
+    //    instead of [fileindex offset label1] [fileindex offset label2] ... [fileindex offset label-len]
+    // could consider variable length encoding of values. Not sure how much of a gain it would be.
     for (size_t i=0;i<length;i++) {
       auto lbl = dfsan_read_label(memp + i, sizeof(char));
-      sinklog_.log_single(idx.value(), offset+i, lbl);
+      if (lbl > 0) // Only log actual taint labels
+        sinklog_.log_single(idx.value(), offset+i, lbl);
     }
   }
   else
