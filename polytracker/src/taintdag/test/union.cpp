@@ -45,7 +45,7 @@ label_t max_test_source_idx = 10;
 label_t max_test_source_offset = 16;
 
 // Number of test case iterations, higher takes longer but explores more paths/combinations
-size_t const test_iterations = 300000;
+size_t const test_iterations = 30000;
 
 
 // Create a random taint value/label pair
