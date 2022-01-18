@@ -7,6 +7,7 @@ import sys
 
 
 #TODO (hbrodin): Completely unchecked values. Only parse files from trusted sources...
+# TODO (hbrodin): Implement using mmap instead???
 
 # This needs to be kept in sync with implementation in encoding.cpp
 source_taint_bit_shift = 63
@@ -70,7 +71,7 @@ def iter_sinklog(hdr: FileHdr, path : Path) -> Iterable[SinkLogEntry]:
 
 class Taint:
   def __init__(self, affects_control_flow :bool = False):
-    self.affects_control_flow = False
+    self.affects_control_flow = affects_control_flow
 
   def __repr__(self) -> str:
       return f"affects control flow {self.affects_control_flow}"
