@@ -224,4 +224,46 @@ TEST_CASE("Serialize deserialize for different events") {
     }
     REQUIRE(td.label_count() == 850459);
   }
+
+
+  SECTION("No recursive taint") {
+    auto [n, ofs, srcidx, tr_] = rand_source_labels(td, RandomCount{32});
+
+    for (auto iter =0;iter<10000;iter++) {
+      auto max_label = td.label_count() -1;
+      auto l1 = test::lbl_inrange(1, max_label);
+      auto l2 = test::lbl_inrange(1, max_label);
+
+      auto newlbl = td.union_taint(l1, l2);
+      CAPTURE(l1);
+      CAPTURE(l2);
+      CAPTURE(newlbl);
+
+      auto t = td.read_label(newlbl);
+      if (auto *ut = std::get_if<UnionTaint>(&t)) {
+        REQUIRE(newlbl != ut->lower);
+        REQUIRE(newlbl != ut->higher);
+      }
+
+      if (auto *rt = std::get_if<RangeTaint>(&t)) {
+        CAPTURE(*rt);
+        REQUIRE((rt->first > newlbl || rt->last < newlbl));
+      }
+    }
+
+    SECTION("Affects control flow backwards") {
+      auto max_label = td.label_count() -1;
+      for (auto lbl = max_label;lbl>0;lbl--) {
+        td.affects_control_flow(lbl);
+      }
+    }
+
+    SECTION("Affects control flow random") {
+      auto max_label = td.label_count() -1;
+      for (auto iter = max_label;iter>0;iter--) {
+        auto label = test::lbl_inrange(1, max_label);
+        td.affects_control_flow(label);
+      }
+    }
+  }
 }

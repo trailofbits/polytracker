@@ -158,9 +158,9 @@ namespace taintdag::union_ {
     // are adjacent a range is created, else a union is created.
     Taint union_labels() const {
       if (left_ + 1 == right_) {
-        return RangeTaint{left_, right_+1};
+        return RangeTaint{left_, right_};
       } else if (right_+1 == left_) {
-        return RangeTaint{right_, left_+1};
+        return RangeTaint{right_, left_};
       } else {
         return UnionTaint{left_, right_};
       }
