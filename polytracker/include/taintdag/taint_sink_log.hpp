@@ -37,7 +37,7 @@ namespace taintdag {
 
       *reinterpret_cast<sink_index_t*>(begin_ + write_offset) = file;
       *reinterpret_cast<sink_offset_t*>(begin_ + write_offset + sizeof(file)) = file_offset;
-      *reinterpret_cast<label_t*>(begin_ + write_offset + sizeof(file) + sizeof(file_offset)) = file_offset;
+      *reinterpret_cast<label_t*>(begin_ + write_offset + sizeof(file) + sizeof(file_offset)) = label;
     }
 
   private:
