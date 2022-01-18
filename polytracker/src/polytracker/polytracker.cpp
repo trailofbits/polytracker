@@ -123,7 +123,7 @@ __polytracker_get_label_info(const dfsan_label &l1) {
 
 extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
   if (label > 0) {
-    logConditionalBranch(label);
+    //logConditionalBranch(label);
     get_polytracker_tdag().affects_control_flow(label);
   }
 }
