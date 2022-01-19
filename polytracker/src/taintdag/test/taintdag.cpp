@@ -243,11 +243,14 @@ TEST_CASE("Serialize deserialize for different events") {
       if (auto *ut = std::get_if<UnionTaint>(&t)) {
         REQUIRE(newlbl != ut->lower);
         REQUIRE(newlbl != ut->higher);
+
+        REQUIRE(ut->lower +1 < ut->higher);
       }
 
       if (auto *rt = std::get_if<RangeTaint>(&t)) {
         CAPTURE(*rt);
         REQUIRE((rt->first > newlbl || rt->last < newlbl));
+        REQUIRE(rt->first < rt->last);
       }
     }
 
@@ -265,5 +268,19 @@ TEST_CASE("Serialize deserialize for different events") {
         td.affects_control_flow(label);
       }
     }
+  }
+
+  SECTION("Union of exact same labels twice in a row returns the previous label") {
+    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
+    auto u1 = td.union_taint(tr.first, tr.second-1);
+    auto u2 = td.union_taint(tr.first, tr.second-1);
+    REQUIRE(u1 == u2);
+  }
+
+  SECTION("Range of exact same labels twice in a row returns the previous label") {
+    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
+    auto u1 = td.union_taint(tr.first, tr.first+1);
+    auto u2 = td.union_taint(tr.first, tr.first+1);
+    REQUIRE(u1 == u2);
   }
 }

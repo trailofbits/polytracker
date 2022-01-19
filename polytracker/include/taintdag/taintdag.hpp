@@ -67,7 +67,6 @@ public:
     return decode(p_[lbl]);
   }
 
-  // NOTE (hbrodin): Ideally, this should flow to all ancestor labels and ultimately sourcetaints
   void affects_control_flow(label_t label) {
     using labelq = std::deque<label_t>;
 
@@ -118,8 +117,26 @@ public:
 
   // Create a taint union
   label_t union_taint(label_t l, label_t r) {
+    // TODO (hbrodin): Might already be covered by DFSAN
     if (l == r)
       return l;
+
+    // Simple check, did we just create this union? If so, reuse it
+    // TODO (hbrodin): Extend the check to a range backwards...
+    auto prevlbl = label_count()-1; // Safe, since we start at 1.
+    auto prev = decode(p_[prevlbl]);
+    if (auto ut = std::get_if<UnionTaint>(&prev)) {
+      if (ut->lower == r && ut->higher == l)
+        return prevlbl;
+      if (ut->lower == l && ut->higher == r)
+        return prevlbl;
+    } else if (auto rt = std::get_if<RangeTaint>(&prev)) {
+      if (rt->first == l && rt->last == r)
+        return prevlbl;
+      if (rt->first == r && rt->last == l)
+        return prevlbl;
+    }
+
 
     auto lval = decode(p_[l]);
     auto rval = decode(p_[r]);
