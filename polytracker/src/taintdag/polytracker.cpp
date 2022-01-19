@@ -1,9 +1,24 @@
 #include "taintdag/polytracker.h"
 #include <sanitizer/dfsan_interface.h>
 
+#include <sys/stat.h>
+
 namespace fs = std::filesystem;
 
 namespace taintdag {
+
+
+namespace details {
+  // Returns the file size if it is usable to us (not error, > 0, <= max_label)
+  std::optional<size_t> file_size(int fd) {
+    struct stat st;
+    if (fstat(fd, &st) == 0)
+      if (st.st_size > 0 && st.st_size <= max_label+1)
+        return st.st_size;
+
+    return {};
+  }
+}
 
 PolyTracker::PolyTracker(std::filesystem::path const&outputfile)
  : of_{outputfile}, fdm_{of_.fd_mapping_begin(), of_.fd_mapping_end()},
@@ -25,8 +40,18 @@ label_t PolyTracker::union_labels(label_t l1, label_t l2) {
 }
 
 void PolyTracker::open_file(int fd, fs::path const& path) {
-  fdm_.add_mapping(fd, path.string());
-  //printf("open_file: %d -> %s\n", fd, path.string().data());
+  // TODO (hbrodin): Check if we can determine file size, if so preallocate/reserve labels for all
+  // file bytes and store info about the first label in fdm_ (0 would mean not reserved)
+  std::optional<taint_range_t> range;
+  auto fsize = details::file_size(fd);
+  if (fsize) {
+    range = tdag_.reserve_source_labels(fsize.value());
+  }
+  
+  auto index = fdm_.add_mapping(fd, path.string(), range);
+  // Will leak source labels if fdmapping failed. If it failed we are near capacity anyway so...
+  if (range && index)
+    tdag_.assign_source_labels(range.value(), index.value(), 0);
 }
 
 void PolyTracker::close_file(int fd) {
@@ -34,40 +59,41 @@ void PolyTracker::close_file(int fd) {
   (void)fd;
 }
 
-std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const*mem, source_offset_t offset, size_t length) {
+std::optional<taint_range_t> PolyTracker::create_source_taint(int fd, source_offset_t offset, size_t length) {
   auto idx = fdm_.mapping_idx(fd);
-  printf("Attempt source taint for fd: %d\n", fd);
   if (idx) {
-    //auto[begin, end] = tdag_.create_source_labels(idx.value(), offset, length);
-    auto lblrange = tdag_.create_source_labels(idx.value(), offset, length);
-    //printf("Create source labels fd %d, offset %lu, length: %lu mem: %p. Got [%u, %u)\n", fd, offset, length, mem, lblrange.first, lblrange.second);
+    // Tracking file. Do we already have a preallocated label range? In that case, just offset the request.
+    if (idx->second) {
+      auto lblrange = idx->second.value();
+      // TODO (hbrodin): Consider wrapping?
+      auto start = lblrange.first + offset;
+      auto end = start + length;
+      assert(end <= lblrange.second && "Source taint request outside of preallocated range. File contents changed or bug.");
+      return std::make_pair(start, end);
+    } else { // Crate new labels
+      return tdag_.create_source_labels(idx->first, offset, length);
+    }
+  }
+  printf("WARNING: Ignore source taint for fd %d, offset: %lu, length: %lu\n", fd, offset, length);
+  return {};
 
+}
+
+std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const*mem, source_offset_t offset, size_t length) {
+  auto lblrange = create_source_taint(fd, offset, length);
+  if (lblrange) {
+    auto range = lblrange.value();
     auto memp = const_cast<char*>(static_cast<const char*>(mem));
     for (size_t i=0;i<length;i++) {
-      dfsan_set_label(lblrange.first+i, memp + i, sizeof(char));
+      dfsan_set_label(range.first+i, memp + i, sizeof(char));
     }
-    
-    //for (size_t i=0;i<length;i++) {
-    //  auto lbl = dfsan_read_label(memp+i, sizeof(char));
-    //  printf("lbl: %u\n", lbl);
-    //}
-    return lblrange;
-  } else {
-    printf("WARNING: Ignore source taint for fd %d, offset: %lu, length: %lu\n", fd, offset, length);
   }
-  return {};
+  return lblrange;
 }
 
 
 std::optional<taint_range_t> PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
-  auto idx = fdm_.mapping_idx(fd);
-  if (idx) {
-    auto lblrange = tdag_.create_source_labels(idx.value(), offset, length);
-    //printf("2Create source labels fd %d, offset %lu, length: %lu. Got [%u, %u)\n", fd, offset, length, lblrange.first, lblrange.second);
-    return lblrange;
-  }
-  printf("WARNING: Ignore source taint for fd %d, offset: %lu, length: %lu\n", fd, offset, length);
-  return {};
+  return create_source_taint(fd, offset, length);
 }
 
 
@@ -85,7 +111,7 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size
     for (size_t i=0;i<length;i++) {
       auto lbl = dfsan_read_label(memp + i, sizeof(char));
       if (lbl > 0) // Only log actual taint labels
-        sinklog_.log_single(idx.value(), offset+i, lbl);
+        sinklog_.log_single(idx->first, offset+i, lbl);
     }
   }
   else

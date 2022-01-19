@@ -37,6 +37,9 @@ namespace taintdag {
     void taint_sink(int fd, sink_offset_t offset, void const *mem, size_t length);
 
   private:
+
+    std::optional<taint_range_t> create_source_taint(int fd, source_offset_t offset, size_t length);
+
     OutputFile of_;
     FDMapping fdm_;
     TaintDAG tdag_;

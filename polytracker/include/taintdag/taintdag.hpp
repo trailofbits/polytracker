@@ -43,16 +43,23 @@ public:
     return current_idx_.load(std::memory_order_relaxed);
   }
 
+  taint_range_t reserve_source_labels(label_t length) {
+    auto lbl = increment(length);
+    return {lbl, lbl+length};
+  }
+
+  void assign_source_labels(taint_range_t range, source_index_t source_idx, source_offset_t offset) {
+    std::generate(&p_[range.first], &p_[range.second], [source_idx, source_offset = offset]() mutable {
+      return encode(SourceTaint(source_idx, source_offset++));
+    });
+  }
 
   // creates labels corresponding to a read of 'length' from 'source_fd' at 'offset'
   taint_range_t create_source_labels(source_index_t source_idx, source_offset_t offset, label_t length) {
     assert(offset < max_source_offset && "Source offset exceed limits for encoding");
-
-    auto lbl = increment(length);
-    std::generate_n(&p_[lbl], length, [source_idx, source_offset = offset]() mutable {
-      return encode(SourceTaint(source_idx, source_offset++));
-    });
-    return {lbl, lbl + length};
+    auto range = reserve_source_labels(length);
+    assign_source_labels(range, source_idx, offset);
+    return range;
   }
 
   Taint read_label(label_t lbl) {

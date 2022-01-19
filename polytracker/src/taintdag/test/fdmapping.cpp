@@ -20,8 +20,9 @@ TEST_CASE("Test fdmapping operations") {
 
       fdm.add_mapping(fd, s);
 
-      auto idx = fdm.mapping_idx(fd);
-      REQUIRE(idx == i);
+      auto ret = fdm.mapping_idx(fd);
+      REQUIRE(ret->first == i);
+      REQUIRE(!ret->second); // No range
     }
   }
 
@@ -31,12 +32,46 @@ TEST_CASE("Test fdmapping operations") {
     INFO("fd: " << fd);
 
     fdm.add_mapping(fd, name1);
-    auto idx1 = fdm.mapping_idx(fd);
+    auto ret1 = fdm.mapping_idx(fd);
 
     fdm.add_mapping(fd, name2);
-    auto idx2 = fdm.mapping_idx(fd);
+    auto ret2 = fdm.mapping_idx(fd);
 
-    REQUIRE(idx1 != idx2);
+    REQUIRE(ret1->first != ret2->first);
   }
+
+
+  SECTION("Adding more than max_source_index mappings fails") {
+
+    for (size_t i=0;i<=td::max_source_index;i++)
+      REQUIRE(fdm.add_mapping(i, "a"));
+
+    REQUIRE(!fdm.add_mapping(1, "a"));
+  }
+
+  SECTION("Adding name larger than available storage fails") {
+    std::string longstr(sizeof(storage), 'a');
+    REQUIRE(!fdm.add_mapping(2, longstr));
+  }
+
+  SECTION("Adding name+sizeof(FDMappingHdr) larger than available storage fails") {
+    std::string longstr(sizeof(storage)-sizeof(td::FDMapping::FDMappingHdr)+1, 'a');
+    REQUIRE(!fdm.add_mapping(2, longstr));
+  }
+
+
+  SECTION("Preallocated ranges are returned") {
+    td::taint_range_t r{1,5};
+    REQUIRE(fdm.add_mapping(3, "a", r));
+    auto ret = fdm.mapping_idx(3);
+    REQUIRE(ret->second);
+    REQUIRE(ret->second == r);
+
+    SECTION("New mapping changes range") {
+      REQUIRE(fdm.add_mapping(3, "b"));
+      REQUIRE(!fdm.mapping_idx(3)->second);
+    }
+  }
+
 
 }
