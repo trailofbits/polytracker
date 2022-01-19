@@ -25,7 +25,7 @@ cavities(){
   if [[ -f "${RESULT_DIR}/${BASENAME}.timeout" ]]
   then
     echo "${BASENAME}.pdf,-1,-1" >> "${RESULT_DIR}/cavities.csv"
-    rm -f "${RESULTS_DIR}/${BASENAME}.timeout"
+    rm -f "${RESULT_DIR}/${BASENAME}.timeout"
     return
   fi
   
@@ -45,5 +45,5 @@ then
 fi
 
 for file in "$@"; do
-  cavities "$(readlink -f ${file})" "$(pwd)/results" 100
+  cavities "$(readlink -f ${file})" "$(pwd)/results" 300
 done
