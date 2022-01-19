@@ -1,13 +1,13 @@
+from contextlib import contextmanager
 from ctypes import Structure, c_int32, c_uint32, c_uint64, c_uint8, c_ulonglong, sizeof
 from io import SEEK_SET
+from mmap import mmap, PROT_READ
 from pathlib import Path
-from struct import Struct
-from typing import BinaryIO, List, Iterable, Union
+from typing import Iterable, Tuple, Union
 import sys
 
 
 #TODO (hbrodin): Completely unchecked values. Only parse files from trusted sources...
-# TODO (hbrodin): Implement using mmap instead???
 
 # This needs to be kept in sync with implementation in encoding.cpp
 source_taint_bit_shift = 63
@@ -27,9 +27,19 @@ class FileHdr(Structure):
               ("sink_mapping_offset", c_ulonglong),
               ("sink_mapping_size", c_ulonglong)]
 
+  def __repr__(self) -> str:
+      return (
+        f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_size: {self.fd_mapping_size}\n\t"
+        f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
+        f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
+      )
+
+
 class FDMappingHdr(Structure):
   _fields_ = [("fd", c_int32),
-              ("size", c_uint32)]
+              ("namelen", c_uint32),
+              ("prealloc_begin", c_uint32),
+              ("prealloc_end", c_uint32)]
 
 
 class SinkLogEntry(Structure):
@@ -38,35 +48,8 @@ class SinkLogEntry(Structure):
               ("offset", c_uint64),
               ("label", c_uint32)]
 
-def read_fd_mappings(hdr: FileHdr, f : BinaryIO) -> List[str]:
-  f.seek(hdr.fd_mapping_offset, SEEK_SET)
-  fdm = f.read(hdr.fd_mapping_size)
-
-  ret = []
-
-  offset = 0
-  while offset < len(fdm):
-    fdmhdr = FDMappingHdr.from_buffer_copy(fdm[offset:offset+sizeof(FDMappingHdr)])
-    offset += sizeof(FDMappingHdr)
-
-    s = str(fdm[offset:offset+fdmhdr.size], 'utf-8') # TODO (hbrodin): Encoding???
-    offset += fdmhdr.size
-
-    ret.append(s)
-  return ret
-
-def iter_sinklog(hdr: FileHdr, path : Path) -> Iterable[SinkLogEntry]:
-  with open(path, "rb") as f:
-    f.seek(hdr.sink_mapping_offset)
-    sle = SinkLogEntry()
-    size = hdr.sink_mapping_size
-    read = 0
-    while read < size:
-      nread = f.readinto(sle)
-      if nread == 0:
-        return
-      read += nread
-      yield sle
+  def __repr__(self) -> str:
+    return f"SinkLog fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
 class Taint:
@@ -103,22 +86,49 @@ class UnionTaint(Taint):
   def __repr__(self) -> str:
     return f"UnionTaint: {super().__repr__()} ({self.left}, {self.right})"
 
-class labels:
-  def __init__(self, hdr: FileHdr, f: BinaryIO):
-    self.hdr = hdr
-    self.f = f
 
-  def count(self) -> int:
+@contextmanager
+def open_output_file(file: Path):
+    with open(file, "rb") as f, \
+      mmap(f.fileno(), 0, prot=PROT_READ) as mm:
+      yield OutputFile(mm)
+
+class OutputFile:
+  def __init__(self, mm : bytearray) -> None:
+    self.hdr = FileHdr.from_buffer_copy(mm)
+    self.mm = mm
+
+  def fd_mappings(self) -> Iterable[Tuple[str, int, int]]:
+    offset = self.hdr.fd_mapping_offset
+    end = offset + self.hdr.fd_mapping_size
+
+    while offset < end:
+      fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)
+      offset += sizeof(FDMappingHdr)
+
+      s = str(self.mm[offset:offset+fdmhdr.namelen], 'utf-8') # TODO (hbrodin): Encoding???
+      offset += fdmhdr.namelen
+      yield (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
+
+
+  def sink_log(self) -> Iterable[SinkLogEntry]:
+    offset = self.hdr.sink_mapping_offset
+    end = offset + self.hdr.sink_mapping_size
+  
+    while offset < end:
+        sle = SinkLogEntry.from_buffer_copy(self.mm, offset)
+        yield sle
+        offset += sizeof(SinkLogEntry)
+
+  def label_count(self) -> int:
     return int(self.hdr.tdag_mapping_size/sizeof(c_uint64))
 
-  def value(self, label : int) -> int:
-    storedvalue = c_uint64()
-    self.f.seek(self.hdr.tdag_mapping_offset + sizeof(c_uint64)*label, SEEK_SET)
-    self.f.readinto(storedvalue)
-    return storedvalue.value
+  def raw_taint(self, label:int)->int:
+    offset = self.hdr.tdag_mapping_offset + sizeof(c_uint64)*label
+    return c_uint64.from_buffer_copy(self.mm, offset).value
 
-  def taint(self, label : int) -> Union[SourceTaint, RangeTaint, UnionTaint]:
-    v = self.value(label)
+  def decoded_taint(self, label : int) -> Union[SourceTaint, RangeTaint, UnionTaint]:
+    v = self.raw_taint(label)
     # This needs to be kept in sync with implementation in encoding.cpp
     st = (v>>source_taint_bit_shift) & 1
     affects_cf = (v>>affects_control_flow_bit_shift) & 1
@@ -136,36 +146,18 @@ class labels:
         return RangeTaint(v1, v2, affects_cf)
 
 
-
-
-
-
 def dump_tdag(file: Path):
-  with open(file, "rb") as f:
-      hdr = FileHdr()
-      f.readinto(hdr)
+  with open_output_file(file) as f:
+    print(f.hdr)
+    print(f"Number of labels: {f.label_count()}")
 
-      print(hdr.fd_mapping_offset)
-      print(hdr.fd_mapping_size)
-      print(hdr.tdag_mapping_offset)
-      print(hdr.tdag_mapping_size)
-      print(hdr.sink_mapping_offset)
-      print(hdr.sink_mapping_size)
+    for i, e in enumerate(f.fd_mappings()) :
+      print(f"{i}: {e[0]} {e[1]}")
 
-      fdm = read_fd_mappings(hdr, f)
+    for lbl in range(1, f.label_count()):
+      print(f"Label {lbl}: {f.decoded_taint(lbl)}")
 
-      for idx, name in enumerate(fdm):
-        print(f"Index: {idx} name: {name}")
-
-      lbls = labels(hdr, f)
-      print(f"Number of labels: {lbls.count()}")
-      for lbl in range(1, lbls.count()):
-        print(f"Label {lbl}: {lbls.value(lbl)}->{lbls.taint(lbl)}")
-
-      for sle in iter_sinklog(hdr, file):
-        print(f"fdidx {sle.fdidx}, offset {sle.offset} label {sle.label}")
-
-    
-
+    for e in f.sink_log():
+      print(f"{e} -> {f.decoded_taint(e.label)}")
 
 dump_tdag(sys.argv[1])
