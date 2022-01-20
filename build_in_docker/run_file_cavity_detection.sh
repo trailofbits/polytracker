@@ -16,9 +16,9 @@ cavities(){
     --mount type=bind,source="${SCRIPTPATH}/bin",target=/sources/bin \
     --mount type=bind,source="${RESULT_DIR}",target=/workdir \
     trailofbits/polytrackerbuilder-mupdf /usr/bin/bash -c \
-    "cd /workdir && timeout ${TIMEOUT} /sources/bin/mutool_track_no_control_flow draw -o output.png ${BASENAME}.pdf; if [ \$? -eq 124 ]; then touch ${BASENAME}.timeout; fi"
+    "cd /workdir && timeout ${TIMEOUT} /sources/bin/mutool_track_no_control_flow info ${BASENAME}.pdf; if [ \$? -eq 124 ]; then touch ${BASENAME}.timeout; fi"
 
-  mv -f "${RESULT_DIR}/output.png" "${RESULT_DIR}/${BASENAME}.png"
+  # mv -f "${RESULT_DIR}/output.png" "${RESULT_DIR}/${BASENAME}.png"
   mv -f "${RESULT_DIR}/polytracker.db" "${RESULT_DIR}/${BASENAME}.db"
   rm -f "${RESULT_DIR}/${BASENAME}.pdf"
   
@@ -45,5 +45,15 @@ then
 fi
 
 for file in "$@"; do
-  cavities "$(readlink -f ${file})" "$(pwd)/results" 300
+  cavities "$(readlink -f ${file})" "$(pwd)/results" 5
 done
+
+# TODO(surovic): Add printing of the below stats
+#
+# command: info
+# timeout: 10s
+# # of total cases: 100
+# # of tracing timeouts:  41
+# # of cavity detection timeouts: 0
+# run artifact size (dbs and cavity file):  169mb
+# runtime: 15m12s
