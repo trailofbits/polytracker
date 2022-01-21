@@ -13,6 +13,7 @@
 
 #include "taintdag/encoding.hpp"
 #include "taintdag/fdmapping.hpp"
+#include "taintdag/labeldeq.hpp"
 #include "taintdag/taint.hpp"
 #include "taintdag/union.hpp"
 
@@ -72,12 +73,13 @@ public:
   }
 
   void affects_control_flow(label_t label) {
-    using labelq = std::deque<label_t>;
+    using labelq = utils::LabelDeq<32>;
 
     // Early out
     if (check_affects_control_flow(p_[label]))
       return;
 
+    
     labelq q;
     q.push_back(label);
 
@@ -102,8 +104,9 @@ public:
 
 
     while (!q.empty()) {
-      auto l = q.front();
-      q.pop_front();
+      //auto l = q.front();
+      //q.pop_front();
+      auto l = q.pop_front();
 
       auto encoded = p_[l];
 
@@ -158,6 +161,7 @@ public:
     auto result = union_::compute(l, lval, r, rval);
     if (auto lbl = std::get_if<label_t>(&result))
       return *lbl;
+
     auto idx = increment(1);
     p_[idx] = encode(std::get<Taint>(result));
     return idx;

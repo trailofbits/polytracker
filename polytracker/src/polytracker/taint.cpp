@@ -237,11 +237,13 @@ atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
 
 [[nodiscard]] bool taintData(const int &fd, const char *mem, int offset,
                              int len) {
+#if 0
   if (!isTrackingSource(fd)) {
     return false;
   }
   std::pair<int, int> &targ_info = getTargetTaintRange(fd);
   std::string &name = getSourceName(fd);
   taintTargetRange(mem, offset, len, targ_info.first, targ_info.second, name);
+  #endif
   return true;
 }

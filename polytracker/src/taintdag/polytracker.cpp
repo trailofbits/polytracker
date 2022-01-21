@@ -32,7 +32,6 @@ PolyTracker::~PolyTracker() {
   of_.fileheader_sink_size(sinklog_.size());
 }
 
-
 label_t PolyTracker::union_labels(label_t l1, label_t l2) {
   auto ret = tdag_.union_taint(l1, l2);
   //printf("Union labels: %u %u -> %u\n", l1, l2, ret);
@@ -91,11 +90,9 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const*mem, s
   return lblrange;
 }
 
-
 std::optional<taint_range_t> PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
   return create_source_taint(fd, offset, length);
 }
-
 
 void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size_t length) {
   auto idx = fdm_.mapping_idx(fd);
@@ -118,11 +115,9 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size
     printf("WARNING: Ignore taint sink for fd %d, offset %lu mem %p\n", fd, offset, mem);
 }
 
-
 void PolyTracker::affects_control_flow(label_t lbl) {
   //printf("Label %u affects control flow\n", lbl);
   tdag_.affects_control_flow(lbl);
 }
-
 
 }

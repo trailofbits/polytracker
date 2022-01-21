@@ -66,6 +66,13 @@ inline std::pair<Taint, label_t> rand_taint(label_t maxlabel=max_label, source_i
   }
 }
 
+// seed random with a 'random' seed and return the seed
+inline int init_rand_seed() {
+  srand(time(nullptr));
+  auto seed = rand();
+  srand(seed);
+  return seed;
+}
 
 
 }

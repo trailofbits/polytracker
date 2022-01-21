@@ -55,9 +55,24 @@ namespace taintdag::union_ {
       
       // Do the unions represent the same labels?
       // NOTE: No need to check for reverse since the labels are always stored
-      // with the highest label as left.
+      // ordered.
       if (l.higher == r.higher && l.lower == r.lower)
         return left_;
+
+      // Can the unions be converted to a range?
+      /*
+      if (l.lower < r.lower && l.higher < r.higher && (r.higher - l.lower) == 3)
+          return RangeTaint{l.lower, r.higher};
+      else if (r.lower < l.lower && r.higher < l.higher && (l.higher - r.lower) == 3)
+          return RangeTaint{r.lower, l.higher};
+          */
+#if 0
+      // Join the left union with right label -> range
+      if (convert_to_range(l, right_))
+        return RangeTaint{l.lower, l.higher};
+      if (convert_to_range(r, left_))
+        return RangeTaint{r.lower, r.higher};
+        #endif
       
       return union_labels();
     }
@@ -108,6 +123,14 @@ namespace taintdag::union_ {
 
   private:
 
+#if 0
+    // Can a union plus a label be converted to a range?
+    // if union holds x, x+2 and the label is x+1, then yes.
+    bool convert_to_range(UnionTaint const& u, label_t l) const {
+      return u.higher - u.lower == 2 && u.lower + 1 == l;
+    }
+    #endif
+
     ReturnValue range_source(RangeTaint const& r, label_t rlabel, label_t sourcelabel) const {
       if (encloses(r, sourcelabel))
         return rlabel;
@@ -124,6 +147,13 @@ namespace taintdag::union_ {
     ReturnValue union_source(UnionTaint const& u, label_t ulabel, label_t sourcelabel) const {
       if (encloses(u, sourcelabel))
         return ulabel;
+      
+      #if 0
+      // Source label is exactly in between the union labels, convert to range
+      if (convert_to_range(u, sourcelabel))
+        return RangeTaint{u.lower, u.higher};
+        #endif
+
       return union_labels();
     }
 
@@ -151,8 +181,15 @@ namespace taintdag::union_ {
       if (r.last+1 == ulabel)
         return RangeTaint{r.first, ulabel};
 
+#if 0
+      // Range label between union elements?
+      if (convert_to_range(u, rlabel))
+        return RangeTaint{u.lower, u.higher};
+        #endif
+
       return union_labels();
     }
+
 
     // Creates a range or union depending on labels. If the labels
     // are adjacent a range is created, else a union is created.
