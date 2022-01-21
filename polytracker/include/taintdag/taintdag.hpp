@@ -18,6 +18,10 @@
 
 namespace taintdag {
 
+
+// How many labels to scan backwards to detect if the same Taint is about to be produced.
+const label_t redundant_label_range = 50;
+
 class TaintDAG {
 public:
 
@@ -39,7 +43,7 @@ public:
 
 
   // Get the current number of labels
-  size_t label_count() const {
+  label_t label_count() const {
     return current_idx_.load(std::memory_order_relaxed);
   }
 
@@ -115,27 +119,38 @@ public:
     }
   }
 
+  std::optional<label_t> duplicate_check(label_t lolbl, label_t hilbl) const {
+    // Simple check, did we just create this union? If so, reuse it
+    auto prevlbl = label_count()-1; // Safe, since we start at 1.
+
+    // A union/range have to be created after the labels themselves are
+    // created.
+    auto end_check = prevlbl > redundant_label_range ?
+                      std::max(hilbl, prevlbl - redundant_label_range) :
+                      0;
+    for (auto lbl = prevlbl;lbl > end_check;lbl--) {
+      auto prev = decode(p_[lbl]);
+      if (auto ut = std::get_if<UnionTaint>(&prev)) {
+        if (ut->lower == lolbl && ut->higher == hilbl)
+          return prevlbl;
+      } else if (auto rt = std::get_if<RangeTaint>(&prev)) {
+        if (rt->first == lolbl && rt->last == hilbl)
+          return prevlbl;
+      }
+    }
+    return {};
+  }
+
   // Create a taint union
   label_t union_taint(label_t l, label_t r) {
     // TODO (hbrodin): Might already be covered by DFSAN
     if (l == r)
       return l;
 
-    // Simple check, did we just create this union? If so, reuse it
-    // TODO (hbrodin): Extend the check to a range backwards...
-    auto prevlbl = label_count()-1; // Safe, since we start at 1.
-    auto prev = decode(p_[prevlbl]);
-    if (auto ut = std::get_if<UnionTaint>(&prev)) {
-      if (ut->lower == r && ut->higher == l)
-        return prevlbl;
-      if (ut->lower == l && ut->higher == r)
-        return prevlbl;
-    } else if (auto rt = std::get_if<RangeTaint>(&prev)) {
-      if (rt->first == l && rt->last == r)
-        return prevlbl;
-      if (rt->first == r && rt->last == l)
-        return prevlbl;
-    }
+    auto [lolbl, hilbl] = std::minmax(l, r);
+    auto dup = duplicate_check(lolbl, hilbl);
+    if (dup)
+      return dup.value();
 
 
     auto lval = decode(p_[l]);
