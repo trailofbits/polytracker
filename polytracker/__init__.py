@@ -2,7 +2,8 @@ from inspect import getmembers, isclass
 from pkgutil import iter_modules
 from importlib import import_module
 
-from .database import DBProgramTrace as PolyTrackerTrace
+# from .database import DBProgramTrace as PolyTrackerTrace
+from .taint_dag import TDProgramTrace as PolyTrackerTrace
 from .polytracker import *
 
 # All of the classes in SUBMODULES_TO_SUBSUME should really be in the top-level `polytracker` module.
@@ -22,6 +23,10 @@ package_dir = Path(__file__).resolve().parent
 for (_, module_name, _) in iter_modules([str(package_dir)]):  # type: ignore
     if module_name == "__main__":
         continue
+
+    if module_name == "database":
+        continue
+
     # import the module and iterate through its attributes
     module = import_module(f"{__name__}.{module_name}")
     for attribute_name in dir(module):
