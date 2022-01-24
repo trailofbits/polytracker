@@ -255,5 +255,6 @@ def cavity_detection(tdag: OutputFile, sourcefile: Path):
         print(r)
 
 
-# dump_tdag(sys.argv[1])
-cavity_detection(sys.argv[1], sys.argv[2])
+if __name__ == "__main__":
+  # dump_tdag(sys.argv[1])
+  cavity_detection(sys.argv[1], sys.argv[2])
