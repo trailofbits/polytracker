@@ -283,4 +283,13 @@ TEST_CASE("Serialize deserialize for different events") {
     auto u2 = td.union_taint(tr.first, tr.first+1);
     REQUIRE(u1 == u2);
   }
+
+  SECTION("Create duplicate label, but not same as last") {
+    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
+    auto u01 = td.union_taint(tr.first, tr.first+1);
+    auto u02 = td.union_taint(tr.first, tr.first+2);
+    auto u23 = td.union_taint(tr.first+2, tr.first+3);
+    auto u01_2 = td.union_taint(tr.first, tr.first+1);
+    REQUIRE(u01 == u01_2);
+  }
 }
