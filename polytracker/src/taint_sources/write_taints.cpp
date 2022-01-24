@@ -66,7 +66,7 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
     }
   }
   if (write_count > 0)
-    get_polytracker_tdag().taint_sink(fd, current_offset, buf, write_count);
+    get_polytracker_tdag().taint_sink(fd, current_offset, buf, write_count*size);
   *ret_label = 0;
   return write_count;
 }
