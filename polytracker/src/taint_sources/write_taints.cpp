@@ -54,7 +54,7 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
   if (auto &input_id = get_fd_input_map()[fd]) {
     storeTaintedOutputChunk(output_db, input_id, current_offset,
                             current_offset + write_count);
-    for (auto i = 0; i < write_count; i++) {
+    for (auto i = 0; i < write_count * size; i++) {
       auto taint_label = dfsan_read_label((char *)buf + i, sizeof(char));
       storeTaintedOutput(output_db, input_id, current_offset, taint_label);
       current_offset += 1;
