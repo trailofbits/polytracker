@@ -135,10 +135,10 @@ public:
       auto prev = decode(p_[lbl]);
       if (auto ut = std::get_if<UnionTaint>(&prev)) {
         if (ut->lower == lolbl && ut->higher == hilbl)
-          return prevlbl;
+          return lbl;
       } else if (auto rt = std::get_if<RangeTaint>(&prev)) {
         if (rt->first == lolbl && rt->last == hilbl)
-          return prevlbl;
+          return lbl;
       }
     }
     return {};

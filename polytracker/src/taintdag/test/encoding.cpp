@@ -23,3 +23,13 @@ TEST_CASE("Affects control flow") {
   auto enc2 = add_affects_control_flow(encoded);
   REQUIRE(check_affects_control_flow(enc2));
 }
+
+TEST_CASE("Basic sanity checks") {
+  for (size_t i=0;i<100000;i++) {
+    auto [st, _] = test::random_source_taint();
+    auto encoded = encode(st);
+    REQUIRE((encoded >> source_taint_bit_shift));
+    REQUIRE(is_source_taint(encoded));
+    REQUIRE(check_affects_control_flow(encoded) == st.affects_control_flow);
+  }
+}
