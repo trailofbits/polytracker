@@ -323,7 +323,7 @@ EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
   #endif
 
   if (ret> 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret);
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret*size);
   *ret_label = 0;
   return ret;
 }
@@ -354,7 +354,7 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
   }
   #endif
   if (ret> 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret);
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret*size);
   *ret_label = 0;
   return ret;
 }
