@@ -172,6 +172,7 @@ def dump_tdag(file: Path):
     with open_output_file(file) as f:
         print(f.hdr)
         print(f"Number of labels: {f.label_count()}")
+        return
 
         for i, e in enumerate(f.fd_mappings()):
             print(f"{i}: {e[0]} {e[1]}")
@@ -183,11 +184,25 @@ def dump_tdag(file: Path):
             print(f"{e} -> {f.decoded_taint(e.label)}")
 
 # NOTE (hbrodin): Assemes source taint was preallocated
+
+
 def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
+    seen = set()
+
+    def ctrlflow(l, t):
+        if t.affects_control_flow:
+            seen.add(l)
+            return True
+        return False
+
+    def srctaint(l, t):
+        if isinstance(t, SourceTaint):
+            seen.add(l)
+            return True
+        return False
 
     def iter_source_labels_not_affecting_cf(f: OutputFile, lbl: int):
 
-        seen = set()
         labels = [lbl]
         while len(labels) > 0:
             l = labels[0]
@@ -206,19 +221,48 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
                 yield (l, t)
 
             elif isinstance(t, UnionTaint):
-                labels.append(t.left)
-                labels.append(t.right)
+                tl = f.decoded_taint(t.left)
+                if not ctrlflow(t.left, tl):
+                    if srctaint(t.left, tl):
+                        yield (t.left, tl)
+                    else:
+                        labels.append(t.left)
+
+                tr = f.decoded_taint(t.right)
+                if not ctrlflow(t.right, tr):
+                    if srctaint(t.right, tr):
+                        yield (t.right, tr)
+                    else:
+                        labels.append(t.right)
+
             elif isinstance(t, RangeTaint):
-                for l in range(t.first, t.last+1):
-                    labels.append(l)
+                for rl in range(t.first, t.last+1):
+                    # NOTE: One could skip decoding here, but then we could end up with really long ranges
+                    # being added the labels that really does nothing except cause overhead...
+                    rt = f.decoded_taint(rl)
+                    if ctrlflow(rl, rt):
+                        continue
+                    if srctaint(rl, rt):
+                        yield (rl, rt)
+                    else:
+                        labels.append(rl)
+
+    def dfs(f, lbl, sp):
+        t = f.decoded_taint(lbl)
+        print(f"{sp} {lbl} -> {t}")
+        if isinstance(t, UnionTaint):
+            dfs(f, t.left, sp + "| ")
+            dfs(f, t.right, sp + "| ")
+        elif isinstance(t, RangeTaint):
+            for l in range(t.first, t.last+1):
+                dfs(f, l, sp + "| ")
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-            x for x in f.fd_mappings() if x[0] == sourcefile)
+             x for x in f.fd_mappings() if x[0] == sourcefile)
         filelen = src_end - src_begin
         marker = bytearray(filelen)
-
-        # Initially, mark all source taint that affects control flow
+         # Initially, mark all source taint that affects control flow
         for idx, lbl in enumerate(range(src_begin, src_end)):
             if f.decoded_taint(lbl).affects_control_flow:
                 marker[idx] = 1
@@ -227,11 +271,17 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
         # the taint affects_control_flow, move one. It already spilled into the source
         # taint and was marked above
         l = f.sink_log_labels()
-        for lbl in l:
-            for (srclabel, t) in iter_source_labels_not_affecting_cf(f, lbl):
-                marker[srclabel - src_begin] = 1
-        return marker
 
+        for lbl in l:
+            t = f.decoded_taint(lbl)
+            if t.affects_control_flow:
+                continue
+            if isinstance(t, SourceTaint):
+                marker[t.offset] = 1
+            else:
+                for (srclabel, t) in iter_source_labels_not_affecting_cf(f, lbl):
+                    marker[srclabel - src_begin] = 1
+        return marker
 
 def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
     ranges = []
@@ -256,5 +306,5 @@ def cavity_detection(tdag: OutputFile, sourcefile: Path):
 
 
 if __name__ == "__main__":
-  # dump_tdag(sys.argv[1])
-  cavity_detection(sys.argv[1], sys.argv[2])
+    dump_tdag(sys.argv[1])
+    cavity_detection(sys.argv[1], sys.argv[2])
