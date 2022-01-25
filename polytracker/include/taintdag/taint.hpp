@@ -23,6 +23,8 @@ const size_t storage_bits = std::numeric_limits<storage_t>::digits;
 const size_t source_taint_bit_shift = storage_bits - 1;
 const size_t affects_control_flow_shift = storage_bits - 2;
 
+const storage_t mask_affects_control_flow = ~(static_cast<storage_t>(1) << affects_control_flow_shift);
+
 // Using two bits to encode type info and affects control flowin the stored type. 
 // The stored type can hold at most two labels. Limit the label values to 1 bit 
 // less than original capacity, to accomodate the two type/control flow bits.

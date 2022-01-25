@@ -19,6 +19,12 @@ storage_t add_affects_control_flow(storage_t encoded);
 // Check if affects control flow bit is set (without decoding)
 bool check_affects_control_flow(storage_t encoded);
 
+// Compare two encoded taints for equality while ignoring the affects control flow bit.
+inline bool equal_ignore_cf(storage_t e1, storage_t e2) {
+  return (e1 & mask_affects_control_flow) == (e2 & mask_affects_control_flow);
+}
+
+
 }
 
 #endif

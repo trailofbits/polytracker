@@ -21,7 +21,7 @@ namespace taintdag {
 
 
 // How many labels to scan backwards to detect if the same Taint is about to be produced.
-const label_t redundant_label_range = 50;
+const label_t redundant_label_range = 100;
 
 class TaintDAG {
 public:
@@ -79,6 +79,11 @@ public:
     if (check_affects_control_flow(p_[label]))
       return;
 
+    // Early out if source taint
+    if (is_source_taint(p_[label])) {
+      p_[label] = add_affects_control_flow(p_[label]);
+      return;
+    }
     
     labelq q;
     q.push_back(label);
@@ -131,15 +136,14 @@ public:
     auto end_check = prevlbl > redundant_label_range ?
                       std::max(hilbl, prevlbl - redundant_label_range) :
                       0;
+
+    auto encoded  = (hilbl - lolbl == 1)  ? 
+                        encode(RangeTaint{lolbl, hilbl}) :
+                        encode(UnionTaint{hilbl, lolbl});
+
     for (auto lbl = prevlbl;lbl > end_check;lbl--) {
-      auto prev = decode(p_[lbl]);
-      if (auto ut = std::get_if<UnionTaint>(&prev)) {
-        if (ut->lower == lolbl && ut->higher == hilbl)
-          return lbl;
-      } else if (auto rt = std::get_if<RangeTaint>(&prev)) {
-        if (rt->first == lolbl && rt->last == hilbl)
-          return lbl;
-      }
+      if (equal_ignore_cf(p_[lbl], encoded))
+        return lbl;
     }
     return {};
   }
