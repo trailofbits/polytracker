@@ -75,59 +75,67 @@ public:
   void affects_control_flow(label_t label) {
     using labelq = utils::LabelDeq<32>;
 
-    // Early out
-    if (check_affects_control_flow(p_[label]))
-      return;
+    // Do a check on label to see if it shoudld be added to the q.
+    // - If it affects control flow, ignore it. Already processed.
+    // - If it is source taint, just mark it as affecting cf.
+    // - else add for further processing
+    auto add_to_q = [this](label_t label) -> bool {
+        auto encoded = p_[label];
+        if (check_affects_control_flow(encoded))
+          return false;
 
-    // Early out if source taint
-    if (is_source_taint(p_[label])) {
-      p_[label] = add_affects_control_flow(p_[label]);
+        if (is_source_taint(encoded)) {
+          p_[label] = add_affects_control_flow(encoded);
+          return false;
+        }
+
+        return true;
+    };
+
+    // Early out
+    if (!add_to_q(label))
       return;
-    }
     
     labelq q;
     q.push_back(label);
 
+    // TODO (hbrodin): Consider checking if source taint in the visits to just mark any source
+    // taint without pushing to q.
     struct Visitor {
-      void operator()(SourceTaint s) { }
+      void operator()(SourceTaint s) const { }
 
-      void operator()(RangeTaint r) {
+      void operator()(RangeTaint r) const {
         for (auto curr = r.first;curr <= r.last;curr++) {
-          q.push_back(curr);
+          if (add_to_q(curr))
+            q.push_back(curr);
         }
       }
 
-      void operator()(UnionTaint u) {
-        q.push_back(u.lower);
-        q.push_back(u.higher);
+      void operator()(UnionTaint u) const {
+        if (add_to_q(u.lower))
+          q.push_back(u.lower);
+        if (add_to_q(u.higher))
+          q.push_back(u.higher);
       }
 
-      Visitor(labelq &q) : q{q} {
-      }
+      Visitor(labelq &q, decltype(add_to_q) f) : q{q}, add_to_q{f} { }
+
       labelq &q;
+      decltype(add_to_q) add_to_q;
     };
 
+    Visitor visitor{q, add_to_q};
 
     while (!q.empty()) {
-      //auto l = q.front();
-      //q.pop_front();
       auto l = q.pop_front();
-
       auto encoded = p_[l];
 
-      // Early out
-      if (check_affects_control_flow(encoded))
-        continue;
-
-      auto encoded_waffects = add_affects_control_flow(encoded);
-      p_[l] = encoded_waffects;
-      if (!is_source_taint(encoded_waffects)) {
-        std::visit(Visitor{q}, decode(encoded_waffects));
-      }
+      p_[l] = add_affects_control_flow(encoded);
+      std::visit(visitor, decode(encoded));
     }
   }
 
-  std::optional<label_t> duplicate_check(label_t lolbl, label_t hilbl) const {
+  std::optional<label_t> duplicate_check(label_t hilbl, storage_t encoded) const {
     // Simple check, did we just create this union? If so, reuse it
     auto prevlbl = label_count()-1; // Safe, since we start at 1.
 
@@ -136,10 +144,6 @@ public:
     auto end_check = prevlbl > redundant_label_range ?
                       std::max(hilbl, prevlbl - redundant_label_range) :
                       0;
-
-    auto encoded  = (hilbl - lolbl == 1)  ? 
-                        encode(RangeTaint{lolbl, hilbl}) :
-                        encode(UnionTaint{hilbl, lolbl});
 
     for (auto lbl = prevlbl;lbl > end_check;lbl--) {
       if (equal_ignore_cf(p_[lbl], encoded))
@@ -154,20 +158,24 @@ public:
     if (l == r)
       return l;
 
-    auto [lolbl, hilbl] = std::minmax(l, r);
-    auto dup = duplicate_check(lolbl, hilbl);
-    if (dup)
-      return dup.value();
-
-
     auto lval = decode(p_[l]);
     auto rval = decode(p_[r]);
     auto result = union_::compute(l, lval, r, rval);
     if (auto lbl = std::get_if<label_t>(&result))
       return *lbl;
 
+    // At this point we should add a new taint, before doing so,
+    // scan backwards to see if an identical taint was recently added
+    auto encoded = encode(std::get<Taint>(result));
+
+    auto hilbl = std::max(l, r);
+    auto dup = duplicate_check(hilbl, encoded);
+    if (dup)
+      return dup.value();
+
+    // Nothing left to check, just add the new taint.
     auto idx = increment(1);
-    p_[idx] = encode(std::get<Taint>(result));
+    p_[idx] = encoded;
     return idx;
   }
 
