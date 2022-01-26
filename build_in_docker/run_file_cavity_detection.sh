@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+set -e
+
+if [ "$(uname)" == "Darwin" ]; then
+  # MacOS readlink doesn't support -f
+  if ! command -v greadlink &> /dev/null
+  then
+      echo "\`greadlink\` could not be found."
+      echo "Try installing it with \`brew install coreutils\`"
+      exit 1
+  fi
+  READLINK="greadlink"
+else
+  READLINK="readlink"
+fi
+
 cavities(){
   INPUT_PDF="$1"
   RESULT_DIR="$2"
@@ -45,7 +60,7 @@ then
 fi
 
 for file in "$@"; do
-  cavities "$(readlink -f ${file})" "$(pwd)/results" 5
+  cavities "$(${READLINK} -f ${file})" "$(pwd)/results" 5
 done
 
 # TODO(surovic): Add printing of the below stats
