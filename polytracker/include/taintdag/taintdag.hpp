@@ -99,8 +99,6 @@ public:
     labelq q;
     q.push_back(label);
 
-    // TODO (hbrodin): Consider checking if source taint in the visits to just mark any source
-    // taint without pushing to q.
     struct Visitor {
       void operator()(SourceTaint s) const { }
 
