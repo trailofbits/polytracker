@@ -301,10 +301,11 @@ def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
 
 def cavity_detection(tdag: OutputFile, sourcefile: Path):
     m = gen_source_taint_used(tdag, sourcefile)
+    src = Path(sourcefile)
     for r in marker_to_ranges(m):
-        print(r)
+        print(f"{src.name},{r[0]},{r[1]-1}")
 
 
 if __name__ == "__main__":
-    dump_tdag(sys.argv[1])
+    #dump_tdag(sys.argv[1])
     cavity_detection(sys.argv[1], sys.argv[2])
