@@ -6,3 +6,5 @@ __pycache__
 .mypy_cache
 .DS_Store
 /Default/
+.vscode
+polytracker.egg-info
