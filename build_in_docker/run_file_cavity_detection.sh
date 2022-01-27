@@ -20,6 +20,7 @@ cavities(){
 
   mv -f "${RESULT_DIR}/output.png" "${RESULT_DIR}/${BASENAME}.png"
   mv -f "${RESULT_DIR}/polytracker.db" "${RESULT_DIR}/${BASENAME}.db"
+  mv -f "${RESULT_DIR}/polytracker.tdag" "${RESULT_DIR}/${BASENAME}.tdag"
   rm -f "${RESULT_DIR}/${BASENAME}.pdf"
   
   if [[ -f "${RESULT_DIR}/${BASENAME}.timeout" ]]
@@ -29,12 +30,13 @@ cavities(){
     return
   fi
   
-  timeout "${TIMEOUT}" python3 cavities.py "${RESULT_DIR}/${BASENAME}.db" >> "${RESULT_DIR}/cavities.csv"
+  #timeout "${TIMEOUT}" python3 cavities.py "${RESULT_DIR}/${BASENAME}.db" >> "${RESULT_DIR}/cavities.csv"
+  python3 ${SCRIPTPATH}/../polytracker/dumptdag.py "${RESULT_DIR}/${BASENAME}.tdag" ${BASENAME}.pdf >> "${RESULT_DIR}/cavities.csv"
   
-  if [ $? -eq 124 ]
-  then
-    echo "${BASENAME}.pdf,-2,-2" >> "${RESULT_DIR}/cavities.csv"
-  fi
+  #if [ $? -eq 124 ]
+  #then
+    #echo "${BASENAME}.pdf,-2,-2" >> "${RESULT_DIR}/cavities.csv"
+  #fi
 
   return
 }
@@ -45,5 +47,5 @@ then
 fi
 
 for file in "$@"; do
-  cavities "$(readlink -f ${file})" "$(pwd)/results" 100
+  cavities ${file} "$(pwd)/results" 100
 done
