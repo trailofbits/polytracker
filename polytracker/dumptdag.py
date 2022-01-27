@@ -172,16 +172,17 @@ def dump_tdag(file: Path):
     with open_output_file(file) as f:
         print(f.hdr)
         print(f"Number of labels: {f.label_count()}")
-        return
 
         for i, e in enumerate(f.fd_mappings()):
-            print(f"{i}: {e[0]} {e[1]}")
+            print(f"{i}: {e[0]} {e[1]} {e[2]}")
+        
+        for e in f.sink_log():
+            print(f"{e} -> {f.decoded_taint(e.label)}")
 
         for lbl in range(1, f.label_count()):
             print(f"Label {lbl}: {f.decoded_taint(lbl)}")
 
-        for e in f.sink_log():
-            print(f"{e} -> {f.decoded_taint(e.label)}")
+        return
 
 # NOTE (hbrodin): Assemes source taint was preallocated
 
