@@ -38,6 +38,7 @@ struct PolytrackerPass : public llvm::ModulePass,
   void visitCallInst(llvm::CallInst &ci);
   void visitReturnInst(llvm::ReturnInst &RI);
   void visitBranchInst(llvm::BranchInst &BI);
+  void visitSwitchInst(llvm::SwitchInst &SI);
   const std::pair<llvm::Value *, llvm::Value *>
   getIndicies(llvm::Instruction *);
 

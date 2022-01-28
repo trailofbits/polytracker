@@ -121,6 +121,9 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
   if (BI.isUnconditional()) {
     return;
   } else if (auto condition = BI.getCondition()) {
+    // TODO (hbrodin): Is this to ensure that the size of the argument is at
+    // most sizeof(shadow_type)?? To be able to pass it as first arg to
+    // conditional_branch_log
     if (!op_check(condition)) {
       llvm::IRBuilder<> IRB(&BI);
       llvm::LLVMContext &context = mod->getContext();
@@ -130,6 +133,13 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
       CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
     }
   }
+}
+
+void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
+  // TODO (hbrodin): Is a guard needed? E.g. op_check as in visitBranchInst?
+  llvm::IRBuilder<> IRB(&SI);
+  llvm::Value *int_val = IRB.CreateSExtOrTrunc(SI.getCondition(), shadow_type);
+  CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
 }
 
 void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
@@ -586,10 +596,11 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
         }
       }
       for (auto &bb : func) {
-        for (auto &inst : bb) {
-          if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
-            visitBranchInst(*BI);
-          }
+        auto inst = bb.getTerminator();
+        if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(inst)) {
+          visitBranchInst(*BI);
+        } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(inst)) {
+          visitSwitch(*SI);
         }
       }
     }
