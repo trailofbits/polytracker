@@ -3,8 +3,8 @@ from polytracker.mapping import InputOutputMapping
 
 import sys
 
-def main(dbfile):
-    trace = PolyTrackerTrace.load(dbfile)
+def main(tdfile):
+    trace = PolyTrackerTrace.load(tdfile)
     for cavity in InputOutputMapping(trace).file_cavities():
         print(f"{cavity.source.path},{cavity.offset},{cavity.offset + cavity.length - 1}")
 

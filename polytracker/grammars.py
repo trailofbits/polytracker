@@ -24,7 +24,7 @@ import networkx as nx
 from tqdm import tqdm, trange
 
 from . import PolyTrackerTrace
-from .cfg import DiGraph
+from .graphs import DiGraph
 from .parsing import (
     highlight_offset,
     ImmutableParseTree,
