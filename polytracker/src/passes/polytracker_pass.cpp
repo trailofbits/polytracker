@@ -121,8 +121,9 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
   if (BI.isUnconditional()) {
     return;
   } else if (auto condition = BI.getCondition()) {
-    // TODO (hbrodin): Is this to ensure that the size of the argument is at most sizeof(shadow_type)??
-    // To be able to pass it as first ar to conditional_branch_log
+    // TODO (hbrodin): Is this to ensure that the size of the argument is at
+    // most sizeof(shadow_type)?? To be able to pass it as first arg to
+    // conditional_branch_log
     if (!op_check(condition)) {
       llvm::IRBuilder<> IRB(&BI);
       llvm::LLVMContext &context = mod->getContext();
