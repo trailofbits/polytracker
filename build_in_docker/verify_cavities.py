@@ -94,7 +94,7 @@ def verify_cavities(inputfile : Path, cavitydb : Path, method: str, resultsdir :
   if csum_origpng != csum_mutpng:
     print(f"ERROR: Checksums differ {origpng}:{csum_origpng} {mutpng}:{csum_mutpng}")
   else:
-    print("OK: {inputfile}")
+    print(f"OK: {inputfile}")
 
 
 def main():
