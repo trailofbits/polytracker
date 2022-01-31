@@ -79,13 +79,12 @@ def verify_cavities(inputfile : Path, cavitydb : Path, method: str, resultsdir :
     return
 
   # 3. Draw mutated pdf
+  mutpng = png_from_mutated(mutated_pdf, resultsdir)
   try:
       out = draw_mutated_pdf(mutated_pdf, resultsdir)
-      mutpng = png_from_mutated(mutated_pdf, resultsdir)
       rename(out, mutpng)
   except subprocess.CalledProcessError as e:
-      print(f"ERROR: While processing {mutated_pdf}. Message: {str(e)}. Skip.")
-      return
+      print(f"WARNING: Exception while processing {mutated_pdf}. Message: {str(e)}. Trying to continue.")
 
 
   # 4. Verify mutated png have equal checksum to orig png
