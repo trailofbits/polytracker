@@ -4,7 +4,7 @@ from io import SEEK_SET
 from operator import mod
 from pathlib import Path
 from random import randbytes, randint
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Union
 import unittest
 
 from numpy import byte
@@ -52,7 +52,7 @@ def target_path(filename : Path, method : str) -> Path:
     return Path(f"{filename}.{method}.mutated")
 
 
-def mutate_cavities(filename: Path, cavities_file: Path, method : str) -> Path:
+def mutate_cavities(filename: Path, cavities_file: Path, method : str) -> Union[Path, None]:
     target = target_path(filename, method)
 
     data = orig_file(filename)
@@ -61,12 +61,18 @@ def mutate_cavities(filename: Path, cavities_file: Path, method : str) -> Path:
     mutator = method_mapping[method]
 
     # Only the name of the file is in the cavities file, not the path
+    changes=False
     for (ofirst, olast) in iter_cavities(filename.name, cavities_file):
-        print(f"Replace cavity ({ofirst}, {olast}) {(olast-ofirst+1)} bytes")
         data[ofirst:olast+1] = mutator(data[ofirst:olast+1])
+        changes = True
+
+    if not changes:
+        return None
 
     with open(target, 'wb') as dstf:
         dstf.write(data)
+
+    return target
 
 
 def main():
