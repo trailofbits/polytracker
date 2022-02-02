@@ -12,20 +12,22 @@ from .tracing import (
     TaintOutput,
 )
 
-from typing import Union, Iterable, Iterator, Optional
+from typing import Union, Iterable, Iterator, Optional, Dict, Tuple, List
 from pathlib import Path
 from mmap import mmap, PROT_READ
-from ctypes import Structure, c_ulonglong, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from collections import defaultdict, deque
+from itertools import islice
 
 
 class TDHeader(Structure):
     _fields_ = [
-        ("fd_mapping_offset", c_ulonglong),
-        ("fd_mapping_size", c_ulonglong),
-        ("tdag_mapping_offset", c_ulonglong),
-        ("tdag_mapping_size", c_ulonglong),
-        ("sink_mapping_offset", c_ulonglong),
-        ("sink_mapping_size", c_ulonglong),
+        ("fd_mapping_offset", c_uint64),
+        ("fd_mapping_size", c_uint64),
+        ("tdag_mapping_offset", c_uint64),
+        ("tdag_mapping_size", c_uint64),
+        ("sink_mapping_offset", c_uint64),
+        ("sink_mapping_size", c_uint64),
     ]
 
     def __repr__(self) -> str:
@@ -92,7 +94,7 @@ class TDSink(Structure):
     _fields_ = [("fdidx", c_uint8), ("offset", c_uint64), ("label", c_uint32)]
 
     def __repr__(self) -> str:
-        return f"SinkLog fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
+        return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
 class TDFile:
@@ -110,16 +112,43 @@ class TDFile:
         self.buffer = buffer
         self.header = TDHeader.from_buffer_copy(self.buffer)
 
+        self.raw_nodes: Dict[int, int] = defaultdict(int)
+        self.sink_cache: Dict[int, TDSink] = defaultdict(TDSink)
+
+        self.fd_headers: List[Tuple[str, TDFDHeader]] = list(self.read_fd_headers())
+
+    def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
+        assert self.header.fd_mapping_offset > 0
+        assert self.header.fd_mapping_size > 0
+
+        offset = self.header.fd_mapping_offset
+        end = offset + self.header.fd_mapping_size
+
+        while offset < end:
+            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, offset)
+            offset += sizeof(TDFDHeader)
+            path = str(self.buffer[offset : offset + fdhdr.namelen], "utf-8")
+            yield (path, fdhdr)
+            offset += len(path)
+
     @property
     def label_count(self):
         return int(self.header.tdag_mapping_size / sizeof(c_uint64))
 
-    def read_raw_node(self, label: int) -> int:
-        offset = self.header.tdag_mapping_offset + sizeof(c_uint64) * label
-        return c_uint64.from_buffer_copy(self.buffer, offset).value
+    def read_node(self, label: int) -> int:
+        if label in self.raw_nodes:
+            return self.raw_nodes[int]
 
-    def decode_node(self, label: int) -> Union[TDSourceNode, TDRangeNode, TDUnionNode]:
-        v = self.read_raw_node(label)
+        offset = self.header.tdag_mapping_offset + sizeof(c_uint64) * label
+
+        assert self.header.tdag_mapping_offset + self.header.tdag_mapping_size > offset
+
+        result = c_uint64.from_buffer_copy(self.buffer, offset).value
+        self.raw_nodes[label] = result
+        return result
+
+    def decode_node(self, label: int) -> TDNode:
+        v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
         st = (v >> self.source_taint_bit_shift) & 1
         affects_cf = (v >> self.affects_control_flow_bit_shift) & 1
@@ -136,10 +165,44 @@ class TDFile:
             else:
                 return TDRangeNode(v1, v2, affects_cf)
 
+    @property
+    def nodes(self) -> Iterator[TDNode]:
+        assert self.header.tdag_mapping_offset > 0
+        assert self.header.tdag_mapping_size > 0
+
+        for label in range(0, self.label_count):
+            yield self.decode_node(label)
+
+    def read_sink(self, offset: int) -> TDSink:
+        if offset in self.sink_cache:
+            return self.sink_cache[offset]
+
+        assert self.header.sink_mapping_offset <= offset
+        assert self.header.sink_mapping_offset + self.header.sink_mapping_size > offset
+
+        result = TDSink.from_buffer_copy(self.buffer, offset)
+
+        self.sink_cache[offset] = result
+
+        return result
+
+    @property
+    def sinks(self) -> Iterator[TDSink]:
+        assert self.header.sink_mapping_offset > 0
+        assert self.header.sink_mapping_size > 0
+
+        offset = self.header.sink_mapping_offset
+        end = offset + self.header.sink_mapping_size
+
+        while offset < end:
+            yield self.read_sink(offset)
+            offset += sizeof(TDSink)
+
 
 class TDProgramTrace(ProgramTrace):
     def __init__(self, tdfile: TDFile) -> None:
         self.tdfile: TDFile = TDFile(tdfile)
+        self.tforest: TDTaintForest = TDTaintForest(self)
 
     def __contains__(self, uid: int):
         return super().__contains__(uid)
@@ -161,7 +224,8 @@ class TDProgramTrace(ProgramTrace):
         return super().basic_blocks
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
-        return super().file_offset(node)
+        print(f"SATAN: {self.tdfile.decode_node(node.label)}")
+        return ByteOffset(node.source, node.source.track_start)
 
     @property
     def functions(self) -> Iterable[Function]:
@@ -197,47 +261,100 @@ class TDProgramTrace(ProgramTrace):
         f = open(tdpath, "rb")
         return TDProgramTrace(mmap(f.fileno(), 0, prot=PROT_READ))
 
-    @property
-    def inputs(self) -> Iterable[Input]:
-        # for label in range(1, self.tdfile.label_count):
-        #     node = self.tdfile.decode_node(label)
-        #     if isinstance(node, TDSourceNode):
-        #         # Get the input file path by indexing via TDSourceNode.idx into fd_mapping_header
-        #         yield Input(uid, path, size, start_offset)
-
-        assert self.tdfile.header.fd_mapping_offset > 0
-        assert self.tdfile.header.fd_mapping_size > 0
-
-        offset = self.tdfile.header.fd_mapping_offset
-        end = offset + self.tdfile.header.fd_mapping_size
-        fdhdr = TDFDHeader.from_buffer_copy(self.tdfile.buffer, offset)
-
-        while offset < end:
-            node = self.tdfile.decode_node(fdhdr.prealloc_label_begin)
-
-            if isinstance(node, TDSourceNode):
-                # TODO (hbrodin): Encoding???
-                path = str(self.tdfile.buffer[offset : offset + fdhdr.namelen], "utf-8")
-                uid = hash(path + str(node.offset)) % (1 << 16)
-                yield Input(uid, path, size=1, track_start=node.offset)
-
-            offset += sizeof(TDFDHeader) + fdhdr.namelen
-            fdhdr = TDFDHeader.from_buffer_copy(self.tdfile.buffer, offset)
+    @staticmethod
+    def create_input(offset: int, path: str) -> Input:
+        uid = hash(path + str(offset))
+        return Input(uid, path, size=1, track_start=offset)
 
     @property
-    def output_taints(self) -> Iterable[TaintOutput]:
-        assert self.tdfile.header.sink_mapping_offset > 0
-        assert self.tdfile.header.sink_mapping_size > 0
+    def inputs(self) -> Iterator[Input]:
+        for path, fdhdr in self.tdfile.fd_headers:
+            begin = fdhdr.prealloc_label_begin
+            end = fdhdr.prealloc_label_end
+            inc = sizeof(c_uint32)
+            for offset in range(begin, end, inc):
+                node = self.tdfile.decode_node(offset)
+                if isinstance(node, TDSourceNode):
+                    yield TDProgramTrace.create_input(node.offset, path)
 
-        offset = self.tdfile.header.sink_mapping_offset
-        end = self.tdfile.header.sink_mapping_size
-
-        while offset < end:
-            sink = TDSink.from_buffer_copy(self.tdfile.buffer, offset)
-            source = next(x[1] for x in enumerate(self.inputs) if x[0] == sink.fdidx)
-            yield TaintOutput(source, sink.offset, sink.label)
-            offset += sizeof(TDSink)
+    @property
+    def output_taints(self) -> Iterator[TaintOutput]:
+        for sink in self.tdfile.sinks:
+            offset = sink.offset
+            path = self.tdfile.fd_headers[sink.fdidx][0]
+            label = sink.label
+            yield TaintOutput(TDProgramTrace.create_input(offset, path), offset, label)
 
     @property
     def taint_forest(self) -> TaintForest:
-        return super().taint_forest
+        return self.tforest
+
+
+class TDTaintForestNode(TaintForestNode):
+    def __init__(
+        self,
+        label: int,
+        source: Input,
+        affected_control_flow: bool = False,
+        parent_one: "TDTaintForestNode" = None,
+        parent_two: "TDTaintForestNode" = None,
+    ):
+        super().__init__(label, source, affected_control_flow)
+        self.parents = (parent_one, parent_two)
+
+    def __repr__(self):
+        return str(self.label)
+
+    @property
+    def parent_one(self) -> Optional["TDTaintForestNode"]:
+        return self.parents[0]
+
+    @property
+    def parent_two(self) -> Optional["TDTaintForestNode"]:
+        return self.parents[1]
+
+
+class TDTaintForest(TaintForest):
+    def __init__(self, trace: TDProgramTrace) -> None:
+        self.trace: TDProgramTrace = trace
+        self.node_cache: Dict[int, TDTaintForestNode] = {0: TDTaintForestNode(0, None)}
+
+    def __len__(self) -> int:
+        return self.trace.tdfile.label_count
+
+    def create_nodes(self, label: int) -> List[TDTaintForestNode]:
+        if label in self.node_cache:
+            return [self.node_cache[label]]
+
+        node = self.trace.tdfile.decode_node(label)
+
+        if isinstance(node, TDSourceNode):
+            path = self.trace.tdfile.fd_headers[node.idx][0]
+            source = TDProgramTrace.create_input(node.offset, path)
+            result = TDTaintForestNode(label, source, node.affects_control_flow)
+            self.node_cache[label] = result
+            return [result]
+
+        elif isinstance(node, TDUnionNode):
+            p1 = self.create_nodes(node.left)[0]
+            p2 = self.create_nodes(node.right)[0]
+            result = TDTaintForestNode(label, None, node.affects_control_flow, p1, p2)
+            self.node_cache[label] = result
+            return [result]
+
+        elif isinstance(node, TDRangeNode):
+            result = []
+
+            for l in range(node.first, node.last + 1):
+                for n in self.create_nodes(l):
+                    self.node_cache[l] = n
+                    result.append(n)
+
+            return result
+
+        assert False
+
+    def nodes(self) -> Iterator[TDTaintForestNode]:
+        for label in range(0, len(self)):
+            for node in self.create_nodes(label):
+                yield node
