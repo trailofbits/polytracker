@@ -5,6 +5,7 @@ from hashlib import sha256
 from os import rename
 from os.path import abspath, exists, getsize
 from pathlib import Path
+from typing import Tuple, Union
 
 
 # Name of Docker image containing regular mutool
@@ -17,7 +18,8 @@ MUTOOL_IMAGE = "mupdf"
 # approach could be used, e.g. mutate every non-cavity byte and ensure that no other mutation
 # generates equal output (this is pretty heavy though).
 
-def draw_mutated_pdf(mutpdf: Path, resultpath: Path) -> None:
+
+def draw_mutated_pdf(mutpdf: Path, resultpath: Path) -> Tuple[Path, int]:
     """Draw a mutated pdf as png. Returns path to output file."""
     inputfile = abspath(mutpdf)
     outputdir = abspath(resultpath)
@@ -37,63 +39,72 @@ def draw_mutated_pdf(mutpdf: Path, resultpath: Path) -> None:
         "/outputdir/mutated.png",
         "/inputfile"
     ]
-    subprocess.check_call(args)
-    return resultpath / "mutated.png"
-
-def get_checksum(f : Path) -> str:
-  sh = sha256()
-  with open(f, 'rb') as fd:
-    sh.update(fd.read())
-  return sh.hexdigest()
+    ret = subprocess.call(args)
+    return (resultpath / "mutated.png", ret)
 
 
-def png_from_pdf(pdfpath : Path, results : Path) ->Path:
-  return results / (str(pdfpath.stem) + ".png")
+def get_checksum(f: Path) -> str:
+    sh = sha256()
+    with open(f, 'rb') as fd:
+        sh.update(fd.read())
+    return sh.hexdigest()
 
-def png_from_mutated(mutpath : Path, results : Path) ->Path:
-  return results / (str(mutpath.name) + ".png")
+
+def png_from_pdf(pdfpath: Path, results: Path) -> Path:
+    return results / (str(pdfpath.stem) + ".png")
+
+
+def png_from_mutated(mutpath: Path, results: Path) -> Path:
+    return results / (str(mutpath.name) + ".png")
 
 # TODO Skip any file with timeout or when the png is zero bytes...
 
-def verify_cavities(inputfile : Path, cavitydb : Path, method: str, resultsdir : Path):
-  origpng = png_from_pdf(inputfile, resultsdir)
 
-  if not exists(origpng):
-    print(f"INFO: Original png {origpng} does not exist. Skip.")
-    return
+def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Path, limit: int, skip: int):
+    origpng = png_from_pdf(inputfile, resultsdir)
 
-  if getsize(origpng) == 0:
-    print(f"INFO: Original png {origpng} is zero bytes. Skip.")
-    return
+    if not exists(origpng):
+        print(f"INFO: Original png {origpng} does not exist. Skip.")
+        return
 
-  # 1. Generate mutated pdf
-  mutated_pdf = mutate_cavities(inputfile, cavitydb, method)
-  if mutated_pdf is None:
-    print(f"INFO: No cavities detected in {inputfile}")
+    if getsize(origpng) == 0:
+        print(f"INFO: Original png {origpng} is zero bytes. Skip.")
+        return
 
-  # 2. Check mutated pdf checksum differs from orig
-  csum_origpdf = get_checksum(inputfile)
-  csum_mutpdf = get_checksum(mutated_pdf)
-  if csum_origpdf == csum_mutpdf:
-    print(f"WARNING: No mutation happened between {inputfile} and {mutated_pdf}. Skip.")
-    return
+    # 1. Generate mutated pdf
+    mutated_pdf = mutate_cavities(inputfile, cavitydb, method, limit, skip)
+    if mutated_pdf is None:
+        print(f"INFO: No cavities detected in {inputfile}")
+        return
 
-  # 3. Draw mutated pdf
-  mutpng = png_from_mutated(mutated_pdf, resultsdir)
-  try:
-      out = draw_mutated_pdf(mutated_pdf, resultsdir)
-      rename(out, mutpng)
-  except subprocess.CalledProcessError as e:
-      print(f"WARNING: Exception while processing {mutated_pdf}. Message: {str(e)}. Trying to continue.")
+    # 2. Check mutated pdf checksum differs from orig
+    csum_origpdf = get_checksum(inputfile)
+    csum_mutpdf = get_checksum(mutated_pdf)
+    if csum_origpdf == csum_mutpdf:
+        print(
+            f"WARNING: No mutation happened between {inputfile} and {mutated_pdf}. Skip.")
+        return
 
+    # 3. Draw mutated pdf
+    mutpng = png_from_mutated(mutated_pdf, resultsdir)
+    out, ret = draw_mutated_pdf(mutated_pdf, resultsdir)
+    if ret != 0:
+        print(
+            f"WARNING: Error while processing {mutated_pdf}. Trying to continue anyway.")
+    if not exists(out):
+        print(
+            f"ERROR: Did not generate a png {mutpng} ({out}) from mutated pdf. Orig png {origpng} exists.")
+        return
+    rename(out, mutpng)
 
-  # 4. Verify mutated png have equal checksum to orig png
-  csum_origpng = get_checksum(origpng)
-  csum_mutpng = get_checksum(mutpng)
-  if csum_origpng != csum_mutpng:
-    print(f"ERROR: Checksums differ {origpng}:{csum_origpng} {mutpng}:{csum_mutpng}")
-  else:
-    print(f"OK: {inputfile}")
+    # 4. Verify mutated png have equal checksum to orig png
+    csum_origpng = get_checksum(origpng)
+    csum_mutpng = get_checksum(mutpng)
+    if csum_origpng != csum_mutpng:
+        print(
+            f"ERROR: Checksums differ {origpng}:{csum_origpng} {mutpng}:{csum_mutpng}")
+    else:
+        print(f"OK: {inputfile}")
 
 
 def main():
@@ -112,14 +123,18 @@ def main():
     parser.add_argument("--method", "-m", type=str,
                         choices=method_mapping.keys(), default="zero")
 
-    args = parser.parse_args()
+    parser.add_argument("--limit", "-l", type=int, default=-1,
+                        help="Limit the number of mutations to this many. No limit if -1.")
+    parser.add_argument("--skip", "-s", type=int, default=0,
+                        help="Skip the first cavities, start mutating after skip cavities.")
 
+    args = parser.parse_args()
 
     cavitydb = args.results / "cavities.csv"
 
     for inputfile in args.inputs:
-      verify_cavities(inputfile, cavitydb, args.method, args.results)
-
+        verify_cavities(inputfile, cavitydb, args.method,
+                        args.results, args.limit, args.skip)
 
 
 if __name__ == "__main__":
