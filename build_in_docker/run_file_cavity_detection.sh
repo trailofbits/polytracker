@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+# NOTE: Before running this script you need to build the correct image and binaries etc. The easiest way to do so
+# is just to run './run_mutool.sh --no-control-flow-tracking info somepdf'
 
 cavities(){
   INPUT_PDF="$1"
@@ -15,9 +17,9 @@ cavities(){
     --mount type=bind,source="${SCRIPTPATH}/bin",target=/sources/bin \
     --mount type=bind,source="${RESULT_DIR}",target=/workdir \
     trailofbits/polytrackerbuilder-mupdf /usr/bin/bash -c \
-    "cd /workdir && timeout ${TIMEOUT} /sources/bin/mutool_track_no_control_flow info ${BASENAME}.pdf; if [ \$? -eq 124 ]; then touch ${BASENAME}.timeout; fi"
+    "cd /workdir && DFSAN_OPTIONS=\"strict_data_dependencies=0\" timeout ${TIMEOUT} /sources/bin/mutool_track_no_control_flow draw -o output.png ${BASENAME}.pdf; if [ \$? -eq 124 ]; then touch ${BASENAME}.timeout; fi"
 
-  # mv -f "${RESULT_DIR}/output.png" "${RESULT_DIR}/${BASENAME}.png"
+  mv -f "${RESULT_DIR}/output.png" "${RESULT_DIR}/${BASENAME}.png"
   mv -f "${RESULT_DIR}/polytracker.db" "${RESULT_DIR}/${BASENAME}.db"
   mv -f "${RESULT_DIR}/polytracker.tdag" "${RESULT_DIR}/${BASENAME}.tdag"
   rm -f "${RESULT_DIR}/${BASENAME}.pdf"
@@ -48,6 +50,5 @@ fi
 make -C "${SCRIPTPATH}" "bin/mutool_track_no_control_flow"
 
 for file in "$@"; do
-  # cavities ${file} "$(pwd)/results" 100
-  cavities "$(readlink -f ${file})" "$(pwd)/results" 5
+  cavities ${file} "$(pwd)/results" 100
 done
