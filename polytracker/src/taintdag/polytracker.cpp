@@ -39,8 +39,9 @@ label_t PolyTracker::union_labels(label_t l1, label_t l2) {
 }
 
 void PolyTracker::open_file(int fd, fs::path const& path) {
-  // TODO (hbrodin): Check if we can determine file size, if so preallocate/reserve labels for all
-  // file bytes and store info about the first label in fdm_ (0 would mean not reserved)
+  // TODO (hbrodin): What if you open the same path twice? If we assume the file hasn't changed in between we should be able
+  // to reuse previously reserved source labels. Is this something we want to do? Or is it better to just generate new ranges
+  // on every open?
   std::optional<taint_range_t> range;
   auto fsize = details::file_size(fd);
   if (fsize) {
