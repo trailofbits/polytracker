@@ -52,7 +52,7 @@ def target_path(filename : Path, method : str) -> Path:
     return Path(f"{filename}.{method}.mutated")
 
 
-def mutate_cavities(filename: Path, cavities_file: Path, method : str) -> Union[Path, None]:
+def mutate_cavities(filename: Path, cavities_file: Path, method : str, limit: int = -1, skip : int = 0) -> Union[Path, None]:
     target = target_path(filename, method)
 
     data = orig_file(filename)
@@ -61,12 +61,20 @@ def mutate_cavities(filename: Path, cavities_file: Path, method : str) -> Union[
     mutator = method_mapping[method]
 
     # Only the name of the file is in the cavities file, not the path
-    changes=False
-    for (ofirst, olast) in iter_cavities(filename.name, cavities_file):
-        data[ofirst:olast+1] = mutator(data[ofirst:olast+1])
-        changes = True
+    changes=0
+    for i, (ofirst, olast) in enumerate(iter_cavities(filename.name, cavities_file)):
+        if i < skip:
+            continue
 
-    if not changes:
+        if limit == -1 or changes < limit:
+            #print(f"Mutate {hex(ofirst)}, {hex(olast)}")
+            data[ofirst:olast+1] = mutator(data[ofirst:olast+1])
+            changes +=1
+        else:
+            print(f"Abort on limit after {changes} iterations. Next was {ofirst}, {olast}")
+            break
+
+    if changes == 0:
         return None
 
     with open(target, 'wb') as dstf:
