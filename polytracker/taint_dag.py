@@ -16,8 +16,6 @@ from typing import Union, Iterable, Iterator, Optional, Dict, Tuple, List
 from pathlib import Path
 from mmap import mmap, PROT_READ
 from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
-from collections import defaultdict, deque
-from itertools import islice
 
 
 class TDHeader(Structure):
@@ -112,8 +110,8 @@ class TDFile:
         self.buffer = buffer
         self.header = TDHeader.from_buffer_copy(self.buffer)
 
-        self.raw_nodes: Dict[int, int] = defaultdict(int)
-        self.sink_cache: Dict[int, TDSink] = defaultdict(TDSink)
+        self.raw_nodes: Dict[int, int] = {}
+        self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[str, TDFDHeader]] = list(self.read_fd_headers())
 
@@ -137,7 +135,7 @@ class TDFile:
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
-            return self.raw_nodes[int]
+            return self.raw_nodes[label]
 
         offset = self.header.tdag_mapping_offset + sizeof(c_uint64) * label
 
@@ -151,7 +149,7 @@ class TDFile:
         v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
         st = (v >> self.source_taint_bit_shift) & 1
-        affects_cf = (v >> self.affects_control_flow_bit_shift) & 1
+        affects_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
         if st:
             idx = v & self.source_index_mask
             offset = (v >> self.source_index_bits) & self.source_offset_mask
@@ -224,8 +222,9 @@ class TDProgramTrace(ProgramTrace):
         return super().basic_blocks
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
-        print(f"SATAN: {self.tdfile.decode_node(node.label)}")
-        return ByteOffset(node.source, node.source.track_start)
+        assert node.source is not None
+        offset = self.tdfile.decode_node(node.label).offset
+        return ByteOffset(node.source, offset)
 
     @property
     def functions(self) -> Iterable[Function]:
@@ -261,29 +260,27 @@ class TDProgramTrace(ProgramTrace):
         f = open(tdpath, "rb")
         return TDProgramTrace(mmap(f.fileno(), 0, prot=PROT_READ))
 
-    @staticmethod
-    def create_input(offset: int, path: str) -> Input:
-        uid = hash(path + str(offset))
-        return Input(uid, path, size=1, track_start=offset)
-
     @property
     def inputs(self) -> Iterator[Input]:
         for path, fdhdr in self.tdfile.fd_headers:
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
-            inc = sizeof(c_uint32)
-            for offset in range(begin, end, inc):
-                node = self.tdfile.decode_node(offset)
-                if isinstance(node, TDSourceNode):
-                    yield TDProgramTrace.create_input(node.offset, path)
+            if isinstance(self.tdfile.decode_node(begin), TDSourceNode):
+                yield Input(fdhdr.fd, path, end - begin)
 
     @property
     def output_taints(self) -> Iterator[TaintOutput]:
         for sink in self.tdfile.sinks:
+            path, fdhdr = self.tdfile.fd_headers[sink.fdidx]
+            begin = fdhdr.prealloc_label_begin
+            end = fdhdr.prealloc_label_end
             offset = sink.offset
-            path = self.tdfile.fd_headers[sink.fdidx][0]
             label = sink.label
-            yield TaintOutput(TDProgramTrace.create_input(offset, path), offset, label)
+            yield TaintOutput(
+                Input(fdhdr.fd, path, end - begin),
+                offset,
+                label,
+            )
 
     @property
     def taint_forest(self) -> TaintForest:
@@ -303,7 +300,16 @@ class TDTaintForestNode(TaintForestNode):
         self.parents = (parent_one, parent_two)
 
     def __repr__(self):
-        return str(self.label)
+        i = None if self.source is None else self.source.uid
+        l = None if self.parent_one is None else self.parent_one.label
+        r = None if self.parent_two is None else self.parent_two.label
+        return (
+            f"label: {self.label} ; "
+            f"input: {i} ; "
+            f"affected_control_flow: {self.affected_control_flow} ; "
+            f"parent_one: {l} ; "
+            f"parent_two: {r}"
+        )
 
     @property
     def parent_one(self) -> Optional["TDTaintForestNode"]:
@@ -317,44 +323,102 @@ class TDTaintForestNode(TaintForestNode):
 class TDTaintForest(TaintForest):
     def __init__(self, trace: TDProgramTrace) -> None:
         self.trace: TDProgramTrace = trace
-        self.node_cache: Dict[int, TDTaintForestNode] = {0: TDTaintForestNode(0, None)}
+        self.node_cache: Dict[int, Optional[TDTaintForestNode]] = {}
+
+        self.node_cache[0] = TDTaintForestNode(0, None)
+        for i in range(1, self.trace.tdfile.label_count):
+            self.node_cache[i] = None
+
+        self.synth_label_cnt: int = -1
 
     def __len__(self) -> int:
-        return self.trace.tdfile.label_count
+        return len(self.node_cache)
 
-    def create_nodes(self, label: int) -> List[TDTaintForestNode]:
-        if label in self.node_cache:
-            return [self.node_cache[label]]
+    def get_synth_node_label(self):
+        result = self.synth_label_cnt
+        self.synth_label_cnt -= 1
+        return result
 
-        node = self.trace.tdfile.decode_node(label)
+    def create_nodes(self, label: int) -> None:
 
-        if isinstance(node, TDSourceNode):
-            path = self.trace.tdfile.fd_headers[node.idx][0]
-            source = TDProgramTrace.create_input(node.offset, path)
-            result = TDTaintForestNode(label, source, node.affects_control_flow)
-            self.node_cache[label] = result
-            return [result]
+        stack = [label]
 
-        elif isinstance(node, TDUnionNode):
-            p1 = self.create_nodes(node.left)[0]
-            p2 = self.create_nodes(node.right)[0]
-            result = TDTaintForestNode(label, None, node.affects_control_flow, p1, p2)
-            self.node_cache[label] = result
-            return [result]
+        while len(stack) > 0:
 
-        elif isinstance(node, TDRangeNode):
-            result = []
+            label = stack[-1]
 
-            for l in range(node.first, node.last + 1):
-                for n in self.create_nodes(l):
-                    self.node_cache[l] = n
-                    result.append(n)
+            if self.node_cache[label] is not None:
+                stack.pop()
+                continue
 
-            return result
+            node = self.trace.tdfile.decode_node(label)
 
-        assert False
+            if isinstance(node, TDSourceNode):
+                path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
+                begin = fdhdr.prealloc_label_begin
+                end = fdhdr.prealloc_label_end
+                source = Input(fdhdr.fd, path, end - begin)
+                self.node_cache[label] = TDTaintForestNode(
+                    label, source, node.affects_control_flow
+                )
+                stack.pop()
+
+            elif isinstance(node, TDUnionNode):
+                l = self.node_cache[node.left]
+                r = self.node_cache[node.right]
+
+                if l is None:
+                    stack.append(node.left)
+
+                if r is None:
+                    stack.append(node.right)
+
+                if (r is not None) and (l is not None):
+                    self.node_cache[label] = TDTaintForestNode(
+                        label, None, node.affects_control_flow, l, r
+                    )
+                    stack.pop()
+
+            elif isinstance(node, TDRangeNode):
+                is_ready = True
+                for n in range(node.first, node.last + 1):
+                    if self.node_cache[n] is None:
+                        stack.append(n)
+                        is_ready = False
+
+                if not is_ready:
+                    continue
+
+                sum = self.node_cache[node.first]
+                for n in range(node.first + 1, node.last):
+                    l = self.get_synth_node_label()
+                    sum = TDTaintForestNode(
+                        l,
+                        None,
+                        node.affects_control_flow,
+                        sum,
+                        self.node_cache[n],
+                    )
+                    self.node_cache[l] = sum
+
+                self.node_cache[label] = TDTaintForestNode(
+                    label,
+                    None,
+                    node.affects_control_flow,
+                    sum,
+                    self.node_cache[node.last],
+                )
+
+                stack.pop()
 
     def nodes(self) -> Iterator[TDTaintForestNode]:
-        for label in range(0, len(self)):
-            for node in self.create_nodes(label):
-                yield node
+        label = max(self.node_cache.keys())
+        while label in self.node_cache:
+            if self.node_cache[label] is None:
+                self.create_nodes(label)
+
+            assert self.node_cache[label] is not None
+
+            yield self.node_cache[label]
+
+            label -= 1
