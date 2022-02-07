@@ -1,13 +1,9 @@
 import argparse
 import csv
-from io import SEEK_SET
-from operator import mod
 from pathlib import Path
 from random import randbytes, randint
 from typing import Iterable, Tuple, Union
 import unittest
-
-from numpy import byte
 
 
 def method_zero(cavity : bytearray) -> bytearray:
