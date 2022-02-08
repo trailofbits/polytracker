@@ -14,7 +14,7 @@ namespace taintdag {
   // compact encoding for sharing. Just move the tdag_mapping_offset (and contents) to the fd_mapping_offset + fd_mapping_size etc.
   struct FileHdr {
     uint64_t fd_mapping_offset;
-    uint64_t fd_mapping_size;
+    uint64_t fd_mapping_count;
     uint64_t tdag_mapping_offset;
     uint64_t tdag_mapping_size;
     uint64_t sink_mapping_offset;
@@ -64,8 +64,8 @@ namespace taintdag {
     char* sink_mapping_begin();
     char* sink_mapping_end();
 
-    // Update the fileheader size information (typically at exit)
-    void fileheader_fd_size(size_t fd_size);
+    // Update the fileheader size and count information (typically at exit)
+    void fileheader_fd_count(size_t fd_count);
     void fileheader_tdag_size(size_t tdag_size);
     void fileheader_sink_size(size_t tdag_size);
   private:

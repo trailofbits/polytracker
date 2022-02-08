@@ -3,7 +3,7 @@ from ctypes import Structure, c_int32, c_uint32, c_uint64, c_uint8, c_ulonglong,
 from io import SEEK_SET
 from mmap import mmap, PROT_READ
 from pathlib import Path
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 import sys
 
 
@@ -22,7 +22,7 @@ source_offset_mask = ((1 << 54)-1)
 
 class FileHdr(Structure):
     _fields_ = [("fd_mapping_offset", c_ulonglong),
-                ("fd_mapping_size", c_ulonglong),
+                ("fd_mapping_count", c_ulonglong),
                 ("tdag_mapping_offset", c_ulonglong),
                 ("tdag_mapping_size", c_ulonglong),
                 ("sink_mapping_offset", c_ulonglong),
@@ -30,7 +30,7 @@ class FileHdr(Structure):
 
     def __repr__(self) -> str:
         return (
-            f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_size: {self.fd_mapping_size}\n\t"
+            f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_count: {self.fd_mapping_count}\n\t"
             f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
             f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
         )
@@ -38,7 +38,8 @@ class FileHdr(Structure):
 
 class FDMappingHdr(Structure):
     _fields_ = [("fd", c_int32),
-                ("namelen", c_uint32),
+                ("name_offset", c_uint32),
+                ("name_len", c_uint32),
                 ("prealloc_begin", c_uint32),
                 ("prealloc_end", c_uint32)]
 
@@ -103,18 +104,21 @@ class OutputFile:
         self.hdr = FileHdr.from_buffer_copy(mm)
         self.mm = mm
 
+    def fd_mapping(self, index: int) -> Optional[Tuple[str, int, int]]:
+        if index >= self.hdr.fd_mapping_count:
+            return None
+
+        offset = self.hdr.fd_mapping_offset + sizeof(FDMappingHdr)*index
+        fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)
+
+        sbegin = self.hdr.fd_mapping_offset + fdmhdr.name_offset
+        s = str(self.mm[sbegin:sbegin+fdmhdr.name_len],
+                'utf-8')  # TODO (hbrodin): Encoding???
+        return (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
+
     def fd_mappings(self) -> Iterable[Tuple[str, int, int]]:
-        offset = self.hdr.fd_mapping_offset
-        end = offset + self.hdr.fd_mapping_size
-
-        while offset < end:
-            fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)
-            offset += sizeof(FDMappingHdr)
-
-            s = str(self.mm[offset:offset+fdmhdr.namelen],
-                    'utf-8')  # TODO (hbrodin): Encoding???
-            offset += fdmhdr.namelen
-            yield (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
+        for i in range(0, self.hdr.fd_mapping_count):
+            yield self.fd_mapping(i)
 
     def sink_log(self) -> Iterable[SinkLogEntry]:
         offset = self.hdr.sink_mapping_offset
@@ -175,7 +179,7 @@ def dump_tdag(file: Path):
 
         for i, e in enumerate(f.fd_mappings()):
             print(f"{i}: {e[0]} {e[1]} {e[2]}")
-        
+
         for e in f.sink_log():
             print(f"{e} -> {f.decoded_taint(e.label)}")
 
@@ -260,10 +264,10 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-             x for x in f.fd_mappings() if x[0] == sourcefile)
+            x for x in f.fd_mappings() if x[0] == sourcefile)
         filelen = src_end - src_begin
         marker = bytearray(filelen)
-         # Initially, mark all source taint that affects control flow
+        # Initially, mark all source taint that affects control flow
         for idx, lbl in enumerate(range(src_begin, src_end)):
             if f.decoded_taint(lbl).affects_control_flow:
                 marker[idx] = 1
@@ -283,6 +287,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
                 for (srclabel, t) in iter_source_labels_not_affecting_cf(f, lbl):
                     marker[srclabel - src_begin] = 1
         return marker
+
 
 def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
     ranges = []

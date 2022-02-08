@@ -74,4 +74,14 @@ TEST_CASE("Test fdmapping operations") {
   }
 
 
+  SECTION("Names can be retrieved") {
+    auto idx_out = fdm.add_mapping(1, "stdout").value();
+    auto idx_err = fdm.add_mapping(2, "stderr").value();
+    auto idx_in = fdm.add_mapping(0, "stdin").value();
+
+    REQUIRE(fdm.name(idx_out).value() == "stdout");
+    REQUIRE(fdm.name(idx_err).value() == "stderr");
+    REQUIRE(fdm.name(idx_in).value() == "stdin");
+  }
+
 }

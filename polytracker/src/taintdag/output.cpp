@@ -51,7 +51,7 @@ OutputFile::~OutputFile() {
 void OutputFile::init_filehdr() {
   auto fh = reinterpret_cast<FileHdr*>(mapping_);
   fh->fd_mapping_offset = fd_mapping_offset; 
-  fh->fd_mapping_size = 0;
+  fh->fd_mapping_count = 0;
   fh->tdag_mapping_offset = tdag_mapping_offset;
   fh->tdag_mapping_size = 0;
   fh->sink_mapping_offset = sink_mapping_offset;
@@ -78,8 +78,8 @@ char* OutputFile::sink_mapping_begin() { return reinterpret_cast<char*>(mapping_
 char* OutputFile::sink_mapping_end() { return sink_mapping_begin() + sink_mapping_size; }
 std::pair<char*, char*> OutputFile::sink_mapping() { return {sink_mapping_begin(), sink_mapping_end()}; }
 
-void OutputFile::fileheader_fd_size(size_t fd_size) {
-  reinterpret_cast<FileHdr*>(mapping_)->fd_mapping_size = fd_size;
+void OutputFile::fileheader_fd_count(size_t fd_count) {
+  reinterpret_cast<FileHdr*>(mapping_)->fd_mapping_count = fd_count;
 }
 
 void OutputFile::fileheader_tdag_size(size_t tdag_size) {
