@@ -39,7 +39,7 @@ TEST_CASE("OutputFile tests") {
     REQUIRE(fs::file_size(path) == mapping_size);
     auto fhdr = read_filehdr(path);
     REQUIRE(fhdr.fd_mapping_offset == fd_mapping_offset);
-    REQUIRE(fhdr.fd_mapping_size == 0);
+    REQUIRE(fhdr.fd_mapping_count == 0);
     REQUIRE(fhdr.tdag_mapping_offset == tdag_mapping_offset);
     REQUIRE(fhdr.tdag_mapping_size == 0);
     REQUIRE(fhdr.sink_mapping_offset == sink_mapping_offset);
@@ -52,11 +52,11 @@ TEST_CASE("OutputFile tests") {
       OutputFile of{path};
       auto [begin, end] = of.fd_mapping();
       *begin = value;
-      of.fileheader_fd_size(1);
+      of.fileheader_fd_count(1);
     }
 
     auto fhdr = read_filehdr(path);
-    REQUIRE(fhdr.fd_mapping_size == 1);
+    REQUIRE(fhdr.fd_mapping_count == 1);
     REQUIRE(fhdr.tdag_mapping_size == 0);
     REQUIRE(fhdr.sink_mapping_size == 0);
 
@@ -73,7 +73,7 @@ TEST_CASE("OutputFile tests") {
     }
 
     auto fhdr = read_filehdr(path);
-    REQUIRE(fhdr.fd_mapping_size == 0);
+    REQUIRE(fhdr.fd_mapping_count == 0);
     REQUIRE(fhdr.tdag_mapping_size == sizeof(storage_t));
     REQUIRE(fhdr.sink_mapping_size == 0);
 
@@ -90,7 +90,7 @@ TEST_CASE("OutputFile tests") {
     }
 
     auto fhdr = read_filehdr(path);
-    REQUIRE(fhdr.fd_mapping_size == 0);
+    REQUIRE(fhdr.fd_mapping_count == 0);
     REQUIRE(fhdr.tdag_mapping_size == 0);
     REQUIRE(fhdr.sink_mapping_size == sizeof(value));
 
@@ -99,10 +99,10 @@ TEST_CASE("OutputFile tests") {
 
   SECTION("Move is handled correctly") {
     OutputFile of{path};
-    auto fd_size = test::rand_limit(0xffffu);
+    auto fd_count = test::rand_limit(0xffffu);
     auto sink_size = test::rand_limit(0xffffu);
     auto tdag_size = test::rand_limit(0xffffffu);
-    of.fileheader_fd_size(fd_size);
+    of.fileheader_fd_count(fd_count);
     of.fileheader_sink_size(sink_size);
     of.fileheader_tdag_size(tdag_size);
 
@@ -111,7 +111,7 @@ TEST_CASE("OutputFile tests") {
     }
     // Because a move was done, and that OutputFile was destroyed, values should be present in the file
     auto fhdr = read_filehdr(path);
-    REQUIRE(fhdr.fd_mapping_size == fd_size);
+    REQUIRE(fhdr.fd_mapping_count == fd_count);
     REQUIRE(fhdr.tdag_mapping_size == tdag_size);
     REQUIRE(fhdr.sink_mapping_size == sink_size);
   }

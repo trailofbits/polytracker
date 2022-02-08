@@ -140,14 +140,13 @@ FDMappingHdr.
         return {};
       }
 
-    private:
-
       // Returns the number of existing mappings
       size_t get_mapping_count() const {
         std::unique_lock l{m_};
         return nmappings_;
       }
 
+    private:
       // Write the name of there is room for name + a header. If written, returns
       // offset. If not returns empty optional.
       std::optional<length_type> write_name(std::string_view name) {

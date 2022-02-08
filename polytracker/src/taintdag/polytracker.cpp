@@ -27,7 +27,7 @@ PolyTracker::PolyTracker(std::filesystem::path const&outputfile)
 }
 
 PolyTracker::~PolyTracker() {
-  of_.fileheader_fd_size(fdm_.get_size());
+  of_.fileheader_fd_count(fdm_.get_mapping_count());
   of_.fileheader_tdag_size(tdag_.label_count() * sizeof(storage_t));
   of_.fileheader_sink_size(sinklog_.size());
 }
