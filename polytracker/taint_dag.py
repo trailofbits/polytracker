@@ -21,7 +21,7 @@ from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
 class TDHeader(Structure):
     _fields_ = [
         ("fd_mapping_offset", c_uint64),
-        ("fd_mapping_size", c_uint64),
+        ("fd_mapping_count", c_uint64),
         ("tdag_mapping_offset", c_uint64),
         ("tdag_mapping_size", c_uint64),
         ("sink_mapping_offset", c_uint64),
@@ -30,7 +30,7 @@ class TDHeader(Structure):
 
     def __repr__(self) -> str:
         return (
-            f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_size: {self.fd_mapping_size}\n\t"
+            f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_count: {self.fd_mapping_count}\n\t"
             f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
             f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
         )
@@ -39,7 +39,8 @@ class TDHeader(Structure):
 class TDFDHeader(Structure):
     _fields_ = [
         ("fd", c_int32),
-        ("namelen", c_uint32),
+        ("name_offset", c_uint32),
+        ("name_len", c_uint32),
         # First label of the pre-allocated range
         ("prealloc_label_begin", c_uint32),
         # One-past last label of the pre-allocated range
@@ -117,17 +118,15 @@ class TDFile:
 
     def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
         assert self.header.fd_mapping_offset > 0
-        assert self.header.fd_mapping_size > 0
+        assert self.header.fd_mapping_count > 0
 
         offset = self.header.fd_mapping_offset
-        end = offset + self.header.fd_mapping_size
-
-        while offset < end:
-            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, offset)
-            offset += sizeof(TDFDHeader)
-            path = str(self.buffer[offset : offset + fdhdr.namelen], "utf-8")
+        for i in range(0, self.header.fd_mapping_count):
+            header_offset = offset + sizeof(TDFDHeader)*i
+            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)
+            sbegin = offset + fdhdr.name_offset
+            path = str(self.buffer[sbegin:sbegin+fdhdr.name_len], "utf-8")
             yield (path, fdhdr)
-            offset += len(path)
 
     @property
     def label_count(self):
