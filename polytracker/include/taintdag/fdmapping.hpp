@@ -12,7 +12,6 @@ namespace taintdag {
 
 /*
 
-
 struct FDMappingHdr {
   fd_type fd;
   length_type name_offset;
@@ -20,8 +19,6 @@ struct FDMappingHdr {
   label_t prealloc_begin;
   label_t prealloc_end;
 };
-
-
 
 
 Memory layout
@@ -39,8 +36,6 @@ N.b. name_offset is from the start of the memory allocated for FDMappings, not t
 FDMappingHdr.
 */
 
-  // TODO (hbrodin): There might be a better way to do this... The assumption is that very few files will be added...
-  // TODO (hbrodin): Probably need to consider alignment issues for some of the types.
   class FDMapping {
 
     public:
@@ -53,8 +48,7 @@ FDMappingHdr.
       const size_t string_offset = length_offset + sizeof(length_type);
 
 
-      // Following each FDMappingHdr is namelen bytes of name string
-      //  if prealloc_begin == 0 it means no preallocation.
+      // Prealloc_begin == 0 implies no preallocation.
       // TODO (hbrodin): Consider alignment and padding of this structure.
       struct FDMappingHdr {
         fd_type fd;
@@ -127,8 +121,13 @@ FDMappingHdr.
         if (n == 0)
           return {};
 
+        // Walk the mappings by decreasing index since we want the last
+        // FDMappingHeader having wanted fd. If an fd is reused it will
+        // have higher index. We know that there is at least
+        // one FDMappingHeader present due to the check above.
         auto latesthdr = &get(n-1);
         // NOTE (hbrodin): Assumes first is not mapped in the first sizeof(FDMappingHdr) bytes of the address space.
+        // If it is, the pointer comparison would wrap on curr--.
         for (auto first = &get(0), curr = latesthdr;curr >= first;curr--) {
           if (curr->fd == fd) {
             std::optional<taint_range_t> r;

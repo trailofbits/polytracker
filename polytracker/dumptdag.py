@@ -3,7 +3,7 @@ from ctypes import Structure, c_int32, c_uint32, c_uint64, c_uint8, c_ulonglong,
 from io import SEEK_SET
 from mmap import mmap, PROT_READ
 from pathlib import Path
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 import sys
 
 
@@ -104,7 +104,7 @@ class OutputFile:
         self.hdr = FileHdr.from_buffer_copy(mm)
         self.mm = mm
 
-    def fd_mapping(self, index: int) -> Union[None, Tuple[str, int, int]]:
+    def fd_mapping(self, index: int) -> Optional[Tuple[str, int, int]]:
         if index >= self.hdr.fd_mapping_count:
             return None
 
