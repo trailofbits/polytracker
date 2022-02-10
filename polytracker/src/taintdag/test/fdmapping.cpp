@@ -84,4 +84,63 @@ TEST_CASE("Test fdmapping operations") {
     REQUIRE(fdm.name(idx_in).value() == "stdin");
   }
 
+  SECTION("Std mappings") {
+    SECTION("Handle null, empty and incorrect str") {
+      td::add_std_fd(nullptr, fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+
+      td::add_std_fd("", fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+
+      td::add_std_fd("invalid", fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+    }
+
+    SECTION("single token") {
+      auto [fd, name] = GENERATE(table<int, char const*>({
+                          {0, "stdin"},
+                          {1, "stdout"},
+                          {2, "stderr"}
+      }));
+
+      td::add_std_fd(name, fdm);
+      REQUIRE(fdm.get_mapping_count() == 1);
+      auto ret = fdm.mapping_idx(fd);
+      REQUIRE(ret);
+      REQUIRE(!ret->second);
+      REQUIRE(fdm.name(ret->first) == name);
+    }
+
+    SECTION("multiple token") {
+      auto [fds, name] = GENERATE(table<std::array<int, 2>, char const*>({
+                          {{0, 1}, "stdin,stdout"},
+                          {{1, 2}, "stdout,stderr"},
+                          {{2, 0}, "stderr,stdin"}
+      }));
+
+      td::add_std_fd(name, fdm);
+      REQUIRE(fdm.get_mapping_count() == 2);
+      for (auto fd : fds) {
+        auto ret = fdm.mapping_idx(fd);
+        REQUIRE(ret);
+        REQUIRE(!ret->second);
+      }
+    }
+
+    SECTION("ignore nonexact") {
+      td::add_std_fd("nostdin", fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+
+      td::add_std_fd("stderrout", fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+
+      td::add_std_fd("astdin,stderrout", fdm);
+      REQUIRE(fdm.get_mapping_count() == 0);
+    }
+
+    SECTION("all") {
+      td::add_std_fd("stderr,stdin,stdout", fdm);
+      REQUIRE(fdm.get_mapping_count() == 3);
+    }
+  }
 }

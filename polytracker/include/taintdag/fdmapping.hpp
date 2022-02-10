@@ -92,5 +92,14 @@ FDMappingHdr.
       mutable std::mutex m_;
 
   };
+
+  // parses the config_str, scanning for the tokens:
+  // stdin, stdout and stderr
+  // for each found it will add its corresponding
+  // fd number 0,1 and 2 to the fdmapping with
+  // the name. This allows tracking of taint from/to
+  // stdin/stdout/stderr
+  // if null config_str nothing is added
+  void add_std_fd(char const *config_str, FDMapping &fdm);
 }
 #endif

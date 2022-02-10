@@ -24,6 +24,7 @@ PolyTracker::PolyTracker(std::filesystem::path const&outputfile)
  : of_{outputfile}, fdm_{of_.fd_mapping_begin(), of_.fd_mapping_end()},
  tdag_{of_.tdag_mapping_begin(), of_.tdag_mapping_end()},
  sinklog_{of_.sink_mapping_begin(), of_.sink_mapping_end()} {
+  add_std_fd(getenv("POLYTRACKER_STDFD"), fdm_);
 }
 
 PolyTracker::~PolyTracker() {
@@ -117,7 +118,6 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem, size
 }
 
 void PolyTracker::affects_control_flow(label_t lbl) {
-  //printf("Label %u affects control flow\n", lbl);
   tdag_.affects_control_flow(lbl);
 }
 
