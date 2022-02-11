@@ -84,14 +84,14 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
         return_str = ""
         ret = None
         try:
-            # ret = subprocess.run(
-            #     command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            # )
+            ret = subprocess.run(
+                command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             # ret = subprocess.run(command)
-            ret = subprocess.run(command, capture_output=True)
-            stats["draw_stdout"] = ret.stdout.decode('utf-8')
-            stats["draw_stderr"] = ret.stderr.decode('utf-8')
-            stats["draw_return_code"] = ret.returncode
+            # ret = subprocess.run(command, capture_output=True)
+            # stats["draw_stdout"] = ret.stdout.decode('utf-8')
+            # stats["draw_stderr"] = ret.stderr.decode('utf-8')
+            # stats["draw_return_code"] = ret.returncode
             if ret.returncode == 124:
                 return_str = f"{filename},-1,-1\n"
                 stats["draw_timeout"] = True
