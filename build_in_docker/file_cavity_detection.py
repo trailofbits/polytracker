@@ -3,12 +3,14 @@ import concurrent.futures
 import json
 import os.path
 import subprocess
+import sys
 from argparse import ArgumentParser
 from os import mkdir, rename
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import time
 from typing import Dict, Iterable, Union
+
 
 DOCKER_IMAGE = "trailofbits/polytrackerbuilder-mupdf"
 BINDIR = Path(os.path.dirname(os.path.realpath(__file__))) / "bin"
@@ -54,7 +56,7 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
         command = [
             "docker",
             "run",
-            "-it",
+            "-t",
             "--rm",
             "--mount",
             f"type=bind,source={inputdir},target=/inputs",
@@ -121,13 +123,25 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
 def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path]):
     if not os.path.exists(output_dir):
         mkdir(output_dir)
+
+    # TODO (hbrodin): Consider not enqueueing all work upfront but keep a limit
+    # on the size of the futures list and append as jobs complete.
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe, open(output_dir / RESULTSCSV, "w") as f:
         futures = []
         for input in paths:
-            print(f"Queue {input}")
-            futures.append(
-                tpe.submit(file_cavity_detection, input, output_dir, TIMEOUT)
-            )
+            if str(input).strip() == "-":
+                # Read inputs from stdin
+                for file in sys.stdin:
+                    file = file.rstrip()
+                    print(f"Queue {file}")
+                    futures.append(
+                        tpe.submit(file_cavity_detection, Path(file), output_dir, TIMEOUT)
+                    )
+            else:
+                print(f"Queue {input}")
+                futures.append(
+                    tpe.submit(file_cavity_detection, input, output_dir, TIMEOUT)
+                )
         for fut in concurrent.futures.as_completed(futures):
             f.write(fut.result())
 
