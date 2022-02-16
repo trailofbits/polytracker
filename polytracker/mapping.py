@@ -3,7 +3,7 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
-from typing import Dict, Iterator, Set
+from typing import Dict, Iterable, Iterator, Set
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
@@ -11,13 +11,15 @@ from tqdm import tqdm
 from . import PolyTrackerTrace
 from .inputs import Input
 from .plugins import Command
-from .tracing import ByteOffset, TaintOutput, TaintedRegion
+from .tracing import ByteOffset, TaintedRegion
+from .taint_forest import TaintForestNode
+# from .tracing import TaintOutput, Taints
 
 
 class InputOutputMapping:
     def __init__(self, trace: PolyTrackerTrace):
         self.trace: PolyTrackerTrace = trace
-        self.inputs = {i.uid: i for i in trace.inputs}
+        # self.inputs = {i.uid: i for i in trace.inputs}
         self._mapping: Dict[ByteOffset, Set[ByteOffset]] = defaultdict(set)
         self._mapping_is_complete: bool = False
 
@@ -36,37 +38,23 @@ class InputOutputMapping:
 
         return self._mapping
 
-    def read_from(self, output: TaintOutput) -> Set[ByteOffset]:
-        written_to = self.inputs[output.source.uid]
-        output_byte_offset = ByteOffset(source=written_to, offset=output.offset)
-        ret: Set[ByteOffset] = set()
-        for byte_offset in output.taints():
-            self._mapping[byte_offset].add(output_byte_offset)
-            ret.add(byte_offset)
-        return ret
+    # TODO(surovic): unused
+    # def read_from(self, output: TaintOutput) -> Set[ByteOffset]:
+    #     written_to = self.inputs[output.source.uid]
+    #     output_byte_offset = ByteOffset(source=written_to, offset=output.offset)
+    #     ret: Set[ByteOffset] = set()
+    #     for byte_offset in output.taints():
+    #         self._mapping[byte_offset].add(output_byte_offset)
+    #         ret.add(byte_offset)
+    #     return ret
 
     def written_input_bytes(self) -> Iterator[ByteOffset]:
         """Yields all of the input byte offsets from input files that are written to an output file"""
-        output_labels = {
-            output_taint.label
-            for output_taint in tqdm(self.trace.output_taints, unit=" output taints", leave=False)
-        }
-        yielded: Set[ByteOffset] = set()
-        for node in tqdm(self.trace.taint_forest, desc="searching taint forest", unit=" nodes", leave=False):
-            # this is guaranteed to iterate over the nodes in order of decreasing label
-            if node.label in output_labels:
-                if node.is_canonical():
-                    # this was written!
-                    offset = self.trace.file_offset(node)
-                    if offset not in yielded:
-                        yield offset
-                        yielded.add(offset)
-                else:
-                    if node.parent_one is not None:
-                        output_labels.add(node.parent_one.label)
-                    if node.parent_two is not None:
-                        output_labels.add(node.parent_two.label)
-
+        sink_nodes : Iterable[TaintForestNode] = []
+        for t in self.trace.output_taints:
+            sink_nodes.append(self.trace.taint_forest.get_node(t.label))
+        yield from self.trace.taints(sink_nodes)
+    
     def file_cavities(self) -> Iterator[TaintedRegion]:
         sources: Dict[Input, IntervalTree] = defaultdict(IntervalTree)
         for offset in self.written_input_bytes():
