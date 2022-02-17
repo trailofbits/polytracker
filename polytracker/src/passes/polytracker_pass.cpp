@@ -595,20 +595,11 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
         }
       }
       for (auto &bb : func) {
-<<<<<<< HEAD
-        for (auto &inst : bb) {
-          if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
-            visitBranchInst(*BI);
-          } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(&inst)) {
-            visitSwitch(*SI);
-          }
-=======
         auto inst = bb.getTerminator();
         if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(inst)) {
           visitBranchInst(*BI);
         } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(inst)) {
           visitSwitch(*SI);
->>>>>>> master
         }
       }
     }
