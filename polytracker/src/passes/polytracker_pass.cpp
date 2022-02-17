@@ -137,7 +137,6 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
 void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
   // TODO (hbrodin): Is a guard needed? E.g. op_check as in visitBranchInst?
   llvm::IRBuilder<> IRB(&SI);
-  llvm::LLVMContext &context = mod->getContext();
   llvm::Value *int_val = IRB.CreateSExtOrTrunc(SI.getCondition(), shadow_type);
   CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
 }
@@ -596,12 +595,20 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
         }
       }
       for (auto &bb : func) {
+<<<<<<< HEAD
         for (auto &inst : bb) {
           if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(&inst)) {
             visitBranchInst(*BI);
           } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(&inst)) {
             visitSwitch(*SI);
           }
+=======
+        auto inst = bb.getTerminator();
+        if (auto *BI = llvm::dyn_cast<llvm::BranchInst>(inst)) {
+          visitBranchInst(*BI);
+        } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(inst)) {
+          visitSwitch(*SI);
+>>>>>>> master
         }
       }
     }
