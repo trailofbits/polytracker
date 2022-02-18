@@ -134,12 +134,39 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
   }
 }
 
-void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
-  // TODO (hbrodin): Is a guard needed? E.g. op_check as in visitBranchInst?
-  llvm::IRBuilder<> IRB(&SI);
+void PolytrackerPass::visitGetElementPtrInst(llvm::GetElementPtrInst &GEP) {
+
+  llvm::IRBuilder<> IRB(&GEP);
   llvm::LLVMContext &context = mod->getContext();
-  llvm::Value *int_val = IRB.CreateSExtOrTrunc(SI.getCondition(), shadow_type);
-  CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+  for (auto &op : GEP.indices()) {
+    // Ignore constant indices
+    if (!llvm::isa<llvm::ConstantInt>(op)) {
+      if (!op_check(op)) {
+        llvm::Value *int_val = IRB.CreateSExtOrTrunc(op, shadow_type);
+        CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+      }
+    }
+  }
+}
+
+void PolytrackerPass::visitSelectInst(llvm::SelectInst &SI) {
+  auto condition = SI.getCondition();
+  if (!op_check(condition)) {
+    llvm::IRBuilder<> IRB(&SI);
+    llvm::LLVMContext &context = mod->getContext();
+    llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
+    CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+  }
+}
+
+void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
+  auto condition = SI.getCondition();
+  if (!op_check(condition)) {
+    llvm::IRBuilder<> IRB(&SI);
+    llvm::LLVMContext &context = mod->getContext();
+    llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
+    CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+  }
 }
 
 void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
@@ -601,7 +628,14 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
             visitBranchInst(*BI);
           } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(&inst)) {
             visitSwitch(*SI);
-          }
+          } else if (auto *SI = llvm::dyn_cast<llvm::SelectInst>(&inst)) {
+            visitSelectInst(*SI);
+          } else if (auto *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(&inst)) {
+            // TODO (hbrodin): How about GEP as part of an expression e.g.
+            // %81 = call %struct._IO_FILE* @__dfsw_fopen(i8* %80, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0),
+            //                                            i32 zeroext %79, i32 zeroext 0, i32* %labelreturn)
+            visitGetElementPtrInst(*GEP);
+           }
         }
       }
     }
