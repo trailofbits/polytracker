@@ -6,7 +6,7 @@
 #include <iostream>
 
 namespace taintdag {
-template <typename... Msgs> void error_exit(Msgs &&...msgs) {
+template <typename... Msgs> void error_exit(Msgs &&... msgs) {
   std::cerr << "Fatal error. Abort.\n";
   (std::cerr << ... << msgs) << std::endl;
   exit(-1);
