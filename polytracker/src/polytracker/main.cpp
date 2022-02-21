@@ -21,7 +21,6 @@
 #include <unistd.h>
 #include <unordered_set>
 
-
 #include "taintdag/polytracker.h"
 
 using json = nlohmann::json;

@@ -1,5 +1,5 @@
-#include "polytracker/early_construct.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/early_construct.h"
 #include "polytracker/logging.h"
 #include "polytracker/output.h"
 #include "polytracker/taint.h"
@@ -107,10 +107,10 @@ extern "C" void __polytracker_log_bb_entry(uint32_t findex, uint32_t bindex,
   }
 }
 
-extern "C" dfsan_label
-__polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
+extern "C" dfsan_label __polytracker_union_table(const dfsan_label &l1,
+                                                 const dfsan_label &l2) {
   return get_polytracker_tdag().union_labels(l1, l2);
-  //return getUnionEntry(l1, l2);
+  // return getUnionEntry(l1, l2);
 }
 
 extern "C" void __polytracker_preserve_map(char *map) {}
@@ -123,7 +123,7 @@ __polytracker_get_label_info(const dfsan_label &l1) {
 
 extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
   if (label > 0) {
-    //logConditionalBranch(label);
+    // logConditionalBranch(label);
     get_polytracker_tdag().affects_control_flow(label);
   }
 }

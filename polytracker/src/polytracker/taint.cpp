@@ -27,7 +27,6 @@ DECLARE_EARLY_CONSTRUCT(std::mutex, track_target_map_lock);
 EARLY_CONSTRUCT_EXTERN_GETTER(std::unordered_set<std::string>, target_sources);
 EARLY_CONSTRUCT_EXTERN_GETTER(fd_input_map_t, fd_input_map);
 
-
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 extern sqlite3 *output_db;
@@ -244,6 +243,6 @@ atomic_dfsan_label *getUnionEntry(const dfsan_label &l1,
   std::pair<int, int> &targ_info = getTargetTaintRange(fd);
   std::string &name = getSourceName(fd);
   taintTargetRange(mem, offset, len, targ_info.first, targ_info.second, name);
-  #endif
+#endif
   return true;
 }
