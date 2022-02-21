@@ -37,3 +37,4 @@ ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV CC=/polytracker/build/bin/polybuild_script
 ENV CXX=/polytracker/build/bin/polybuild_script++
 ENV PATH=/polytracker/build/bin:$PATH
+ENV DFSAN_OPTIONS="strict_data_dependencies=0"
