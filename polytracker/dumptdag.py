@@ -1,9 +1,8 @@
 from contextlib import contextmanager
 from ctypes import Structure, c_int32, c_uint32, c_uint64, c_uint8, c_ulonglong, sizeof
-from io import SEEK_SET
 from mmap import mmap, PROT_READ
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Generator, Iterable, List, Optional, Tuple, Union
 import sys
 
 
@@ -17,7 +16,7 @@ label_mask = 0x7fffffff
 val1_shift = label_bits
 source_index_mask = 0xff
 source_index_bits = 8
-source_offset_mask = ((1 << 54)-1)
+source_offset_mask = ((1 << 54) - 1)
 
 
 class FileHdr(Structure):
@@ -96,11 +95,11 @@ class UnionTaint(Taint):
 def open_output_file(file: Path):
     with open(file, "rb") as f, \
             mmap(f.fileno(), 0, prot=PROT_READ) as mm:
-        yield OutputFile(mm)
+        yield OutputFile(memoryview(mm))
 
 
 class OutputFile:
-    def __init__(self, mm: bytearray) -> None:
+    def __init__(self, mm: memoryview) -> None:
         self.hdr = FileHdr.from_buffer_copy(mm)
         self.mm = mm
 
@@ -116,9 +115,11 @@ class OutputFile:
                 'utf-8')  # TODO (hbrodin): Encoding???
         return (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
 
-    def fd_mappings(self) -> Iterable[Tuple[str, int, int]]:
+    def fd_mappings(self) -> Generator[Tuple[str, int, int], None, None]:
         for i in range(0, self.hdr.fd_mapping_count):
-            yield self.fd_mapping(i)
+            m = self.fd_mapping(i)
+            if m:
+                yield m
 
     def sink_log(self) -> Iterable[SinkLogEntry]:
         offset = self.hdr.sink_mapping_offset
@@ -157,7 +158,7 @@ class OutputFile:
         v = self.raw_taint(label)
         # This needs to be kept in sync with implementation in encoding.cpp
         st = (v >> source_taint_bit_shift) & 1
-        affects_cf = (v >> affects_control_flow_bit_shift) & 1
+        affects_cf = bool((v >> affects_control_flow_bit_shift) & 1)
         if st:
             idx = v & source_index_mask
             offset = (v >> source_index_bits) & source_offset_mask
@@ -305,7 +306,7 @@ def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
     return ranges
 
 
-def cavity_detection(tdag: OutputFile, sourcefile: Path):
+def cavity_detection(tdag: Path, sourcefile: Path):
     m = gen_source_taint_used(tdag, sourcefile)
     src = Path(sourcefile)
     for r in marker_to_ranges(m):
@@ -314,4 +315,4 @@ def cavity_detection(tdag: OutputFile, sourcefile: Path):
 
 if __name__ == "__main__":
     #dump_tdag(sys.argv[1])
-    cavity_detection(sys.argv[1], sys.argv[2])
+    cavity_detection(Path(sys.argv[1]), Path(sys.argv[2]))
