@@ -5,9 +5,11 @@
 __pycache__
 .mypy_cache
 .DS_Store
-/Default/
 .vscode
+*.db
 *.bc
 *.o
 *.tdag
+/Default/
 polytracker.egg-info
+/polytracker.egg-info
