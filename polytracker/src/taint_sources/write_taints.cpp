@@ -1,7 +1,5 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/early_construct.h"
-#include "polytracker/logging.h"
-#include "polytracker/output.h"
 #include "taintdag/polytracker.h"
 #include <iostream>
 #include <sanitizer/dfsan_interface.h>

@@ -41,12 +41,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -L/polytracker_clang/lib -L${POLYTRAC
 
 set(POLY_SOURCES
 ${POLY_DIR}/main.cpp 
-${POLY_DIR}/logging.cpp 
-${POLY_DIR}/taint.cpp
-${POLY_DIR}/output.cpp 
-${POLY_DIR}/tablegen.cpp 
 ${POLY_DIR}/polytracker.cpp
-${POLY_DIR}/sqlite3.c
 )
 
 set (TAINT_SOURCES 
