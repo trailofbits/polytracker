@@ -254,7 +254,7 @@ class TDProgramTrace(ProgramTrace):
         return super().outputs
 
     @staticmethod
-    @PolyTrackerREPL.register("load_trace")
+    @PolyTrackerREPL.register("load_trace_tdag")
     def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
         """loads a trace from a .tdag file emitted by an instrumented binary"""
         f = open(tdpath, "rb")
