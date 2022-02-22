@@ -100,7 +100,7 @@ def open_output_file(file: Path):
 
 
 class OutputFile:
-    def __init__(self, mm: bytearray) -> None:
+    def __init__(self, mm: mmap) -> None:
         self.hdr = FileHdr.from_buffer_copy(mm)
         self.mm = mm
 
@@ -113,7 +113,7 @@ class OutputFile:
 
         sbegin = self.hdr.fd_mapping_offset + fdmhdr.name_offset
         s = str(
-            self.mm[sbegin: sbegin + fdmhdr.name_len], "utf-8"
+            self.mm[sbegin : sbegin + fdmhdr.name_len], "utf-8"
         )  # TODO (hbrodin): Encoding???
         return (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
 
@@ -267,7 +267,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-            x for x in f.fd_mappings() if x[0] == sourcefile
+            x for x in f.fd_mappings() if x[0] == sourcefile.name
         )
         filelen = src_end - src_begin
         marker = bytearray(filelen)
@@ -315,5 +315,5 @@ def cavity_detection(tdag: Path, sourcefile: Path):
 
 
 if __name__ == "__main__":
-    dump_tdag(sys.argv[1])
-    # cavity_detection(Path(sys.argv[1]), Path(sys.argv[2]))
+    # dump_tdag(Path(sys.argv[1]))
+    cavity_detection(Path(sys.argv[1]), Path(sys.argv[2]))
