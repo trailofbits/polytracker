@@ -664,7 +664,7 @@ class DBProgramTrace(ProgramTrace):
                 del self.thread_event_cache[(instance.thread_id, instance.thread_event_id)]
 
     @staticmethod
-    @PolyTrackerREPL.register("load_trace")
+    @PolyTrackerREPL.register("load_trace_db")
     def load(db_path: Union[str, Path], read_only: bool = True) -> "DBProgramTrace":
         """loads a trace from the database emitted by an instrumented binary"""
         engine = create_engine(f"sqlite:///{db_path!s}")
