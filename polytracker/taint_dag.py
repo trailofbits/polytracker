@@ -6,7 +6,6 @@ from .tracing import (
     BasicBlock,
     ByteOffset,
     Function,
-    Input,
     TaintAccess,
     TraceEvent,
     TaintOutput,
@@ -123,10 +122,10 @@ class TDFile:
 
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
-            header_offset = offset + sizeof(TDFDHeader)*i
+            header_offset = offset + sizeof(TDFDHeader) * i
             fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)
             sbegin = offset + fdhdr.name_offset
-            path = str(self.buffer[sbegin:sbegin+fdhdr.name_len], "utf-8")
+            path = str(self.buffer[sbegin: sbegin + fdhdr.name_len], "utf-8")
             yield (path, fdhdr)
 
     @property
@@ -229,9 +228,6 @@ class TDProgramTrace(ProgramTrace):
     @property
     def functions(self) -> Iterable[Function]:
         return super().functions
-
-    def get_event(self, uid: int) -> TraceEvent:
-        return super().get_event(uid)
 
     def get_event(self, uid: int) -> TraceEvent:
         return super().get_event(uid)
@@ -378,10 +374,10 @@ class TDTaintForest(TaintForest):
 
         elif isinstance(node, TDRangeNode):
             for n in range(node.first, node.last):
-                l = self.get_synth_node_label()
-                self.node_cache[l] = TDTaintForestNode(
+                synth_label = self.get_synth_node_label()
+                self.node_cache[synth_label] = TDTaintForestNode(
                     self,
-                    l,
+                    synth_label,
                     None,
                     node.affects_control_flow,
                     n,

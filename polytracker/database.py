@@ -106,24 +106,33 @@ class DBFunction(Base, Function):  # type: ignore
     accessed_labels = relationship(
         "DBTaintAccess",
         primaryjoin="and_(DBFunction.id==remote(DBBasicBlock.function_id), "
-                    "foreign(DBTraceEvent.block_gid)==DBBasicBlock.id, "
-                    "foreign(DBTaintAccess.event_id)==DBTraceEvent.event_id)",
+        "foreign(DBTraceEvent.block_gid)==DBBasicBlock.id, "
+        "foreign(DBTaintAccess.event_id)==DBTraceEvent.event_id)",
         viewonly=True,
     )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints(
+            (label.taint_forest_node for label in self.accessed_labels)
+        )
 
     @property
     def function_index(self) -> int:  # type: ignore
         return self.id
 
     def calls_to(self) -> Set["Function"]:
-        return {edge.dest for edge in self.outgoing_edges if
-                edge.dest is not None and edge.edge_type == EdgeType.FORWARD}
+        return {
+            edge.dest
+            for edge in self.outgoing_edges
+            if edge.dest is not None and edge.edge_type == EdgeType.FORWARD
+        }
 
     def called_from(self) -> Set["Function"]:
-        return {edge.src for edge in self.incoming_edges if edge.src is not None and edge.edge_type == EdgeType.FORWARD}
+        return {
+            edge.src
+            for edge in self.incoming_edges
+            if edge.src is not None and edge.edge_type == EdgeType.FORWARD
+        }
 
 
 class FunctionCFGEdge(Base):  # type: ignore
@@ -135,8 +144,12 @@ class FunctionCFGEdge(Base):  # type: ignore
     event_id = Column(BigInteger, ForeignKey("events.event_id"))
     edge_type = Column(SmallInteger, SQLEnum(EdgeType))
 
-    dest = relationship("DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges")
-    src = relationship("DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges")
+    dest = relationship(
+        "DBFunction", foreign_keys=[dest_id], back_populates="incoming_edges"
+    )
+    src = relationship(
+        "DBFunction", foreign_keys=[src_id], back_populates="outgoing_edges"
+    )
     source = relationship("DBInput")
     event = relationship("DBTraceEvent")
 
@@ -152,7 +165,9 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
 
     __table_args__ = (UniqueConstraint("id", "block_attributes"),)
 
-    events: Iterable["DBTraceEvent"] = relationship("DBTraceEvent", order_by="asc(DBTraceEvent.event_id)")
+    events: Iterable["DBTraceEvent"] = relationship(
+        "DBTraceEvent", order_by="asc(DBTraceEvent.event_id)"
+    )
     function = relationship("DBFunction", back_populates="basic_blocks")
 
     _children: Optional[Set[BasicBlock]] = None
@@ -162,9 +177,9 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
     def entries(self) -> Iterator[BasicBlockEntry]:
         return stream_results(
             Session.object_session(self)
-                .query(DBBasicBlockEntry)
-                .filter(DBBasicBlockEntry.block_gid == self.id)
-                .order_by(DBBasicBlockEntry.event_id.asc())
+            .query(DBBasicBlockEntry)
+            .filter(DBBasicBlockEntry.block_gid == self.id)
+            .order_by(DBBasicBlockEntry.event_id.asc())
         )
 
     @property
@@ -175,15 +190,20 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
     def accessed_labels(self) -> Iterable["DBTaintAccess"]:
         return stream_results(
             Session.object_session(self)
-                .query(DBTaintAccess)
-                .join(DBTraceEvent)
-                .filter(DBTraceEvent.block_gid == self.id, DBTaintAccess.event_id == DBTraceEvent.event_id)
-                .order_by(DBTaintAccess.access_id.asc())
-                .all()
+            .query(DBTaintAccess)
+            .join(DBTraceEvent)
+            .filter(
+                DBTraceEvent.block_gid == self.id,
+                DBTaintAccess.event_id == DBTraceEvent.event_id,
+            )
+            .order_by(DBTaintAccess.access_id.asc())
+            .all()
         )
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.get_taints((label.taint_forest_node for label in self.accessed_labels))
+        return DBTaintForestNode.get_taints(
+            (label.taint_forest_node for label in self.accessed_labels)
+        )
 
     def _discover_neighbors(self):
         if self._children is not None and self._predecessors is not None:
@@ -193,25 +213,27 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
         next_event_queue = []
         prev_event_queue = []
         with tqdm(
-                desc=f"resolving neighborhood for event {self.id}",
-                unit=" BBs",
-                total=3,
-                leave=False,
+            desc=f"resolving neighborhood for event {self.id}",
+            unit=" BBs",
+            total=3,
+            leave=False,
         ) as t:
             t.update(1)
-            for event in tqdm(self.events, desc="processing", unit=" events", leave=False):
-                next_event = event.next_event
+            for e in tqdm(
+                self.events, desc="processing", unit=" events", leave=False
+            ):
+                next_event = e.next_event
                 if next_event is not None:
                     next_event_queue.append(next_event)
-                prev_event = event.previous_event
+                prev_event = e.previous_event
                 if prev_event is not None:
                     prev_event_queue.append(prev_event)
             t.update(1)
             with tqdm(
-                    desc="processing",
-                    unit="descendants",
-                    leave=False,
-                    total=len(next_event_queue),
+                desc="processing",
+                unit="descendants",
+                leave=False,
+                total=len(next_event_queue),
             ) as d:
                 while next_event_queue:
                     d.update(1)
@@ -226,10 +248,10 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
                             d.total += 1
             t.update(1)
             with tqdm(
-                    desc="processing",
-                    unit="predecessors",
-                    leave=False,
-                    total=len(prev_event_queue),
+                desc="processing",
+                unit="predecessors",
+                leave=False,
+                total=len(prev_event_queue),
             ) as d:
                 while prev_event_queue:
                     d.update(1)
@@ -261,9 +283,15 @@ class DBTaintAccess(Base, TaintAccess):  # type: ignore
     label = Column(Integer, ForeignKey("taint_forest.label"))
     access_type = Column(SmallInteger, SQLEnum(ByteAccessType))
 
-    event: "DBTraceEvent" = relationship("DBTraceEvent", back_populates="accessed_labels")
-    taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
-                                                          back_populates="accesses", sync_backref=False)
+    event: "DBTraceEvent" = relationship(
+        "DBTraceEvent", back_populates="accessed_labels"
+    )
+    taint_forest_node: "DBTaintForestNode" = relationship(
+        "DBTaintForestNode",
+        foreign_keys=[label],
+        back_populates="accesses",
+        sync_backref=False,
+    )
 
     def taints(self) -> Taints:
         return DBTaintForestNode.get_taints((self.taint_forest_node,))
@@ -272,7 +300,9 @@ class DBTaintAccess(Base, TaintAccess):  # type: ignore
 class DBTraceEvent(Base, TraceEvent):  # type: ignore
     __tablename__ = "events"
     event_id = Column(BigInteger)  # globally unique, globally sequential event counter
-    thread_event_id = Column(BigInteger)  # unique-to-thread id, sequential within the thread
+    thread_event_id = Column(
+        BigInteger
+    )  # unique-to-thread id, sequential within the thread
     event_type = Column(SmallInteger, SQLEnum(EventType))
     input_id = Column(Integer, ForeignKey("input.id"))
     thread_id = Column(Integer)
@@ -315,9 +345,9 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
                 try:
                     self._function_entry = (
                         Session.object_session(self)
-                            .query(DBFunctionEntry)
-                            .filter(DBFunctionEntry.event_id == self.func_event_id)
-                            .one()
+                        .query(DBFunctionEntry)
+                        .filter(DBFunctionEntry.event_id == self.func_event_id)
+                        .one()
                     )
                 except NoResultFound:
                     self._function_entry = None
@@ -328,7 +358,9 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
         if self.trace is not None:
             # Use the LRU event cache in the trace:
             try:
-                return self.trace.get_thread_event(thread_event_id=self.thread_event_id + 1, thread_id=self.thread_id)
+                return self.trace.get_thread_event(
+                    thread_event_id=self.thread_event_id + 1, thread_id=self.thread_id
+                )
             except KeyError:
                 return None
         elif not hasattr(self, "_next_event"):
@@ -338,11 +370,11 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
                     self,
                     "_next_event",
                     session.query(DBTraceEvent)
-                        .filter(
+                    .filter(
                         DBTraceEvent.thread_event_id == self.thread_event_id + 1,
                         DBTraceEvent.thread_id == self.thread_id,
                     )
-                        .one(),
+                    .one(),
                 )
                 setattr(self._next_event, "_prev_event", self)
             except NoResultFound:
@@ -354,7 +386,9 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
         if self.trace is not None:
             # Use the LRU event cache in the trace:
             try:
-                return self.trace.get_thread_event(thread_event_id=self.thread_event_id - 1, thread_id=self.thread_id)
+                return self.trace.get_thread_event(
+                    thread_event_id=self.thread_event_id - 1, thread_id=self.thread_id
+                )
             except KeyError:
                 return None
         elif not hasattr(self, "_prev_event"):
@@ -364,11 +398,11 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
                     self,
                     "_prev_event",
                     session.query(DBTraceEvent)
-                        .filter(
+                    .filter(
                         DBTraceEvent.thread_event_id == self.thread_event_id - 1,
                         DBTraceEvent.thread_id == self.thread_id,
                     )
-                        .one(),
+                    .one(),
                 )
                 setattr(self._prev_event, "_next_event", self)
             except NoResultFound:
@@ -385,7 +419,11 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
                 return None
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(DBTraceEvent.event_id == self.event_id + 1).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(DBTraceEvent.event_id == self.event_id + 1)
+                .one()
+            )
         except NoResultFound:
             return None
 
@@ -399,12 +437,18 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
                 return None
         session = Session.object_session(self)
         try:
-            return session.query(DBTraceEvent).filter(DBTraceEvent.event_id == self.event_id - 1).one()
+            return (
+                session.query(DBTraceEvent)
+                .filter(DBTraceEvent.event_id == self.event_id - 1)
+                .one()
+            )
         except NoResultFound:
             return None
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.accessed_labels))
+        return DBTaintForestNode.get_taints(
+            (access.taint_forest_node for access in self.accessed_labels)
+        )
 
 
 class BlockEntries(Base):  # type: ignore
@@ -448,34 +492,36 @@ class DBBasicBlockEntry(DBTraceEvent, BasicBlockEntry):  # type: ignore
         try:
             return (
                 self.trace.session.query(DBBasicBlockEntry)
-                    .filter(
+                .filter(
                     DBBasicBlockEntry.thread_id == self.thread_id,
                     DBBasicBlockEntry.func_event_id == self.func_event_id,
                     DBBasicBlockEntry.thread_event_id > self.thread_event_id,
                 )
-                    .order_by(DBBasicBlockEntry.thread_event_id.asc())
-                    .limit(1)
-                    .one()
+                .order_by(DBBasicBlockEntry.thread_event_id.asc())
+                .limit(1)
+                .one()
             )
         except NoResultFound:
             return None
 
-    def next_basic_block_in_function_that_touched_taint(self) -> Optional["BasicBlockEntry"]:
+    def next_basic_block_in_function_that_touched_taint(
+        self,
+    ) -> Optional["BasicBlockEntry"]:
         if self.trace is None:
             return super().next_basic_block_in_function()
         try:
             return (
                 self.trace.session.query(DBBasicBlockEntry)
-                    .join(DBTaintAccess)
-                    .filter(
+                .join(DBTaintAccess)
+                .filter(
                     DBBasicBlockEntry.thread_id == self.thread_id,
                     DBBasicBlockEntry.func_event_id == self.func_event_id,
                     DBBasicBlockEntry.thread_event_id > self.thread_event_id,
                     DBTraceEvent.event_id == DBBasicBlockEntry.event_id,
                 )
-                    .order_by(DBBasicBlockEntry.thread_event_id.asc())
-                    .limit(1)
-                    .one()
+                .order_by(DBBasicBlockEntry.thread_event_id.asc())
+                .limit(1)
+                .one()
             )
         except NoResultFound:
             return None
@@ -500,8 +546,10 @@ class DBFunctionEntry(DBFunctionEvent, FunctionEntry):  # type: ignore
     def function_return(self) -> Optional["FunctionReturn"]:
         try:
             return (
-                Session.object_session(self).query(DBFunctionReturn).filter(
-                    DBFunctionReturn.func_event_id == self.uid).one()
+                Session.object_session(self)
+                .query(DBFunctionReturn)
+                .filter(DBFunctionReturn.func_event_id == self.uid)
+                .one()
             )
         except NoResultFound:
             return None
@@ -513,7 +561,12 @@ class DBCallUninst(DBFunctionEvent, CallUninst):  # type: ignore
     @property
     def function_name(self) -> Optional[str]:
         try:
-            item = Session.object_session(self).query(DBUninstFunc).filter(DBUninstFunc.event_id == self.uid).one()
+            item = (
+                Session.object_session(self)
+                .query(DBUninstFunc)
+                .filter(DBUninstFunc.event_id == self.uid)
+                .one()
+            )
             return item.name
         except NoResultFound:
             return None
@@ -563,9 +616,9 @@ class DBFunctionInvocation(FunctionInvocation):
         try:
             return bool(
                 self.trace.session.query(FunctionEntries)
-                    .filter(FunctionEntries.event_id == self.function_entry.event_id)
-                    .one()
-                    .touched_taint
+                .filter(FunctionEntries.event_id == self.function_entry.event_id)
+                .one()
+                .touched_taint
             )
         except NoResultFound:
             return False
@@ -573,8 +626,8 @@ class DBFunctionInvocation(FunctionInvocation):
     def taint_accesses(self) -> Iterator[DBTaintAccess]:
         query = (
             self.trace.session.query(DBTaintAccess)
-                .join(DBTraceEvent)
-                .filter(
+            .join(DBTraceEvent)
+            .filter(
                 DBTraceEvent.thread_id == self.function_entry.thread_id,
                 DBTraceEvent.thread_event_id >= self.function_entry.thread_event_id,
             )
@@ -585,7 +638,9 @@ class DBFunctionInvocation(FunctionInvocation):
         return stream_results(query.order_by(DBTaintAccess.access_id.asc()))
 
     def taints(self) -> Taints:
-        return DBTaintForestNode.get_taints((access.taint_forest_node for access in self.taint_accesses()))
+        return DBTaintForestNode.get_taints(
+            (access.taint_forest_node for access in self.taint_accesses())
+        )
 
     def calls(self) -> Iterator["DBFunctionInvocation"]:
         event = self.function_return
@@ -595,13 +650,14 @@ class DBFunctionInvocation(FunctionInvocation):
             try:
                 event = (
                     self.trace.session.query(DBTraceEvent)
-                        .filter(
-                        DBTraceEvent.thread_event_id > self.function_entry.thread_event_id,
-                        DBTraceEvent.thread_id == thread_id
+                    .filter(
+                        DBTraceEvent.thread_event_id
+                        > self.function_entry.thread_event_id,
+                        DBTraceEvent.thread_id == thread_id,
                     )
-                        .order_by(DBTraceEvent.thread_event_id.desc())
-                        .limit(1)
-                        .one()
+                    .order_by(DBTraceEvent.thread_event_id.desc())
+                    .limit(1)
+                    .one()
                 )
             except NoResultFound:
                 return iter(())
@@ -612,14 +668,15 @@ class DBFunctionInvocation(FunctionInvocation):
             try:
                 func_return = (
                     self.trace.session.query(DBFunctionReturn)
-                        .filter(
+                    .filter(
                         DBFunctionReturn.thread_event_id < event.thread_event_id,
-                        DBFunctionReturn.thread_event_id > self.function_entry.thread_event_id,
+                        DBFunctionReturn.thread_event_id
+                        > self.function_entry.thread_event_id,
                         DBFunctionReturn.thread_id == thread_id,
                     )
-                        .order_by(DBFunctionReturn.thread_event_id.desc())
-                        .limit(1)
-                        .one()
+                    .order_by(DBFunctionReturn.thread_event_id.desc())
+                    .limit(1)
+                    .one()
                 )
                 event = func_return.function_entry
                 if event is not None:
@@ -632,19 +689,24 @@ class DBFunctionInvocation(FunctionInvocation):
     def basic_blocks(self) -> Iterator[BasicBlockEntry]:
         return (
             self.trace.session.query(DBBasicBlockEntry)
-                .filter(
+            .filter(
                 DBBasicBlockEntry.func_event_id == self.function_entry.event_id,
             )
-                .order_by(DBBasicBlockEntry.thread_event_id.asc())
-                .all()
+            .order_by(DBBasicBlockEntry.thread_event_id.asc())
+            .all()
         )
 
 
 class DBProgramTrace(ProgramTrace):
     def __init__(self, session: Session, event_cache_size: Optional[int] = 15000000):
         self.session: Session = session
-        self.event_cache: LRUCache[int, TraceEvent] = LRUCache(max_size=event_cache_size)
-        self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(max_size=event_cache_size)
+        self.event_cache: LRUCache[int, TraceEvent] = LRUCache(
+            max_size=event_cache_size
+        )
+        self.thread_event_cache: LRUCache[Tuple[int, int], DBTraceEvent] = LRUCache(
+            max_size=event_cache_size
+        )
+
         @event.listens_for(session, "pending_to_persistent")
         @event.listens_for(session, "deleted_to_persistent")
         @event.listens_for(session, "detached_to_persistent")
@@ -652,7 +714,9 @@ class DBProgramTrace(ProgramTrace):
         def strong_ref_object(sess, instance):
             if isinstance(instance, DBTraceEvent):
                 self.event_cache[instance.event_id] = instance
-                self.thread_event_cache[(instance.thread_id, instance.thread_event_id)] = instance
+                self.thread_event_cache[
+                    (instance.thread_id, instance.thread_event_id)
+                ] = instance
                 instance.trace = self
 
         @event.listens_for(session, "persistent_to_detached")
@@ -661,7 +725,9 @@ class DBProgramTrace(ProgramTrace):
         def deref_object(sess, instance):
             if isinstance(instance, DBTraceEvent):
                 del self.event_cache[instance.uid]
-                del self.thread_event_cache[(instance.thread_id, instance.thread_event_id)]
+                del self.thread_event_cache[
+                    (instance.thread_id, instance.thread_event_id)
+                ]
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace_db")
@@ -675,6 +741,7 @@ class DBProgramTrace(ProgramTrace):
         session = session_maker()
 
         if read_only:
+
             def abort_read_only(*_, **__):
                 raise ValueError(
                     f"Database {db_path} was loaded as read only! To write to the database, make sure "
@@ -697,38 +764,55 @@ class DBProgramTrace(ProgramTrace):
         return self.session.query(DBTraceEvent).count()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        yield from stream_results(self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc()))
+        yield from stream_results(
+            self.session.query(DBTraceEvent).order_by(DBTraceEvent.event_id.asc())
+        )
 
     @property
     def call_trace(self) -> Iterator[DBFunctionEvent]:
-        yield from stream_results(self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc()))
+        yield from stream_results(
+            self.session.query(DBFunctionEvent).order_by(DBFunctionEvent.event_id.asc())
+        )
 
     def function_trace(self) -> Iterator[DBFunctionEntry]:
-        yield from stream_results(self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()))
+        yield from stream_results(
+            self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc())
+        )
 
     def num_function_calls(self) -> int:
         return self.session.query(DBFunctionEntry).count()
 
     def num_function_calls_that_touched_taint(self) -> int:
-        return self.session.query(FunctionEntries).filter(FunctionEntries.touched_taint > 0).count()
+        return (
+            self.session.query(FunctionEntries)
+            .filter(FunctionEntries.touched_taint > 0)
+            .count()
+        )
 
     def num_basic_block_entries(self) -> int:
         return self.session.query(DBBasicBlockEntry).count()
 
-    def next_function_entry(self, after: Optional[FunctionEntry] = None) -> Optional[FunctionEntry]:
+    def next_function_entry(
+        self, after: Optional[FunctionEntry] = None
+    ) -> Optional[FunctionEntry]:
         try:
             if after is None:
-                return self.session.query(DBFunctionEntry).order_by(DBFunctionEntry.event_id.asc()).limit(1).one()
+                return (
+                    self.session.query(DBFunctionEntry)
+                    .order_by(DBFunctionEntry.event_id.asc())
+                    .limit(1)
+                    .one()
+                )
             elif isinstance(after, DBFunctionEntry):
                 return (
                     self.session.query(DBFunctionEntry)
-                        .filter(
+                    .filter(
                         DBFunctionEntry.thread_event_id > after.thread_event_id,
-                        DBFunctionEntry.thread_id == after.thread_id
+                        DBFunctionEntry.thread_id == after.thread_id,
                     )
-                        .order_by(DBFunctionEntry.thread_event_id.asc())
-                        .limit(1)
-                        .one()
+                    .order_by(DBFunctionEntry.thread_event_id.asc())
+                    .limit(1)
+                    .one()
                 )
             else:
                 return super().next_function_entry(after)
@@ -751,7 +835,12 @@ class DBProgramTrace(ProgramTrace):
         except KeyError:
             pass
         try:
-            return self.session.query(DBTraceEvent).filter(DBTraceEvent.event_id == uid).limit(1).one()
+            return (
+                self.session.query(DBTraceEvent)
+                .filter(DBTraceEvent.event_id == uid)
+                .limit(1)
+                .one()
+            )
         except NoResultFound:
             pass
         raise KeyError(uid)
@@ -767,9 +856,12 @@ class DBProgramTrace(ProgramTrace):
         try:
             return (
                 self.session.query(DBTraceEvent)
-                    .filter(DBTraceEvent.thread_event_id == thread_event_id, DBTraceEvent.thread_id == thread_id)
-                    .limit(1)
-                    .one()
+                .filter(
+                    DBTraceEvent.thread_event_id == thread_event_id,
+                    DBTraceEvent.thread_id == thread_id,
+                )
+                .limit(1)
+                .one()
             )
         except NoResultFound:
             pass
@@ -783,13 +875,17 @@ class DBProgramTrace(ProgramTrace):
         try:
             file_offset = (
                 self.session.query(CanonicalMap)
-                    .filter(
-                        CanonicalMap.taint_label == node.label,
-                        CanonicalMap.input_id == node.source.uid,
-                    ).one().file_offset
+                .filter(
+                    CanonicalMap.taint_label == node.label,
+                    CanonicalMap.input_id == node.source.uid,
+                )
+                .one()
+                .file_offset
             )
         except NoResultFound:
-            raise ValueError(f"Taint label {node.label} is not in the canonical mapping!")
+            raise ValueError(
+                f"Taint label {node.label} is not in the canonical mapping!"
+            )
         return ByteOffset(source=node.source, offset=file_offset)
 
     @property
@@ -798,20 +894,30 @@ class DBProgramTrace(ProgramTrace):
 
     def get_function(self, name: str) -> Function:
         try:
-            return self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+            return (
+                self.session.query(DBFunction).filter(DBFunction.name.like(name)).one()
+            )
         except NoResultFound:
             pass
         raise KeyError(name)
 
     def has_function(self, name: str) -> bool:
-        return self.session.query(DBFunction).filter(DBFunction.name.like(name)).limit(1).count() > 0
+        return (
+            self.session.query(DBFunction)
+            .filter(DBFunction.name.like(name))
+            .limit(1)
+            .count()
+            > 0
+        )
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
         return self.session.query(DBBasicBlock).all()
 
     def access_sequence(self) -> Iterator[TaintAccess]:
-        yield from stream_results(self.session.query(DBTaintAccess).order_by(DBTaintAccess.event_id.asc()))
+        yield from stream_results(
+            self.session.query(DBTaintAccess).order_by(DBTaintAccess.event_id.asc())
+        )
 
     @property
     def num_accesses(self) -> int:
@@ -855,11 +961,21 @@ class DBProgramTrace(ProgramTrace):
         }
         canonical_map = {
             (mapping.input_id, mapping.taint_label): mapping.file_offset
-            for mapping in tqdm(self.session.query(CanonicalMap).all(), desc="caching the canonical map", leave=False)
+            for mapping in tqdm(
+                self.session.query(CanonicalMap).all(),
+                desc="caching the canonical map",
+                leave=False,
+            )
         }
-        for label, input_id, parent_one, parent_two in tqdm(self.session.execute(
+        for label, input_id, parent_one, parent_two in tqdm(
+            self.session.execute(
                 "SELECT label, input_id, parent_one, parent_two FROM taint_forest ORDER BY label DESC"
-        ), desc="searching taint forest", unit=" nodes", leave=False, total=len(forest)):
+            ),
+            desc="searching taint forest",
+            unit=" nodes",
+            leave=False,
+            total=len(forest),
+        ):
             # this is guaranteed to iterate over the nodes in order of decreasing label
             if label in history:
                 if parent_one == parent_two == 0:
@@ -919,8 +1035,12 @@ class DBTaintOutput(Base, TaintOutput):  # type: ignore
     input_id = Column(Integer, ForeignKey("input.id"))
     offset = Column(BigInteger)
     label = Column(BigInteger, ForeignKey("taint_forest.label"))
-    taint_forest_node: "DBTaintForestNode" = relationship("DBTaintForestNode", foreign_keys=[label],
-                                                          back_populates="writes", sync_backref=False)
+    taint_forest_node: "DBTaintForestNode" = relationship(
+        "DBTaintForestNode",
+        foreign_keys=[label],
+        back_populates="writes",
+        sync_backref=False,
+    )
     source = relationship("DBInput")
     __table_args__ = (PrimaryKeyConstraint("input_id", "offset", "label"),)
 
@@ -936,27 +1056,39 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
     __tablename__ = "taint_forest"
     parent_one_id = Column("parent_one", Integer, ForeignKey("taint_forest.label"))
     parent_two_id = Column("parent_two", Integer, ForeignKey("taint_forest.label"))
-    label = Column(Integer, ForeignKey("accessed_label.label"), ForeignKey("output_taint.label"))
+    label = Column(
+        Integer, ForeignKey("accessed_label.label"), ForeignKey("output_taint.label")
+    )
     input_id = Column(Integer, ForeignKey("input.id"))
     affected_control_flow = Column(Boolean)
 
     __table_args__ = (PrimaryKeyConstraint("input_id", "label"),)
 
     source = relationship("DBInput")
-    accesses = relationship("DBTaintAccess", foreign_keys=[label], viewonly=True, lazy="select")
-    writes = relationship("DBTaintOutput", foreign_keys=[label], viewonly=True, lazy="select")
+    accesses = relationship(
+        "DBTaintAccess", foreign_keys=[label], viewonly=True, lazy="select"
+    )
+    writes = relationship(
+        "DBTaintOutput", foreign_keys=[label], viewonly=True, lazy="select"
+    )
 
     def __hash__(self):
         return hash((self.input_id, self.label))
 
     def __eq__(self, other):
-        return isinstance(other, DBTaintForestNode) and self.input_id == other.input_id and self.label == other.label
+        return (
+            isinstance(other, DBTaintForestNode)
+            and self.input_id == other.input_id
+            and self.label == other.label
+        )
 
     def __str__(self):
         return f"I{self.input_id}L{self.label}"
 
     def is_canonical(self) -> bool:
-        assert (self.parent_one_id > 0 and self.parent_two_id > 0) or (self.parent_one_id == self.parent_two_id == 0)
+        assert (self.parent_one_id > 0 and self.parent_two_id > 0) or (
+            self.parent_one_id == self.parent_two_id == 0
+        )
         return self.parent_one_id == 0
 
     @property
@@ -974,10 +1106,12 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
                     self,
                     "_parent_one",
                     Session.object_session(self)
-                        .query(DBTaintForestNode)
-                        .filter(DBTaintForestNode.label == self.parent_one_id,
-                                DBTaintForestNode.input_id == self.input_id)
-                        .one(),
+                    .query(DBTaintForestNode)
+                    .filter(
+                        DBTaintForestNode.label == self.parent_one_id,
+                        DBTaintForestNode.input_id == self.input_id,
+                    )
+                    .one(),
                 )
             except NoResultFound:
                 setattr(self, "_parent_one", None)
@@ -991,10 +1125,12 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
                     self,
                     "_parent_two",
                     Session.object_session(self)
-                        .query(DBTaintForestNode)
-                        .filter(DBTaintForestNode.label == self.parent_two_id,
-                                DBTaintForestNode.input_id == self.input_id)
-                        .one(),
+                    .query(DBTaintForestNode)
+                    .filter(
+                        DBTaintForestNode.label == self.parent_two_id,
+                        DBTaintForestNode.input_id == self.input_id,
+                    )
+                    .one(),
                 )
             except NoResultFound:
                 setattr(self, "_parent_two", None)
@@ -1012,11 +1148,11 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
             labels_str = f"{len(node_stack)} labels"
         session: Optional[Session] = None
         with tqdm(
-                desc=f"finding canonical taints for {labels_str}",
-                leave=False,
-                delay=5.0,
-                bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
-                total=sum(node.label for node in node_stack),
+            desc=f"finding canonical taints for {labels_str}",
+            leave=False,
+            delay=5.0,
+            bar_format="{l_bar}{bar}| [{elapsed}<{remaining}, {rate_fmt}{postfix}]'",
+            total=sum(node.label for node in node_stack),
         ) as t:
             while node_stack:
                 node = node_stack.pop()
@@ -1028,15 +1164,17 @@ class DBTaintForestNode(Base, TaintForestNode):  # type: ignore
                     try:
                         file_offset = (
                             session.query(CanonicalMap)
-                                .filter(
+                            .filter(
                                 CanonicalMap.taint_label == node.label,
                                 CanonicalMap.input_id == node.input_id,
                             )
-                                .one()
-                                .file_offset
+                            .one()
+                            .file_offset
                         )
                     except NoResultFound:
-                        raise ValueError(f"Taint label {node.label} is not in the canonical mapping!")
+                        raise ValueError(
+                            f"Taint label {node.label} is not in the canonical mapping!"
+                        )
                     taints.add(ByteOffset(source=node.source, offset=file_offset))
                 else:
                     parent1, parent2 = node.parent_one, node.parent_two
@@ -1057,19 +1195,29 @@ class DBTaintForest(TaintForest):
         self.trace: DBProgramTrace = trace
 
     def nodes(self) -> Iterator[TaintForestNode]:
-        yield from stream_results(self.trace.session.query(DBTaintForestNode).order_by(DBTaintForestNode.label.desc()))
+        yield from stream_results(
+            self.trace.session.query(DBTaintForestNode).order_by(
+                DBTaintForestNode.label.desc()
+            )
+        )
 
     def get_node(self, label: int, source: Optional[Input] = None) -> TaintForestNode:
         try:
             constraints = [DBTaintForestNode.label == label]
             if source is not None:
                 constraints.append(DBTaintForestNode.input_id == source.uid)
-            return self.trace.session.query(DBTaintForestNode).filter(*constraints).one()
+            return (
+                self.trace.session.query(DBTaintForestNode).filter(*constraints).one()
+            )
         except NoResultFound:
             raise ValueError(f"Taint label {label} is not in the taint forest!")
 
     def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
-        yield from stream_results(self.trace.session.query(DBTaintForestNode).filter(DBTaintForestNode.label == label))
+        yield from stream_results(
+            self.trace.session.query(DBTaintForestNode).filter(
+                DBTaintForestNode.label == label
+            )
+        )
 
     def __len__(self):
         return self.trace.session.query(DBTaintForestNode).count()

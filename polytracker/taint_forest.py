@@ -1,8 +1,6 @@
 from abc import abstractmethod
 from typing import Iterator, Optional, Tuple
 
-from graphviz.dot import Digraph
-
 from .graphs import DAG
 from .inputs import Input
 from .plugins import Command
@@ -95,6 +93,7 @@ class ExportTaintForest(Command):
 
     def run(self, args):
         from . import PolyTrackerTrace
+
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)

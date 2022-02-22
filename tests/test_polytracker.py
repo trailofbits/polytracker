@@ -149,12 +149,13 @@ def test_fgetc(program_trace: ProgramTrace):
         assert len(regions) == 1
         assert regions[0].value == b"ABCDEFGH"[i: i + 1]
 
+
 @pytest.mark.program_trace("test_cxx_global_object.cpp", taint_all=True)
 def test_cxx_global_object(program_trace: ProgramTrace):
     r1 = program_trace.get_function("_ZN12GlobalObject10read_firstEv")
     assert r1.demangled_name == "GlobalObject::read_first()"
     taints = list(r1.taints().regions())
-    assert len(taints) ==1
+    assert len(taints) == 1
     assert taints[0].offset == 0
     assert taints[0].length == 1
 
@@ -171,6 +172,7 @@ def test_cxx_global_object(program_trace: ProgramTrace):
     assert len(taints) == 1
     assert taints[0].offset == 1
     assert taints[0].length == 1
+
 
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
 def test_taint_forest(program_trace: ProgramTrace):

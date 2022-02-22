@@ -91,11 +91,11 @@ if options.with_libstdcxx:
   libs.append(os.path.join(options.libstdcxx_dso_path, 'libstdc++.so.6'))
 """
 functions = []
-for l in libs:
-    if os.path.exists(l):
-        functions += defined_function_list(l)
+for lib in libs:
+    if os.path.exists(lib):
+        functions += defined_function_list(lib)
     else:
-        sys.stderr.write('warning: library %s not found\n' % l)
+        sys.stderr.write('warning: library %s not found\n' % lib)
 
 functions = list(set(functions))
 functions.sort()

@@ -12,11 +12,15 @@ def test_basic_tdag_operation():
     target_path = TESTS_DIR / target_name
     bin_path = BUILD_DIR / f"{target_name}.bin"
 
-    compile_command = ["/usr/bin/env",
+    compile_command = [
+        "/usr/bin/env",
         getenv("CXX"),
         "--instrument-target",
         "--no-control-flow-tracking",
-        "-o", to_native_path(bin_path), to_native_path(target_path)]
+        "-o",
+        to_native_path(bin_path),
+        to_native_path(target_path),
+    ]
     assert run_natively(*compile_command) == 0
     assert bin_path.exists()
 
@@ -25,13 +29,11 @@ def test_basic_tdag_operation():
     with open(data_file, "wb") as f:
         f.write(b"abcdefgh")
 
-    run_command = ["/usr/bin/env",
-                   bin_path,
-                   data_file]
+    run_command = ["/usr/bin/env", bin_path, data_file]
 
     assert run_natively(*run_command) == 0
 
-    with dumptdag.open_output_file('polytracker.tdag') as o:
+    with dumptdag.open_output_file("polytracker.tdag") as o:
         # Basic properties
         assert o.label_count() == 14
         t1 = o.decoded_taint(1)
@@ -48,7 +50,7 @@ def test_basic_tdag_operation():
         assert len(list(o.sink_log())) == 6
 
     # Cavities
-    m = dumptdag.gen_source_taint_used('polytracker.tdag', str(data_file))
+    m = dumptdag.gen_source_taint_used("polytracker.tdag", str(data_file))
     cavities = dumptdag.marker_to_ranges(m)
     assert len(cavities) == 1
     assert cavities[0] == (5, 6)
