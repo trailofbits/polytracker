@@ -1,7 +1,11 @@
 Dockerfile
 docs
 build
+build_in_docker/bin
 the_klondike
 *.json
 *.pdf
+*.bc
+*.o
+*.tdag
 .git

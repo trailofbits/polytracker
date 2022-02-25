@@ -24,9 +24,6 @@ for (_, module_name, _) in iter_modules([str(package_dir)]):  # type: ignore
     if module_name == "__main__":
         continue
 
-    if module_name == "database":
-        continue
-
     # import the module and iterate through its attributes
     module = import_module(f"{__name__}.{module_name}")
     for attribute_name in dir(module):

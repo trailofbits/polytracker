@@ -137,7 +137,6 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
 void PolytrackerPass::visitGetElementPtrInst(llvm::GetElementPtrInst &GEP) {
 
   llvm::IRBuilder<> IRB(&GEP);
-  llvm::LLVMContext &context = mod->getContext();
   for (auto &op : GEP.indices()) {
     // Ignore constant indices
     if (!llvm::isa<llvm::ConstantInt>(op)) {
@@ -153,7 +152,6 @@ void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
   auto condition = SI.getCondition();
   if (!op_check(condition)) {
     llvm::IRBuilder<> IRB(&SI);
-    llvm::LLVMContext &context = mod->getContext();
     llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
     CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
   }
