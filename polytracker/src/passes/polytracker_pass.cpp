@@ -380,13 +380,6 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
   dfsan_get_label =
       mod.getOrInsertFunction("dfsan_get_label", dfsan_get_label_ty);
 
-  llvm::Type *blob_args = {llvm::Type::getInt8PtrTy(context)->getPointerTo()};
-  auto polytracker_store_blob_ty =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(context), blob_args, false);
-
-  store_blob = mod.getOrInsertFunction("__polytracker_store_blob",
-                                       polytracker_store_blob_ty);
-
   llvm::Type *map_args = {llvm::Type::getInt8PtrTy(context)};
   auto polytracker_map_ty =
       llvm::FunctionType::get(llvm::Type::getVoidTy(context), map_args, false);
