@@ -610,12 +610,17 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
             visitBranchInst(*BI);
           } else if (auto *SI = llvm::dyn_cast<llvm::SwitchInst>(&inst)) {
             visitSwitch(*SI);
-          } else if (auto *GEP = llvm::dyn_cast<llvm::GetElementPtrInst>(&inst)) {
+          } else if (auto *GEP =
+                         llvm::dyn_cast<llvm::GetElementPtrInst>(&inst)) {
             // TODO (hbrodin): How about GEP as part of an expression e.g.
-            // %81 = call %struct._IO_FILE* @__dfsw_fopen(i8* %80, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0),
-            //                                            i32 zeroext %79, i32 zeroext 0, i32* %labelreturn)
+            // %81 = call %struct._IO_FILE* @__dfsw_fopen(i8* %80, i8*
+            // getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64
+            // 0),
+            //                                            i32 zeroext %79, i32
+            //                                            zeroext 0, i32*
+            //                                            %labelreturn)
             visitGetElementPtrInst(*GEP);
-           }
+          }
         }
       }
     }

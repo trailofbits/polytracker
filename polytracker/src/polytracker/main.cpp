@@ -257,7 +257,8 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
 
   polytracker_get_settings();
   polytracker_print_settings();
-  DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag, get_polytracker_db_name());
+  DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
+                     get_polytracker_db_name());
 
   if (!control_flow_tracking) {
     printf("Program compiled without PolyTracker control flow tracking "
