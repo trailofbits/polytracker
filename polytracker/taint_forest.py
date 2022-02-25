@@ -9,9 +9,9 @@ import networkx as nx
 
 
 class TaintForestNode:
-    def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
+    def __init__(self, label: int, source: Optional[Input], affected_control_flow: bool = False):
         self.label: int = label
-        self.source: Input = source
+        self.source: Optional[Input] = source
         self.affected_control_flow: bool = affected_control_flow
 
     @property

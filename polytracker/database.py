@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Union, cast
 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -872,12 +872,13 @@ class DBProgramTrace(ProgramTrace):
         return DBTaintForest(self)
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        source: Input = cast(Input, node.source)
         try:
             file_offset = (
                 self.session.query(CanonicalMap)
                 .filter(
                     CanonicalMap.taint_label == node.label,
-                    CanonicalMap.input_id == node.source.uid,
+                    CanonicalMap.input_id == source.uid,
                 )
                 .one()
                 .file_offset
@@ -886,7 +887,7 @@ class DBProgramTrace(ProgramTrace):
             raise ValueError(
                 f"Taint label {node.label} is not in the canonical mapping!"
             )
-        return ByteOffset(source=node.source, offset=file_offset)
+        return ByteOffset(source=source, offset=file_offset)
 
     @property
     def functions(self) -> Iterable[Function]:

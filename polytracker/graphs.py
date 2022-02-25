@@ -144,7 +144,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         if labeler is None:
             labeler = str
 
-        def default_node_filter(x: Any):
+        def default_node_filter(x: Any) -> bool:
             return True
 
         if node_filter is None:
@@ -152,7 +152,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         # Sort nodes into roots and inner nodes
         root_nodes = []
         inner_nodes = []
-        for node in sorted(filter(node_filter, self.nodes)):
+        for node in sorted(filter(node_filter, self.nodes)): # type: N
             if node in self.roots:
                 root_nodes.append(node)
             else:

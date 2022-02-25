@@ -3,7 +3,7 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
-from typing import Dict, Iterable, Iterator, Set
+from typing import Dict, List, Iterator, Set
 
 from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
@@ -32,7 +32,8 @@ class InputOutputMapping:
         for output_taint in tqdm(
             self.trace.output_taints, unit=" output taints", leave=False
         ):
-            written_to = self.inputs[output_taint.input_id]
+            inputs = {i.uid: i for i in self.trace.inputs}
+            written_to = inputs[output_taint.input_id]
             output_byte_offset = ByteOffset(
                 source=written_to, offset=output_taint.offset
             )
@@ -55,7 +56,7 @@ class InputOutputMapping:
 
     def written_input_bytes(self) -> Iterator[ByteOffset]:
         """Yields all of the input byte offsets from input files that are written to an output file"""
-        sink_nodes: Iterable[TaintForestNode] = []
+        sink_nodes: List[TaintForestNode] = []
         for t in self.trace.output_taints:
             sink_nodes.append(self.trace.taint_forest.get_node(t.label))
         yield from self.trace.taints(sink_nodes)
