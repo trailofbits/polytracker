@@ -1,5 +1,5 @@
-#include "polytracker/early_construct.h"
 #include "polytracker/polytracker.h"
+#include "polytracker/early_construct.h"
 #include "taintdag/polytracker.h"
 #include <atomic>
 #include <inttypes.h>
@@ -18,55 +18,43 @@ uint64_t block_mapping_count;
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 extern "C" void __polytracker_log_taint_op(dfsan_label arg1, dfsan_label arg2,
-                                           uint32_t findex, uint32_t bindex) {
-}
+                                           uint32_t findex, uint32_t bindex) {}
 
 extern "C" void __dfsw___polytracker_log_taint_op(
     uint32_t arg1, uint32_t arg2, uint32_t findex, uint32_t bindex,
     dfsan_label arg1_label, dfsan_label arg2_label, dfsan_label ignore_label1,
-    dfsan_label ignore_label2) {
-}
+    dfsan_label ignore_label2) {}
 
 extern "C" void __polytracker_log_taint_cmp(dfsan_label arg1, dfsan_label arg2,
-                                            uint32_t findex, uint32_t bindex) {
-
-}
+                                            uint32_t findex, uint32_t bindex) {}
 
 extern "C" void __dfsw___polytracker_log_taint_cmp(
     uint64_t arg1, uint64_t arg2, uint32_t findex, uint32_t bindex,
     dfsan_label arg1_label, dfsan_label arg2_label, dfsan_label ignore_label1,
-    dfsan_label ignore_label2) {
-}
+    dfsan_label ignore_label2) {}
 
-extern "C" int __polytracker_log_func_entry(uint32_t index) {
-  return 0;
-}
+extern "C" int __polytracker_log_func_entry(uint32_t index) { return 0; }
 
 extern "C" void __polytracker_log_func_exit(uint32_t func_index,
                                             uint32_t block_index,
-                                            const int stack_loc) {
-}
+                                            const int stack_loc) {}
 
 extern "C" void __polytracker_log_call_exit(uint32_t func_index,
                                             uint32_t block_index,
-                                            const int stack_loc) {
-}
+                                            const int stack_loc) {}
 
 extern "C" void __polytracker_log_call_uninst(uint32_t func_index,
                                               uint32_t block_index,
-                                              char *fname) {
-}
+                                              char *fname) {}
 
 extern "C" void __polytracker_log_call_indirect(uint32_t func_index,
-                                                uint32_t block_index) {
-}
+                                                uint32_t block_index) {}
 
 extern "C" void __polytracker_log_bb_entry(uint32_t findex, uint32_t bindex,
-                                           uint8_t btype) {
-}
+                                           uint8_t btype) {}
 
-extern "C" dfsan_label
-__polytracker_union_table(const dfsan_label &l1, const dfsan_label &l2) {
+extern "C" dfsan_label __polytracker_union_table(const dfsan_label &l1,
+                                                 const dfsan_label &l2) {
   return get_polytracker_tdag().union_labels(l1, l2);
 }
 
@@ -86,8 +74,7 @@ __dfsw___polytracker_log_conditional_branch(uint64_t conditional,
 
 extern "C" void __polytracker_log_union(const dfsan_label &l1,
                                         const dfsan_label &l2,
-                                        const dfsan_label &union_label) {
-}
+                                        const dfsan_label &union_label) {}
 
 extern "C" int __polytracker_size() { return 0; }
 

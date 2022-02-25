@@ -8,25 +8,23 @@
 
 namespace taintdag::utils {
 
-
-// Starts out with N slots for labels on the stack and fall back to heap allocated deque
-// if it grows larger.
+// Starts out with N slots for labels on the stack and fall back to heap
+// allocated deque if it grows larger.
 template <size_t N> class LabelDeq {
   using deq_t = std::deque<label_t>;
 
 public:
-
   LabelDeq() {
     new (&storage_) ArrayImpl;
     arr_active = true;
   }
   // NOTE (hbrodin): Not implementing copy/move construct/assign  right now
   // because it is not needed. Should be easy to fix though.
-  LabelDeq(LabelDeq const&) = delete;
+  LabelDeq(LabelDeq const &) = delete;
   LabelDeq(LabelDeq &&) = delete;
 
-  LabelDeq & operator=(LabelDeq const&) = delete;
-  LabelDeq & operator=(LabelDeq &&) = delete;
+  LabelDeq &operator=(LabelDeq const &) = delete;
+  LabelDeq &operator=(LabelDeq &&) = delete;
 
   ~LabelDeq() {
     if (arr_active)
@@ -43,7 +41,7 @@ public:
       auto &d = as_deq();
       auto v = d.front();
       d.pop_front();
-      return v; 
+      return v;
     }
   }
 
@@ -68,7 +66,6 @@ public:
   }
 
 private:
-
   void migrate(label_t l) {
     deq_t d;
     auto &a = as_arr();
@@ -78,7 +75,7 @@ private:
     d.push_back(l);
 
     as_arr().~ArrayImpl();
-    new(&storage_) deq_t(std::move(d));
+    new (&storage_) deq_t(std::move(d));
     arr_active = false;
   }
 
@@ -87,17 +84,11 @@ private:
     size_t first{0};
     size_t last{0};
 
-    size_t next(size_t i) const {
-      return (i+1) % N;
-    }
+    size_t next(size_t i) const { return (i + 1) % N; }
 
-    bool empty() const {
-      return first == last;
-    }
+    bool empty() const { return first == last; }
 
-    bool full() const {
-      return (last == next(first));
-    }
+    bool full() const { return (last == next(first)); }
 
     label_t pop_front() {
       auto v = arr_[last];
@@ -111,27 +102,24 @@ private:
     }
   };
 
-  inline deq_t & as_deq() {
-    return *reinterpret_cast<deq_t*>(&storage_);
+  inline deq_t &as_deq() { return *reinterpret_cast<deq_t *>(&storage_); }
+
+  inline deq_t const &as_deq() const {
+    return *reinterpret_cast<deq_t const *>(&storage_);
   }
 
-  inline deq_t const & as_deq() const {
-    return *reinterpret_cast<deq_t const*>(&storage_);
+  inline ArrayImpl &as_arr() {
+    return *reinterpret_cast<ArrayImpl *>(&storage_);
   }
 
-  inline ArrayImpl & as_arr() {
-    return *reinterpret_cast<ArrayImpl*>(&storage_);
-  }
-
-  inline ArrayImpl const & as_arr() const {
-    return *reinterpret_cast<ArrayImpl const*>(&storage_);
+  inline ArrayImpl const &as_arr() const {
+    return *reinterpret_cast<ArrayImpl const *>(&storage_);
   }
   // Is the array implementation active?
   bool arr_active;
 
   using au = std::aligned_union_t<0, ArrayImpl, deq_t>;
   au storage_;
-
 };
 } // namespace taintdag::utils
 

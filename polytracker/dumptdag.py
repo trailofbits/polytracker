@@ -1,9 +1,8 @@
 from contextlib import contextmanager
 from ctypes import Structure, c_int32, c_uint32, c_uint64, c_uint8, c_ulonglong, sizeof
-from io import SEEK_SET
 from mmap import mmap, PROT_READ
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Generator, Iterable, List, Optional, Tuple, Union
 import sys
 
 
@@ -13,20 +12,22 @@ import sys
 source_taint_bit_shift = 63
 affects_control_flow_bit_shift = 62
 label_bits = 31
-label_mask = 0x7fffffff
+label_mask = 0x7FFFFFFF
 val1_shift = label_bits
-source_index_mask = 0xff
+source_index_mask = 0xFF
 source_index_bits = 8
-source_offset_mask = ((1 << 54)-1)
+source_offset_mask = (1 << 54) - 1
 
 
 class FileHdr(Structure):
-    _fields_ = [("fd_mapping_offset", c_ulonglong),
-                ("fd_mapping_count", c_ulonglong),
-                ("tdag_mapping_offset", c_ulonglong),
-                ("tdag_mapping_size", c_ulonglong),
-                ("sink_mapping_offset", c_ulonglong),
-                ("sink_mapping_size", c_ulonglong)]
+    _fields_ = [
+        ("fd_mapping_offset", c_ulonglong),
+        ("fd_mapping_count", c_ulonglong),
+        ("tdag_mapping_offset", c_ulonglong),
+        ("tdag_mapping_size", c_ulonglong),
+        ("sink_mapping_offset", c_ulonglong),
+        ("sink_mapping_size", c_ulonglong),
+    ]
 
     def __repr__(self) -> str:
         return (
@@ -37,18 +38,18 @@ class FileHdr(Structure):
 
 
 class FDMappingHdr(Structure):
-    _fields_ = [("fd", c_int32),
-                ("name_offset", c_uint32),
-                ("name_len", c_uint32),
-                ("prealloc_begin", c_uint32),
-                ("prealloc_end", c_uint32)]
+    _fields_ = [
+        ("fd", c_int32),
+        ("name_offset", c_uint32),
+        ("name_len", c_uint32),
+        ("prealloc_begin", c_uint32),
+        ("prealloc_end", c_uint32),
+    ]
 
 
 class SinkLogEntry(Structure):
     _pack_ = 1
-    _fields_ = [("fdidx", c_uint8),
-                ("offset", c_uint64),
-                ("label", c_uint32)]
+    _fields_ = [("fdidx", c_uint8), ("offset", c_uint64), ("label", c_uint32)]
 
     def __repr__(self) -> str:
         return f"SinkLog fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
@@ -94,13 +95,12 @@ class UnionTaint(Taint):
 
 @contextmanager
 def open_output_file(file: Path):
-    with open(file, "rb") as f, \
-            mmap(f.fileno(), 0, prot=PROT_READ) as mm:
+    with open(file, "rb") as f, mmap(f.fileno(), 0, prot=PROT_READ) as mm:
         yield OutputFile(mm)
 
 
 class OutputFile:
-    def __init__(self, mm: bytearray) -> None:
+    def __init__(self, mm: mmap) -> None:
         self.hdr = FileHdr.from_buffer_copy(mm)
         self.mm = mm
 
@@ -108,17 +108,20 @@ class OutputFile:
         if index >= self.hdr.fd_mapping_count:
             return None
 
-        offset = self.hdr.fd_mapping_offset + sizeof(FDMappingHdr)*index
+        offset = self.hdr.fd_mapping_offset + sizeof(FDMappingHdr) * index
         fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)
 
         sbegin = self.hdr.fd_mapping_offset + fdmhdr.name_offset
-        s = str(self.mm[sbegin:sbegin+fdmhdr.name_len],
-                'utf-8')  # TODO (hbrodin): Encoding???
+        s = str(
+            self.mm[sbegin : sbegin + fdmhdr.name_len], "utf-8"
+        )  # TODO (hbrodin): Encoding???
         return (s, fdmhdr.prealloc_begin, fdmhdr.prealloc_end)
 
-    def fd_mappings(self) -> Iterable[Tuple[str, int, int]]:
+    def fd_mappings(self) -> Generator[Tuple[str, int, int], None, None]:
         for i in range(0, self.hdr.fd_mapping_count):
-            yield self.fd_mapping(i)
+            m = self.fd_mapping(i)
+            if m:
+                yield m
 
     def sink_log(self) -> Iterable[SinkLogEntry]:
         offset = self.hdr.sink_mapping_offset
@@ -130,8 +133,7 @@ class OutputFile:
             offset += sizeof(SinkLogEntry)
 
     def sink_log_labels(self) -> List[int]:
-        offset = self.hdr.sink_mapping_offset + \
-            sizeof(c_uint64) + sizeof(c_uint8)
+        offset = self.hdr.sink_mapping_offset + sizeof(c_uint64) + sizeof(c_uint8)
         step = sizeof(SinkLogEntry)
         end = offset + self.hdr.sink_mapping_size
         labels = []
@@ -147,17 +149,17 @@ class OutputFile:
         return labels
 
     def label_count(self) -> int:
-        return int(self.hdr.tdag_mapping_size/sizeof(c_uint64))
+        return int(self.hdr.tdag_mapping_size / sizeof(c_uint64))
 
     def raw_taint(self, label: int) -> int:
-        offset = self.hdr.tdag_mapping_offset + sizeof(c_uint64)*label
+        offset = self.hdr.tdag_mapping_offset + sizeof(c_uint64) * label
         return c_uint64.from_buffer_copy(self.mm, offset).value
 
     def decoded_taint(self, label: int) -> Union[SourceTaint, RangeTaint, UnionTaint]:
         v = self.raw_taint(label)
         # This needs to be kept in sync with implementation in encoding.cpp
         st = (v >> source_taint_bit_shift) & 1
-        affects_cf = (v >> affects_control_flow_bit_shift) & 1
+        affects_cf = bool((v >> affects_control_flow_bit_shift) & 1)
         if st:
             idx = v & source_index_mask
             offset = (v >> source_index_bits) & source_offset_mask
@@ -188,42 +190,43 @@ def dump_tdag(file: Path):
 
         return
 
-# NOTE (hbrodin): Assemes source taint was preallocated
+
+# NOTE (hbrodin): Assumes source taint was preallocated
 
 
 def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
     seen = set()
 
-    def ctrlflow(l, t):
+    def ctrlflow(lbl, t):
         if t.affects_control_flow:
-            seen.add(l)
+            seen.add(lbl)
             return True
         return False
 
-    def srctaint(l, t):
+    def srctaint(lbl, t):
         if isinstance(t, SourceTaint):
-            seen.add(l)
+            seen.add(lbl)
             return True
         return False
 
-    def iter_source_labels_not_affecting_cf(f: OutputFile, lbl: int):
+    def iter_source_labels_not_affecting_cf(f: OutputFile, label: int):
 
-        labels = [lbl]
+        labels = [label]
         while len(labels) > 0:
-            l = labels[0]
+            lbl = labels[0]
             labels = labels[1:]
 
-            if l in seen:
+            if lbl in seen:
                 continue
 
-            t = f.decoded_taint(l)
+            t = f.decoded_taint(lbl)
 
             # It is already marked in the source labels if it affects control flow
             if t.affects_control_flow:
                 continue
 
             if isinstance(t, SourceTaint):
-                yield (l, t)
+                yield (lbl, t)
 
             elif isinstance(t, UnionTaint):
                 tl = f.decoded_taint(t.left)
@@ -241,7 +244,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
                         labels.append(t.right)
 
             elif isinstance(t, RangeTaint):
-                for rl in range(t.first, t.last+1):
+                for rl in range(t.first, t.last + 1):
                     # NOTE: One could skip decoding here, but then we could end up with really long ranges
                     # being added the labels that really does nothing except cause overhead...
                     rt = f.decoded_taint(rl)
@@ -252,19 +255,20 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
                     else:
                         labels.append(rl)
 
-    def dfs(f, lbl, sp):
-        t = f.decoded_taint(lbl)
-        print(f"{sp} {lbl} -> {t}")
+    def dfs(f, label, sp):
+        t = f.decoded_taint(label)
+        print(f"{sp} {label} -> {t}")
         if isinstance(t, UnionTaint):
             dfs(f, t.left, sp + "| ")
             dfs(f, t.right, sp + "| ")
         elif isinstance(t, RangeTaint):
-            for l in range(t.first, t.last+1):
-                dfs(f, l, sp + "| ")
+            for lbl in range(t.first, t.last + 1):
+                dfs(f, lbl, sp + "| ")
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-            x for x in f.fd_mappings() if x[0] == sourcefile)
+            x for x in f.fd_mappings() if x[0] == sourcefile.name
+        )
         filelen = src_end - src_begin
         marker = bytearray(filelen)
         # Initially, mark all source taint that affects control flow
@@ -275,9 +279,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
         # Now, iterate all source labels in the taint sink. As an optimization, if
         # the taint affects_control_flow, move one. It already spilled into the source
         # taint and was marked above
-        l = f.sink_log_labels()
-
-        for lbl in l:
+        for lbl in f.sink_log_labels():
             t = f.decoded_taint(lbl)
             if t.affects_control_flow:
                 continue
@@ -305,7 +307,7 @@ def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
     return ranges
 
 
-def cavity_detection(tdag: OutputFile, sourcefile: Path):
+def cavity_detection(tdag: Path, sourcefile: Path):
     m = gen_source_taint_used(tdag, sourcefile)
     src = Path(sourcefile)
     for r in marker_to_ranges(m):
@@ -313,5 +315,5 @@ def cavity_detection(tdag: OutputFile, sourcefile: Path):
 
 
 if __name__ == "__main__":
-    #dump_tdag(sys.argv[1])
-    cavity_detection(sys.argv[1], sys.argv[2])
+    # dump_tdag(Path(sys.argv[1]))
+    cavity_detection(Path(sys.argv[1]), Path(sys.argv[2]))

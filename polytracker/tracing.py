@@ -137,10 +137,10 @@ class TaintedRegion:
 
     def __eq__(self, other):
         return (
-                isinstance(other, TaintedRegion)
-                and self.source == other.source
-                and self.offset == other.offset
-                and self.length == other.length
+            isinstance(other, TaintedRegion)
+            and self.source == other.source
+            and self.offset == other.offset
+            and self.length == other.length
         )
 
     def __lt__(self, other):
@@ -481,9 +481,9 @@ class BasicBlock:
 
     def __eq__(self, other):
         return (
-                isinstance(other, BasicBlock)
-                and other.function == self.function
-                and self.index_in_function == other.index_in_function
+            isinstance(other, BasicBlock)
+            and other.function == self.function
+            and self.index_in_function == other.index_in_function
         )
 
     def __str__(self):

@@ -43,7 +43,7 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
   int fd = open(path, oflags, args);
   va_end(args);
 
-  if (fd >=0) {
+  if (fd >= 0) {
     get_polytracker_tdag().open_file(fd, path);
   }
 
@@ -60,7 +60,7 @@ EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
   int fd = openat(dirfd, path, oflags, args);
   va_end(args);
 
-  if (fd >=0) {
+  if (fd >= 0) {
     get_polytracker_tdag().open_file(fd, path);
   }
 
@@ -97,7 +97,7 @@ EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
 EXT_C_FUNC int __dfsw_close(int fd, dfsan_label fd_label,
                             dfsan_label *ret_label) {
   int ret = close(fd);
-  
+
   if (ret == 0)
     get_polytracker_tdag().close_file(fd);
 
@@ -134,7 +134,7 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
                                 dfsan_label offset_label,
                                 dfsan_label *ret_label) {
   ssize_t ret = pread(fd, buf, count, offset);
-  if (ret> 0)
+  if (ret > 0)
     get_polytracker_tdag().source_taint(fd, buf, offset, ret);
   *ret_label = 0;
   return ret;
@@ -146,7 +146,7 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
                                   dfsan_label offset_label,
                                   dfsan_label *ret_label) {
   ssize_t ret = pread(fd, buf, count, offset);
-  if (ret> 0)
+  if (ret > 0)
     get_polytracker_tdag().source_taint(fd, buf, offset, ret);
   *ret_label = 0;
   return ret;
@@ -159,8 +159,8 @@ EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
   long offset = ftell(fd);
   size_t ret = fread(buff, size, count, fd);
 
-  if (ret> 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret*size);
+  if (ret > 0)
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret * size);
   *ret_label = 0;
   return ret;
 }
@@ -173,8 +173,8 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
                                         dfsan_label *ret_label) {
   long offset = ftell(fd);
   size_t ret = fread_unlocked(buff, size, count, fd);
-  if (ret> 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret*size);
+  if (ret > 0)
+    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret * size);
   *ret_label = 0;
   return ret;
 }
@@ -185,7 +185,8 @@ EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
   *ret_label = 0;
 
   if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    auto tr =
+        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
     if (tr)
       *ret_label = tr.value().first;
   }
@@ -198,7 +199,8 @@ EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
   int c = fgetc_unlocked(fd);
   *ret_label = 0;
   if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    auto tr =
+        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
     if (tr)
       *ret_label = tr.value().first;
   }
@@ -210,7 +212,8 @@ EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
   int c = getc(fd);
   *ret_label = 0;
   if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    auto tr =
+        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
     if (tr)
       *ret_label = tr.value().first;
   }
@@ -222,7 +225,8 @@ EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
   int c = getchar();
   *ret_label = 0;
   if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset, sizeof(char));
+    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset,
+                                                  sizeof(char));
     if (tr)
       *ret_label = tr.value().first;
   }
@@ -272,7 +276,7 @@ EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
   if (ret != -1) {
     get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
   }
-  
+
   *ret_label = 0;
   return ret;
 }

@@ -129,11 +129,11 @@ def program_trace(request):
             raise ValueError(f"Invalid input argument: {input_val!r}")
     else:
         input_bytes = None
-    if "taint_all" in marker.kwargs and marker.kwargs["taint_all"] == True:
+    if "taint_all" in marker.kwargs and marker.kwargs["taint_all"] is True:
         taint_all = True
     else:
         taint_all = False
-    
+
     return_exceptions = "return_exceptions" in marker.kwargs and marker.kwargs["return_exceptions"]
 
     assert polyclang_compile_target(target_name) == 0

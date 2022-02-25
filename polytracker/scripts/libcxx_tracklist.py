@@ -51,7 +51,7 @@ for func in cxx_undef:
 
 all_undef += abi_funcs
 
-# all_undef contains all functions in/not in libcxxabi and functions not defined in libcxx 
+# all_undef contains all functions in/not in libcxxabi and functions not defined in libcxx
 
 # Here are all the functions not in libcxx that are not defined in libcxxabi
 # This is what our ignore list should be.
@@ -74,7 +74,3 @@ for f in functions:
     f = f.replace("dfs$", "")
     print('fun:%s=uninstrumented' % f)
     print('fun:%s=discard' % f)
-
-
-
-

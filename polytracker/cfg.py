@@ -51,7 +51,7 @@ class FunctionInfo:
             return os.stat(source).st_size
         else:
             # find the largest byte this trace touched
-            return max(self.input_bytes.get(source, default=[]))
+            return max(self.input_bytes[source])
 
     def taint_source_sizes(self) -> Dict[str, int]:
         return {source: self.source_size(source) for source in self.taint_sources}

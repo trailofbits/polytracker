@@ -29,7 +29,7 @@ class PolyBuild(Command):
                 sys.stderr.write("It looks like you are trying to compile C++ code.\n"
                                  "This requires `polybuild++`, not `polybuild`!\n")
                 while True:
-                    sys.stderr.write(f"Would you like to run with `polybuild++` instead? [Yn] ")
+                    sys.stderr.write("Would you like to run with `polybuild++` instead? [Yn] ")
                     try:
                         choice = input().lower()
                     except KeyboardInterrupt:

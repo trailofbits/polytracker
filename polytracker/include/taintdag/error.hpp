@@ -6,12 +6,11 @@
 #include <iostream>
 
 namespace taintdag {
-  template<typename... Msgs>
-  void error_exit(Msgs&&... msgs) {
-    std::cerr << "Fatal error. Abort.\n";
-    (std::cerr << ... << msgs) << std::endl;
-    exit(-1);
+template <typename... Msgs> void error_exit(Msgs &&... msgs) {
+  std::cerr << "Fatal error. Abort.\n";
+  (std::cerr << ... << msgs) << std::endl;
+  exit(-1);
 }
-}
+} // namespace taintdag
 
 #endif

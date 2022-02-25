@@ -1,8 +1,6 @@
 from abc import abstractmethod
 from typing import Iterator, Optional, Tuple
 
-from graphviz.dot import Digraph
-
 from .graphs import DAG
 from .inputs import Input
 from .plugins import Command
@@ -11,9 +9,9 @@ import networkx as nx
 
 
 class TaintForestNode:
-    def __init__(self, label: int, source: Input, affected_control_flow: bool = False):
+    def __init__(self, label: int, source: Optional[Input], affected_control_flow: bool = False):
         self.label: int = label
-        self.source: Input = source
+        self.source: Optional[Input] = source
         self.affected_control_flow: bool = affected_control_flow
 
     @property
@@ -95,6 +93,7 @@ class ExportTaintForest(Command):
 
     def run(self, args):
         from . import PolyTrackerTrace
+
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)

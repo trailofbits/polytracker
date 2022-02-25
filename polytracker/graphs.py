@@ -1,5 +1,18 @@
 import math
-from typing import TypeVar, Generic, Optional, Collection, Dict, Union, Iterable, Callable, Set, FrozenSet, Tuple, Any
+from typing import (
+    TypeVar,
+    Generic,
+    Optional,
+    Collection,
+    Dict,
+    Union,
+    Iterable,
+    Callable,
+    Set,
+    FrozenSet,
+    Tuple,
+    Any,
+)
 
 import graphviz
 import networkx as nx
@@ -19,8 +32,13 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
     def path_length(self, from_node: N, to_node: N) -> Union[int, float]:
         if self._path_lengths is None:
-            self._path_lengths = dict(nx.all_pairs_shortest_path_length(self, cutoff=None))
-        if from_node not in self._path_lengths or to_node not in self._path_lengths[from_node]:
+            self._path_lengths = dict(
+                nx.all_pairs_shortest_path_length(self, cutoff=None)
+            )
+        if (
+            from_node not in self._path_lengths
+            or to_node not in self._path_lengths[from_node]
+        ):
             return math.inf
         else:
             return self._path_lengths[from_node][to_node]
@@ -44,7 +62,14 @@ class DiGraph(nx.DiGraph, Generic[N]):
         if not self.has_node(node):
             raise nx.NetworkXError(f"Node {node} is not in the graph")
         return OrderedSet(
-            *(x for _, x in sorted((d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node))
+            *(
+                x
+                for _, x in sorted(
+                    (d, n)
+                    for n, d in nx.shortest_path_length(self, target=node).items()
+                    if n is not node
+                )
+            )
         )
 
     def has_one_predecessor(self, node: N) -> bool:
@@ -87,7 +112,10 @@ class DiGraph(nx.DiGraph, Generic[N]):
                 incoming_nodes = list(self.predecessors(pred))
                 outgoing_nodes = list(self.successors(node))
                 ret.remove_nodes_from([pred, node])
-                ret.add_edges_from([(i, new_node) for i in incoming_nodes] + [(new_node, o) for o in outgoing_nodes])
+                ret.add_edges_from(
+                    [(i, new_node) for i in incoming_nodes]
+                    + [(new_node, o) for o in outgoing_nodes]
+                )
                 if new_node is not pred:
                     nodes.remove(pred)
                     nodes.add(new_node)
@@ -116,18 +144,26 @@ class DiGraph(nx.DiGraph, Generic[N]):
         if labeler is None:
             labeler = str
 
+        def default_node_filter(x: Any) -> bool:
+            return True
+
         if node_filter is None:
-            node_filter = lambda x: True
+            node_filter = default_node_filter
         # Sort nodes into roots and inner nodes
         root_nodes = []
         inner_nodes = []
-        for node in sorted(filter(node_filter, self.nodes)):
+        for node in sorted(filter(node_filter, self.nodes)): # type: N
             if node in self.roots:
                 root_nodes.append(node)
             else:
                 inner_nodes.append(node)
         # Add root nodes
-        roots = graphviz.Digraph(name="roots", graph_attr={"rank":"same"}, node_attr={"shape":"square"}, edge_attr={"style":"invis"})
+        roots = graphviz.Digraph(
+            name="roots",
+            graph_attr={"rank": "same"},
+            node_attr={"shape": "square"},
+            edge_attr={"style": "invis"},
+        )
         for node in root_nodes:
             roots.node(str(node), label=labeler(node))
         # Add invisible edges to enforce root node ordering within a rank
@@ -137,7 +173,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         inner = graphviz.Digraph(name="inner")
         for node in inner_nodes:
             inner.node(str(node), label=labeler(node))
-        
+
         result = graphviz.Digraph(comment=comment)
         result.subgraph(roots)
         result.subgraph(inner)

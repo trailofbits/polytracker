@@ -2,12 +2,12 @@
 #define POLYTRACKER_TAINTDAG_TAINTDAG_H
 #include <atomic>
 #include <cassert>
+#include <deque>
 #include <limits>
 #include <numeric>
 #include <optional>
 #include <type_traits>
 #include <vector>
-#include <deque>
 
 #include <sys/mman.h>
 
@@ -19,29 +19,28 @@
 
 namespace taintdag {
 
-
-// How many labels to scan backwards to detect if the same Taint is about to be produced.
+// How many labels to scan backwards to detect if the same Taint is about to be
+// produced.
 const label_t redundant_label_range = 100;
 
 class TaintDAG {
 public:
-
   class taint_iterator;
   using iterator = taint_iterator;
 
   TaintDAG(char *begin, char *end)
-   : p_{reinterpret_cast<storage_t*>(begin)}, storage_size_{static_cast<size_t>(end-begin)} {
+      : p_{reinterpret_cast<storage_t *>(begin)},
+        storage_size_{static_cast<size_t>(end - begin)} {
     if (end < begin)
       error_exit("TaintDAG: end < begin");
     if (storage_size_ < max_label * sizeof(storage_t))
       error_exit("Insufficient storage size for ", max_label, " labels.");
   }
 
-  TaintDAG(TaintDAG const&) = delete;
-  TaintDAG(TaintDAG&&) = delete;
-  TaintDAG &operator=(TaintDAG const&) = delete;
+  TaintDAG(TaintDAG const &) = delete;
+  TaintDAG(TaintDAG &&) = delete;
+  TaintDAG &operator=(TaintDAG const &) = delete;
   TaintDAG &operator=(TaintDAG &&o) = delete;
-
 
   // Get the current number of labels
   label_t label_count() const {
@@ -50,18 +49,23 @@ public:
 
   taint_range_t reserve_source_labels(label_t length) {
     auto lbl = increment(length);
-    return {lbl, lbl+length};
+    return {lbl, lbl + length};
   }
 
-  void assign_source_labels(taint_range_t range, source_index_t source_idx, source_offset_t offset) {
-    std::generate(&p_[range.first], &p_[range.second], [source_idx, source_offset = offset]() mutable {
-      return encode(SourceTaint(source_idx, source_offset++));
-    });
+  void assign_source_labels(taint_range_t range, source_index_t source_idx,
+                            source_offset_t offset) {
+    std::generate(&p_[range.first], &p_[range.second],
+                  [source_idx, source_offset = offset]() mutable {
+                    return encode(SourceTaint(source_idx, source_offset++));
+                  });
   }
 
-  // creates labels corresponding to a read of 'length' from 'source_fd' at 'offset'
-  taint_range_t create_source_labels(source_index_t source_idx, source_offset_t offset, label_t length) {
-    assert(offset < max_source_offset && "Source offset exceed limits for encoding");
+  // creates labels corresponding to a read of 'length' from 'source_fd' at
+  // 'offset'
+  taint_range_t create_source_labels(source_index_t source_idx,
+                                     source_offset_t offset, label_t length) {
+    assert(offset < max_source_offset &&
+           "Source offset exceed limits for encoding");
     auto range = reserve_source_labels(length);
     assign_source_labels(range, source_idx, offset);
     return range;
@@ -80,30 +84,30 @@ public:
     // - If it is source taint, just mark it as affecting cf.
     // - else add for further processing
     auto add_to_q = [this](label_t label) -> bool {
-        auto encoded = p_[label];
-        if (check_affects_control_flow(encoded))
-          return false;
+      auto encoded = p_[label];
+      if (check_affects_control_flow(encoded))
+        return false;
 
-        if (is_source_taint(encoded)) {
-          p_[label] = add_affects_control_flow(encoded);
-          return false;
-        }
+      if (is_source_taint(encoded)) {
+        p_[label] = add_affects_control_flow(encoded);
+        return false;
+      }
 
-        return true;
+      return true;
     };
 
     // Early out
     if (!add_to_q(label))
       return;
-    
+
     labelq q;
     q.push_back(label);
 
     struct Visitor {
-      void operator()(SourceTaint s) const { }
+      void operator()(SourceTaint s) const {}
 
       void operator()(RangeTaint r) const {
-        for (auto curr = r.first;curr <= r.last;curr++) {
+        for (auto curr = r.first; curr <= r.last; curr++) {
           if (add_to_q(curr))
             q.push_back(curr);
         }
@@ -116,7 +120,7 @@ public:
           q.push_back(u.higher);
       }
 
-      Visitor(labelq &q, decltype(add_to_q) f) : q{q}, add_to_q{f} { }
+      Visitor(labelq &q, decltype(add_to_q) f) : q{q}, add_to_q{f} {}
 
       labelq &q;
       decltype(add_to_q) add_to_q;
@@ -133,17 +137,18 @@ public:
     }
   }
 
-  std::optional<label_t> duplicate_check(label_t hilbl, storage_t encoded) const {
+  std::optional<label_t> duplicate_check(label_t hilbl,
+                                         storage_t encoded) const {
     // Simple check, did we just create this union? If so, reuse it
-    auto prevlbl = label_count()-1; // Safe, since we start at 1.
+    auto prevlbl = label_count() - 1; // Safe, since we start at 1.
 
     // A union/range have to be created after the labels themselves are
     // created.
-    auto end_check = prevlbl > redundant_label_range ?
-                      std::max(hilbl, prevlbl - redundant_label_range) :
-                      0;
+    auto end_check = prevlbl > redundant_label_range
+                         ? std::max(hilbl, prevlbl - redundant_label_range)
+                         : 0;
 
-    for (auto lbl = prevlbl;lbl > end_check;lbl--) {
+    for (auto lbl = prevlbl; lbl > end_check; lbl--) {
       if (equal_ignore_cf(p_[lbl], encoded))
         return lbl;
     }
@@ -177,29 +182,24 @@ public:
     return idx;
   }
 
-
   // Iterate through the entire taint hierarchy for a certain taint
   class taint_iterator {
-    public:
-
+  public:
     using value_type = label_t;
     using difference_type = label_t;
-    using pointer = value_type*;
-    using reference = value_type&;
+    using pointer = value_type *;
+    using reference = value_type &;
     using iterator_category = std::forward_iterator_tag;
 
-    taint_iterator(label_t start, TaintDAG const &td) :td{td} {
+    taint_iterator(label_t start, TaintDAG const &td) : td{td} {
       stack.push_back(start);
       ++*this;
     }
 
     // Construct end iterator
-    taint_iterator(TaintDAG const&td) : td{td} {
-    }
+    taint_iterator(TaintDAG const &td) : td{td} {}
 
-    reference operator*() {
-      return stack.back();
-    }
+    reference operator*() { return stack.back(); }
 
     taint_iterator &operator++() {
       auto v = stack.back();
@@ -207,7 +207,7 @@ public:
 
       Taint t = decode(td.p_[v]);
       if (std::holds_alternative<UnionTaint>(t)) {
-        UnionTaint const& ut = std::get<UnionTaint>(t);
+        UnionTaint const &ut = std::get<UnionTaint>(t);
         stack.push_back(ut.lower);
         stack.push_back(ut.higher);
       }
@@ -215,7 +215,7 @@ public:
       return *this;
     }
 
-    bool operator==(taint_iterator const& other) const {
+    bool operator==(taint_iterator const &other) const {
       return &td == &other.td && stack == other.stack;
     }
 
@@ -225,34 +225,29 @@ public:
 
   private:
     std::vector<label_t> stack;
-    TaintDAG const& td;
+    TaintDAG const &td;
   };
 
   // Iterate through all taint sources for a certain taint
-  class taint_source_iterator {
-
-  };
-
+  class taint_source_iterator {};
 
   std::pair<taint_iterator, taint_iterator> iter_taints(label_t start) {
     return {taint_iterator{start, *this}, taint_iterator{*this}};
   }
 
 private:
-
-
   label_t increment(label_t length) {
     label_t next;
     auto old = current_idx_.load(std::memory_order_relaxed);
     do {
-      next = old+length;
+      next = old + length;
       if (next < old) {
         assert(false && "Overflow detected, out of taint labels");
       }
-    } while (!current_idx_.compare_exchange_weak(old, next, std::memory_order_relaxed));
+    } while (!current_idx_.compare_exchange_weak(old, next,
+                                                 std::memory_order_relaxed));
     return old;
   }
-
 
   storage_t *p_{nullptr};
   size_t storage_size_{0};
@@ -260,5 +255,5 @@ private:
   std::atomic<label_t> current_idx_{1};
 };
 
-}
+} // namespace taintdag
 #endif
