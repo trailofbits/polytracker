@@ -1,10 +1,6 @@
-//#include "dfsan/dfsan.h"
 #include "polytracker/taint_sources.h"
 #include "polytracker/early_construct.h"
-#include "polytracker/logging.h"
-#include "polytracker/output.h"
 #include "polytracker/polytracker.h"
-#include "polytracker/taint.h"
 
 #include "taintdag/polytracker.h"
 
@@ -306,15 +302,6 @@ EXT_C_FUNC void *__dfsw_mmap(void *start, size_t length, int prot, int flags,
                              dfsan_label flags_label, dfsan_label fd_label,
                              dfsan_label offset_label, dfsan_label *ret_label) {
   void *ret = mmap(start, length, prot, flags, fd, offset);
-#if 0
-  if (ret && isTrackingSource(fd)) {
-    bool res = taintData(fd, (char *)ret, offset, length);
-    if (res == false) {
-      std::cerr << "### mmap: error, data not tainted" << std::endl;
-    }
-  }
-#endif
-
   if (ret != MAP_FAILED) {
     get_polytracker_tdag().source_taint(fd, ret, offset, length);
   }

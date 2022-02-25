@@ -39,6 +39,7 @@ struct PolytrackerPass : public llvm::ModulePass,
   void visitReturnInst(llvm::ReturnInst &RI);
   void visitBranchInst(llvm::BranchInst &BI);
   void visitSwitchInst(llvm::SwitchInst &SI);
+  void visitGetElementPtrInst(llvm::GetElementPtrInst &GEP);
   const std::pair<llvm::Value *, llvm::Value *>
   getIndicies(llvm::Instruction *);
 
@@ -56,7 +57,6 @@ struct PolytrackerPass : public llvm::ModulePass,
   llvm::FunctionCallee taint_cmp_log;
   llvm::FunctionCallee conditional_branch_log;
   llvm::FunctionCallee dfsan_get_label;
-  llvm::FunctionCallee store_blob;
   llvm::FunctionCallee preserve_map;
 
   std::unordered_map<llvm::BasicBlock *, uint64_t> block_global_map;
