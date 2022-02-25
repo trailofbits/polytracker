@@ -6,6 +6,16 @@
 
 using namespace taintdag;
 
+
+TEST_CASE("LabelDeq basic properties") {
+  utils::LabelDeq<15> l;
+  REQUIRE(l.empty());
+  l.push_back(1);
+  REQUIRE(!l.empty());
+  REQUIRE(l.pop_front() == 1);
+  REQUIRE(l.empty());
+}
+
 TEST_CASE("LabelDeq behaves equal to std list (push_back/pop_front)") {
   auto s = test::init_rand_seed();
   INFO("Init rand with seed" << s)
