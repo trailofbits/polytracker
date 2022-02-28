@@ -12,8 +12,7 @@ clang-format -i polytracker/include/**/*.{h,hpp}
 # Black to auto format code, mypy for type checking
 # Temporarily disabled because a bug in black is causing it not to reach a
 # reformatting fixed point (every subsequent call causes reformatting)
-# black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
-
+black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
 flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
 flake8 polytracker tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
