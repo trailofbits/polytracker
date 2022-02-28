@@ -21,7 +21,9 @@ from .repl import PolyTrackerREPL
 
 IS_LINUX: bool = platform.system() == "Linux"
 CAN_RUN_NATIVELY: bool = (
-    IS_LINUX and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0" and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
+    IS_LINUX
+    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "0") != "0"
+    and os.getenv("POLYTRACKER_CAN_RUN_NATIVELY", "") != ""
 )
 PolyTrackerREPL.register_global("CAN_RUN_NATIVELY", CAN_RUN_NATIVELY)
 
@@ -84,14 +86,18 @@ class DockerOutOfDateError(RuntimeError):
 
 
 class DockerContainer:
-    def __init__(self, image_name: str = "trailofbits/polytracker", tag: Optional[str] = None):
+    def __init__(
+        self, image_name: str = "trailofbits/polytracker", tag: Optional[str] = None
+    ):
         self.image_name: str = image_name
         if tag is None:
             self.tag: str = polytracker_version()
         else:
             self.tag = tag
         self._client: Optional[docker.DockerClient] = None
-        self.dockerfile: Dockerfile = Dockerfile(Path(__file__).parent.parent / "Dockerfile")
+        self.dockerfile: Dockerfile = Dockerfile(
+            Path(__file__).parent.parent / "Dockerfile"
+        )
         self._out_of_date_sources: Optional[List[Path]] = None
 
     def out_of_date_sources(self) -> List[Path]:
@@ -109,7 +115,9 @@ class DockerContainer:
                     # PolyTracker was not installed from source
                     return self._out_of_date_sources
             source_files.extend(
-                p for p in (root_dir / "polytracker").glob("**/*") if "__pycache__" not in str(p) and not p.suffix == ".py"
+                p
+                for p in (root_dir / "polytracker").glob("**/*")
+                if "__pycache__" not in str(p) and not p.suffix == ".py"
             )
             for path in source_files:
                 mtime = path.stat().st_mtime
@@ -158,10 +166,14 @@ class DockerContainer:
                     raise ValueError(f"{self.name} does not exist!")
             else:
                 raise ValueError(
-                    f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically " "build it."
+                    f"{self.name} does not exist! Re-run with `build_if_necessary=True` to automatically "
+                    "build it."
                 )
         elif check_if_docker_out_of_date and len(self.out_of_date_sources()) > 0:
-            oods = [str(s.relative_to(self.dockerfile.path.parent)) for s in self.out_of_date_sources()]
+            oods = [
+                str(s.relative_to(self.dockerfile.path.parent))
+                for s in self.out_of_date_sources()
+            ]
             raise DockerOutOfDateError(
                 f"Docker container {self.name} relies on the following source files "
                 "that were modified after the container was last built: "
@@ -177,8 +189,12 @@ class DockerContainer:
         # Call out to the actual Docker command instead of the Python API because it has better support for interactive
         # TTYs
 
-        if interactive and (stdin is not None or stdout is not None or stderr is not None):
-            raise ValueError("if `interactive == True`, all of `stdin`, `stdout`, and `stderr` must be `None`")
+        if interactive and (
+            stdin is not None or stdout is not None or stderr is not None
+        ):
+            raise ValueError(
+                "if `interactive == True`, all of `stdin`, `stdout`, and `stderr` must be `None`"
+            )
 
         cmd_args = ["/usr/bin/env", "docker", "run", "-w=/workdir"]
 
@@ -205,7 +221,9 @@ class DockerContainer:
         if interactive:
             return subprocess.call(cmd_args, cwd=cwd)
         else:
-            return subprocess.run(cmd_args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd).returncode
+            return subprocess.run(
+                cmd_args, stdin=stdin, stdout=stdout, stderr=stderr, cwd=cwd
+            ).returncode
 
         # self.client.containers.run(self.name, args, remove=remove, mounts=[
         #     Mount(target=str(target), source=str(source), consistency="cached") for source, target in mounts
@@ -249,7 +267,9 @@ class DockerContainer:
             )
         # use the low-level APIClient so we can get streaming build status
         cli = docker.APIClient()
-        with tqdm(desc="Archiving the build directory", unit=" steps", leave=False) as t:
+        with tqdm(
+            desc="Archiving the build directory", unit=" steps", leave=False
+        ) as t:
             last_line = 0
             last_step = None
             for raw_line in cli.build(
@@ -285,7 +305,9 @@ class DockerContainer:
                                 # Docker didn't tell us the total number of steps, so infer it from our line
                                 # number in the Dockerfile
                                 t.total = len(self.dockerfile)
-                                new_line = self.dockerfile.get_line(m.group(4), starting_line=last_line)
+                                new_line = self.dockerfile.get_line(
+                                    m.group(4), starting_line=last_line
+                                )
                                 if new_line is not None:
                                     t.update(new_line - last_line)
                                     last_line = new_line
@@ -347,7 +369,8 @@ class DockerPull(DockerSubcommand):
         except ImageNotFound:
             if self.container.exists():
                 sys.stderr.write(
-                    f"The docker image {self.container.name} was not found on DockerHub, " "but it does already exist locally."
+                    f"The docker image {self.container.name} was not found on DockerHub, "
+                    "but it does already exist locally."
                 )
                 return 1
             pass
@@ -376,7 +399,9 @@ of `polytracker docker pull` and it will rebuild from the local Dockerfile.
             elif result.lower() == "y":
                 image = self.container.pull(latest=True)
                 if image.tag(self.container.image_name, self.container.tag):
-                    sys.stderr.write(f"\nTagged {self.container.image_name}:latest as {self.container.name}")
+                    sys.stderr.write(
+                        f"\nTagged {self.container.image_name}:latest as {self.container.name}"
+                    )
                     return 0
                 else:
                     return 1
@@ -418,7 +443,9 @@ or download the latest prebuilt Docker image for your preexisting PolyTracker in
 """
             )
             return 1
-        self.container.rebuild(nocache=args.no_cache, tag_as_latest=not args.no_tag_latest)
+        self.container.rebuild(
+            nocache=args.no_cache, tag_as_latest=not args.no_tag_latest
+        )
 
 
 class DockerRun(DockerSubcommand):
@@ -472,7 +499,9 @@ class DockerRun(DockerSubcommand):
             raise out_of_date_error
         sys.stderr.write(str(out_of_date_error))
         while True:
-            sys.stderr.write("\nWould you like to rebuild the Docker image before running? [Yn] ")
+            sys.stderr.write(
+                "\nWould you like to rebuild the Docker image before running? [Yn] "
+            )
             sys.stderr.flush()
             option = input()
             if option.lower() == "n":
@@ -482,7 +511,9 @@ class DockerRun(DockerSubcommand):
                     f"By default, the new image will be tagged as trailofbits/polytracker:{polytracker_version()}."
                 )
                 while True:
-                    sys.stderr.write("\nWould you like to also tag it as trailofbits/polytracker:latest? [Yn] ")
+                    sys.stderr.write(
+                        "\nWould you like to also tag it as trailofbits/polytracker:latest? [Yn] "
+                    )
                     sys.stderr.flush()
                     option = input()
                     if option.lower() == "n":
@@ -493,4 +524,6 @@ class DockerRun(DockerSubcommand):
                         break
                 container.rebuild(nocache=True, tag_as_latest=tag_as_latest)
                 break
-        return container.run(*args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs)
+        return container.run(
+            *args, interactive=interactive, check_if_docker_out_of_date=False, **kwargs
+        )

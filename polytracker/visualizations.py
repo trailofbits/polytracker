@@ -34,7 +34,10 @@ def file_diff(
 
 
 def temporal_animation(
-    output_path: str, trace: ProgramTrace, for_input: Optional[Input] = None, aspect_ratio: float = 1.61803398875
+    output_path: str,
+    trace: ProgramTrace,
+    for_input: Optional[Input] = None,
+    aspect_ratio: float = 1.61803398875,
 ):
     if for_input is None:
         for_input = next(iter(trace.inputs))
@@ -61,4 +64,6 @@ def temporal_animation(
             col = offset.offset % width
             image.putpixel((col, row), 0)
         images.append(image)
-    images[0].save(output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True)
+    images[0].save(
+        output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True
+    )

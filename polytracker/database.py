@@ -219,9 +219,7 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
             leave=False,
         ) as t:
             t.update(1)
-            for e in tqdm(
-                self.events, desc="processing", unit=" events", leave=False
-            ):
+            for e in tqdm(self.events, desc="processing", unit=" events", leave=False):
                 next_event = e.next_event
                 if next_event is not None:
                     next_event_queue.append(next_event)
