@@ -29,6 +29,8 @@ cavities(){
   echo "Detecting file cavities in ${BASENAME}.pdf ..."
 
   cp "${INPUT_PDF}" "${RESULT_DIR}/${BASENAME}.pdf"
+
+  rm -f "${RESULT_DIR}/polytracker.db"
   
   if docker run -it --rm \
     --mount type=bind,source="${SCRIPTPATH}/bin",target=/sources/bin \

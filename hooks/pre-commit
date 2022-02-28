@@ -7,6 +7,21 @@
 #
 # To enable this hook, rename this file to "pre-commit".
 
+echo Checking Python formatting...
+black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
+RESULT=$?
+if [ $RESULT -ne 0 ]; then
+  cat <<\EOF
+black wants to reformat some files!
+Try running:
+
+    black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
+
+from the root of this repository to automatically reformat them.
+EOF
+  exit 1
+fi
+
 echo Checking C/C++ formatting...
 python third_party/run-clang-format/run-clang-format.py \
           polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
