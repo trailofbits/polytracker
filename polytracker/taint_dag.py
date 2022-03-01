@@ -118,7 +118,6 @@ class TDFile:
 
     def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
         assert self.header.fd_mapping_offset > 0
-        assert self.header.fd_mapping_count > 0
 
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
@@ -385,7 +384,7 @@ class TDTaintForest(TaintForest):
             )
 
         elif isinstance(node, TDRangeNode):
-            curr : int = node.first
+            curr: int = node.first
             for n in range(node.first + 1, node.last):
                 synth_label = self.get_synth_node_label()
                 self.node_cache[synth_label] = TDTaintForestNode(
