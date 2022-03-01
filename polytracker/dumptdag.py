@@ -194,7 +194,7 @@ def dump_tdag(file: Path):
 # NOTE (hbrodin): Assumes source taint was preallocated
 
 
-def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
+def gen_source_taint_used(tdagpath: Path, sourcefile: str) -> bytearray:
     seen = set()
 
     def ctrlflow(lbl, t):
@@ -267,7 +267,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-            x for x in f.fd_mappings() if x[0] == sourcefile.name
+            x for x in f.fd_mappings() if x[0] == sourcefile
         )
         filelen = src_end - src_begin
         marker = bytearray(filelen)
@@ -307,7 +307,7 @@ def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
     return ranges
 
 
-def cavity_detection(tdag: Path, sourcefile: Path):
+def cavity_detection(tdag: Path, sourcefile: str):
     m = gen_source_taint_used(tdag, sourcefile)
     src = Path(sourcefile)
     for r in marker_to_ranges(m):
@@ -316,4 +316,4 @@ def cavity_detection(tdag: Path, sourcefile: Path):
 
 if __name__ == "__main__":
     # dump_tdag(Path(sys.argv[1]))
-    cavity_detection(Path(sys.argv[1]), Path(sys.argv[2]))
+    cavity_detection(Path(sys.argv[1]), sys.argv[2])
