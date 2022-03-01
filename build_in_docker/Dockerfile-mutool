@@ -48,8 +48,8 @@ RUN groupadd -r --gid $GID user \
  && chmod 0440 /etc/sudoers.d/user
 
 WORKDIR /sources/mupdf
-RUN make -j$(($(nproc)+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=release install
-WORKDIR /sources/mupdf/build/release
+RUN make -j$(($(nproc)+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=debug install
+WORKDIR /sources/mupdf/build/debug
 RUN get-bc -b mutool
 
 WORKDIR /
