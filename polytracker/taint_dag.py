@@ -383,6 +383,12 @@ class TDTaintForest(TaintForest):
                 self, label, None, node.affects_control_flow, (node.left, node.right)
             )
 
+        # TDRangeNode has to be unfolded into a tree of union nodes in a sum-like
+        # fashion. The created intermediate nodes are given labels via 
+        # `get_synth_node_label()`. `curr` holds the current node to be unioned.
+        # Initially it holds the first element of the range, but as the sum goes
+        # on it holds the current intermediate node. The final union is given the 
+        # label of the original node and is returned.
         elif isinstance(node, TDRangeNode):
             curr: int = node.first
             for n in range(node.first + 1, node.last):
