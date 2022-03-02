@@ -78,7 +78,7 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
             DOCKER_IMAGE,
             "/usr/bin/bash",
             "-c",
-            f'cd /workdir && DFSAN_OPTIONS="strict_data_dependencies=0" timeout {TIMEOUT} {MUTOOL_PATH} draw -o {OUTPNG} /inputs/{filename}',
+            f'cd /workdir && timeout {TIMEOUT} {MUTOOL_PATH} draw -o {OUTPNG} /inputs/{filename}',
         ]
 
         stats["draw_command"] = " ".join(command)
