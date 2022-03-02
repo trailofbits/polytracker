@@ -28,7 +28,7 @@ def test_dumptdag(program_trace: ProgramTrace):
         assert len(list(o.sink_log())) == 6
 
     # Cavities
-    m = dumptdag.gen_source_taint_used(tdag_file, str(data_file))
+    m = dumptdag.gen_source_taint_used(tdag_file, data_file)
     cavities = dumptdag.marker_to_ranges(m)
     assert len(cavities) == 2
     assert cavities[0] == (5, 6)
