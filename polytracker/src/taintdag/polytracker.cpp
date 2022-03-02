@@ -46,8 +46,8 @@ void PolyTracker::open_file(int fd, fs::path const &path) {
   // hasn't changed in between we should be able to reuse previously reserved
   // source labels. Is this something we want to do? Or is it better to just
   // generate new ranges on every open?
-  // TODO (hbrodin): This code is a a bit shaky. The main issue is with reserving
-  // labels that are not immediately initialized/assigned.
+  // TODO (hbrodin): This code is a a bit shaky. The main issue is with
+  // reserving labels that are not immediately initialized/assigned.
   std::optional<taint_range_t> range;
   bool reuse_source_range = details::reuse_prealloc_labels();
   bool was_reused = false;

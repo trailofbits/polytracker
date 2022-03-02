@@ -79,8 +79,10 @@ public:
   // Returns the number of existing mappings
   size_t get_mapping_count() const;
 
-  // Is there an existing mapping for the supplied name, if so, return prealloc range.
-  std::optional<taint_range_t> existing_label_range(std::string_view name) const;
+  // Is there an existing mapping for the supplied name, if so, return prealloc
+  // range.
+  std::optional<taint_range_t>
+  existing_label_range(std::string_view name) const;
 
 private:
   // Write the name of there is room for name + a header. If written, returns
