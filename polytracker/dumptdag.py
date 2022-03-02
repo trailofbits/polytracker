@@ -267,7 +267,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
 
     with open_output_file(tdagpath) as f:
         srcidx, src_begin, src_end = next(
-            x for x in f.fd_mappings() if x[0] == sourcefile.name
+            x for x in f.fd_mappings() if x[0] == str(sourcefile)
         )
         filelen = src_end - src_begin
         marker = bytearray(filelen)
@@ -309,7 +309,7 @@ def marker_to_ranges(m: bytearray) -> List[Tuple[int, int]]:
 
 def cavity_detection(tdag: Path, sourcefile: Path):
     m = gen_source_taint_used(tdag, sourcefile)
-    src = Path(sourcefile)
+    src = sourcefile
     for r in marker_to_ranges(m):
         print(f"{src.name},{r[0]},{r[1]-1}")
 
