@@ -28,6 +28,10 @@ def process_command_mutool(filename) -> Tuple[str, str, Path]:
     and is the parent directory of filename, which is the file
     to be processed.
 
+    NOTE: The current command is to draw a png-file. This only
+    produces one page, hence more data than expected might be
+    lost. Consider switching to .ps output.
+
     The return value is a tuple of (command, docker-image, output-filename),
     where command is the command to run and it produces
     output-filename in the current directory on success.
@@ -39,11 +43,37 @@ def process_command_mutool(filename) -> Tuple[str, str, Path]:
     return (f"{MUTOOL_PATH} draw -o {str(OUTPNG)} /inputs/{filename}", DOCKER_IMAGE, OUTPNG)
 
 def process_command_openjpeg(filename) -> Tuple[str, str, Path]:
+    """Command to run in container for openjpeg
+
+    This command is run where the directory /inputs is mounted
+    and is the parent directory of filename, which is the file
+    to be processed.
+
+    NOTE: The current command is to draw a png-file. More data
+    than expected might be lost because of the choosen output
+    format.
+
+    The return value is a tuple of (command, docker-image, output-filename),
+    where command is the command to run and it produces
+    output-filename in the current directory on success.
+
+    N.b. for this command to work you need to build the openjpeg
+    image. The following command can be used:
+    ```shell
+    docker build -t openjpg -f examples/Dockerfile-openjpeg.demo .
+    ```
+    """
     OUTBMP = Path("output.bmp")
     DOCKER_IMAGE = "openjpg"
     BIN_PATH = "/polytracker/the_klondike/openjpeg/build/bin/opj_decompress_track"
 
     return (f"{BIN_PATH} -o {str(OUTBMP)} -i /inputs/{filename}", DOCKER_IMAGE, OUTBMP)
+
+# Maps tool selection argument to functions controlling processing
+TOOL_MAPPING = {
+    "mutool" : process_command_mutool,
+    "openjpeg" : process_command_openjpeg
+}
 
 
 def rename_if_exists(src: Path, dst: Path) -> None:
@@ -78,14 +108,14 @@ def create_work_dir(path: Path):
 # an additional file call {base}.meta.json is created, containing two keys
 # draw_time and cavity_compute_time, which indicate runtime in seconds for
 # drawing and computing cavities.
-def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
+def file_cavity_detection(file: Path, output_dir: Path, timeout: int, proc_func) -> str:
     filename = file.name
     inputdir = os.path.abspath(file.parent)
     stats = {}
     print(f"Processing {filename}")
 
     with create_work_dir(Path(output_dir, file.stem)) as tmpd:
-        proc_command, docker_image, output_name = process_command_mutool(filename)
+        proc_command, docker_image, output_name = proc_func(filename)
         # Run the draw command
         command = [
             "docker",
@@ -159,9 +189,11 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
         return return_str
 
 
-def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path]):
+def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool: str):
     if not os.path.exists(output_dir):
         mkdir(output_dir)
+
+    proc_func = TOOL_MAPPING[tool]
 
     # TODO (hbrodin): Consider not enqueueing all work upfront but keep a limit
     # on the size of the futures list and append as jobs complete.
@@ -177,12 +209,12 @@ def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path])
                     file = file.rstrip()
                     print(f"Queue {file}")
                     futures.append(
-                        tpe.submit(file_cavity_detection, Path(file), output_dir, TIMEOUT)
+                        tpe.submit(file_cavity_detection, Path(file), output_dir, TIMEOUT, proc_func)
                     )
             else:
                 print(f"Queue {input}")
                 futures.append(
-                    tpe.submit(file_cavity_detection, input, output_dir, TIMEOUT)
+                    tpe.submit(file_cavity_detection, input, output_dir, TIMEOUT, proc_func)
                 )
         for fut in concurrent.futures.as_completed(futures):
             f.write(fut.result())
@@ -202,8 +234,13 @@ def main():
         default=None,
         help="Number of jobs to run in parallell",
     )
+
     parser.add_argument(
         "--output-dir", "-o", type=Path, help="Directory where output is stored"
+    )
+
+    parser.add_argument(
+        "--tool", "-t", type=str, choices=TOOL_MAPPING.keys(), help="Tool to run.", required=True
     )
 
     parser.add_argument(
@@ -212,7 +249,7 @@ def main():
 
     args = parser.parse_args()
 
-    execute(args.output_dir, args.jobs, args.inputs)
+    execute(args.output_dir, args.jobs, args.inputs, args.tool)
 
 
 if __name__ == "__main__":
