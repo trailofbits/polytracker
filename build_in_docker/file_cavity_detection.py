@@ -100,15 +100,18 @@ def create_work_dir(path: Path):
         rmtree(path)
 
 
-# Runs full file cavity detection on draw pdf to png using mutool.
-# Output format (return string) is filename,cavityfirst,cavitylast
-# -1 is used for cavityfirst/cavitylast if timeout of the draw command
-# -2 is used for cavityfirst/cavitylast if timeout of the dumptdag/cavity computation command
-# Result files are stored to output_dir,
-# an additional file call {base}.meta.json is created, containing two keys
-# draw_time and cavity_compute_time, which indicate runtime in seconds for
-# drawing and computing cavities.
 def file_cavity_detection(file: Path, output_dir: Path, timeout: int, proc_func) -> str:
+    """
+    Runs full file cavity detection using selected tool.
+
+    Output format (return string) is filename,cavityfirst,cavitylast
+    -1 is used for cavityfirst/cavitylast if timeout of the draw command
+    -2 is used for cavityfirst/cavitylast if timeout of the dumptdag/cavity computation command
+    Result files are stored to output_dir,
+    an additional file call {base}.meta.json is created, containing two keys
+    draw_time and cavity_compute_time, which indicate runtime in seconds for
+    drawing and computing cavities.
+    """
     filename = file.name
     inputdir = os.path.abspath(file.parent)
     stats = {}
@@ -116,7 +119,7 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int, proc_func)
 
     with create_work_dir(Path(output_dir, file.stem)) as tmpd:
         proc_command, docker_image, output_name = proc_func(filename)
-        # Run the draw command
+        # Run the tool
         command = [
             "docker",
             "run",
