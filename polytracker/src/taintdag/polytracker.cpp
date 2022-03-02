@@ -17,6 +17,12 @@ std::optional<size_t> file_size(int fd) {
 
   return {};
 }
+
+bool reuse_prealloc_labels() {
+  auto v = getenv("POLYTRACKER_NO_REUSE_PREALLOC_LABELS");
+  return v == nullptr || v[0] != '0';
+}
+
 } // namespace details
 
 PolyTracker::PolyTracker(std::filesystem::path const &outputfile)
@@ -41,15 +47,22 @@ void PolyTracker::open_file(int fd, fs::path const &path) {
   // source labels. Is this something we want to do? Or is it better to just
   // generate new ranges on every open?
   std::optional<taint_range_t> range;
-  auto fsize = details::file_size(fd);
-  if (fsize) {
-    range = tdag_.reserve_source_labels(fsize.value());
+  bool reuse_source_range = details::reuse_prealloc_labels();
+  if (reuse_source_range) {
+    range = fdm_.existing_label_range(path.string());
+  }
+
+  if (!range) {
+    auto fsize = details::file_size(fd);
+    if (fsize) {
+      range = tdag_.reserve_source_labels(fsize.value());
+    }
   }
 
   auto index = fdm_.add_mapping(fd, path.string(), range);
   // Will leak source labels if fdmapping failed. If it failed we are near
   // capacity anyway so...
-  if (range && index)
+  if (!reuse_source_range && range && index)
     tdag_.assign_source_labels(range.value(), index.value(), 0);
 }
 
