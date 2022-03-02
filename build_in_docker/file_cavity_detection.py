@@ -9,20 +9,41 @@ from os import mkdir, rename
 from shutil import rmtree
 from pathlib import Path
 from time import time
-from typing import Dict, Iterable, Union
+from typing import Dict, Iterable, Tuple, Union
 from contextlib import contextmanager
 
 
-DOCKER_IMAGE = "trailofbits/polytrackerbuilder-mupdf"
 BINDIR = Path(os.path.dirname(os.path.realpath(__file__))) / "bin"
-MUTOOL_PATH = "/sources/bin/mutool_track_no_control_flow"
 TIMEOUT = 100
 SCRIPTDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 
 POLYDB = "polytracker.db"
 TDAG = "polytracker.tdag"
-OUTPNG = "output.png"
 RESULTSCSV = "cavities.csv"
+
+def process_command_mutool(filename) -> Tuple[str, str, Path]:
+    """Command to run in container for mutool
+
+    This command is run where the directory /inputs is mounted
+    and is the parent directory of filename, which is the file
+    to be processed.
+
+    The return value is a tuple of (command, docker-image, output-filename),
+    where command is the command to run and it produces
+    output-filename in the current directory on success.
+    """
+    OUTPNG = Path("output.png")
+    DOCKER_IMAGE = "trailofbits/polytrackerbuilder-mupdf"
+    MUTOOL_PATH = "/sources/bin/mutool_track_no_control_flow"
+
+    return (f"{MUTOOL_PATH} draw -o {str(OUTPNG)} /inputs/{filename}", DOCKER_IMAGE, OUTPNG)
+
+def process_command_openjpeg(filename) -> Tuple[str, str, Path]:
+    OUTBMP = Path("output.bmp")
+    DOCKER_IMAGE = "openjpg"
+    BIN_PATH = "/polytracker/the_klondike/openjpeg/build/bin/opj_decompress_track"
+
+    return (f"{BIN_PATH} -o {str(OUTBMP)} -i /inputs/{filename}", DOCKER_IMAGE, OUTBMP)
 
 
 def rename_if_exists(src: Path, dst: Path) -> None:
@@ -30,11 +51,12 @@ def rename_if_exists(src: Path, dst: Path) -> None:
         rename(src, dst)
 
 
-def save_results(filename: Path, workdir: Path, output_dir: Path, stats: Dict) -> None:
+def save_results(filename: Path, workdir: Path, output_dir: Path, output_name : Path, stats: Dict) -> None:
     base = filename.stem
+    out_ext = output_name.suffix
     rename_if_exists(workdir / POLYDB, output_dir / f"{base}.db")
     rename_if_exists(workdir / TDAG, output_dir / f"{base}.tdag")
-    rename_if_exists(workdir / OUTPNG, output_dir / f"{base}.png")
+    rename_if_exists(workdir / output_name, output_dir / f"{base}.{out_ext}")
     with open(output_dir / f"{base}.meta.json", "w") as fstat:
         json.dump(stats, fstat)
 
@@ -63,6 +85,7 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
     print(f"Processing {filename}")
 
     with create_work_dir(Path(output_dir, file.stem)) as tmpd:
+        proc_command, docker_image, output_name = process_command_mutool(filename)
         # Run the draw command
         command = [
             "docker",
@@ -75,10 +98,10 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
             f"type=bind,source={BINDIR},target=/sources/bin",
             "--mount",
             f"type=bind,source={tmpd},target=/workdir",
-            DOCKER_IMAGE,
+            docker_image,
             "/usr/bin/bash",
             "-c",
-            f'cd /workdir && timeout {TIMEOUT} {MUTOOL_PATH} draw -o {OUTPNG} /inputs/{filename}',
+            f'cd /workdir && timeout {TIMEOUT} {proc_command}',
         ]
 
         stats["draw_command"] = " ".join(command)
@@ -107,8 +130,8 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
         if return_str == "":
             command = [
                 "python3",
-                # str(SCRIPTDIR / "../polytracker/dumptdag.py"),
-                str(SCRIPTDIR / "cavities.py"),
+                str(SCRIPTDIR / "../polytracker/dumptdag.py"),
+                #str(SCRIPTDIR / "cavities.py"),
                 str(tmpd / TDAG),
                 f"/inputs/{filename}",
             ]
@@ -131,7 +154,7 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int) -> str:
                     stats["cavity_compute_end"] - stats["cavity_compute_start"]
                 )
 
-        save_results(Path(filename), tmpd, output_dir, stats)
+        save_results(Path(filename), tmpd, output_dir, output_name, stats)
         print(f"Finished {filename}")
         return return_str
 
