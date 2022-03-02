@@ -32,7 +32,6 @@ PolyTracker::~PolyTracker() {
 
 label_t PolyTracker::union_labels(label_t l1, label_t l2) {
   auto ret = tdag_.union_taint(l1, l2);
-  // printf("Union labels: %u %u -> %u\n", l1, l2, ret);
   return ret;
 }
 
@@ -131,7 +130,6 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
 }
 
 void PolyTracker::affects_control_flow(label_t lbl) {
-  // printf("Label %u affects control flow\n", lbl);
   tdag_.affects_control_flow(lbl);
 }
 
