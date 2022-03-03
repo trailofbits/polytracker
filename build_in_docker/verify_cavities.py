@@ -1,47 +1,9 @@
 import argparse
-import subprocess
+from file_cavity_detection import path_iterator, Tool, TOOL_MAPPING
 from mutate_cavities import method_mapping, mutate_cavities
 from hashlib import sha256
-from os import rename
-from os.path import abspath, exists, getsize
+from os.path import exists, getsize
 from pathlib import Path
-from typing import Tuple, Union
-
-
-# Name of Docker image containing regular mutool
-MUTOOL_IMAGE = "mupdf"
-
-# This script is used to verify generated cavities by mutating all cavities and running the
-# mutool draw process again and verify that the generated png is identical to the non-mutated
-# version. This method will only identify errors when a detected cavity is not a real cavity.
-# It will not detect when there are more or larger cavities than reported. For that a different
-# approach could be used, e.g. mutate every non-cavity byte and ensure that no other mutation
-# generates equal output (this is pretty heavy though).
-
-
-def draw_mutated_pdf(mutpdf: Path, resultpath: Path) -> Tuple[Path, int]:
-    """Draw a mutated pdf as png. Returns path to output file."""
-    inputfile = abspath(mutpdf)
-    outputdir = abspath(resultpath)
-    args = [
-        "docker",
-        "run",
-        "-it",
-        "--rm",
-        "--mount",
-        f'type=bind,source={outputdir},target=/outputdir',
-        "--mount",
-        f'type=bind,source={inputfile},target=/inputfile',
-        MUTOOL_IMAGE,
-        "/polytracker/the_klondike/mupdf/build/debug/mutool",
-        "draw",
-        "-o",
-        "/outputdir/mutated.png",
-        "/inputfile"
-    ]
-    ret = subprocess.call(args)
-    return (resultpath / "mutated.png", ret)
-
 
 def get_checksum(f: Path) -> str:
     sh = sha256()
@@ -49,62 +11,55 @@ def get_checksum(f: Path) -> str:
         sh.update(fd.read())
     return sh.hexdigest()
 
+def result_file(input_file: Path, results_dir: Path, output_ext: str) -> Path:
+    return results_dir / f"{input_file.stem}{output_ext}"
 
-def png_from_pdf(pdfpath: Path, results: Path) -> Path:
-    return results / (str(pdfpath.stem) + ".png")
+def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Path, limit: int, skip: int, tool : Tool):
+    orig_output = result_file(inputfile, resultsdir, tool.output_extension())
 
-
-def png_from_mutated(mutpath: Path, results: Path) -> Path:
-    return results / (str(mutpath.name) + ".png")
-
-# TODO Skip any file with timeout or when the png is zero bytes...
-
-
-def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Path, limit: int, skip: int):
-    origpng = png_from_pdf(inputfile, resultsdir)
-
-    if not exists(origpng):
-        print(f"INFO: Original png {origpng} does not exist. Skip.")
+    if not exists(orig_output):
+        print(f"INFO: Original output file {str(orig_output)} does not exist. Skip.")
         return
 
-    if getsize(origpng) == 0:
-        print(f"INFO: Original png {origpng} is zero bytes. Skip.")
+    if getsize(orig_output) == 0:
+        print(f"INFO: Original output file {str(orig_output)} is zero bytes. Skip.")
         return
 
-    # 1. Generate mutated pdf
-    mutated_pdf = mutate_cavities(inputfile, cavitydb, method, limit, skip)
-    if mutated_pdf is None:
+    # 1. Generate mutated file
+    mutated_file = mutate_cavities(inputfile, cavitydb, method, limit, skip)
+    if mutated_file is None:
         print(f"INFO: No cavities detected in {inputfile}")
         return
 
-    # 2. Check mutated pdf checksum differs from orig
-    csum_origpdf = get_checksum(inputfile)
-    csum_mutpdf = get_checksum(mutated_pdf)
-    if csum_origpdf == csum_mutpdf:
+    # 2. Check mutated file checksum differs from orig
+    csum_origfile = get_checksum(inputfile)
+    csum_mutfile = get_checksum(mutated_file)
+    if csum_origfile == csum_mutfile:
         print(
-            f"WARNING: No mutation happened between {inputfile} and {mutated_pdf}. Skip.")
+            f"WARNING: No mutation happened between {str(inputfile)} and {str(mutated_file)}. Skip.")
         return
 
-    # 3. Draw mutated pdf
-    mutpng = png_from_mutated(mutated_pdf, resultsdir)
-    out, ret = draw_mutated_pdf(mutated_pdf, resultsdir)
-    if ret != 0:
-        print(
-            f"WARNING: Error while processing {mutated_pdf}. Trying to continue anyway.")
-    if not exists(out):
-        print(
-            f"ERROR: Did not generate a png {mutpng} ({out}) from mutated pdf. Orig png {origpng} exists.")
-        return
-    rename(out, mutpng)
+    # 3. Process mutated file
+    mutfile = result_file(mutated_file, resultsdir, tool.output_extension())
+    result = tool.run_non_instrumented(mutated_file, mutfile)
+    if "timeout" in result:
+        print(f"WARNING: Timeout while generating output for mutated file {str(mutated_file)}. Trying to continue.")
+    if "failure" in result:
+        print(f"WARNING: Error while generating output for mutated file {str(mutated_file)}. Trying to continue.")
 
-    # 4. Verify mutated png have equal checksum to orig png
-    csum_origpng = get_checksum(origpng)
-    csum_mutpng = get_checksum(mutpng)
-    if csum_origpng != csum_mutpng:
+    if not exists(mutfile):
         print(
-            f"ERROR: Checksums differ {origpng}:{csum_origpng} {mutpng}:{csum_mutpng}")
+            f"ERROR: Did not generate output file {str(mutfile)} from mutated file. Orig output file {str(orig_output)} exists.")
+        return
+
+    # 4. Verify mutated output file have equal checksum to orig output file
+    csum_origoutput = get_checksum(orig_output)
+    csum_mutoutput = get_checksum(mutfile)
+    if csum_origoutput != csum_mutoutput:
+        print(
+            f"ERROR: Checksums differ {str(orig_output)}:{csum_origoutput} {str(mutfile)}:{csum_mutoutput}")
     else:
-        print(f"OK: {inputfile}")
+        print(f"OK: {str(inputfile)}")
 
 
 def main():
@@ -114,7 +69,7 @@ def main():
     """
     )
 
-    parser.add_argument("--results", "-c", type=Path,
+    parser.add_argument("--results", "-c", type=Path, required=True,
                         help="Path to the results directory, including cavities db")
 
     parser.add_argument("inputs", type=Path, nargs='+',
@@ -128,13 +83,17 @@ def main():
     parser.add_argument("--skip", "-s", type=int, default=0,
                         help="Skip the first cavities, start mutating after skip cavities.")
 
+    parser.add_argument(
+        "--tool", "-t", type=str, choices=TOOL_MAPPING.keys(), help="Tool to run.", required=True
+    )
+
     args = parser.parse_args()
 
     cavitydb = args.results / "cavities.csv"
 
-    for inputfile in args.inputs:
+    for inputfile in path_iterator(args.inputs):
         verify_cavities(inputfile, cavitydb, args.method,
-                        args.results, args.limit, args.skip)
+                        args.results, args.limit, args.skip, TOOL_MAPPING[args.tool]())
 
 
 if __name__ == "__main__":

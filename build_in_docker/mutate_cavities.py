@@ -44,12 +44,13 @@ def orig_file(filename: Path) -> bytearray:
         return bytearray(f.read())
 
 
-def target_path(filename : Path, method : str) -> Path:
-    return Path(f"{filename}.{method}.mutated")
+def target_path(filename : Path, target_dir: Path, method : str) -> Path:
+    return target_dir / f"{filename.stem}.mut-{method}{filename.suffix}"
 
 
 def mutate_cavities(filename: Path, cavities_file: Path, method : str, limit: int = -1, skip : int = 0) -> Union[Path, None]:
-    target = target_path(filename, method)
+    target_dir = cavities_file.parent
+    target = target_path(filename, target_dir, method).absolute()
 
     data = orig_file(filename)
     print(f"Mutating {filename} using {method} storing at {target}")
@@ -87,7 +88,7 @@ def main():
     To zero out cavities for a single file invoke this script using:
       ./mutate_cavities.py --cavitydb=path-to.csv path-to-file-to-mutate.pdf
 
-    this will generate a output file called path-to-file-to-mutate.pdf.zero.mutate.
+    this will generate a output file called path-to-file-to-mutate.zero.pdf
     The zero indicates that mutation method was 'zero' i.e. fill with zeroes.
 
     The program can be invoked with as many paths as you want to mutate files.
