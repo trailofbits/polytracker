@@ -1,0 +1,30 @@
+FROM ubuntu:focal AS sources
+
+WORKDIR /polytracker/the_klondike/
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y upgrade && apt-get install -y wget
+
+RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && tar xf jpegsrc.v9e.tar.gz
+WORKDIR jpeg-9e
+
+FROM trailofbits/polytracker:latest
+MAINTAINER Henrik Brodin <henrik.brodin@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike/
+
+COPY --from=sources /polytracker/the_klondike/jpeg-9e /polytracker/the_klondike/jpeg-9e
+
+WORKDIR /polytracker/the_klondike/jpeg-9e
+RUN ./configure  LDFLAGS="-static" && make
+
+#Extract bitcode from mutool
+#WORKDIR /polytracker/the_klondike/jpeg-9e/
+RUN get-bc -b djpeg
+
+#Instrument and link libs
+RUN ${CC} --lower-bitcode --no-control-flow-tracking -i djpeg.bc -o djpeg_track #--libs libjpeg.a # m pthread
+
+# Note, the /workdir directory is intended to be mounted at runtime
+VOLUME ["/workdir"]
+WORKDIR /workdir
