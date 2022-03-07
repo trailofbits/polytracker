@@ -334,6 +334,5 @@ EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
 }
 
 EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
-  polytracker_end();
   exit(ret_code);
 }
