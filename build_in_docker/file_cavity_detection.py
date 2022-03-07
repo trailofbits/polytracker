@@ -312,24 +312,48 @@ def path_iterator(paths: Iterable[Path]) -> Iterable[Path]:
         else:
             yield p
 
-def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool : Tool):
+def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = None, target_qlen:int = 32) -> int:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe:
+        futures = []
+        run = True
+        enqueue = True
+        nfiles_processed = 0
+        while run:
+            while enqueue and len(futures) < target_qlen:
+                try:
+                    file = next(path_iterator(paths))
+                    print(f"Queue {file}")
+                    futures.append(
+                        tpe.submit(*func(file))
+                    )
+                except StopIteration:
+                    enqueue = False
+                    print("All inputs scheduled for processing.")
+
+            for fut in concurrent.futures.as_completed(futures):
+                res = fut.result()
+                if res is not None:
+                    f.write(res)
+                futures.remove(fut)
+                nfiles_processed += 1
+                # If more input should be processed, add to queue
+                if enqueue:
+                    break
+                # Otherwise all inputs are in queue and we should just drain it and complete.
+            run = enqueue or len(futures) > 0
+        return nfiles_processed
+
+
+def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool : Tool) -> int:
     if not os.path.exists(output_dir):
         mkdir(output_dir)
 
-    # TODO (hbrodin): Consider not enqueueing all work upfront but keep a limit
-    # on the size of the futures list and append as jobs complete.
-    with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe, open(
-        output_dir / RESULTSCSV, "w"
-    ) as f:
+    def enq(file: Path):
+        return (file_cavity_detection, file, output_dir, TIMEOUT, tool)
 
-        futures = []
-        for file in path_iterator(paths):
-            print(f"Queue {file}")
-            futures.append(
-                tpe.submit(file_cavity_detection, file, output_dir, TIMEOUT, tool)
-            )
-        for fut in concurrent.futures.as_completed(futures):
-            f.write(fut.result())
+    with open(output_dir / RESULTSCSV, "w") as f:
+        return process_paths(enq, paths, f)
+
 
 # Maps tool selection argument to functions controlling processing
 TOOL_MAPPING = {
