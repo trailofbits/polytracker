@@ -211,6 +211,30 @@ class OpenJPEG(Tool):
         return self._cmd(OpenJPEG.BIN_DIR / "opj_decompress", container_input_path, container_output_path)
 
 
+class LibJPEG(Tool):
+    BIN_DIR = Path("/polytracker/the_klondike/jpeg-9e")
+
+    def __init__(self, timeout=100):
+        super().__init__(timeout)
+
+    def image_instrumented(self):
+        return "libjpeg"
+
+    def input_extension(self) -> str:
+        return ".jpg"
+
+    def output_extension(self) -> str:
+        return ".bmp"
+
+    def _cmd(self, binary : Path, input: Path, output: Path):
+        return f"{str(binary)} -bmp -outfile {str(output)} {input}"
+
+    def command_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
+        return self._cmd(LibJPEG.BIN_DIR / "djpeg_track", container_input_path, container_output_path)
+
+    def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
+        return self._cmd(LibJPEG.BIN_DIR / "djpeg", container_input_path, container_output_path)
+
 def rename_if_exists(src: Path, dst: Path) -> None:
     if os.path.exists(src):
         rename(src, dst)
@@ -357,6 +381,7 @@ def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path],
 
 # Maps tool selection argument to functions controlling processing
 TOOL_MAPPING = {
+    "libjpeg": LibJPEG,
     "mutool" : MuTool,
     "openjpeg" : OpenJPEG
 }
