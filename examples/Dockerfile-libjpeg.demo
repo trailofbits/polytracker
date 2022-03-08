@@ -19,7 +19,6 @@ WORKDIR /polytracker/the_klondike/jpeg-9e
 RUN ./configure  LDFLAGS="-static" && make
 
 #Extract bitcode from mutool
-#WORKDIR /polytracker/the_klondike/jpeg-9e/
 RUN get-bc -b djpeg
 
 #Instrument and link libs

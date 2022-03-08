@@ -168,7 +168,7 @@ class MuTool(Tool):
         super().__init__(timeout)
 
     def image_instrumented(self):
-        return "mupdf"
+        return "trailofbits/polytracker-demo-mupdf"
 
     def input_extension(self) -> str:
         return ".pdf"
@@ -193,7 +193,7 @@ class OpenJPEG(Tool):
         super().__init__(timeout)
 
     def image_instrumented(self):
-        return "openjpg"
+        return "trailofbits/polytracker-demo-openjpeg"
 
     def input_extension(self) -> str:
         return ".jp2"
@@ -218,7 +218,7 @@ class LibJPEG(Tool):
         super().__init__(timeout)
 
     def image_instrumented(self):
-        return "libjpeg"
+        return "trailofbits/polytracker-demo-libjpeg"
 
     def input_extension(self) -> str:
         return ".jpg"
