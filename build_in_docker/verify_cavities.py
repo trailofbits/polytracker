@@ -76,7 +76,7 @@ def store_stats(output: Path):
         json.dump(d, f)
 
 STATSJSON = "stats.json"
-def verify_in_container(inputfile, toolname):
+def verify_in_container(inputfile: Path, tool: Tool):
     """Run file cavity verification in the container
     
     Expects:
@@ -96,9 +96,6 @@ def verify_in_container(inputfile, toolname):
     6. For a subset of non-cavity bytes, do the same as (5)
     7. Store the statistics to /data/stats.json
     """
-    inputfile = Path(inputfile)
-    tool = TOOL_MAPPING[toolname]()
-
     data = Path("/data")
     work = Path("/work")
     # 1
@@ -157,7 +154,7 @@ def verify_in_container(inputfile, toolname):
         # 6
         do_mutation(fmi.sample_non_cavity_bytes(0.01), stats["non-cavity"])
 
-def start_in_container(inputfile: Path, cavitydb: Path, toolname: str):
+def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdir: Path):
     tool = TOOL_MAPPING[toolname]()
     script_dir = Path(__file__).absolute().parent
     with TemporaryDirectory() as datadir:
@@ -167,12 +164,12 @@ def start_in_container(inputfile: Path, cavitydb: Path, toolname: str):
             "-v", f"{datadir}:/data",
             "-v", f"{cavitydb.absolute()}:/data/cavities.csv",
             tool.image_non_instrumented(),
-            "/usr/bin/python3", "/src/verify_cavities.py", "--container", f"/data/{inputfile.name}", toolname]
+            "/usr/bin/python3", "/src/verify_cavities.py", "--container", "--tool", toolname, "--results", "/data", f"/data/{inputfile.name}"]
         subprocess.run(cmd)
 
-        with open(Path(datadir) / STATSJSON, "r") as f:
-            f = json.load(f)
-            print(f)
+        json_path = Path(datadir)/STATSJSON
+        json_dst = resultsdir/f"{inputfile.stem}-verification.json"
+        json_path.rename(json_dst)
 
 
 
@@ -267,6 +264,8 @@ def main():
     """
     )
 
+    parser.add_argument("--container", help=argparse.SUPPRESS, action="store_true")
+
     parser.add_argument("--results", "-c", type=Path, required=True,
                         help="Path to the results directory, including cavities db")
 
@@ -291,21 +290,20 @@ def main():
 
     tool = TOOL_MAPPING[args.tool]()
 
+    if args.container:
+        verify_in_container(args.inputs[0], tool)
+        return
+
     def enq(file: Path):
         return (verify_cavities, file, cavitydb, args.method, args.results, args.limit, args.skip, tool)
 
     #process_paths(enq, args.inputs, stdout)
 
     def enq_full(file: Path):
-        return (start_in_container, file, cavitydb, args.tool)
+        return (start_in_container, file, cavitydb, args.tool, args.results)
         #return (verify_results, file, cavitydb, args.method, args.results, tool, 0.005)
     process_paths(enq_full, args.inputs, stdout)
 
 
 if __name__ == "__main__":
-    print(len(argv))
-    print(argv)
-    if len(argv) == 4 and argv[1] == "--container":
-        verify_in_container(argv[2], argv[3])
-    else:
-        main()
+    main()
