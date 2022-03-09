@@ -1,7 +1,9 @@
 from asyncio import subprocess
 import concurrent.futures
+from hashlib import sha256
 import json
 import os.path
+from re import T
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -10,7 +12,7 @@ from os import mkdir, rename
 from shutil import rmtree
 from pathlib import Path
 from time import time
-from typing import Dict, Iterable, List, Union
+from typing import Dict, Iterable, List, Optional, Union
 from contextlib import contextmanager
 
 
@@ -219,6 +221,7 @@ class LibJPEG(Tool):
 
     def image_instrumented(self):
         return "trailofbits/polytracker-demo-libjpeg"
+        return "libjpeg"
 
     def input_extension(self) -> str:
         return ".jpg"
@@ -234,6 +237,51 @@ class LibJPEG(Tool):
 
     def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
         return self._cmd(LibJPEG.BIN_DIR / "djpeg", container_input_path, container_output_path)
+
+class InteractiveRunner:
+    MARKER = "e1eefe9c266415e925638de4dd389e5224e64e93ffadf000ac343479a50ba7e4"
+    def __init__(self, t: Tool, p:subprocess.Popen, indir: Optional[Path] = None, outdir: Optional[Path] = None):
+        self.t = t
+        self.p = p
+        self.indir = indir
+        self.outdir = outdir
+    
+    def run_cmd(self, cmd) -> int:
+        #print(f"cmd: {cmd}")
+        self.p.stdin.write(f"{cmd}\necho $?\necho {InteractiveRunner.MARKER}\n".encode("utf-8"))
+        self.p.stdin.flush()
+        last = ''
+        while True:
+            l = self.p.stdout.readline().rstrip()
+            l = l.decode("utf-8", errors='ignore')
+            #print(f"out: {l}")
+            if l != InteractiveRunner.MARKER:
+                last = l
+            else:
+                ret = int(last)
+                return ret
+
+
+    def exit(self):
+        self.p.stdin.write(b"exit\n")
+        self.p.stdin.flush()
+        self.p.communicate()
+
+
+@contextmanager
+def run_interactive(tool: Tool, indir: Optional[Path] = None, outdir: Optional[Path] = None):
+    args = [x if x != "-t" else "-i" for x in tool.get_docker_run_base()]
+    if indir:
+        args.extend(tool.get_mount_arg(indir, tool.container_input_dir))
+    if outdir:
+        args.extend(tool.get_mount_arg(outdir, tool.container_output_dir))
+    args.append(tool.image_non_instrumented())
+    args.append("/bin/bash")
+    with subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as p:
+    #with subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as p:
+        ir = InteractiveRunner(tool, p, indir, outdir)
+        yield ir
+        ir.exit()
 
 def rename_if_exists(src: Path, dst: Path) -> None:
     if os.path.exists(src):
