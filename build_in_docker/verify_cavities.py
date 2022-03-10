@@ -153,12 +153,12 @@ def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdi
     script_dir = Path(__file__).absolute().parent
     with TemporaryDirectory() as datadir:
         shutil.copy(inputfile, datadir)
-        cmd = ["docker", "run", "--rm", 
-            "-v", f"{script_dir}:/src",
-            "-v", f"{datadir}:/data",
-            "-v", f"{cavitydb.absolute()}:/data/cavities.csv",
-            tool.image_non_instrumented(),
-            "/usr/bin/python3", "/src/verify_cavities.py", "--container", "--tool", toolname, "--results", "/data", f"/data/{inputfile.name}"]
+        cmd = ["docker", "run", "--rm"]
+        cmd.extend(tool.get_mount_arg(script_dir, "/src"))
+        cmd.extend(tool.get_mount_arg(datadir, "/data"))
+        cmd.extend(tool.get_mount_arg(cavitydb.absolute(), "/data/cavities.csv"))
+        cmd.extend([tool.image_non_instrumented(), "/usr/bin/python3", "/src/verify_cavities.py",
+                    "--container", "--tool", toolname, "--results", "/data", f"/data/{inputfile.name}"])
         subprocess.run(cmd)
 
         json_path = Path(datadir)/STATSJSON
