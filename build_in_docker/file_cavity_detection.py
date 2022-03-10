@@ -385,6 +385,9 @@ def path_iterator(paths: Iterable[Path]) -> Iterable[Path]:
             yield p
 
 def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = None, target_qlen:int = 32) -> int:
+    if nworkers and target_qlen < nworkers:
+        target_qlen = nworkers
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe:
         futures = []
         run = True
@@ -424,7 +427,7 @@ def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path],
         return (file_cavity_detection, file, output_dir, TIMEOUT, tool)
 
     with open(output_dir / RESULTSCSV, "w") as f:
-        return process_paths(enq, paths, f)
+        return process_paths(enq, paths, f, nworkers)
 
 
 # Maps tool selection argument to functions controlling processing
