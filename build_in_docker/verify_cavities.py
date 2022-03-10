@@ -113,6 +113,9 @@ def verify_in_container(inputfile: Path, tool: Tool):
 
         # 3
         fmi = FileMutatorInfo(inputfile, data/"cavities.csv")
+        if any(map(lambda x: x < 0, fmi.cavity_offsets)):
+            stats["error"] = "No cavities detected"
+            return
 
         stats["filesize"] = fmi.file_size
         stats["cavity"] = {}
