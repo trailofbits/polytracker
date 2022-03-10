@@ -23,7 +23,7 @@ RESULTSCSV = "cavities.csv"
 class Tool(ABC):
     """Enables interaction with different tools in docker images"""
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         self._timeout = timeout
         self.container_input_dir = Path("/inputs")
         self.container_output_dir = Path("/outputs")
@@ -161,7 +161,7 @@ class Tool(ABC):
 class MuTool(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/mupdf/build/release")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
@@ -186,7 +186,7 @@ class MuTool(Tool):
 class OpenJPEG(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/openjpeg/build/bin")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
@@ -211,7 +211,7 @@ class OpenJPEG(Tool):
 class LibJPEG(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/jpeg-9e")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
