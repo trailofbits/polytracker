@@ -216,7 +216,6 @@ class LibJPEG(Tool):
 
     def image_instrumented(self):
         return "trailofbits/polytracker-demo-libjpeg"
-        return "libjpeg"
 
     def input_extension(self) -> str:
         return ".jpg"
