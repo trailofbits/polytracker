@@ -14,11 +14,8 @@ from typing import Dict, Iterable, List, Union
 from contextlib import contextmanager
 
 
-
-BINDIR = Path(os.path.dirname(os.path.realpath(__file__))) / "bin"
 TIMEOUT = 100
 SCRIPTDIR = Path(os.path.dirname(os.path.realpath(__file__)))
-
 TDAG = "polytracker.tdag"
 RESULTSCSV = "cavities.csv"
 
@@ -26,7 +23,7 @@ RESULTSCSV = "cavities.csv"
 class Tool(ABC):
     """Enables interaction with different tools in docker images"""
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         self._timeout = timeout
         self.container_input_dir = Path("/inputs")
         self.container_output_dir = Path("/outputs")
@@ -164,7 +161,7 @@ class Tool(ABC):
 class MuTool(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/mupdf/build/release")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
@@ -189,7 +186,7 @@ class MuTool(Tool):
 class OpenJPEG(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/openjpeg/build/bin")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
@@ -214,7 +211,7 @@ class OpenJPEG(Tool):
 class LibJPEG(Tool):
     BIN_DIR = Path("/polytracker/the_klondike/jpeg-9e")
 
-    def __init__(self, timeout=100):
+    def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
 
     def image_instrumented(self):
@@ -337,6 +334,9 @@ def path_iterator(paths: Iterable[Path]) -> Iterable[Path]:
             yield p
 
 def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = None, target_qlen:int = 32) -> int:
+    if nworkers and target_qlen < nworkers:
+        target_qlen = nworkers
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe:
         futures = []
         run = True
@@ -376,7 +376,7 @@ def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path],
         return (file_cavity_detection, file, output_dir, TIMEOUT, tool)
 
     with open(output_dir / RESULTSCSV, "w") as f:
-        return process_paths(enq, paths, f)
+        return process_paths(enq, paths, f, nworkers)
 
 
 # Maps tool selection argument to functions controlling processing

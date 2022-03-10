@@ -1,10 +1,16 @@
 import argparse
+from contextlib import contextmanager
+import json
+import shutil
+import subprocess
+from tempfile import TemporaryDirectory
 from file_cavity_detection import process_paths, Tool, TOOL_MAPPING
-from mutate_cavities import method_mapping, mutate_cavities
+from mutate_cavities import FileMutator, FileMutatorInfo, method_mapping, mutate_cavities
 from hashlib import sha256
 from os.path import exists, getsize
 from pathlib import Path
 from sys import stdout
+from time import time
 
 def get_checksum(f: Path) -> str:
     sh = sha256()
@@ -58,12 +64,135 @@ def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Pa
     return returnstr
 
 
+@contextmanager
+def store_stats(output: Path):
+    d = {}
+    yield d
+    with open(output, 'w') as f:
+        json.dump(d, f)
+
+STATSJSON = "stats.json"
+def verify_in_container(inputfile: Path, tool: Tool):
+    """Run file cavity verification in the container
+    
+    Expects:
+    1. the directory hosting this script to be mounted in the container.
+    2. /data to be a directory hosting one the input file and the
+       cavities.csv which include cavities related to this file.
+
+    Main operation:
+    1. Creates /work
+    2. Run the tool and generate the output file including checksum
+    3. Extract file cavity information from cavities.csv
+    4. For all cavity bytes,
+        - generate a mutated version and run the tool,
+        - produce output checksum
+        - compare checksum and update statistics
+    5. For a subset of non-cavity bytes, do the same as (4)
+    6. Store the statistics to /data/stats.json
+    """
+    data = Path("/data")
+    work = Path("/work")
+    # 1
+    work.mkdir()
+
+    with store_stats(data / STATSJSON) as stats:
+
+        fm = FileMutator(inputfile)
+        output_file = work / f"output{tool.output_extension()}"
+
+        # 2
+        subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(inputfile, output_file)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if not output_file.exists():
+            stats["error"] = "Original output file could not be generated"
+            return
+
+        orig_checksum = get_checksum(output_file)
+        output_file.unlink()
+
+        # 3
+        fmi = FileMutatorInfo(inputfile, data/"cavities.csv")
+        if any(map(lambda x: x < 0, fmi.cavity_offsets)):
+            stats["error"] = "No cavities detected"
+            return
+
+        stats["filesize"] = fmi.file_size
+        stats["cavity"] = {}
+        stats["non-cavity"] = {}
+        c = stats["cavity"]
+
+        def do_mutation(offsets, c):
+            c["no_output"] = 0
+            c["count"] = 0
+            c["checksum_eq"] = 0
+            c["checksum_diff"] = 0
+            start = time()
+            lastprint = start
+            mutated_input = work / f"mutated{tool.input_extension()}"
+            mutated_ouput = work / f"mutated{tool.output_extension()}"
+            for offset in offsets:
+                with open(str(mutated_input), 'wb') as f:
+                    fm.write_mutated(offset, f)
+                    c["count"] += 1
+                    subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(mutated_input, mutated_ouput)], 
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    if not mutated_ouput.exists():
+                        c["no_output"] += 1
+                    else:
+                        csum = get_checksum(mutated_ouput)
+                        if csum == orig_checksum:
+                            c["checksum_eq"] += 1
+                        else:
+                            c["checksum_diff"] += 1
+                    mutated_input.unlink()
+                    mutated_ouput.unlink()
+                t = time()
+                if t - lastprint > 30:
+                    rate = c["count"] / (t - start)
+                    print(f'Verifed {c["count"]} mutated bytes. Currently verifying at {rate:.1f} mutated bytes/sec. {str(inputfile)}')
+                    lastprint = t
+
+
+        # 4
+        do_mutation(fmi.cavity_offsets, stats["cavity"])
+        # 5
+        do_mutation(fmi.sample_non_cavity_bytes(0.01), stats["non-cavity"])
+    # 6
+
+def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdir: Path):
+    print(f"Start processing {inputfile}")
+    tool = TOOL_MAPPING[toolname]()
+    script_dir = Path(__file__).absolute().parent
+    with TemporaryDirectory() as datadir:
+        shutil.copy(inputfile, datadir)
+        cmd = ["docker", "run", "--rm", "-t"]
+        cmd.extend(tool.get_mount_arg(script_dir, "/src"))
+        cmd.extend(tool.get_mount_arg(datadir, "/data"))
+        cmd.extend(tool.get_mount_arg(cavitydb.absolute(), "/data/cavities.csv"))
+        cmd.extend([tool.image_non_instrumented(), "/usr/bin/python3", "/src/verify_cavities.py",
+                    "--container", "--tool", toolname, "--results", "/data", f"/data/{inputfile.name}"])
+        subprocess.run(cmd)
+
+        json_path = Path(datadir)/STATSJSON
+        json_dst = resultsdir/f"{inputfile.stem}-verification.json"
+        json_path.rename(json_dst)
+    print(f"Completed {inputfile}")
+
+TYPES = {
+    "allcavities": "Mutate all cavities at once, ensure equal output.",
+    "singlebyte": "Mutate all cavity bytes, one byte at a time and verify equal output. " \
+                    "Mutate a subset of non-cavities and report on equal/non-equal output."
+}
+
 def main():
     parser = argparse.ArgumentParser(
         description="""
     Verify detected cavities by mutating input files
     """
     )
+
+    parser.add_argument("--container", help=argparse.SUPPRESS, action="store_true")
 
     parser.add_argument("--results", "-c", type=Path, required=True,
                         help="Path to the results directory, including cavities db")
@@ -83,16 +212,27 @@ def main():
         "--tool", "-t", type=str, choices=TOOL_MAPPING.keys(), help="Tool to run.", required=True
     )
 
+    type_help = "Type of verification to run: "
+    type_help += ' '.join([f'{k} - {v}' for (k,v) in TYPES.items()])
+    parser.add_argument("--type", help=type_help, choices=TYPES.keys(), default="singlebyte")
+
     args = parser.parse_args()
 
     cavitydb = args.results / "cavities.csv"
 
     tool = TOOL_MAPPING[args.tool]()
 
-    def enq(file: Path):
-        return (verify_cavities, file, cavitydb, args.method, args.results, args.limit, args.skip, tool)
+    if args.container:
+        verify_in_container(args.inputs[0], tool)
+    elif args.type == "allcavities":
+        def enq(file: Path):
+            return (verify_cavities, file, cavitydb, args.method, args.results, args.limit, args.skip, tool)
 
-    process_paths(enq, args.inputs, stdout)
+        process_paths(enq, args.inputs, stdout)
+    else:
+        def enq_full(file: Path):
+            return (start_in_container, file, cavitydb, args.tool, args.results)
+        process_paths(enq_full, args.inputs, stdout)
 
 
 if __name__ == "__main__":
