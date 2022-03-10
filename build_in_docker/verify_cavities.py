@@ -10,6 +10,7 @@ from hashlib import sha256
 from os.path import exists, getsize
 from pathlib import Path
 from sys import stdout
+from time import time
 
 def get_checksum(f: Path) -> str:
     sh = sha256()
@@ -101,7 +102,8 @@ def verify_in_container(inputfile: Path, tool: Tool):
         output_file = work / f"output{tool.output_extension()}"
 
         # 2
-        subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(inputfile, output_file)])
+        subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(inputfile, output_file)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if not output_file.exists():
             stats["error"] = "Original output file could not be generated"
             return
@@ -122,6 +124,8 @@ def verify_in_container(inputfile: Path, tool: Tool):
             c["count"] = 0
             c["checksum_eq"] = 0
             c["checksum_diff"] = 0
+            start = time()
+            lastprint = start
             mutated_input = work / f"mutated{tool.input_extension()}"
             mutated_ouput = work / f"mutated{tool.output_extension()}"
             for offset in offsets:
@@ -140,6 +144,12 @@ def verify_in_container(inputfile: Path, tool: Tool):
                             c["checksum_diff"] += 1
                     mutated_input.unlink()
                     mutated_ouput.unlink()
+                t = time()
+                if t - lastprint > 30:
+                    rate = c["count"] / (t - start)
+                    print(f'Verifed {c["count"]} mutated bytes. Currently verifying at {rate:.1f} mutated bytes/sec. {str(inputfile)}')
+                    lastprint = t
+
 
         # 4
         do_mutation(fmi.cavity_offsets, stats["cavity"])
@@ -153,7 +163,7 @@ def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdi
     script_dir = Path(__file__).absolute().parent
     with TemporaryDirectory() as datadir:
         shutil.copy(inputfile, datadir)
-        cmd = ["docker", "run", "--rm"]
+        cmd = ["docker", "run", "--rm", "-t"]
         cmd.extend(tool.get_mount_arg(script_dir, "/src"))
         cmd.extend(tool.get_mount_arg(datadir, "/data"))
         cmd.extend(tool.get_mount_arg(cavitydb.absolute(), "/data/cavities.csv"))
