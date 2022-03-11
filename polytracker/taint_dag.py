@@ -118,7 +118,6 @@ class TDFile:
 
     def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
         assert self.header.fd_mapping_offset > 0
-        assert self.header.fd_mapping_count > 0
 
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
@@ -324,8 +323,8 @@ class TDTaintForestNode(TaintForestNode):
             f"label: {self.label} ; "
             f"input: {None if self.source is None else self.source.uid} ; "
             f"affected_control_flow: {self.affected_control_flow} ; "
-            f"parent_one: {self.parents[0]} ; "
-            f"parent_two: {self.parents[1]}"
+            f"parent_one: {self.parents[0] if self.parents else None} ; "
+            f"parent_two: {self.parents[1] if self.parents else None}"
         )
 
     @property
@@ -364,7 +363,7 @@ class TDTaintForest(TaintForest):
     def __len__(self) -> int:
         return len(self.node_cache)
 
-    def get_synth_node_label(self):
+    def get_synth_node_label(self) -> int:
         result = self.synth_label_cnt
         self.synth_label_cnt -= 1
         return result
@@ -384,23 +383,31 @@ class TDTaintForest(TaintForest):
                 self, label, None, node.affects_control_flow, (node.left, node.right)
             )
 
+        # TDRangeNode has to be unfolded into a tree of union nodes in a sum-like
+        # fashion. The created intermediate nodes are given labels via 
+        # `get_synth_node_label()`. `curr` holds the current node to be unioned.
+        # Initially it holds the first element of the range, but as the sum goes
+        # on it holds the current intermediate node. The final union is given the 
+        # label of the original node and is returned.
         elif isinstance(node, TDRangeNode):
-            for n in range(node.first, node.last):
+            curr: int = node.first
+            for n in range(node.first + 1, node.last):
                 synth_label = self.get_synth_node_label()
                 self.node_cache[synth_label] = TDTaintForestNode(
                     self,
                     synth_label,
                     None,
                     node.affects_control_flow,
-                    (n, n + 1),
+                    (curr, n),
                 )
+                curr = synth_label
 
             return TDTaintForestNode(
                 self,
                 label,
                 None,
                 node.affects_control_flow,
-                (node.last - 1, node.last),
+                (curr, node.last),
             )
 
         assert False

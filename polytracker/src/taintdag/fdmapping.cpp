@@ -1,5 +1,28 @@
 #include "taintdag/fdmapping.hpp"
 
+#include <iterator>
+
+namespace {
+
+// Helper structure that allows range-based for iteration
+// on the entries in FDMapping.
+template <typename It> struct RetVal {
+  It b;
+  It e;
+  RetVal(It b, It e) : b{b}, e{e} {}
+  It begin() { return b; }
+  It end() { return e; }
+};
+
+// Helper function that creates a reverse iterator for the range
+// first, last and returns a structure (RetVal) suitable for use
+// with range-based for.
+template <typename HdrIt> auto reverse_iter(HdrIt first, HdrIt last) {
+  return RetVal{std::make_reverse_iterator(last),
+                std::make_reverse_iterator(first)};
+}
+} // namespace
+
 namespace taintdag {
 
 FDMapping::FDMapping(char *begin, char *end) : begin_{begin}, end_{end} {
@@ -95,6 +118,19 @@ FDMapping::mapping_idx(int fd) const {
 size_t FDMapping::get_mapping_count() const {
   std::unique_lock l{m_};
   return nmappings_;
+}
+
+std::optional<taint_range_t>
+FDMapping::existing_label_range(std::string_view name) const {
+  for (auto const &fdm : reverse_iter(&get(0), &get(get_mapping_count()))) {
+    std::string_view s{fdm.name_offset + begin_, fdm.name_len};
+    if (s == name) {
+      if (fdm.prealloc_begin != 0) {
+        return taint_range_t{fdm.prealloc_begin, fdm.prealloc_end};
+      }
+    }
+  }
+  return {};
 }
 
 // Write the name of there is room for name + a header. If written, returns

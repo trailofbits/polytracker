@@ -17,6 +17,12 @@ std::optional<size_t> file_size(int fd) {
 
   return {};
 }
+
+bool reuse_prealloc_labels() {
+  auto v = getenv("POLYTRACKER_NO_REUSE_PREALLOC_LABELS");
+  return v == nullptr || v[0] != '0';
+}
+
 } // namespace details
 
 PolyTracker::PolyTracker(std::filesystem::path const &outputfile)
@@ -32,7 +38,6 @@ PolyTracker::~PolyTracker() {
 
 label_t PolyTracker::union_labels(label_t l1, label_t l2) {
   auto ret = tdag_.union_taint(l1, l2);
-  // printf("Union labels: %u %u -> %u\n", l1, l2, ret);
   return ret;
 }
 
@@ -41,16 +46,28 @@ void PolyTracker::open_file(int fd, fs::path const &path) {
   // hasn't changed in between we should be able to reuse previously reserved
   // source labels. Is this something we want to do? Or is it better to just
   // generate new ranges on every open?
+  // TODO (hbrodin): This code is a a bit shaky. The main issue is with
+  // reserving labels that are not immediately initialized/assigned.
   std::optional<taint_range_t> range;
-  auto fsize = details::file_size(fd);
-  if (fsize) {
-    range = tdag_.reserve_source_labels(fsize.value());
+  bool reuse_source_range = details::reuse_prealloc_labels();
+  bool was_reused = false;
+  if (reuse_source_range) {
+    range = fdm_.existing_label_range(path.string());
+    was_reused = range.has_value();
+  }
+
+  if (!range) {
+    auto fsize = details::file_size(fd);
+    if (fsize) {
+      range = tdag_.reserve_source_labels(fsize.value());
+    }
   }
 
   auto index = fdm_.add_mapping(fd, path.string(), range);
   // Will leak source labels if fdmapping failed. If it failed we are near
   // capacity anyway so...
-  if (range && index)
+  // If source label range was reused we should not assign it again here.
+  if (!was_reused && range && index)
     tdag_.assign_source_labels(range.value(), index.value(), 0);
 }
 
@@ -131,7 +148,6 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
 }
 
 void PolyTracker::affects_control_flow(label_t lbl) {
-  // printf("Label %u affects control flow\n", lbl);
   tdag_.affects_control_flow(lbl);
 }
 
