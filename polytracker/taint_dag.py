@@ -109,7 +109,7 @@ class TDFile:
         self.source_offset_mask = (1 << 54) - 1
 
         self.buffer = buffer
-        self.header = TDHeader.from_buffer_copy(self.buffer)
+        self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
 
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
@@ -123,7 +123,7 @@ class TDFile:
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
             header_offset = offset + sizeof(TDFDHeader) * i
-            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)
+            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)  # type: ignore
             sbegin = offset + fdhdr.name_offset
             path = str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8")
             yield (path, fdhdr)
@@ -140,7 +140,7 @@ class TDFile:
 
         assert self.header.tdag_mapping_offset + self.header.tdag_mapping_size > offset
 
-        result = c_uint64.from_buffer_copy(self.buffer, offset).value
+        result = c_uint64.from_buffer_copy(self.buffer, offset).value  # type: ignore
         self.raw_nodes[label] = result
         return result
 
@@ -177,7 +177,7 @@ class TDFile:
         assert self.header.sink_mapping_offset <= offset
         assert self.header.sink_mapping_offset + self.header.sink_mapping_size > offset
 
-        result = TDSink.from_buffer_copy(self.buffer, offset)
+        result = TDSink.from_buffer_copy(self.buffer, offset)  # type: ignore
 
         self.sink_cache[offset] = result
 
