@@ -135,7 +135,7 @@ class ImmutableParseTree(Generic[V], ParseTree[V]):
     def clone(self: IPT) -> IPT:
         class IPTNode:
             def __init__(
-                self, node: IPT, parent: Optional["IPTNode"] = None
+                self, node: IPT, parent: Optional["IPTNode"] = None  # noqa: F821
             ):  # noqa: F821
                 self.node: IPT = node
                 self.children: Optional[List[IPT]] = None
