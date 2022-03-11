@@ -101,7 +101,7 @@ def open_output_file(file: Path):
 
 class OutputFile:
     def __init__(self, mm: mmap) -> None:
-        self.hdr = FileHdr.from_buffer_copy(mm)
+        self.hdr = FileHdr.from_buffer_copy(mm)  # type: ignore
         self.mm = mm
 
     def fd_mapping(self, index: int) -> Optional[Tuple[str, int, int]]:
@@ -109,7 +109,7 @@ class OutputFile:
             return None
 
         offset = self.hdr.fd_mapping_offset + sizeof(FDMappingHdr) * index
-        fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)
+        fdmhdr = FDMappingHdr.from_buffer_copy(self.mm, offset)  # type: ignore
 
         sbegin = self.hdr.fd_mapping_offset + fdmhdr.name_offset
         s = str(
@@ -128,7 +128,7 @@ class OutputFile:
         end = offset + self.hdr.sink_mapping_size
 
         while offset < end:
-            sle = SinkLogEntry.from_buffer_copy(self.mm, offset)
+            sle = SinkLogEntry.from_buffer_copy(self.mm, offset)  # type: ignore
             yield sle
             offset += sizeof(SinkLogEntry)
 
@@ -140,7 +140,7 @@ class OutputFile:
 
         last = 0
         while offset < end:
-            v = c_uint32.from_buffer_copy(self.mm, offset).value
+            v = c_uint32.from_buffer_copy(self.mm, offset).value  # type: ignore
             if v != last:
                 labels.append(v)
                 last = v
@@ -153,7 +153,7 @@ class OutputFile:
 
     def raw_taint(self, label: int) -> int:
         offset = self.hdr.tdag_mapping_offset + sizeof(c_uint64) * label
-        return c_uint64.from_buffer_copy(self.mm, offset).value
+        return c_uint64.from_buffer_copy(self.mm, offset).value  # type: ignore
 
     def decoded_taint(self, label: int) -> Union[SourceTaint, RangeTaint, UnionTaint]:
         v = self.raw_taint(label)

@@ -141,18 +141,18 @@ class FileCavities(Command):
                 content = cavity.source.content
                 if content:
                     bytes_before = bytes_to_ascii(
-                        content[max(cavity.offset - 10, 0): cavity.offset]
+                        content[max(cavity.offset - 10, 0) : cavity.offset]
                     )
                     bytes_after = bytes_to_ascii(
                         content[
                             cavity.offset
-                            + cavity.length: cavity.offset
+                            + cavity.length : cavity.offset
                             + cavity.length
                             + 10
                         ]
                     )
                     cavity_content = bytes_to_ascii(
-                        content[cavity.offset: cavity.offset + cavity.length]
+                        content[cavity.offset : cavity.offset + cavity.length]
                     )
                     print(f'\t"{bytes_before}{cavity_content}{bytes_after}"')
                     print(f"\t {' ' * len(bytes_before)}{'^' * len(cavity_content)}")

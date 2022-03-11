@@ -13,7 +13,9 @@ class PolyBuild(Command):
     _container: Optional[DockerContainer] = None
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
-        parser.add_argument("--c++", action="store_true", help="run polybuild++ in C++ mode")
+        parser.add_argument(
+            "--c++", action="store_true", help="run polybuild++ in C++ mode"
+        )
         parser.add_argument("args", nargs=argparse.REMAINDER)
 
     def run(self, args: argparse.Namespace):
@@ -22,14 +24,23 @@ class PolyBuild(Command):
         else:
             cmd = "polybuild_script"
             # Are we trying to compile C++ code without using `polybuild++`?
-            if sys.stderr.isatty() and sys.stdin.isatty() and any(
-                    arg.strip()[-4:].lower() in (".cpp", ".cxx", ".c++") for arg in args.args
+            if (
+                sys.stderr.isatty()
+                and sys.stdin.isatty()
+                and any(
+                    arg.strip()[-4:].lower() in (".cpp", ".cxx", ".c++")
+                    for arg in args.args
+                )
             ):
                 # one of the arguments ends in .cpp, .cxx, or .c++
-                sys.stderr.write("It looks like you are trying to compile C++ code.\n"
-                                 "This requires `polybuild++`, not `polybuild`!\n")
+                sys.stderr.write(
+                    "It looks like you are trying to compile C++ code.\n"
+                    "This requires `polybuild++`, not `polybuild`!\n"
+                )
                 while True:
-                    sys.stderr.write("Would you like to run with `polybuild++` instead? [Yn] ")
+                    sys.stderr.write(
+                        "Would you like to run with `polybuild++` instead? [Yn] "
+                    )
                     try:
                         choice = input().lower()
                     except KeyboardInterrupt:
@@ -59,7 +70,13 @@ class PolyInst(Command):
 
     def run(self, args: argparse.Namespace):
         cmd = "polybuild_script"
-        items = [cmd] + ["--lower-bitcode", "-i", args.input_file, "-o", args.output_file]
+        items = [cmd] + [
+            "--lower-bitcode",
+            "-i",
+            args.input_file,
+            "-o",
+            args.output_file,
+        ]
         if CAN_RUN_NATIVELY:
             return subprocess.call(items)
         else:
@@ -69,8 +86,12 @@ class PolyInst(Command):
 
 
 def main():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": False}))
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(
+        argparse.Namespace(args=sys.argv[1:], **{"c++": False})
+    )
 
 
 def main_plus_plus():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(argparse.Namespace(args=sys.argv[1:], **{"c++": True}))
+    PolyBuild(argparse.ArgumentParser(add_help=False)).run(
+        argparse.Namespace(args=sys.argv[1:], **{"c++": True})
+    )

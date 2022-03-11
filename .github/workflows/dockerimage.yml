@@ -37,8 +37,7 @@ jobs:
           flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 polytracker tests --ignore=F405,F403,W503,E203 --count --exit-zero --max-complexity=30 --max-line-length=127 --statistics
-          # Don't enforce black for now because a bug was causing it to not reach a fixed point when reformatting
-          # black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
+          black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
           mypy --python-version ${{ matrix.python-version }} --ignore-missing-imports polytracker tests
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache

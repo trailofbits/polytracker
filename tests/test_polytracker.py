@@ -17,12 +17,18 @@ from .data import *
 
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
-    assert any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
+    )
 
 
 @pytest.mark.program_trace("test_open.c")
 def test_source_open(program_trace: ProgramTrace):
-    assert any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
+    )
 
 
 @pytest.mark.program_trace("test_control_flow.c")
@@ -78,7 +84,10 @@ def test_control_flow(program_trace: ProgramTrace):
 
 @pytest.mark.program_trace("test_open.c")
 def test_source_open_full_validate_schema(program_trace: ProgramTrace):
-    assert any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
+    )
 
 
 @pytest.mark.program_trace("test_memcpy.c")
@@ -96,7 +105,9 @@ def test_taint_log(program_trace: ProgramTrace):
         assert any(i == offset.offset for offset in taints)
 
 
-@pytest.mark.program_trace("test_taint_log.c", config_path=CONFIG_DIR / "new_range.json")
+@pytest.mark.program_trace(
+    "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
+)
 def test_config_files(program_trace: ProgramTrace):
     # the new_range.json config changes the polystart/polyend to
     # POLYSTART: 1, POLYEND: 3
@@ -129,7 +140,10 @@ def test_cxx_object_propagation(program_trace: ProgramTrace):
 # TODO Compute DFG and query if we touch vector in libcxx from object
 @pytest.mark.program_trace("test_vector.cpp")
 def test_cxx_vector(program_trace: ProgramTrace):
-    assert any(byte_offset.offset == 0 for byte_offset in program_trace.get_function("main").taints())
+    assert any(
+        byte_offset.offset == 0
+        for byte_offset in program_trace.get_function("main").taints()
+    )
 
 
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
@@ -147,7 +161,7 @@ def test_fgetc(program_trace: ProgramTrace):
     for i, called in enumerate(called_by_main):
         regions = list(called.taints().regions())
         assert len(regions) == 1
-        assert regions[0].value == b"ABCDEFGH"[i: i + 1]
+        assert regions[0].value == b"ABCDEFGH"[i : i + 1]
 
 
 @pytest.mark.program_trace("test_cxx_global_object.cpp", taint_all=True)
@@ -177,7 +191,12 @@ def test_cxx_global_object(program_trace: ProgramTrace):
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
 def test_taint_forest(program_trace: ProgramTrace):
     had_taint_union = False
-    for taint_node in tqdm(program_trace.taint_forest.nodes(), leave=False, desc="validating", unit=" taint nodes"):
+    for taint_node in tqdm(
+        program_trace.taint_forest.nodes(),
+        leave=False,
+        desc="validating",
+        unit=" taint nodes",
+    ):
         if taint_node.is_canonical():
             assert taint_node.parent_one is None
             assert taint_node.parent_two is None
