@@ -4,11 +4,25 @@ from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
 
 import pytest
 
-from polytracker import BasicBlock, ByteOffset, Function, TaintForest, TaintAccess, Taints, TaintOutput
+from polytracker import (
+    BasicBlock,
+    ByteOffset,
+    Function,
+    TaintForest,
+    TaintAccess,
+    Taints,
+    TaintOutput,
+)
 from polytracker.grammars import Grammar, parse_tree_to_grammar
 from polytracker.inputs import Input
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
-from polytracker.tracing import BasicBlockEntry, FunctionEntry, FunctionReturn, ProgramTrace, TraceEvent
+from polytracker.tracing import (
+    BasicBlockEntry,
+    FunctionEntry,
+    FunctionReturn,
+    ProgramTrace,
+    TraceEvent,
+)
 
 
 class Counter:
@@ -99,7 +113,9 @@ class TracedBasicBlockEntry(TracedEvent, BasicBlockEntry):
         return self._basic_block
 
     def taints(self) -> Taints:
-        return Taints((ByteOffset(source=self.tracer.source, offset=i) for i in self.consumed))
+        return Taints(
+            (ByteOffset(source=self.tracer.source, offset=i) for i in self.consumed)
+        )
 
 
 class TracedFunctionEntry(TracedEvent, FunctionEntry):
@@ -123,7 +139,9 @@ class TracedFunctionEntry(TracedEvent, FunctionEntry):
     @function_return.setter
     def function_return(self, new_value: FunctionReturn):
         if self._function_return is not None and new_value is not self._function_return:
-            raise ValueError(f"{self!r} is already set to return to {self._function_return!r}, not {new_value!r}")
+            raise ValueError(
+                f"{self!r} is already set to return to {self._function_return!r}, not {new_value!r}"
+            )
         self._function_return = new_value
 
     def taints(self) -> Taints:
@@ -145,7 +163,9 @@ class TracedFunctionReturn(TracedEvent, FunctionReturn):
 
 class Tracer(ProgramTrace):
     def __init__(self, inputstr: bytes):
-        self.source: Input = Input(uid=1, path="test.data", size=len(inputstr), content=inputstr)
+        self.source: Input = Input(
+            uid=1, path="test.data", size=len(inputstr), content=inputstr
+        )
         self.call_stack: List[TracedFunctionEntry] = []
         self.bb_stack: List[List[TracedBasicBlockEntry]] = []
         self.events: Dict[int, TraceEvent] = {}
@@ -188,7 +208,11 @@ class Tracer(ProgramTrace):
 
     @property
     def num_accesses(self) -> int:
-        return sum(len(bb.consumed) for bb in self.events if isinstance(bb, TracedBasicBlockEntry))
+        return sum(
+            len(bb.consumed)
+            for bb in self.events
+            if isinstance(bb, TracedBasicBlockEntry)
+        )
 
     @property
     def inputs(self) -> Iterable[Input]:
@@ -223,8 +247,10 @@ class Tracer(ProgramTrace):
         return self.bb_stack[-1][-1].name
 
     def peek(self, num_bytes: int) -> bytes:
-        bytes_read = self.inputstr[self.input_offset: self.input_offset + num_bytes]
-        self.current_bb.consumed.extend(range(self.input_offset, self.input_offset + len(bytes_read)))
+        bytes_read = self.inputstr[self.input_offset : self.input_offset + num_bytes]
+        self.current_bb.consumed.extend(
+            range(self.input_offset, self.input_offset + len(bytes_read))
+        )
         return bytes_read
 
     def read(self, num_bytes: int) -> bytes:

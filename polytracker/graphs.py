@@ -152,7 +152,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         # Sort nodes into roots and inner nodes
         root_nodes = []
         inner_nodes = []
-        for node in sorted(filter(node_filter, self.nodes)): # type: N
+        for node in sorted(filter(node_filter, self.nodes)):  # type: N
             if node in self.roots:
                 root_nodes.append(node)
             else:

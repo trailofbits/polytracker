@@ -122,7 +122,9 @@ class PluginMeta(ABCMeta):
             PLUGINS[plugin_name] = cls
             if issubclass(cls, Command):
                 if "help" not in clsdict:
-                    raise TypeError(f"PolyTracker command {name} does not define a help string")
+                    raise TypeError(
+                        f"PolyTracker command {name} does not define a help string"
+                    )
                 COMMANDS[clsdict["name"]] = cls
 
 
@@ -168,11 +170,15 @@ class AbstractCommand(Plugin):
     subparser: Optional[Any] = None
     """A subparser, auto-populated if subcommand_types is not ``None``."""
 
-    def __init__(self, argument_parser: ArgumentParser, parent: Optional[Plugin] = None):
+    def __init__(
+        self, argument_parser: ArgumentParser, parent: Optional[Plugin] = None
+    ):
         super().__init__(parent)
         self.subcommands: List[Subcommand] = []
         if self.extension_types is not None:
-            self.extensions: List[CommandExtension] = [et(parent=self) for et in self.extension_types]
+            self.extensions: List[CommandExtension] = [
+                et(parent=self) for et in self.extension_types
+            ]
         else:
             self.extensions = []
         if self.parent is None:
@@ -184,7 +190,9 @@ class AbstractCommand(Plugin):
                 help=f"run `polytracker {self.full_name} subcommand --help` for help on a specific subcommand",
             )
             for st in self.subcommand_types:
-                p = self.subparser.add_parser(st.name, parents=st.parent_parsers, help=st.help)
+                p = self.subparser.add_parser(
+                    st.name, parents=st.parent_parsers, help=st.help
+                )
                 s = st(argument_parser=p, parent=self)
                 self.subcommands.append(s)
                 p.set_defaults(func=s.run)
@@ -233,7 +241,9 @@ class Command(AbstractCommand, ABC):
         super().__init__(argument_parser)
 
 
-def _lookup_class_property(name: str, bases: Iterable[Type], clsdict: Dict[str, Any]) -> Any:
+def _lookup_class_property(
+    name: str, bases: Iterable[Type], clsdict: Dict[str, Any]
+) -> Any:
     if name in clsdict:
         return clsdict[name]
     for base in bases:
@@ -294,7 +304,8 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
         if not isabstract(cls):
             if cls.parent_type is None:
                 raise TypeError(
-                    f"CommandExtension {cls.__name__} must define the type of the command it is extending in " "`parent_type`"
+                    f"CommandExtension {cls.__name__} must define the type of the command it is extending in "
+                    "`parent_type`"
                 )
             elif not issubclass(cls.parent_type, AbstractCommand):
                 raise TypeError(
@@ -305,7 +316,8 @@ class CommandExtension(Plugin, Generic[C], ABC, metaclass=CommandExtensionMeta[C
                 cls.parent_command_type.extension_types = []
             if cls in cls.parent_command_type.extension_types:
                 raise TypeError(
-                    f"CommandExtension {cls.__name__} is already registered to Command " f"{cls.parent_command_type.__name__}"
+                    f"CommandExtension {cls.__name__} is already registered to Command "
+                    f"{cls.parent_command_type.__name__}"
                 )
             cls.parent_command_type.extension_types.append(cls)
 
@@ -328,7 +340,9 @@ class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMet
     def __init_subclass__(cls, **kwargs):
         if not isabstract(cls):
             if cls.parent_type is None:
-                raise TypeError(f"Subcommand {cls.__name__} must define its parent command's type in `parent_type`")
+                raise TypeError(
+                    f"Subcommand {cls.__name__} must define its parent command's type in `parent_type`"
+                )
             elif not issubclass(cls.parent_type, AbstractCommand):
                 raise TypeError(
                     f"Subcommand {cls.__name__} has a `parent_type` of {cls.parent_type.__name__} that does not extend "
@@ -338,7 +352,8 @@ class Subcommand(Generic[C], AbstractCommand, ABC, metaclass=CommandExtensionMet
                 cls.parent_command_type.subcommand_types = []
             if cls in cls.parent_command_type.subcommand_types:
                 raise TypeError(
-                    f"Subcommand {cls.__name__} is already registered to Command " f"{cls.parent_command_type.__name__}"
+                    f"Subcommand {cls.__name__} is already registered to Command "
+                    f"{cls.parent_command_type.__name__}"
                 )
             cls.parent_command_type.subcommand_types.append(cls)
 
@@ -356,6 +371,8 @@ def add_command_subparsers(parser: ArgumentParser):
         help="run `polytracker command --help` for help on a specific command",
     )
     for name, command_type in COMMANDS.items():
-        p = subparsers.add_parser(name, parents=command_type.parent_parsers, help=command_type.help)
+        p = subparsers.add_parser(
+            name, parents=command_type.parent_parsers, help=command_type.help
+        )
         p.set_defaults(func=command_type(p).run)
     return subparsers
