@@ -5,6 +5,7 @@ from typing import Dict, Set
 from polytracker import BasicBlock, BasicBlockEntry, FunctionReturn, ProgramTrace
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_bb_splitting.c")
 def test_bb_splitting(program_trace: ProgramTrace):
     """Ensure that every basic block has at most one funtion call or one conditional branch"""

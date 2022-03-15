@@ -15,6 +15,7 @@ from polytracker import (
 from .data import *
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_mmap.c")
 def test_source_mmap(program_trace: ProgramTrace):
     assert any(
@@ -23,6 +24,7 @@ def test_source_mmap(program_trace: ProgramTrace):
     )
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_open.c")
 def test_source_open(program_trace: ProgramTrace):
     assert any(
@@ -31,6 +33,7 @@ def test_source_open(program_trace: ProgramTrace):
     )
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_control_flow.c")
 def test_control_flow(program_trace: ProgramTrace):
     # make sure the trace contains all of the functions:
@@ -82,6 +85,7 @@ def test_control_flow(program_trace: ProgramTrace):
     # so for now just ignore main
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_open.c")
 def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     assert any(
@@ -90,6 +94,7 @@ def test_source_open_full_validate_schema(program_trace: ProgramTrace):
     )
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_memcpy.c")
 def test_memcpy_propagate(program_trace: ProgramTrace):
     func = program_trace.get_function("touch_copied_byte")
@@ -98,6 +103,7 @@ def test_memcpy_propagate(program_trace: ProgramTrace):
     assert next(iter(taints)).offset == 0
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_taint_log.c")
 def test_taint_log(program_trace: ProgramTrace):
     taints = program_trace.get_function("main").taints()
@@ -105,6 +111,7 @@ def test_taint_log(program_trace: ProgramTrace):
         assert any(i == offset.offset for offset in taints)
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace(
     "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
 )
@@ -118,18 +125,21 @@ def test_config_files(program_trace: ProgramTrace):
         assert all(i != offset.offset for offset in taints)
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fopen.c")
 def test_source_fopen(program_trace: ProgramTrace):
     taints = program_trace.get_function("main").taints()
     assert any(offset.offset == 0 for offset in taints)
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_ifstream.cpp")
 def test_source_ifstream(program_trace: ProgramTrace):
     taints = program_trace.get_function("main").taints()
     assert any(offset.offset == 0 for offset in taints)
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_object_propagation.cpp")
 def test_cxx_object_propagation(program_trace: ProgramTrace):
     for func in program_trace.functions:
@@ -138,6 +148,7 @@ def test_cxx_object_propagation(program_trace: ProgramTrace):
 
 
 # TODO Compute DFG and query if we touch vector in libcxx from object
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_vector.cpp")
 def test_cxx_vector(program_trace: ProgramTrace):
     assert any(
@@ -146,6 +157,7 @@ def test_cxx_vector(program_trace: ProgramTrace):
     )
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
 def test_fgetc(program_trace: ProgramTrace):
     for _ in program_trace:
@@ -164,6 +176,7 @@ def test_fgetc(program_trace: ProgramTrace):
         assert regions[0].value == b"ABCDEFGH"[i : i + 1]
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_cxx_global_object.cpp", taint_all=True)
 def test_cxx_global_object(program_trace: ProgramTrace):
     r1 = program_trace.get_function("_ZN12GlobalObject10read_firstEv")
