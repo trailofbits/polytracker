@@ -3,12 +3,17 @@ from polytracker import dumptdag, taint_dag, ProgramTrace
 from os import getcwd
 from typing import cast
 from .data import TEST_DATA_DIR, TEST_DATA_PATH, TEST_RESULTS_DIR
+from polytracker.containerization import CAN_RUN_NATIVELY
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_dumptdag(program_trace: ProgramTrace):
-    data_dir = TEST_DATA_DIR.relative_to(getcwd())
-    data_file = "/workdir" / data_dir / TEST_DATA_PATH.name
+    if CAN_RUN_NATIVELY:
+        data_file = TEST_DATA_PATH
+    else:
+        data_dir = TEST_DATA_DIR.relative_to(getcwd())
+        data_file = "/workdir" / data_dir / TEST_DATA_PATH.name
+
     tdag_file = TEST_RESULTS_DIR / "test_tdag.cpp.db"
 
     with dumptdag.open_output_file(tdag_file) as o:
