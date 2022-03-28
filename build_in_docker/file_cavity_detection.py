@@ -342,10 +342,11 @@ def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = N
         run = True
         enqueue = True
         nfiles_processed = 0
+        path_iter = path_iterator(paths)
         while run:
             while enqueue and len(futures) < target_qlen:
                 try:
-                    file = next(path_iterator(paths))
+                    file = next(path_iter)
                     print(f"Queue {file}")
                     futures.append(
                         tpe.submit(*func(file))
