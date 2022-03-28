@@ -1,4 +1,3 @@
-from asyncio import subprocess
 import concurrent.futures
 import json
 import os.path
@@ -6,13 +5,12 @@ import subprocess
 import sys
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser
-from os import mkdir, rename
-from shutil import rmtree
-from pathlib import Path
-from time import time
-from typing import Dict, Iterable, List, Union
 from contextlib import contextmanager
-
+from os import mkdir, rename
+from pathlib import Path
+from shutil import rmtree
+from time import time
+from typing import Any, Dict, Generator, Iterable, List, Union
 
 TIMEOUT = 100
 SCRIPTDIR = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -63,7 +61,9 @@ class Tool(ABC):
         return self.image_instrumented()
 
     @abstractmethod
-    def command_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
+    def command_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
         """Command to run in the container specified by image_instrumented
 
         The idea is that the command would produce container_output_path from
@@ -71,7 +71,9 @@ class Tool(ABC):
         pass
 
     @abstractmethod
-    def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
+    def command_non_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
         """Command to run in the container specified by image_non_instrumented
 
         The idea is that the command would produce container_output_path from
@@ -92,7 +94,10 @@ class Tool(ABC):
 
     def get_mount_arg(self, host_dir: Path, container_dir: Path) -> List[str]:
         """Returns a docker mount command given args"""
-        return ["--mount", f"type=bind,source={str(host_dir)},target={str(container_dir)}"]
+        return [
+            "--mount",
+            f"type=bind,source={str(host_dir)},target={str(container_dir)}",
+        ]
 
     def get_docker_run_base(self):
         """The docker command common to all processing"""
@@ -102,18 +107,16 @@ class Tool(ABC):
             "-t",
             "--rm",
             "-e",
-            f"POLYDB={str(self.container_tdag_path)}"
+            f"POLYDB={str(self.container_tdag_path)}",
         ]
 
-    def get_container_cmd(self, cmd : str):
+    def get_container_cmd(self, cmd: str):
         """The command to run in the docker container"""
-        return [
-                "/usr/bin/bash",
-                "-c",
-                f"timeout {TIMEOUT} {cmd}"
-        ]
+        return ["/usr/bin/bash", "-c", f"timeout {TIMEOUT} {cmd}"]
 
-    def _run(self, input_file : Path, output_file : Path, docker_image: str, cmd_func) -> Dict:
+    def _run(
+        self, input_file: Path, output_file: Path, docker_image: str, cmd_func
+    ) -> Dict:
         """Run the tool cavity detection
 
         input_file and output_file are host paths"""
@@ -127,11 +130,14 @@ class Tool(ABC):
         command.append(docker_image)
         command.extend(
             self.get_container_cmd(
-                    cmd_func(
-                        self.container_input_path(input_file),
-                        self.container_output_path(output_file))))
+                cmd_func(
+                    self.container_input_path(input_file),
+                    self.container_output_path(output_file),
+                )
+            )
+        )
 
-        exec_info = {}
+        exec_info: Dict[str, Union[str, float]] = {}
         exec_info["command"] = " ".join(command)
         exec_info["tdag_path"] = str(tdag_host_path)
         exec_info["start"] = time()
@@ -152,10 +158,20 @@ class Tool(ABC):
         return exec_info
 
     def run_instrumented(self, input_file: Path, output_file: Path) -> Dict:
-        return self._run(input_file, output_file, self.image_instrumented(), self.command_instrumented)
+        return self._run(
+            input_file,
+            output_file,
+            self.image_instrumented(),
+            self.command_instrumented,
+        )
 
-    def run_non_instrumented(self, input_file : Path, output_file : Path) -> Dict:
-        return self._run(input_file, output_file, self.image_non_instrumented(), self.command_non_instrumented)
+    def run_non_instrumented(self, input_file: Path, output_file: Path) -> Dict:
+        return self._run(
+            input_file,
+            output_file,
+            self.image_non_instrumented(),
+            self.command_non_instrumented,
+        )
 
 
 class MuTool(Tool):
@@ -173,14 +189,22 @@ class MuTool(Tool):
     def output_extension(self) -> str:
         return ".png"
 
-    def _cmd(self, binary : Path, input: Path, output: Path):
+    def _cmd(self, binary: Path, input: Path, output: Path):
         return f"{str(binary)} draw -o {str(output)} {input}"
 
-    def command_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(MuTool.BIN_DIR / "mutool_track", container_input_path, container_output_path)
+    def command_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            MuTool.BIN_DIR / "mutool_track", container_input_path, container_output_path
+        )
 
-    def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(MuTool.BIN_DIR / "mutool", container_input_path, container_output_path)
+    def command_non_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            MuTool.BIN_DIR / "mutool", container_input_path, container_output_path
+        )
 
 
 class OpenJPEG(Tool):
@@ -198,14 +222,26 @@ class OpenJPEG(Tool):
     def output_extension(self) -> str:
         return ".bmp"
 
-    def _cmd(self, binary : Path, input: Path, output: Path):
+    def _cmd(self, binary: Path, input: Path, output: Path):
         return f"{str(binary)} -OutFor bmp -o {str(output)} -i {input}"
 
-    def command_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(OpenJPEG.BIN_DIR / "opj_decompress_track", container_input_path, container_output_path)
+    def command_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            OpenJPEG.BIN_DIR / "opj_decompress_track",
+            container_input_path,
+            container_output_path,
+        )
 
-    def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(OpenJPEG.BIN_DIR / "opj_decompress", container_input_path, container_output_path)
+    def command_non_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            OpenJPEG.BIN_DIR / "opj_decompress",
+            container_input_path,
+            container_output_path,
+        )
 
 
 class LibJPEG(Tool):
@@ -223,18 +259,28 @@ class LibJPEG(Tool):
     def output_extension(self) -> str:
         return ".bmp"
 
-    def _cmd(self, binary : Path, input: Path, output: Path):
+    def _cmd(self, binary: Path, input: Path, output: Path):
         return f"{str(binary)} -bmp -outfile {str(output)} {input}"
 
-    def command_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(LibJPEG.BIN_DIR / "djpeg_track", container_input_path, container_output_path)
+    def command_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            LibJPEG.BIN_DIR / "djpeg_track", container_input_path, container_output_path
+        )
 
-    def command_non_instrumented(self, container_input_path: Path, container_output_path: Path) -> str:
-        return self._cmd(LibJPEG.BIN_DIR / "djpeg", container_input_path, container_output_path)
+    def command_non_instrumented(
+        self, container_input_path: Path, container_output_path: Path
+    ) -> str:
+        return self._cmd(
+            LibJPEG.BIN_DIR / "djpeg", container_input_path, container_output_path
+        )
+
 
 def rename_if_exists(src: Path, dst: Path) -> None:
     if os.path.exists(src):
         rename(src, dst)
+
 
 @contextmanager
 def create_work_dir(path: Path):
@@ -244,9 +290,10 @@ def create_work_dir(path: Path):
     finally:
         rmtree(path)
 
+
 @contextmanager
 def proc_metadata(filename: Path):
-    d = {}
+    d: Dict[str, Any] = {}
     try:
         yield d
     finally:
@@ -254,7 +301,9 @@ def proc_metadata(filename: Path):
             json.dump(d, f)
 
 
-def file_cavity_detection(file: Path, output_dir: Path, timeout: int, tool : Tool) -> str:
+def file_cavity_detection(
+    file: Path, output_dir: Path, timeout: int, tool: Tool
+) -> str:
     """
     Runs full file cavity detection using selected tool.
 
@@ -271,7 +320,9 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int, tool : Too
     dst_meta = output_dir / f"{file.stem}.meta.json"
     dst_tdag = output_dir / f"{file.stem}.tdag"
 
-    with create_work_dir(Path(output_dir, file.stem)) as tmpd, proc_metadata(dst_meta) as meta:
+    with create_work_dir(Path(output_dir, file.stem)) as tmpd, proc_metadata(
+        dst_meta
+    ) as meta:
 
         output_file = tmpd / f"{file.stem}{tool.output_extension()}"
         results = tool.run_instrumented(file, output_file)
@@ -290,13 +341,13 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int, tool : Too
             return f"{filename},-3,-3\n"
 
         command = [
-                "python3",
-                str(SCRIPTDIR / "../polytracker/dumptdag.py"),
-                str(dst_tdag),
-                str(tool.container_input_path(filename))
-            ]
+            "python3",
+            str(SCRIPTDIR / "../polytracker/dumptdag.py"),
+            str(dst_tdag),
+            str(tool.container_input_path(filename)),
+        ]
 
-        result_cavity = {}
+        result_cavity: Dict[str, Union[str, float]] = {}
         result_cavity["command"] = " ".join(command)
         try:
             result_cavity["start"] = time()
@@ -306,13 +357,11 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int, tool : Too
             result_cavity["stderr"] = ret.stderr.decode("utf-8")
             if ret.returncode != 0:
                 result_cavity["failure"] = True
-        except subprocess.TimeoutExpired as e:
+        except subprocess.TimeoutExpired:
             result_cavity["timeout"] = True
         finally:
             result_cavity["end"] = time()
-            result_cavity["time"] = (
-                result_cavity["end"] - result_cavity["start"]
-            )
+            result_cavity["time"] = result_cavity["end"] - result_cavity["start"]
         meta["cavity_detect"] = result_cavity
 
         if "timeout" in result_cavity:
@@ -325,15 +374,23 @@ def file_cavity_detection(file: Path, output_dir: Path, timeout: int, tool : Too
             print(f"Finished {filename} successfully.")
             return return_str
 
-def path_iterator(paths: Iterable[Path]) -> Iterable[Path]:
+
+def path_iterator(paths: Iterable[Path]) -> Generator[Path, None, None]:
     for p in paths:
         if str(p) == "-":
-            for l in sys.stdin:
-                yield Path(l.rstrip())
+            for line in sys.stdin:
+                yield Path(line.rstrip())
         else:
             yield p
 
-def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = None, target_qlen:int = 32) -> int:
+
+def process_paths(
+    func,
+    paths: Iterable[Path],
+    f,
+    nworkers: Union[None, int] = None,
+    target_qlen: int = 32,
+) -> int:
     if nworkers and target_qlen < nworkers:
         target_qlen = nworkers
 
@@ -342,14 +399,13 @@ def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = N
         run = True
         enqueue = True
         nfiles_processed = 0
+        path_iter = path_iterator(paths)
         while run:
             while enqueue and len(futures) < target_qlen:
                 try:
-                    file = next(path_iterator(paths))
+                    file = next(path_iter)
                     print(f"Queue {file}")
-                    futures.append(
-                        tpe.submit(*func(file))
-                    )
+                    futures.append(tpe.submit(*func(file)))
                 except StopIteration:
                     enqueue = False
                     print("All inputs scheduled for processing.")
@@ -368,7 +424,9 @@ def process_paths(func, paths: Iterable[Path], f, nworkers: Union[None, int] = N
         return nfiles_processed
 
 
-def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool : Tool) -> int:
+def execute(
+    output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool: Tool
+) -> int:
     if not os.path.exists(output_dir):
         mkdir(output_dir)
 
@@ -380,11 +438,8 @@ def execute(output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path],
 
 
 # Maps tool selection argument to functions controlling processing
-TOOL_MAPPING = {
-    "libjpeg": LibJPEG,
-    "mutool" : MuTool,
-    "openjpeg" : OpenJPEG
-}
+TOOL_MAPPING = {"libjpeg": LibJPEG, "mutool": MuTool, "openjpeg": OpenJPEG}
+
 
 def main():
     parser = ArgumentParser(
@@ -406,7 +461,12 @@ def main():
     )
 
     parser.add_argument(
-        "--tool", "-t", type=str, choices=TOOL_MAPPING.keys(), help="Tool to run.", required=True
+        "--tool",
+        "-t",
+        type=str,
+        choices=TOOL_MAPPING.keys(),
+        help="Tool to run.",
+        required=True,
     )
 
     parser.add_argument(
