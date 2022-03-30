@@ -302,7 +302,7 @@ def proc_metadata(filename: Path):
 
 
 def file_cavity_detection(
-    file: Path, output_dir: Path, timeout: int, tool: Tool
+    file: Path, output_dir: Path, timeout: int, tool: Tool, drop_tdag: bool
 ) -> str:
     """
     Runs full file cavity detection using selected tool.
@@ -362,6 +362,8 @@ def file_cavity_detection(
         finally:
             result_cavity["end"] = time()
             result_cavity["time"] = result_cavity["end"] - result_cavity["start"]
+        if drop_tdag and dst_tdag.exists():
+            dst_tdag.unlink()
         meta["cavity_detect"] = result_cavity
 
         if "timeout" in result_cavity:
@@ -425,13 +427,17 @@ def process_paths(
 
 
 def execute(
-    output_dir: Path, nworkers: Union[None, int], paths: Iterable[Path], tool: Tool
+    output_dir: Path,
+    nworkers: Union[None, int],
+    paths: Iterable[Path],
+    tool: Tool,
+    drop_tdag: bool,
 ) -> int:
     if not os.path.exists(output_dir):
         mkdir(output_dir)
 
     def enq(file: Path):
-        return (file_cavity_detection, file, output_dir, TIMEOUT, tool)
+        return (file_cavity_detection, file, output_dir, TIMEOUT, tool, drop_tdag)
 
     with open(output_dir / RESULTSCSV, "w") as f:
         return process_paths(enq, paths, f, nworkers)
@@ -470,12 +476,26 @@ def main():
     )
 
     parser.add_argument(
+        "--drop-tdag",
+        "-d",
+        action="store_true",
+        default=False,
+        help="Do not keep the tdag file after cavity detection is finished.",
+    )
+
+    parser.add_argument(
         "inputs", type=Path, nargs="+", help="Paths to inputs to mutate"
     )
 
     args = parser.parse_args()
 
-    execute(args.output_dir, args.jobs, args.inputs, TOOL_MAPPING[args.tool]())
+    execute(
+        args.output_dir,
+        args.jobs,
+        args.inputs,
+        TOOL_MAPPING[args.tool](),
+        args.drop_tdag,
+    )
 
 
 if __name__ == "__main__":
