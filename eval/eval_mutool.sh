@@ -53,11 +53,14 @@ EXAMPLES_BUILDSH="examples/build.sh"
 # Path to logfile from builds/git etc.
 LOGFILE="/tmp/polytracker-eval-log"
 
+# Name of python binary
+PYTHON_BIN=python3
+
 ######## Pre-requisites #######################################################
 # Will install prerequisites if on the Ubuntu platform
 function install_prerequisites_ubuntu() {
     echo "Installing pre-requisites"
-    apt-get update && apt-get install -y git docker.io || fail "Failed to install pre-requisites."
+    apt-get update && apt-get install -y git docker.io python3 || fail "Failed to install pre-requisites."
     groupadd docker
     usermod -aG docker ${SUDO_USER} || fail "Failed to add user ${SUDO_USER} to group docker."
     echo "Either logout and login again or run 'newgrp docker' as user ${SUDO_USER} to activate docker group."
@@ -128,8 +131,27 @@ function download_govdocs_pdf_corpus() {
 }
 
 # 5. Run file cavity detection
+# args:
+#  - polytracker directory
+#  - corpus directory
+#  - results directory
+#  - sample_size
 function file_cavity_detection() {
-    echo "Cavity detect"
+    polytracker_dir=${1}
+    corpus_dir=${2}
+    results_dir=${3}
+    sample_size=${4}
+
+    echo "Run file cavity detection"
+    # Drop any old cavities.csv, otherwise we will append to it and
+    # things won't work as expected.
+    cavcsv=${results_dir}/cavities.csv
+    [ -f $cavcsv ] && rm $cavcsv
+
+    find $corpus_dir -type f | head -n ${sample_size} | $PYTHON_BIN ${polytracker_dir}/build_in_docker/file_cavity_detection.py \
+      --tool mutool --output-dir ${results_dir} - 2>&1 | tee ${LOGFILE} || fail "File cavity detection failed."
+
+    echo "Done"
 }
 
 # 6. Verify detected cavities
@@ -227,6 +249,9 @@ function main() {
     [[ ${step} -eq 4 ]] && [[ ${step} -le ${last_step} ]] && download_govdocs_pdf_corpus ${corpus_dir} \
                                                                 ${sample_size} && step=$((step + 1))
 
+    # Step 5 file cavity detection
+    [[ ${step} -eq 5 ]] && [[ ${step} -le ${last_step} ]] && file_cavity_detection ${polytracker_dir} ${corpus_dir} \
+                                                              ${results_dir} ${sample_size} && step=$((step + 1))
     echo "STEP is ${step}"
 }
 
