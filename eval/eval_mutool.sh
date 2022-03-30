@@ -149,7 +149,7 @@ function file_cavity_detection() {
     [ -f $cavcsv ] && rm $cavcsv
 
     find $corpus_dir -type f | head -n ${sample_size} | $PYTHON_BIN -u ${polytracker_dir}/build_in_docker/file_cavity_detection.py \
-      --tool mutool --output-dir ${results_dir} - 2>&1 | tee ${LOGFILE} || fail "File cavity detection failed."
+      --tool mutool --output-dir ${results_dir} --drop-tdag - 2>&1 | tee ${LOGFILE} || fail "File cavity detection failed."
 
     echo "Done"
 }
