@@ -164,7 +164,17 @@ function file_cavity_detection() {
 
 # 6. Verify detected cavities
 function verify_detected_cavities() {
-    echo "verify cavities"
+    polytracker_dir=${1}
+    corpus_dir=${2}
+    results_dir=${3}
+    sample_size=${4}
+
+    echo "Verify cavities"
+    find $corpus_dir -type f | head -n ${sample_size} | ${PYTHON_BIN} -u ${polytracker_dir}/build_in_docker/verify_cavities.py \
+      --results ${results_dir} --method=${MUTATION_TYPE} --type=${VERIFICATION_TYPE} --tool mutool - | tee ${LOGFILE} || \
+      fail "File cavity verification failed."
+
+    echo "Done"
 }
 
 ######## Main Operation #######################################################
@@ -259,6 +269,10 @@ function main() {
 
     # Step 5 file cavity detection
     [[ ${step} -eq 5 ]] && [[ ${step} -le ${last_step} ]] && file_cavity_detection ${polytracker_dir} ${corpus_dir} \
+                                                              ${results_dir} ${sample_size} && step=$((step + 1))
+
+    # Step 6 verification of cavities
+    [[ ${step} -eq 6 ]] && [[ ${step} -le ${last_step} ]] && verify_detected_cavities ${polytracker_dir} ${corpus_dir} \
                                                               ${results_dir} ${sample_size} && step=$((step + 1))
     echo "STEP is ${step}"
 }
