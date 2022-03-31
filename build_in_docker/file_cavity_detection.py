@@ -399,7 +399,7 @@ def process_paths(
     paths: Iterable[Path],
     f,
     nworkers: Union[None, int] = None,
-    target_qlen: int = 32,
+    target_qlen: int = 128,
 ) -> int:
     if nworkers and target_qlen < nworkers:
         target_qlen = nworkers
