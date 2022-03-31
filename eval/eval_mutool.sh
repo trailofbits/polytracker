@@ -56,11 +56,19 @@ LOGFILE="/tmp/polytracker-eval-log"
 # Name of python binary
 PYTHON_BIN=python3
 
+# Method used to mutate files during verification
+MUTATION_TYPE="flip"
+
+# File cavitiy detection type, currently all cavity bytes, one at a time
+# and a sampled subset of the remaining bytes.
+VERIFICATION_TYPE="singlebyte"
+
+
 ######## Pre-requisites #######################################################
 # Will install prerequisites if on the Ubuntu platform
 function install_prerequisites_ubuntu() {
     echo "Installing pre-requisites"
-    apt-get update && apt-get install -y git docker.io python3 || fail "Failed to install pre-requisites."
+    apt-get update && apt-get install -y git docker.io python3 python3-numpy || fail "Failed to install pre-requisites."
     groupadd docker
     usermod -aG docker ${SUDO_USER} || fail "Failed to add user ${SUDO_USER} to group docker."
     echo "Either logout and login again or run 'newgrp docker' as user ${SUDO_USER} to activate docker group."
