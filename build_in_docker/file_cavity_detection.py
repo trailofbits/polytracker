@@ -301,6 +301,16 @@ def proc_metadata(filename: Path):
             json.dump(d, f)
 
 
+@contextmanager
+def tdag_dropper(dst_tdag: Path, drop_tdag: bool):
+    """Drops the tdag-file if specified by drop_tdag"""
+    try:
+        yield
+    finally:
+        if drop_tdag and dst_tdag.exists():
+            dst_tdag.unlink()
+
+
 def file_cavity_detection(
     file: Path, output_dir: Path, timeout: int, tool: Tool, drop_tdag: bool
 ) -> str:
@@ -322,7 +332,7 @@ def file_cavity_detection(
 
     with create_work_dir(Path(output_dir, file.stem)) as tmpd, proc_metadata(
         dst_meta
-    ) as meta:
+    ) as meta, tdag_dropper(dst_tdag, drop_tdag):
 
         output_file = tmpd / f"{file.stem}{tool.output_extension()}"
         results = tool.run_instrumented(file, output_file)
@@ -362,8 +372,6 @@ def file_cavity_detection(
         finally:
             result_cavity["end"] = time()
             result_cavity["time"] = result_cavity["end"] - result_cavity["start"]
-        if drop_tdag and dst_tdag.exists():
-            dst_tdag.unlink()
         meta["cavity_detect"] = result_cavity
 
         if "timeout" in result_cavity:
@@ -391,7 +399,7 @@ def process_paths(
     paths: Iterable[Path],
     f,
     nworkers: Union[None, int] = None,
-    target_qlen: int = 32,
+    target_qlen: int = 128,
 ) -> int:
     if nworkers and target_qlen < nworkers:
         target_qlen = nworkers
