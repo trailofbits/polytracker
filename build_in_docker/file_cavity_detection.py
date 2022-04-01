@@ -12,7 +12,8 @@ from shutil import rmtree
 from time import time
 from typing import Any, Dict, Generator, Iterable, List, Union
 
-TIMEOUT = 100
+# 10 minute timeout for detecting cavities
+TIMEOUT = 60*10
 SCRIPTDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 TDAG = "polytracker.tdag"
 RESULTSCSV = "cavities.csv"
