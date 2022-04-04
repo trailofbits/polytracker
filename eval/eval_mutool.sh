@@ -68,7 +68,7 @@ VERIFICATION_TYPE="singlebyte"
 # Will install prerequisites if on the Ubuntu platform
 function install_prerequisites_ubuntu() {
     echo "Installing pre-requisites"
-    apt-get update && apt-get install -y git docker.io python3 python3-numpy || fail "Failed to install pre-requisites."
+    apt-get update && apt-get install -y git docker.io python3 python3-numpy unzip || fail "Failed to install pre-requisites."
     groupadd docker
     usermod -aG docker ${SUDO_USER} || fail "Failed to add user ${SUDO_USER} to group docker."
     echo "Either logout and login again or run 'newgrp docker' as user ${SUDO_USER} to activate docker group."
