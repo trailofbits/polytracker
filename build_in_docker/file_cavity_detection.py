@@ -188,7 +188,7 @@ class MuTool(Tool):
         return ".pdf"
 
     def output_extension(self) -> str:
-        return ".png"
+        return ".ps"
 
     def _cmd(self, binary: Path, input: Path, output: Path):
         return f"{str(binary)} draw -o {str(output)} {input}"
