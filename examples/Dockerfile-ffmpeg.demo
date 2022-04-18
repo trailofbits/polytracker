@@ -4,7 +4,7 @@ WORKDIR /polytracker/the_klondike
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git && git clone https://git.ffmpeg.org/ffmpeg.git
 
-# Now, build the openjpg image using previously downloaded source
+# Now, build the ffmpeg image using previously downloaded source
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="marek.surovic@trailofbits.com"
 
