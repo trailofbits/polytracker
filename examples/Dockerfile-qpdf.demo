@@ -1,41 +1,28 @@
-FROM trailofbits/polytracker
-MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
-
-WORKDIR /
-
-RUN apt-get install -y wget
-
-RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
-RUN wget https://www.ijg.org/files/jpegsrc.v9c.tar.gz
-
-RUN echo "temp" > PLACEHOLDER
-ENV POLYPATH=/PLACEHOLDER
-ENV LD=ld
-
-RUN tar -xzvf zlib-1.2.11.tar.gz
-WORKDIR zlib-1.2.11
-RUN ./configure && make -j$(nproc) test && make -j$(nproc) install
-
-WORKDIR / 
-
-RUN tar -xzvf jpegsrc.v9c.tar.gz
-WORKDIR jpeg-9c
-RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
-
-WORKDIR /polytracker/the_klondike/
- 
+# Create a separate image with the latest source
+FROM ubuntu:focal AS qpdf-sources
+WORKDIR /polytracker/the_klondike
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y git wget 
 RUN git clone https://github.com/qpdf/qpdf.git
-WORKDIR  qpdf
-RUN ./configure --disable-shared --enable-static && make -j$(nproc) install
+RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && tar xf jpegsrc.v9e.tar.gz
 
-WORKDIR /usr/local/bin/
+# Now, build the qpdf image using previously downloaded source
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="marek.surovic@trailofbits.com"
+
+WORKDIR /polytracker/the_klondike
+COPY --from=qpdf-sources /polytracker/the_klondike/qpdf /polytracker/the_klondike/qpdf
+COPY --from=qpdf-sources /polytracker/the_klondike/jpeg-9e /polytracker/the_klondike/jpeg-9e
+
+WORKDIR /polytracker/the_klondike/jpeg-9e/build
+RUN ../configure LDFLAGS="-static" && make install -j$(nproc)
+
+WORKDIR /polytracker/the_klondike/qpdf
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON && cmake --build build -j$(nproc)
 
 #Extract BC 
-RUN get-bc -b qpdf 
+WORKDIR /polytracker/the_klondike/qpdf/build/qpdf
+RUN get-bc -o qpdf.bc -b qpdf
 
 #Instrument and build track target
-RUN ${CXX} --lower-bitcode -i qpdf.bc -o qpdf_track --libs /polytracker/the_klondike/qpdf/libqpdf/build/.libs/libqpdf.a atomic z /usr/local/lib/libjpeg.a --lists libz
-
-# Note, the /workdir directory is intended to be mounted at runtime
-VOLUME ["/workdir"]
-WORKDIR /workdir
+RUN ${CXX} --lower-bitcode -i qpdf.bc -o qpdf_track --libs ../libqpdf/libqpdf.a atomic z jpeg --lists libz
