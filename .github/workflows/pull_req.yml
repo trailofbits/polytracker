@@ -8,8 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # example: [mupdf,poppler,qpdf]
-        example: [mupdf, qpdf]
+        example: [mupdf,poppler,qpdf]
     steps:
       - uses: actions/checkout@v2
       - name: Build the base image
