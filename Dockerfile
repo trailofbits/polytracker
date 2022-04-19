@@ -11,10 +11,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       libgraphviz-dev                                 \
       libjpeg-dev                                     \
       graphviz										  \
-      libsqlite3-dev                                  \
       vim                                             \
       gdb                                             \
-      sqlite3                                         \
       libncurses5-dev                                 \
       apt-transport-https                             \
       ca-certificates
