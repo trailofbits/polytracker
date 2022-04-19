@@ -70,7 +70,7 @@ polytracker --help
 The `polytracker` script is also a REPL, if run with no command line arguments:
 ```python
 $ polytracker
-PolyTracker (3.0.0)
+PolyTracker (3.1.0)
 https://github.com/trailofbits/polytracker
 Type "help" or "commands"
 >>> commands
@@ -114,51 +114,39 @@ meant to be tracked. (Note: PolyTracker can in fact track multiple input filesâ€
 network socketsâ€”however, we have thus far only exposed the capability to specify a single file. This will be improved in
 a future release.)
 
-The instrumented software will write its output to the path specified in `POLYDB`, or `polytracker.db` if omitted.
-This is a sqlite3 database that can be operated on by running:
+The instrumented software will write its output to the path specified in `POLYDB`, or `polytracker.tdag` if omitted.
+This is a binary file that can be operated on by running:
 ```python
-from polytracker import PolyTrackerTrace
+from polytracker import PolyTrackerTrace, taint_dag
 
-trace = PolyTrackerTrace.load("polytracker.db")
+trace = PolyTrackerTrace.load("polytracker.tdag")
+tdfile = trace.tdfile
 
-for event in trace:
-    # this prints every single event in the trace, in order
-    print(event)
+first_node = list(tdfile.nodes)[0]
+print(f"First node affects control flow: {first_node.affects_control_flow}")
 
-for function in trace.functions:
-    # this returns a function object for every function observed
-    # (this is different than a function invocation, which we describe below)
-    print(function.demangled_name)
+# Operate on all Range nodes
+for index, node in enumerate(tdfile.nodes):
+  if isinstance(node, taint_dag.TDRangeNode):
+    print(f"Node {index}: first {node.first}, last {node.last}")
 
-main_func = trace.get_function("main")
-for taint in main_func.taints().regions():
-    # this iterates over every taint touched by the main function aggregated across all invocations of main
-    print(f"source={taint.source}, offset={taint.offset}, length={taint.length}, value={taint.value}")
-```
-Individual function invocations in the trace can also be enumerated:
-```python
-entrypoint = trace.entrypoint
-# entrypoint is a function invocation object associated with a single invocation of the entrypoint of the trace (main)
-print(f"Entrypoint is: {entrypoint!s}")
-for called_function in entrypoint.calls():
-    # called_function is another function invocation object
-    # associated with a function called from entrypoint
-    print(str(called_function))
-    for region in called_function.taints().regions():
-        # this will iterate over every tainted region operated on by called_function,
-        # including any functions called to from called_function
-        print(f"\t{region.value}")
+# Access taint forest
+tdforest = trace.taint_forest
+n1 = tdforest.get_node(1)
+print(
+  f"Forest node {n1.label}. Parent labels: {n1.parent_labels}, "
+  f"source: {n1.source.path if n1.source is not None else None}, "
+  f"affects control flow: {n1.affected_control_flow}"
+)
 ```
 
 You can also run an instrumented binary directly from the REPL:
 ```python
 $ polytracker
-PolyTracker (3.0.0)
+PolyTracker (3.1.0)
 https://github.com/trailofbits/polytracker
 Type "help" or "commands"
 >>> trace = run_trace("path_to_binary", "path_to_input_file")
->>> for event in trace:
-...     print(event)
 ```
 This will automatically run the instrumented binary in a Docker container, if necessary.
 
@@ -192,7 +180,7 @@ POLYSTART: Start offset to track
 
 POLYEND: End offset to track
 
-POLYDB: A path to which to save the output database (default is polytracker.db)
+POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
 POLYCONFIG: Provides a path to a JSON file specifying settings
 
@@ -245,7 +233,7 @@ The original script can be found in `dfsan_rt`.
 Check out this Git repository. From the root, either build the base PolyTracker Docker image:
 
 ```commandline
-pip3 install -e .[dev] && polytracker docker rebuild
+pip3 install -e ".[dev]" && polytracker docker rebuild
 ```
 
 or pull the latest prebuilt version from DockerHub:
@@ -265,8 +253,7 @@ docker build -t trailofbits/polytracker-demo-mupdf -f examples/pdf/Dockerfile-mu
 ```
 
 `mutool_track` will be build in `/polytracker/the_klondike/mupdf/build/debug`. Running `mutool_track` will output
-`polytracker.db` which contains the information provided by the taint analysis. Its recommended to use this json with
-[PolyFile](https://www.github.com/trailofbits/PolyFile).
+`polytracker.tdag` which contains the information provided by the taint analysis.
 
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this command:
 
