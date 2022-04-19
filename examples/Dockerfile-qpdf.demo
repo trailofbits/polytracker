@@ -18,7 +18,8 @@ WORKDIR /polytracker/the_klondike/jpeg-9e/build
 RUN ../configure LDFLAGS="-static" && make install -j$(nproc)
 
 WORKDIR /polytracker/the_klondike/qpdf
-RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON && cmake --build build -j$(nproc)
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON 
+RUN cmake --build build -j$(nproc)
 
 #Extract BC 
 WORKDIR /polytracker/the_klondike/qpdf/build/qpdf
