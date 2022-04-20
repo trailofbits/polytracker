@@ -299,6 +299,22 @@ The following tools are required to test and run PolyTracker:
 * [gllvm](https://github.com/SRI-CSL/gllvm) (`go get github.com/SRI-CSL/gllvm/cmd/...`) is used to create whole program
   bitcode archives and to extract bitcode from targets.
 
+### Building on Apple silicon:
+
+Prebuilt Docker images for `polytracker-llvm` are only available for `amd64`. Users with `arm64` systems will have to
+build the image locally and then change `polytracker`'s Dockerfile to point to it:
+```commandline
+$ mkdir repos && cd repos
+$ git clone https://github.com/trailofbits/polytracker
+$ git clone https://github.com/trailofbits/polytracker-llvm
+$ cd polytracker-llvm
+$ DOCKER_BUILDKIT=1 docker build -t trailofbits/polytracker-llvm .
+$ cd ../polytracker
+$ ## Replace the first line of the Dockerfile with "FROM trailofbits/polytracker-llvm:latest" (no quotes)
+$ docker build -t trailofbits/polytracker .
+```
+
+
 ## Building with LLVM Xray Instrumentation
 It's possible to build both Polytracker and target programs with [LLVM's Xray](https://llvm.org/docs/XRay.html)
 instrumentation. Pass the `XRAY_ON` option to Polytracker, and build targets with `--xray-instrument-target` or
