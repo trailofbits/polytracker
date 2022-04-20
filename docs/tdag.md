@@ -12,9 +12,33 @@ Because of the sparse layout it is very well suited for memory mapping (via `mma
 ## Taint Sources, Unions and Ranges
 Whenever data is read from an input file, the data entering the program is labeled as source taint. Information about which file and at what offset is kept. This is the only way taints can originate in a program.
 
-Whenever an operation is performed where one or more operands are involved a union or range value is created. If the taint labels are adjacent (number wise), e.g. two consecutive source taint bytes, a range is created. If the labels are not adjacent a union of the two labels is created. Unions and ranges occupy the same amount of storage. The main difference is that a range can be extended to become a larger range.
+As the instrumented binary operates on the now labeled data, the associated taint labels need to reflect those operations. E.g. on addition of two tainted values there should be a new taint label associated with the result. The new label should reflect the union of the operand labels.
+```C
+  uint32_t a = ...;
+  uint32_t b = ...;
+  uint32_t result = a + b;
+```
+For the above case the taint label of `result` represents a union of the taint labels of `a` and `b`.
 
-The main motivation for introducing ranges is to allow very efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it requires more computation.
+If the taint labels considered for a union are adjacent (number wise), e.g. two consecutive source taint bytes, a range is created. Unions and ranges occupy the same amount of storage. The main difference is that a range can be extended to become a larger range.
+
+Consider the following operation on source bytes
+```C
+uint8_t src[1024];
+// read source taint into src
+uint32_t val = *(uint32_t*)src;
+```
+In this example `val` should be labeled with the union of the four consecutive source taint lables. In this case a range is instead created representing all for labels. 
+
+The main motivation for introducing ranges is to allow for efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it requires more computation.
+
+```C
+uint8_t src[1024];
+// read source taint into src
+uint32_t val = *(uint32_t*)src;
+uint32_t val2 = val + src[1];
+```
+In this slightly extended example the label of `val2` can be made equal to `val1`. It depends on the exact same source labels. Ranges make checking for such cases more efficient.
 
 ## Affects control flow
 In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `L`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
