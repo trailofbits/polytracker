@@ -70,7 +70,7 @@ polytracker --help
 The `polytracker` script is also a REPL, if run with no command line arguments:
 ```python
 $ polytracker
-PolyTracker (3.1.0)
+PolyTracker (4.0.0)
 https://github.com/trailofbits/polytracker
 Type "help" or "commands"
 >>> commands
@@ -143,7 +143,7 @@ print(
 You can also run an instrumented binary directly from the REPL:
 ```python
 $ polytracker
-PolyTracker (3.1.0)
+PolyTracker (4.0.0)
 https://github.com/trailofbits/polytracker
 Type "help" or "commands"
 >>> trace = run_trace("path_to_binary", "path_to_input_file")
