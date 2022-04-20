@@ -88,7 +88,7 @@ w < v => UnionTaint
 w == v => undefined
 ```
 ### SinkLog
-The sinklog is a sequence of records logging what tainted values have been writeen to output files. Each entry in the sinklog index is defined as
+The sinklog is a sequence of records logging what tainted values have been written to output files. Each entry in the sinklog index is defined as
 ```C
 struct SinkLogEntry {
   uint8_t fdidx;
