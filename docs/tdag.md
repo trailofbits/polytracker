@@ -7,14 +7,14 @@ It is a binary file format based on sparse files. It consists of a header and a 
 * taint output log, tainted values written to an output file
 * taint graph, the graph of how taint values are unioned from source taint and other unions.
 
-Because of the sparse layout it is very well suited for mmap'ing directly into the instrumented process address space.
+Because of the sparse layout it is very well suited for memory mapping (via `mmap()`) directly into the instrumented process address space.
 
 ## Taint Sources, Unions and Ranges
-Whenever data is read from an input file, the data entering the program is labeled as source taint. Information about which file and at what offset is kept. This is the only way taint can originate in a program.
+Whenever data is read from an input file, the data entering the program is labeled as source taint. Information about which file and at what offset is kept. This is the only way taints can originate in a program.
 
 Whenever an operation is performed where one or more operands are involved a union or range value is created. If the taint labels are adjacent (number wise), e.g. two consecutive source taint bytes, a range is created. If the labels are not adjacent a union of the two labels is created. Unions and ranges occupy the same amount of storage. The main difference is that a range can be extended to become a larger range.
 
-The main motivation for introducing ranges is to allow very efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it reqiures more computation.
+The main motivation for introducing ranges is to allow very efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it requires more computation.
 
 ## Affects control flow
 In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `y`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and and branch is executed taint with label `y` is marked as affecting control flow.
