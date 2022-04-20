@@ -97,7 +97,7 @@ struct SinkLogEntry {
 };
 ```
 NOTE: The structure is assumed to be packed and occupy `1 + 8 + 4 = 13` bytes.
-In this structure, the `fdidx` member is an index into the `FDMappingHdr` array previously described. The `offset` is current offset in the output file (represented by `fdidx`). Finally the `label` is the taint label associated with the data written and is thus an index into the structure at `tdag_mapping_offset` into the file.
+In this structure, the `fdidx` member is an index into the `FDMappingHdr` array previously described. The `offset` is the offset in the output file (represented by `fdidx`). Finally the `label` is the taint label associated with the data written and is thus an index into the TDAG structure at `tdag_mapping_offset`.
 
 
 
