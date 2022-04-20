@@ -51,7 +51,7 @@ struct FDMappingHdr {
   uint32_t prealloc_end;
 };
 ```
-Each of the `FDMappingHdr` structures have an implicit index to which they are refered to in subsequent structures in the tdag.
+Each of the `FDMappingHdr` structures has an implicit index. Subsequent structures in the tdag use that index to refer to each `FDMappingHdr`
 ```
 [FDMappingHdr][FDMappingHdr]...[FDMappingHdr]
 Index 0        Index 1      ... Index N
