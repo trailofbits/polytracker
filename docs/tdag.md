@@ -3,9 +3,9 @@
 The Taint Directed Acyclic Graph (TaintDAG, TDAG) file format is tailored to facilitate fast recording of taint operations.
 
 It is a binary file format based on sparse files. It consists of a header and a number of subsections. The subsections store information about:
-* taint sources, filename and offset information
-* taint output log, tainted values written to an output file
-* taint graph, the graph of how taint values are unioned from source taint and other unions.
+* taint sources: filename and offset information
+* taint output log: tainted values written to an output file
+* taint graph: the graph of how taint values are unioned from source taint and other unions.
 
 Because of the sparse layout it is very well suited for memory mapping (via `mmap()`) directly into the instrumented process address space.
 
