@@ -66,7 +66,7 @@ At `tdag_mapping_offset` there are `tdag_mapping_count` uint64_t entries. Each e
 | x y zzz...z |
   63        0
 ``` 
-Bits `x` and `y` are common for the three kinds of taint values. The value `y` is set to one if the taint represents control flow and zero if not. The value `x` is set to one to indicate that it is a source taint and
+Bits `x` and `y` are common for the three kinds of taint values. The value `y` is set to one if the taint affects control flow and zero if not. The value `x` is set to one to indicate that it is a source taint and
 to zero if it is a Union- or Range-Taint.
 
 For SourceTaint, the following layout is used:
