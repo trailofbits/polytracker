@@ -17,7 +17,7 @@ Whenever an operation is performed where one or more operands are involved a uni
 The main motivation for introducing ranges is to allow very efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it requires more computation.
 
 ## Affects control flow
-In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `y`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and and branch is executed taint with label `y` is marked as affecting control flow.
+In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `L`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
 
 Affects control flow propagates through unions and ranges meaning that if a value `v`, having label `w` where `w` is a union or range, affects control flow. Then each taint label represented by `w` is in turn marked as affecting control flow.
 
