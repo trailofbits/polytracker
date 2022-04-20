@@ -57,7 +57,7 @@ Each of the `FDMappingHdr` structures has an implicit index. Subsequent structur
 Index 0        Index 1      ... Index N
 ```
 The `fd` indicates the number of the fd as seen in the running program.  
-The `name_offset` and `name_len` specifies offset and length to the filename that was opened and having file descriptor `fd` in the program.
+The `name_offset` and `name_len` specifies offset and length of the filename that was opened and had file descriptor `fd` in the program.
 The `prealloc_begin` and `prealloc_end`, if not zero, indicates a source taint range that was preallocated for this file. The idea is to have as many contiguous labels as possible for the same file, aiming at maximising the number of ranges generated.
 
 ### SourceTaint, UnionTaint and RangeTaint - the actual TDAG
