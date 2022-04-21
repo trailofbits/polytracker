@@ -82,7 +82,7 @@ Index 0        Index 1      ... Index N
 ```
 The `fd` indicates the number of the fd as seen in the running program.  
 The `name_offset` and `name_len` specifies offset and length of the filename that was opened and had file descriptor `fd` in the program.
-The `prealloc_begin` and `prealloc_end`, if not zero, indicates a source taint range that was preallocated for this file. The idea is to have as many contiguous labels as possible for the same file, aiming at maximising the number of ranges generated.
+The `prealloc_begin` and `prealloc_end`, if not zero, indicates a source taint sequence of adjacent labels that was preallocated for this file. The idea is to have as many contiguous labels as possible for the same file, aiming at maximising the number of ranges generated.
 
 ### SourceTaint, UnionTaint and RangeTaint - the actual TDAG
 At `tdag_mapping_offset` there are `tdag_mapping_count` uint64_t entries. Each entry denotes either SourceTaint, UnionTaint or RangeTaint. Their relative index is the taint label. Index zero is unused as it denotes 'not tainted'. The general layout of these 64-bit values are:
