@@ -41,7 +41,7 @@ uint32_t val2 = val + src[1];
 In this slightly extended example the label of `val2` can be made equal to `val1`. It depends on the exact same source labels. Ranges make checking for such cases more efficient.
 
 ## Affects control flow
-In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `L`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
+In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is a value with taint label `L` is read from file, compared against another value, and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
 
 Affects control flow propagates through unions and ranges meaning that if a value having label `w` where `w` is a union or range, is identified as affecting control flow. Then each taint label represented by `w` is in turn marked as affecting control flow.
 
