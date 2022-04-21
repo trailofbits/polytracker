@@ -43,7 +43,7 @@ In this slightly extended example the label of `val2` can be made equal to `val1
 ## Affects control flow
 In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is if a value `x` (having label `L`) read from file is compared against another value and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
 
-Affects control flow propagates through unions and ranges meaning that if a value `v`, having label `w` where `w` is a union or range, affects control flow. Then each taint label represented by `w` is in turn marked as affecting control flow.
+Affects control flow propagates through unions and ranges meaning that if a value having label `w` where `w` is a union or range, is identified as affecting control flow. Then each taint label represented by `w` is in turn marked as affecting control flow.
 
 ## File format
 The general layout of the file is as follows:
@@ -65,7 +65,7 @@ struct FileHdr {
 Each offset is relative to file (or memory mapping) start.
 
 ### FDMappingHdr
-At `fd_mapping_offset` there are `fd_mapping_count` `FDMappingHdr` structures.
+At `fd_mapping_offset` there is an array of `FDMappingHdr` structures. Length of the array is given by  `fd_mapping_count`.
 ```C
 struct FDMappingHdr {
   int32_t fd;
