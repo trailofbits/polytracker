@@ -1,0 +1,22 @@
+# Create a separate image with the latest source
+FROM ubuntu:focal AS libjpeg-sources
+WORKDIR /polytracker/the_klondike/
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y upgrade && apt-get install -y wget
+RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && tar xf jpegsrc.v9e.tar.gz
+
+# Now, build the libjpeg image using previously downloaded source
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com"
+
+WORKDIR /polytracker/the_klondike/
+COPY --from=libjpeg-sources /polytracker/the_klondike/jpeg-9e /polytracker/the_klondike/jpeg-9e
+
+WORKDIR /polytracker/the_klondike/jpeg-9e/build
+RUN ../configure LDFLAGS="-static" && make -j$(nproc)
+
+#Extract bitcodes
+RUN get-bc -b djpeg
+
+# #Instrument and link
+RUN ${CC} --lower-bitcode --no-control-flow-tracking -i djpeg.bc -o djpeg_track

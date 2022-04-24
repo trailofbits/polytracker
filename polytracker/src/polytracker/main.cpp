@@ -1,10 +1,7 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/early_construct.h"
 #include "polytracker/json.hpp"
-#include "polytracker/logging.h"
-#include "polytracker/output.h"
 #include "polytracker/polytracker.h"
-#include "polytracker/taint.h"
 #include "polytracker/write_taints.h"
 #include <atomic>
 #include <fcntl.h>
@@ -20,6 +17,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <unordered_set>
+
+#include "taintdag/polytracker.h"
 
 using json = nlohmann::json;
 
@@ -37,23 +36,7 @@ bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
 // If this is empty, taint everything.
 DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
-char *forest_mem;
-
-// DB for storing things
-sqlite3 *output_db;
-
-// Input id is unique document key
-// Change this for multiple taint sources
-input_id_t input_id;
-// Maps fds to associated input_ids.
-EARLY_CONSTRUCT_STORAGE(fd_input_map_t, fd_input_map);
-
-EARLY_CONSTRUCT_EXTERN_STORAGE(new_table_t, new_table);
-EARLY_CONSTRUCT_EXTERN_STORAGE(std::mutex, new_table_lock);
-EARLY_CONSTRUCT_EXTERN_STORAGE(fd_name_map_t, fd_name_map);
-EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_name_map_t, track_target_name_map);
-EARLY_CONSTRUCT_EXTERN_STORAGE(track_target_fd_map_t, track_target_fd_map);
-EARLY_CONSTRUCT_EXTERN_STORAGE(std::mutex, track_target_map_lock);
+DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 
 /*
 Parse files deliminated by ; and add them to unordered set.
@@ -90,7 +73,7 @@ void set_defaults() {
     taint_node_ttl = DEFAULT_TTL;
   }
   if (get_polytracker_db_name().empty()) {
-    get_polytracker_db_name() = "polytracker.db";
+    get_polytracker_db_name() = "polytracker.tdag";
   }
 }
 
@@ -243,37 +226,11 @@ void polytracker_get_settings() {
   }
   polytracker_parse_env();
   set_defaults();
-
-  for (auto target_source : get_target_sources()) {
-    // Add named source for polytracker
-    addInitialTaintSource(target_source, byte_start, byte_end, target_source);
-  }
 }
 
 void polytracker_end() {
-  /*
-  if (done) {
-    return;
-  }
-  done.store(true);
-  const dfsan_label last_label = dfsan_get_label_count();
-  */
-  db_fini(output_db);
-}
-
-char *mmap_taint_forest(unsigned long size) {
-  unsigned flags = MAP_PRIVATE | MAP_NORESERVE | MAP_ANON;
-
-  // unsigned long page_size = getpagesize();
-  void *p = mmap(NULL, size, PROT_READ | PROT_WRITE, flags, -1, 0);
-  if (p == nullptr) {
-    fprintf(stderr,
-            "ERROR: PolyTracker failed to "
-            "allocate 0x%zx (%zd) bytes\n",
-            size, size);
-    abort();
-  }
-  return (char *)p;
+  // Explicitly destroy the PolyTracker instance to flush mapping to disk
+  get_polytracker_tdag().~PolyTracker();
 }
 
 void polytracker_print_settings() {
@@ -292,76 +249,22 @@ void polytracker_print_settings() {
   printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
 }
 
-static void storeBinaryMetadata(sqlite3 *output_db) {
-  std::vector<uint8_t> data;
-  std::unique_ptr<FILE, decltype(&fclose)> fd(fopen("/proc/self/exe", "rb"),
-                                              fclose);
-  fseek(fd.get(), 0, SEEK_END);
-  long size = ftell(fd.get());
-  assert(size > 0);
-  auto data_size = static_cast<size_t>(size);
-  fseek(fd.get(), 0, SEEK_SET);
-  data.reserve(
-      data_size); // TODO (hbrodin): Is this guaranteed to work? is memory
-                  // always allocated, should resize be used instead?
-  auto read_len = fread(data.data(), data_size, 1, fd.get());
-  assert(read_len == 1u);
-  storeBlob(output_db, data.data(), data_size);
-}
-
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
                        block_mapping const *block_map, uint64_t block_map_count,
                        bool control_flow_tracking) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
-  DO_EARLY_DEFAULT_CONSTRUCT(fd_input_map_t, fd_input_map);
-  DO_EARLY_DEFAULT_CONSTRUCT(track_target_name_map_t, track_target_name_map);
-
-  DO_EARLY_DEFAULT_CONSTRUCT(new_table_t, new_table);
-  DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, new_table_lock);
-  DO_EARLY_DEFAULT_CONSTRUCT(fd_name_map_t, fd_name_map);
-  DO_EARLY_DEFAULT_CONSTRUCT(track_target_name_map_t, track_target_name_map);
-  DO_EARLY_DEFAULT_CONSTRUCT(track_target_fd_map_t, track_target_fd_map);
-  DO_EARLY_DEFAULT_CONSTRUCT(std::mutex, track_target_map_lock);
-
-  // TODO (hbrodin): Pass these as arguments to storeBinaryMetadata instead of
-  // keeping global vars.
-  func_mappings = globals;
-  func_mapping_count = globals_count;
-
-  block_mappings = block_map;
-  block_mapping_count = block_map_count;
 
   polytracker_get_settings();
   polytracker_print_settings();
-  output_db = db_init(get_polytracker_db_name());
+  DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
+                     get_polytracker_db_name());
 
-  if (control_flow_tracking) {
-    // Store binary metadata (block + functions + blocks)
-    storeBinaryMetadata(output_db);
-  } else {
+  if (!control_flow_tracking) {
     printf("Program compiled without PolyTracker control flow tracking "
            "instrumentation.\n");
   }
 
-  // Store new file
-  for (auto target_source : get_target_sources()) {
-    input_id = storeNewInput(output_db, target_source, byte_start, byte_end,
-                             polytracker_trace);
-  }
   // Set up the atexit call
   atexit(polytracker_end);
-  // Reserve memory for polytracker taintforest.
-  // Reserve enough for all possible labels
-  forest_mem = (char *)mmap_taint_forest(MAX_LABELS * sizeof(dfsan_label));
-  dfsan_label zero_label = 0;
-  taint_node_t *init_node = getTaintNode(zero_label);
-  init_node->p1 = 0;
-  init_node->p2 = 0;
-  init_node->decay = taint_node_ttl;
 }
-
-/*
-__attribute__((section(".init_array"),
-               used)) static void (*poly_init_ptr)() = polytracker_start;
-*/

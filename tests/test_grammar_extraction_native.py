@@ -4,6 +4,7 @@ from polytracker import ProgramTrace
 from polytracker.grammars import extract
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
 def test_extract(program_trace: ProgramTrace):
     grammar = extract([program_trace], simplify=False)
@@ -11,6 +12,7 @@ def test_extract(program_trace: ProgramTrace):
     print(str(grammar))
 
 
+@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fgetc.c", input="ABCDEFGH")
 def test_simplify(program_trace: ProgramTrace):
     grammar = extract([program_trace], simplify=True)

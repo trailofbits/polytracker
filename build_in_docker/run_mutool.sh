@@ -24,4 +24,7 @@ docker run ${DOCKER_FLAGS} --rm --mount type=bind,source="${SCRIPTPATH}/..",targ
   --mount type=bind,source="${SCRIPTPATH}/bin",target=/sources/bin \
   --mount type=bind,source="${SCRIPTPATH}/scripts",target=/sources/mupdf/mupdf_scripts \
   --mount type=bind,source="$(pwd)",target=/workdir \
+  -e POLYTRACE=1 \
+  -e POLYSTART=1024 \
+  -e POLYEND=1040 \
   trailofbits/polytrackerbuilder-mupdf "/sources/bin/${BINARY}" $ARGS

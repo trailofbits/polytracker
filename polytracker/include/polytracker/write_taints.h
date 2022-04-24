@@ -1,6 +1,4 @@
 #include <polytracker/dfsan_types.h>
-#include <polytracker/logging.h>
-#include <polytracker/output.h>
 #include <sanitizer/dfsan_interface.h>
 #include <sys/types.h>
 #include <unistd.h>

@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:f1385f079c2573f2b31834354310e7265a9bb4b3
+FROM trailofbits/polytracker-llvm:16daa680dcff0dc86ebf6ae81f5382859695cb35
 
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
@@ -11,10 +11,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       libgraphviz-dev                                 \
       libjpeg-dev                                     \
       graphviz										  \
-      libsqlite3-dev                                  \
       vim                                             \
       gdb                                             \
-      sqlite3                                         \
       libncurses5-dev                                 \
       apt-transport-https                             \
       ca-certificates

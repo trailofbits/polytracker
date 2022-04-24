@@ -145,12 +145,16 @@ class DatalogRuleList:
                     start_term += 1
                     continue
 
-                self.rules.append(DatalogRule(term, chr(start_term), chr(start_term + 1)))
+                self.rules.append(
+                    DatalogRule(term, chr(start_term), chr(start_term + 1))
+                )
                 start_term += 1
             # If its a terminal, we must make sure the name matches that of the fact.
             elif isinstance(term, Terminal):
                 for val in term.terminal:
-                    self.rules.append(DatalogRule(str(val), chr(start_term), chr(start_term + 1)))
+                    self.rules.append(
+                        DatalogRule(str(val), chr(start_term), chr(start_term + 1))
+                    )
                     start_term += 1
             else:
                 print(f"WARNING term is not string/terminal: {term}")
@@ -227,7 +231,9 @@ class DatalogGrammar:
     @property
     def val(self) -> str:
         return "\n".join(
-            [x.val for x in self.clause_decls] + [x.val for x in self.output_decls] + [x.val for x in self.clauses]
+            [x.val for x in self.clause_decls]
+            + [x.val for x in self.output_decls]
+            + [x.val for x in self.clauses]
         )
 
 
@@ -251,14 +257,17 @@ class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
 
     def run(self, command: ExtractGrammarCommand, args: Namespace):
         if len(command.traces) > 1:
-            raise NotImplementedError("TODO: Add support for generating DataLog grammars from multiple traces")
+            raise NotImplementedError(
+                "TODO: Add support for generating DataLog grammars from multiple traces"
+            )
         elif args.extract_datalog is None:
             return 0
         trace = command.traces[0]
         inputs = list(trace.inputs)
         if len(inputs) != 1:
             raise NotImplementedError(
-                "TODO: Add support for extracting DataLog grammars from traces with more than " "one input"
+                "TODO: Add support for extracting DataLog grammars from traces with more than "
+                "one input"
             )
         data = inputs[0].content
         self.datalog_grammar = DatalogGrammar(trace)

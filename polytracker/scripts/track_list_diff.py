@@ -9,8 +9,8 @@ import argparse
 This file reads in two Polytracker ABI lists and produces
 a list of functions that are declared multiple times within the corpus
 
-If something is flagged as uninstrumented, that is okay, because tagging it with another attribute overrides 
-uninstrumented. The order is custom > functional > discard, (in regular DFSan its functional > discard > custom).  
+If something is flagged as uninstrumented, that is okay, because tagging it with another attribute overrides
+uninstrumented. The order is custom > functional > discard, (in regular DFSan its functional > discard > custom).
 
 This file looks for conflicts related to declaring functions as functional/discard/custom within and across files
 """
@@ -52,8 +52,8 @@ def analyze_abi_file(filename):
 
 
 """
-Returns True if two lists are different 
-if they are the same length and have the same items they are the same. 
+Returns True if two lists are different
+if they are the same length and have the same items they are the same.
 """
 
 
@@ -67,11 +67,11 @@ def list_diff(list1, list2):
 
 
 """
-This function attempts to auto resolve conflicts between diffs by commenting out 
+This function attempts to auto resolve conflicts between diffs by commenting out
 all conflicts in one of the files. The typical usecase for this is when you generate a stublist of a library,
 creating a list that has entries that are all discard. But you want to instrument a few functions, so in another file
-you declare some of them as custom. This function can go and comment out all the discard ones so there are no 
-accidental conflicts between the two. 
+you declare some of them as custom. This function can go and comment out all the discard ones so there are no
+accidental conflicts between the two.
 """
 
 
@@ -93,13 +93,19 @@ def auto_resolve_conflicts(filename, diff_conflicts):
 def main():
     parser = argparse.ArgumentParser(
         description="""
-        A utility to analyze two ABI lists to look for conflicts between them. A conflict comes in the form of 
+        A utility to analyze two ABI lists to look for conflicts between them. A conflict comes in the form of
         one file declaring a function to be <functional, discard, custom> while another disagrees.
         """
     )
-    parser.add_argument("--file-one", "-f1", type=str, default=None, help="Path to first ABI file")
-    parser.add_argument("--file-two", "-f2", type=str, default=None, help="Path to second ABI file")
-    parser.add_argument("--choose-file", "-cf", type=int, default=None, help="Take all from file 1 or 2")
+    parser.add_argument(
+        "--file-one", "-f1", type=str, default=None, help="Path to first ABI file"
+    )
+    parser.add_argument(
+        "--file-two", "-f2", type=str, default=None, help="Path to second ABI file"
+    )
+    parser.add_argument(
+        "--choose-file", "-cf", type=int, default=None, help="Take all from file 1 or 2"
+    )
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -121,8 +127,12 @@ def main():
 
     f1_conflicts, f1_func_attrs = analyze_abi_file(args.file_one)
     f2_conflicts, f2_func_attrs = analyze_abi_file(args.file_two)
-    diff_conflicts = [file for file in f1_func_attrs.keys() if file in f2_func_attrs.keys() and
-                      list_diff(f1_func_attrs[file], f2_func_attrs[file])]
+    diff_conflicts = [
+        file
+        for file in f1_func_attrs.keys()
+        if file in f2_func_attrs.keys()
+        and list_diff(f1_func_attrs[file], f2_func_attrs[file])
+    ]
     if args.choose_file is not None:
         print(args.choose_file)
         truth_file = int(args.choose_file)

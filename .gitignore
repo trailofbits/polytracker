@@ -7,5 +7,9 @@ __pycache__
 .DS_Store
 .vscode
 *.db
+*.bc
+*.o
+*.tdag
 /Default/
+polytracker.egg-info
 /polytracker.egg-info

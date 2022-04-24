@@ -12,7 +12,7 @@ RUN git clone --recursive git://git.ghostscript.com/mupdf.git
 WORKDIR /sources/mupdf
 RUN git submodule update --init
 
-FROM trailofbits/polytracker
+FROM trailofbits/polytracker:latest
 MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
 
 WORKDIR /
