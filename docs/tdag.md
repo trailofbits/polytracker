@@ -25,25 +25,26 @@ If the taint labels considered for a union are adjacent (number wise), e.g. two 
 Consider the following operation on source bytes
 ```C
 uint8_t src[1024];
-// read source taint into src
+// read source taint
 uint32_t val = *(uint32_t*)src;
 ```
-In this example `val` should be labeled with the union of the four consecutive source taint lables. In this case a range is instead created representing all for labels. 
+In this example `val` should be labeled with the union of the four consecutive source taint lables. In this case a range is instead created representing all four labels. 
 
-The main motivation for introducing ranges is to allow for efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to walk the tree of unioned labels but it requires more computation.
+The main motivation for introducing ranges is to allow for efficient membership testing. If a taint label is already included in a range of taint values, the range can be reused. It is possible to unfold the range into a tree of unions and walk the tree, but it requires more computation.
 
 ```C
 uint8_t src[1024];
-// read source taint into src
-uint32_t val = *(uint32_t*)src;
-uint32_t val2 = val + src[1];
+// read source taint
+uint32_t val1 = *(uint32_t*)src;
+uint32_t val2 = val1 + src[1];
 ```
 In this slightly extended example the label of `val2` can be made equal to `val1`. It depends on the exact same source labels. Ranges make checking for such cases more efficient.
 
 ## Affects control flow
-In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is a value with taint label `L` is read from file, compared against another value, and a branch is taken based on the result. Whenever the comparison and branch is executed, the taint with label `L` is marked as affecting control flow.
+In addition to being Source-, Union- or Range-Taint, each value is also marked if it affects control flow. The basic example is a value with taint label `L` is read from file, compared against another value, and a branch is taken based on the result. Whenever the conditional branch is executed, the taint with label `L` is marked as affecting control flow.
 
-Affects control flow propagates through unions and ranges meaning that if a value having label `w` where `w` is a union or range, is identified as affecting control flow. Then each taint label represented by `w` is in turn marked as affecting control flow.
+<!-- TODO(msurovic): This paragraph is a bit clunky, but I don't know how to rephrase it. -->
+Affects control flow propagates through unions and ranges. This means that if a value with a union or range label `W` affects control flow, then each taint label represented by `W` is in turn marked as affecting control flow.
 
 ## File format
 The general layout of the file is as follows:
@@ -62,7 +63,7 @@ struct FileHdr {
   uint64_t sink_mapping_size;
 };
 ```
-Each offset is relative to file (or memory mapping) start.
+Each offset is relative to the start of the file.
 
 ### FDMappingHdr
 At `fd_mapping_offset` there is an array of `FDMappingHdr` structures. Length of the array is given by  `fd_mapping_count`.
@@ -75,37 +76,34 @@ struct FDMappingHdr {
   uint32_t prealloc_end;
 };
 ```
-Each of the `FDMappingHdr` structures has an implicit index. Subsequent structures in the tdag use that index to refer to each `FDMappingHdr`
+Each of the `FDMappingHdr` structures has an implicit index. Subsequent structures in the TDAG use that index to refer to each `FDMappingHdr`.
 ```
 [FDMappingHdr][FDMappingHdr]...[FDMappingHdr]
 Index 0        Index 1      ... Index N
 ```
-The `fd` indicates the number of the fd as seen in the running program.  
-The `name_offset` and `name_len` specifies offset and length of the filename that was opened and had file descriptor `fd` in the program.
-The `prealloc_begin` and `prealloc_end`, if not zero, indicates a source taint sequence of adjacent labels that was preallocated for this file. The idea is to have as many contiguous labels as possible for the same file, aiming at maximising the number of ranges generated.
+The `fd` field is the file descriptor as seen at runtime. The `name_offset` is the offset at which the name associated with `fd` is located in the TDAG file. The `name_len` is the length of the file name at `name_offset`. The `prealloc_begin` and `prealloc_end`, if not zero, indicate a source taint sequence of adjacent labels that was preallocated for this file. The idea is to have as many contiguous labels as possible for the same file, aiming at maximising the number of ranges generated.
 
 ### SourceTaint, UnionTaint and RangeTaint - the actual TDAG
-At `tdag_mapping_offset` there are `tdag_mapping_count` uint64_t entries. Each entry denotes either SourceTaint, UnionTaint or RangeTaint. Their relative index is the taint label. Index zero is unused as it denotes 'not tainted'. The general layout of these 64-bit values are:
+At `tdag_mapping_offset` there is `tdag_mapping_count` of `uint64_t` entries. Each entry denotes either a Source-, Union- or Range-Taint. Their relative index is the taint label. Index zero is unused as it denotes 'not tainted'. The general layout of the `uint64_t` value is:
 ```
 | x y zzz...z |
   63        0
 ``` 
-Bits `x` and `y` are common for the three kinds of taint values. The value `y` is set to one if the taint affects control flow and zero if not. The value `x` is set to one to indicate that it is a source taint and
-to zero if it is a Union- or Range-Taint.
+Bits `x` and `y` are common for the three kinds of taint values. The value `x` is set to one to indicate that it is a source taint and to zero if it is a Union- or Range-Taint. The value `y` is set to one if the taint affects control flow and zero if not.
 
 For SourceTaint, the following layout is used:
 ```
 | x y ooo oo iiiiiiii |
   63  61     7      0
 ```
-Here, `o` denotes the offset in the source file. The `i` denotes the source file index, referring to the `FDMappingHdr` index and structures previouysly described.
+Here, `o` denotes the offset in the source file. The `i` denotes the source file index, referring to the `FDMappingHdr` index and structures previously described.
 
 If `x` is zero, the value is either a Union-Taint or a Range-Taint. They share a common layout
 ```
 | x y vvv ... v www ... w |
   63  61        30      0
 ```
-Here, `v` and `w` denotes unsigned integers referring to other taint values in the tdag structure. To differentiate between a range and a union the following rule is used:
+Here, `v` and `w` denotes unsigned integers referring to other taint values in the TDAG structure. To differentiate between a range and a union the following rule is used:
 ```
 v < w => RangeTaint
 w < v => UnionTaint
@@ -121,7 +119,7 @@ struct SinkLogEntry {
 };
 ```
 NOTE: The structure is assumed to be packed and occupy `1 + 8 + 4 = 13` bytes.
-In this structure, the `fdidx` member is an index into the `FDMappingHdr` array previously described. The `offset` is the offset in the output file (represented by `fdidx`). Finally the `label` is the taint label associated with the data written and is thus an index into the TDAG structure at `tdag_mapping_offset`.
+In this structure, the `fdidx` is an index into the `FDMappingHdr` array described previously. The `offset` is the offset in the output file represented by `fdidx`. Finally the `label` is the taint label associated with the data written and is thus an index into the TDAG structure at `tdag_mapping_offset`.
 
 
 
