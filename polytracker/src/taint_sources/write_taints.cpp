@@ -48,3 +48,20 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
   *ret_label = 0;
   return write_count;
 }
+
+EXT_C_FUNC int __dfsw_putc(int ch, FILE *stream, dfsan_label ch_label,
+                           dfsan_label stream_label, dfsan_label *ret_label) {
+  auto offset = ftell(stream);
+  auto ret = fputc(ch, stream);
+  if (ret == ch) {
+    auto fd = fileno(stream);
+    get_polytracker_tdag().taint_sink(fd, offset, ch_label, sizeof(char));
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+EXT_C_FUNC int __dfsw_fputc(int ch, FILE *stream, dfsan_label ch_label,
+                            dfsan_label stream_label, dfsan_label *ret_label) {
+  return __dfsw_putc(ch, stream, ch_label, stream_label, ret_label);
+}
