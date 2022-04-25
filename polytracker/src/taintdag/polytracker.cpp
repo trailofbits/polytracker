@@ -147,6 +147,18 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
            offset, mem);
 }
 
+void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
+                             size_t length) {
+  auto idx = fdm_.mapping_idx(fd);
+
+  if (idx) {
+    sinklog_.log_range(idx->first, offset, length,
+                       [label](const auto &) { return label; });
+  } else
+    printf("WARNING: Ignore taint sink for fd %d, offset %lu label %u\n", fd,
+           offset, label);
+}
+
 void PolyTracker::affects_control_flow(label_t lbl) {
   tdag_.affects_control_flow(lbl);
 }
