@@ -12,7 +12,14 @@ WORKDIR /polytracker/the_klondike
 COPY --from=ffmpeg-sources /polytracker/the_klondike/ffmpeg /polytracker/the_klondike/ffmpeg
 
 WORKDIR /polytracker/the_klondike/ffmpeg/build
-RUN ../configure --cc=${CC} --enable-hardcoded-tables --disable-stripping --disable-asm && make -j$((`nproc`+1))
+
+RUN ../configure --cc=${CC} --disable-everything \
+        --enable-decoder=mpeg4 \
+        --enable-hardcoded-tables \
+        --disable-stripping \
+        --disable-asm
+
+RUN make -j$((`nproc`+1))
 
 RUN get-bc -o ffmpeg_track.bc -b ffmpeg
 RUN ${CC} --lower-bitcode  --no-control-flow-tracking -i ffmpeg_track.bc -o ffmpeg_track --lists libz --libs z
