@@ -256,6 +256,9 @@ def modify_exec_args(argv: List[str]):
             continue
         compile_command.append(arg)
 
+    # Needed for compiling in AArch64
+    compile_command.append("-fPIC")
+
     # If linking, need to add in libc++.a, libc++abi.a, pthread.
     if linking:
         compile_command.append("-Wl,--start-group")
