@@ -41,6 +41,9 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
           continue;
         }
       }
+      // We need to split this BB into a new one after the call
+      auto bb = next->getParent();
+#ifdef DEBUG_INFO
       std::string fname;
       if (auto function = call->getCalledFunction()) {
         if (function->hasName()) {
@@ -53,13 +56,10 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
           fname = v->getName().data();
         }
       }
-      // We need to split this BB into a new one after the call
-      auto bb = next->getParent();
       // Don't bother logging these common functions, but still split for them
       bool includeFunctionName =
           (fname != "llvm.dbg.declare" && fname != "llvm.dbg.value" &&
            fname != "llvm.lifetime.end.p0i8" && fname != "__assert_fail");
-#ifdef DEBUG_INFO
       if (fname.length() == 0 || bb->hasName() || includeFunctionName) {
         if (bb->hasName()) {
           llvm::errs() << " " << bb->getName().data();
