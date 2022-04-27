@@ -6,6 +6,7 @@ from pathlib import Path
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.description = "Summarize information after running verify_cavities.py."
@@ -83,7 +84,7 @@ def main():
     print(f"Avg. file cavity fraction: {file_cavity_fraction/file_count:.2f}%")
 
     print(
-        f"Cavity mutations not affecting output {100.0*cavity_checksum_eq/cavity_bytes:.2f}%")
+        f"Cavity mutations not affecting output {100.0*cavity_checksum_eq/cavity_bytes:.2f}% ({cavity_checksum_eq:n}/{cavity_bytes:n})")
     print(
         f"Cavity bytes failing to produce output {100.0*cavity_no_output/cavity_bytes:.2f}%")
     print(
