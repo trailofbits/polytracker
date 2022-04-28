@@ -114,10 +114,10 @@ class TaintedRegion:
         if isinstance(index_or_slice, slice):
             if index_or_slice.step is not None and index_or_slice.step != 1:
                 raise ValueError("TaintedRegion only supports slices with step == 1")
-            start = slice.start
+            start = index_or_slice.start
             if start < 0:
                 start = max(self.length + start, 0)
-            stop = slice.stop
+            stop = index_or_slice.stop
             if stop < 0:
                 stop = self.length + stop
             if start >= stop or start >= self.length or stop <= 0:
