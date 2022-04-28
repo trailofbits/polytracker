@@ -6,12 +6,13 @@ jobs:
   # TODO: Consider building the base image as a separate job and caching the result
   integration_tests:
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
-        example: [mupdf,poppler,qpdf]
+        program: [mupdf, poppler, qpdf]
     steps:
-      - uses: actions/checkout@v2
-      - name: Build the base image
-        run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
-      - name: Build the example Docker image
-        run: docker build --no-cache examples --file examples/Dockerfile-${{ matrix.example }}.demo --tag trailofbits/polytracker-demo-${{ matrix.example }}
+    - uses: actions/checkout@v2
+    - name: Build the base image
+      run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
+    - name: Build the example Docker image
+      run: docker build --no-cache examples --file examples/Dockerfile-${{ matrix.program }}.demo --tag trailofbits/polytracker-demo-${{ matrix.program }}
