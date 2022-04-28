@@ -6,7 +6,8 @@ jobs:
     name: Integration test
     runs-on: ubuntu-latest
     strategy:
-      matrix: { program: ['mupdf', 'poppler', 'qpdf''] }
+      matrix:
+        program: [mupdf, poppler, qpdf]
 
     steps:
       - name: Checkout code
