@@ -28,10 +28,6 @@
 static llvm::cl::list<std::string>
     ignore_file_path("ignore-list",
                      llvm::cl::desc("Specify functions to ignore"));
-// FIXME (Carson) turn into a bool
-static llvm::cl::opt<std::string> generate_ignore_list(
-    "gen-list",
-    llvm::cl::desc("When specified, generates an ignore list from bitcode"));
 
 static llvm::cl::opt<int> file_id(
     "file-id",
