@@ -86,6 +86,7 @@ from typing import (
     Generic,
     Iterable,
     List,
+    Mapping,
     Optional,
     Tuple,
     Type,
@@ -242,7 +243,7 @@ class Command(AbstractCommand, ABC):
 
 
 def _lookup_class_property(
-    name: str, bases: Iterable[Type], clsdict: Dict[str, Any]
+    name: str, bases: Iterable[Type], clsdict: Mapping[str, Any]
 ) -> Any:
     if name in clsdict:
         return clsdict[name]
