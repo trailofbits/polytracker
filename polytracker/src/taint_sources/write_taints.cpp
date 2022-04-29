@@ -1,5 +1,6 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/early_construct.h"
+#include "polytracker/taint_sources.h"
 #include "taintdag/polytracker.h"
 #include <iostream>
 #include <sanitizer/dfsan_interface.h>
@@ -20,7 +21,6 @@ ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
 */
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
-#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
                                 dfsan_label fd_label, dfsan_label buff_label,
                                 dfsan_label count_label,
@@ -34,7 +34,6 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
   return write_count;
 }
 
-#define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
                                 FILE *stream, dfsan_label buff_label,
                                 dfsan_label size_label, dfsan_label count_label,
@@ -48,4 +47,21 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
                                       write_count * size);
   *ret_label = 0;
   return write_count;
+}
+
+EXT_C_FUNC int __dfsw_putc(int ch, FILE *stream, dfsan_label ch_label,
+                           dfsan_label stream_label, dfsan_label *ret_label) {
+  auto offset = ftell(stream);
+  auto ret = fputc(ch, stream);
+  if (ret == ch) {
+    auto fd = fileno(stream);
+    get_polytracker_tdag().taint_sink(fd, offset, ch_label, sizeof(char));
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+EXT_C_FUNC int __dfsw_fputc(int ch, FILE *stream, dfsan_label ch_label,
+                            dfsan_label stream_label, dfsan_label *ret_label) {
+  return __dfsw_putc(ch, stream, ch_label, stream_label, ret_label);
 }
