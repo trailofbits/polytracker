@@ -37,6 +37,8 @@ public:
 
   // Log tainted data flowed into the sink
   void taint_sink(int fd, sink_offset_t offset, void const *mem, size_t length);
+  // Same as before, but use same label for all data
+  void taint_sink(int fd, sink_offset_t offset, label_t label, size_t length);
 
 private:
   std::optional<taint_range_t>
