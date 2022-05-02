@@ -11,6 +11,8 @@ jobs:
         example: [mupdf,poppler,qpdf]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Build the example Docker image
