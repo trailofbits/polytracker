@@ -26,5 +26,8 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/third_party/indicators/CMakeLists.txt")
     message(FATAL_ERROR "git submodule update --init --recursive must be run first to checkout submodules")
 endif()
 
-add_subdirectory(polytracker)
+add_subdirectory(third_party/Catch2)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/third_party/Catch2/contrib")
 add_subdirectory(third_party/indicators)
+
+add_subdirectory(polytracker)
