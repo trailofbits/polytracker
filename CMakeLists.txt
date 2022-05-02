@@ -22,4 +22,9 @@ set(POLYTRACK_TESTS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/tests")
 set(POLYTRACK_PASS_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/pass")
 set(POLYTRACK_CXX_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker")
 
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/third_party/indicators/CMakeLists.txt")
+    message(FATAL_ERROR "git submodule update --init --recursive must be run first to checkout submodules")
+endif()
+
 add_subdirectory(polytracker)
+add_subdirectory(third_party/indicators)
