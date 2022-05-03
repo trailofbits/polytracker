@@ -10,6 +10,8 @@ jobs:
         python-version: [3.7, 3.8, 3.9]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
@@ -23,8 +25,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install setuptools
           pip install .[dev]
-      - name: Update git submodules
-        run: git submodule update --init --recursive
       - name: C++ lint
         run: |
           python third_party/run-clang-format/run-clang-format.py \
