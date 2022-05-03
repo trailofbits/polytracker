@@ -41,7 +41,7 @@ static llvm::cl::opt<bool> no_control_flow_tracking(
         "When specified, do not instrument for control flow tracking"));
 
 namespace {
-indicators::ProgressBar create_progress_bar() {
+indicators::ProgressBar create_progress_bar(int max) {
   using namespace indicators;
   return ProgressBar{
       option::BarWidth{50},
@@ -52,8 +52,9 @@ indicators::ProgressBar create_progress_bar() {
       option::End{"]"},
       option::ShowPercentage{true},
       option::PostfixText{"Instrumenting"},
-      option::ForegroundColor{Color::green},
-      option::FontStyles{std::vector<FontStyle>{FontStyle::bold}}};
+      option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+      option::MaxProgress{max},
+  };
 }
 } // namespace
 
@@ -605,18 +606,15 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  auto progress_bar = create_progress_bar();
-
   if (no_control_flow_tracking) {
     std::cout << "Omitting PolyTracker control flow instrumentation."
               << std::endl;
     // We still want to visit comparison instructions because they are useful
     // for detecting file cavities:
 
-    auto function_index = 1;
+    auto progress_bar = create_progress_bar(mod.size());
     for (auto &func : mod) {
-      progress_bar.set_progress(
-          (static_cast<double>(function_index++) / mod.size()) * 100);
+      progress_bar.tick();
       // Ignore if the func is in our ignore list
       if (func.hasName()) {
         std::string fname = func.getName().str();
@@ -658,10 +656,9 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       func_index_map[func.getName().str()] = function_index++;
     }
 
-    auto function_index = 1;
+    auto progress_bar = create_progress_bar(functions.size());
     for (auto func : functions) {
-      progress_bar.set_progress(
-          (static_cast<double>(function_index++) / functions.size()) * 100);
+      progress_bar.tick();
 
       if (!func || func->isDeclaration()) {
         continue;
