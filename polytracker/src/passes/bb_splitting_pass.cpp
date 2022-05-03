@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "spdlog/spdlog.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 
@@ -53,10 +54,9 @@ void log_function(BasicBlock *bb, const std::optional<std::string> &fname) {
   }
 
   if ((fname || bb->hasName())) {
-    llvm::errs() << " "
-                 << (bb->hasName() ? bb->getName().data() : "Unnamed block");
-    llvm::errs() << " after call to " << (fname.value_or("Unnamed function"))
-                 << "\n";
+    spdlog::debug("{} after call to {}",
+                  bb->hasName() ? bb->getName().data() : "Unnamed block",
+                  fname.value_or("Unnamed function"));
   }
 }
 } // namespace
@@ -83,9 +83,7 @@ BBSplittingPass::analyzeBasicBlock(BasicBlock &basicBlock) const {
       }
       // We need to split this BB into a new one after the call
       auto bb = next->getParent();
-#ifdef DEBUG_INFO
       log_function(bb, get_function_name(call));
-#endif
       newBBs.push_back(bb->splitBasicBlock(next));
     }
   }

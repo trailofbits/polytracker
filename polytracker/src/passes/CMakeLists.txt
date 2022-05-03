@@ -49,7 +49,7 @@ endif(APPLE)
 
 #add_llvm_library(LLVMShit DataFlowSanitizer.cpp BBSplittingPass.cpp)
 add_library(PolytrackerPass SHARED polytracker_pass.cpp bb_splitting_pass.cpp)
-target_link_libraries(PolytrackerPass LLVMPassConfig indicators)
+target_link_libraries(PolytrackerPass PUBLIC LLVMPassConfig PRIVATE indicators spdlog::spdlog_header_only)
 install (TARGETS PolytrackerPass DESTINATION ${POLYTRACK_PASS_DIR})
 add_library(MetadataPass SHARED metadata_pass.cpp)
 target_link_libraries(MetadataPass LLVMPassConfig)
