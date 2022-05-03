@@ -29,5 +29,7 @@ endif()
 add_subdirectory(third_party/Catch2)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/third_party/Catch2/contrib")
 add_subdirectory(third_party/indicators)
+set(SPDLOG_NO_EXCEPTIONS TRUE)
+add_subdirectory(third_party/spdlog)
 
 add_subdirectory(polytracker)
