@@ -162,9 +162,8 @@ The Python API documentation is available [here](https://trailofbits.github.io/p
 
 ## Runtime Parameters and Instrumentation Tuning
 
-At runtime, PolyTracker instrumentation looks for a number of configuration parameters either specified through
-environment variables or a local configuration file. This allows one to modify instrumentation parameters without
-needing to recompile the binary.
+At runtime, PolyTracker instrumentation looks for a number of configuration parameters specified through
+environment variables. This allows one to modify instrumentation parameters without needing to recompile the binary.
 
 ### Environment Variables
 
@@ -182,32 +181,13 @@ The current environment variables PolyTracker supports is:
 
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
-POLYCONFIG: Provides a path to a JSON file specifying settings
-
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
-```
-
-### Configuration Files
-
-Rather than setting environment variables on every run, you can make a configuration file.
-
-Example:
-```
-{
-    "POLYSTART": 1,
-    "POLYEND": 3,
-    "POLYTTL": 16
-}
 ```
 
 Polytracker will set its configuration parameters in the following order:
 1. If a parameter is specified via an environment variable, use that value
-2. Else if `POLYCONFIG` is specified and that configuration file contains the parameter, use that value
-3. Else if the current directory contains `polytracker_config.json` and that config contains the parameter, use that
-   value
-4. Else if `~/.config/polytracker/polytracker_config.json` exists and it contains the parameter, use that value
-5. Else if a default value for the parameter exists, use the default
-6. Else throw an error
+2. Else if a default value for the parameter exists, use the default
+3. Else throw an error
 
 ### ABI Lists
 DFSan uses ABI lists to determine what functions it should automatically instrument, what functions it should ignore,
