@@ -1,6 +1,5 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/early_construct.h"
-#include "polytracker/json.hpp"
 #include "polytracker/polytracker.h"
 #include "polytracker/write_taints.h"
 #include <atomic>
@@ -19,8 +18,6 @@
 #include <unordered_set>
 
 #include "taintdag/polytracker.h"
-
-using json = nlohmann::json;
 
 #define DEFAULT_TTL 32
 
@@ -75,87 +72,6 @@ void set_defaults() {
   if (get_polytracker_db_name().empty()) {
     get_polytracker_db_name() = "polytracker.tdag";
   }
-}
-
-// This function parses the config file
-// Overwrites env vars if not already specified.
-void polytracker_parse_config(std::ifstream &config_file) {
-  std::string line;
-  std::string json_str;
-  while (getline(config_file, line)) {
-    json_str += line;
-  }
-  auto config_json = json::parse(json_str);
-  if (config_json.contains("POLYPATH")) {
-    parse_target_files(config_json["POLYPATH"].get<std::string>());
-  }
-  if (config_json.contains("POLYSTART")) {
-    byte_start = config_json["POLYSTART"].get<int>();
-  }
-  if (config_json.contains("POLYEND")) {
-    byte_end = config_json["POLYEND"].get<int>();
-  }
-  if (config_json.contains("POLYDB")) {
-    get_polytracker_db_name() = config_json["POLYDB"].get<std::string>();
-  }
-  if (config_json.contains("POLYTRACE")) {
-    std::string trace_str = config_json["POLYTRACE"].get<std::string>();
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_trace = false;
-    } else {
-      polytracker_trace = true;
-    }
-  }
-  if (config_json.contains("POLYSAVEINPUT")) {
-    std::string trace_str = config_json["POLYSAVEINPUT"].get<std::string>();
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_save_input_file = false;
-    } else {
-      polytracker_save_input_file = true;
-    }
-  }
-  if (config_json.contains("POLYTTL")) {
-    taint_node_ttl = config_json["POLYTTL"].get<int>();
-  }
-  if (config_json.contains("POLYFUNC")) {
-    std::string trace_str = config_json["POLYFUNC"].get<std::string>();
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_trace_func = false;
-    } else {
-      polytracker_trace_func = true;
-    }
-  }
-}
-
-// Determines if a polytracker config is in use or not.
-// Returns false if no config found.
-bool polytracker_detect_config(std::ifstream &config) {
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, sizeof(cwd)) == NULL) {
-    perror("getcwd() error");
-    return false;
-  }
-
-  // Check current dir.
-  config.open(std::string(cwd) + std::string("/.polytracker_config.json"));
-  if (config.good()) {
-    return true;
-  }
-  // Check home config path
-  config.open("~/.config/polytracker/polytracker_config.json");
-  if (config.good()) {
-    return true;
-  }
-  return false;
 }
 
 // Parses the env looking to override current settings
@@ -219,11 +135,6 @@ polytrackers settings
 3. Set rest to default if possible and error if no polypath.
 */
 void polytracker_get_settings() {
-  std::ifstream config;
-
-  if (polytracker_detect_config(config)) {
-    polytracker_parse_config(config);
-  }
   polytracker_parse_env();
   set_defaults();
 }
