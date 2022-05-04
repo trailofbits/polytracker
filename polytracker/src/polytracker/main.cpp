@@ -76,54 +76,54 @@ void set_defaults() {
 
 // Parses the env looking to override current settings
 void polytracker_parse_env() {
-  if (getenv("POLYPATH")) {
-    parse_target_files(getenv("POLYPATH"));
-  }
-  if (getenv("POLYSTART")) {
-    byte_start = atoi(getenv("POLYSTART"));
-  }
-  if (getenv("POLYEND")) {
-    byte_end = atoi(getenv("POLYEND"));
-  }
+  // if (getenv("POLYPATH")) {
+  //   parse_target_files(getenv("POLYPATH"));
+  // }
+  // if (getenv("POLYSTART")) {
+  //   byte_start = atoi(getenv("POLYSTART"));
+  // }
+  // if (getenv("POLYEND")) {
+  //   byte_end = atoi(getenv("POLYEND"));
+  // }
   if (auto pdb = getenv("POLYDB")) {
     get_polytracker_db_name() = pdb;
   }
-  if (getenv("POLYSAVEINPUT")) {
-    std::string trace_str = getenv("POLYSAVEINPUT");
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_save_input_file = false;
-    } else {
-      polytracker_save_input_file = true;
-    }
-  }
-  if (getenv("POLYTRACE")) {
-    std::string trace_str = getenv("POLYTRACE");
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_trace = false;
-    } else {
-      polytracker_trace = true;
-    }
-  }
-  if (auto ptrace = getenv("POLYFUNC")) {
-    std::string trace_str = ptrace;
-    std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-        trace_str == "false") {
-      polytracker_trace_func = false;
-    } else {
-      polytracker_trace_func = true;
-    }
-  }
-  if (getenv("POLYTTL")) {
-    taint_node_ttl = atoi(getenv("POLYTTL"));
-  }
+  // if (getenv("POLYSAVEINPUT")) {
+  //   std::string trace_str = getenv("POLYSAVEINPUT");
+  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+  //                  [](unsigned char c) { return std::tolower(c); });
+  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
+  //       trace_str == "false") {
+  //     polytracker_save_input_file = false;
+  //   } else {
+  //     polytracker_save_input_file = true;
+  //   }
+  // }
+  // if (getenv("POLYTRACE")) {
+  //   std::string trace_str = getenv("POLYTRACE");
+  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+  //                  [](unsigned char c) { return std::tolower(c); });
+  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
+  //       trace_str == "false") {
+  //     polytracker_trace = false;
+  //   } else {
+  //     polytracker_trace = true;
+  //   }
+  // }
+  // if (auto ptrace = getenv("POLYFUNC")) {
+  //   std::string trace_str = ptrace;
+  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
+  //                  [](unsigned char c) { return std::tolower(c); });
+  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
+  //       trace_str == "false") {
+  //     polytracker_trace_func = false;
+  //   } else {
+  //     polytracker_trace_func = true;
+  //   }
+  // }
+  // if (getenv("POLYTTL")) {
+  //   taint_node_ttl = atoi(getenv("POLYTTL"));
+  // }
 }
 
 /*
