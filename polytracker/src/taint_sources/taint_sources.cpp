@@ -35,9 +35,11 @@ EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
-EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
-                           dfsan_label flag_label, dfsan_label *va_labels,
-                           dfsan_label *ret_label, ...) {
+namespace {
+
+static int impl_open(const char *path, int oflags, dfsan_label path_label,
+                     dfsan_label flag_label, dfsan_label *va_labels,
+                     dfsan_label *ret_label, ...) {
   va_list args;
   va_start(args, ret_label);
   int fd = open(path, oflags, args);
@@ -49,6 +51,42 @@ EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
 
   *ret_label = 0;
   return fd;
+}
+
+static FILE *impl_fopen(const char *filename, const char *mode,
+                        dfsan_label *ret_label) {
+  FILE *fd = fopen(filename, mode);
+
+  if (fd) {
+    get_polytracker_tdag().open_file(fileno(fd), filename);
+  }
+
+  *ret_label = 0;
+  return fd;
+}
+
+static ssize_t impl_pread(int fd, void *buf, size_t count, off_t offset,
+                          dfsan_label *ret_label) {
+  ssize_t ret = pread(fd, buf, count, offset);
+  if (ret > 0)
+    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
+  *ret_label = 0;
+  return ret;
+}
+
+} // namespace
+
+EXT_C_FUNC int __dfsw_open(const char *path, int oflags, dfsan_label path_label,
+                           dfsan_label flag_label, dfsan_label *va_labels,
+                           dfsan_label *ret_label, ...) {
+  return impl_open(path, oflags, path_label, flag_label, va_labels, ret_label);
+}
+
+EXT_C_FUNC int __dfsw_open64(const char *path, int oflags,
+                             dfsan_label path_label, dfsan_label flag_label,
+                             dfsan_label *va_labels, dfsan_label *ret_label,
+                             ...) {
+  return impl_open(path, oflags, path_label, flag_label, va_labels, ret_label);
 }
 
 EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
@@ -71,27 +109,13 @@ EXT_C_FUNC int __dfsw_openat(int dirfd, const char *path, int oflags,
 EXT_C_FUNC FILE *__dfsw_fopen64(const char *filename, const char *mode,
                                 dfsan_label fn_label, dfsan_label mode_label,
                                 dfsan_label *ret_label) {
-  FILE *fd = fopen(filename, mode);
-
-  if (fd) {
-    get_polytracker_tdag().open_file(fileno(fd), filename);
-  }
-
-  *ret_label = 0;
-  return fd;
+  return impl_fopen(filename, mode, ret_label);
 }
 
 EXT_C_FUNC FILE *__dfsw_fopen(const char *filename, const char *mode,
                               dfsan_label fn_label, dfsan_label mode_label,
                               dfsan_label *ret_label) {
-  FILE *fd = fopen(filename, mode);
-
-  if (fd) {
-    get_polytracker_tdag().open_file(fileno(fd), filename);
-  }
-
-  *ret_label = 0;
-  return fd;
+  return impl_fopen(filename, mode, ret_label);
 }
 
 EXT_C_FUNC int __dfsw_close(int fd, dfsan_label fd_label,
@@ -133,11 +157,7 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
                                 dfsan_label count_label,
                                 dfsan_label offset_label,
                                 dfsan_label *ret_label) {
-  ssize_t ret = pread(fd, buf, count, offset);
-  if (ret > 0)
-    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
-  *ret_label = 0;
-  return ret;
+  return impl_pread(fd, buf, count, offset, ret_label);
 }
 
 EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
@@ -145,11 +165,7 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
                                   dfsan_label count_label,
                                   dfsan_label offset_label,
                                   dfsan_label *ret_label) {
-  ssize_t ret = pread(fd, buf, count, offset);
-  if (ret > 0)
-    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
-  *ret_label = 0;
-  return ret;
+  return impl_pread(fd, buf, count, offset, ret_label);
 }
 
 EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
@@ -206,6 +222,7 @@ EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
   }
   return c;
 }
+
 EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
                                dfsan_label *ret_label) {
   long offset = ftell(fd);
@@ -248,6 +265,7 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
   }
   return ret;
 }
+
 EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
                              dfsan_label *ret_label) {
   long offset = ftell(stdin);
@@ -289,9 +307,11 @@ EXT_C_FUNC ssize_t __dfsw___getdelim(char **lineptr, size_t *n, int delim,
                                      dfsan_label *ret_label) {
   long offset = ftell(fd);
   ssize_t ret = __getdelim(lineptr, n, delim, fd);
+
   if (ret != -1) {
     get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
   }
+
   *ret_label = 0;
   return ret;
 }
@@ -326,6 +346,7 @@ EXT_C_FUNC int __dfsw__putc(int __c, FILE *__fp, dfsan_label c_label,
   *ret_label = 0;
   return putc(__c, __fp);
 }
+
 EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
                                              dfsan_label cond_label,
                                              dfsan_label *ret_label) {

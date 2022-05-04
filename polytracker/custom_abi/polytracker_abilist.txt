@@ -2058,6 +2058,7 @@ fun:fchownat=uninstrumented
 fun:fclose=uninstrumented
 fun:fcloseall=uninstrumented
 fun:fcntl=uninstrumented
+fun:fcntl64=uninstrumented
 fun:fcrypt=uninstrumented
 fun:fcvt=uninstrumented
 fun:fcvt_r=uninstrumented

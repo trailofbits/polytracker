@@ -1,0 +1,35 @@
+# Create a separate image with the latest source
+FROM ubuntu:focal AS ffmpeg-sources
+WORKDIR /polytracker/the_klondike
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y git && git clone https://git.ffmpeg.org/ffmpeg.git
+
+# Now, build the ffmpeg image using previously downloaded source
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="marek.surovic@trailofbits.com"
+
+WORKDIR /polytracker/the_klondike
+COPY --from=ffmpeg-sources /polytracker/the_klondike/ffmpeg /polytracker/the_klondike/ffmpeg
+
+WORKDIR /polytracker/the_klondike/ffmpeg/build
+
+RUN ../configure --cc=${CC} --disable-everything \
+        --enable-protocol=file \
+        --enable-demuxer=mov \
+        --enable-decoder=h264 \
+        --enable-decoder=aac \
+        --enable-filter=scale \
+        --enable-encoder=rawvideo \
+        --enable-encoder=aac \
+        --enable-muxer=avi \
+        --enable-hardcoded-tables \
+        --disable-stripping \
+        --disable-asm
+
+RUN make -j$((`nproc`+1))
+
+RUN get-bc -o ffmpeg_track.bc -b ffmpeg
+RUN ${CC} --lower-bitcode  --no-control-flow-tracking -i ffmpeg_track.bc -o ffmpeg_track --lists libz --libs z
+
+# Use the following command to transcode a `.mov` h264/aac file to an `.avi` raw/aac file
+# ffmpeg_track -i input.mov -pix_fmt yuvj422p -acodec aac -vcodec rawvideo -y output.avi

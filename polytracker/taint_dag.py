@@ -185,7 +185,6 @@ class TDFile:
     @property
     def sinks(self) -> Iterator[TDSink]:
         assert self.header.sink_mapping_offset > 0
-        assert self.header.sink_mapping_size > 0
 
         offset = self.header.sink_mapping_offset
         end = offset + self.header.sink_mapping_size
