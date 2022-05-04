@@ -3,6 +3,8 @@
 #include "polytracker/basic_block_utils_test.h"
 #include "polytracker/bb_splitting_pass.h"
 // #include "polytracker/thread_pool.h"
+#include "spdlog/cfg/env.h"
+#include "spdlog/spdlog.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -41,7 +43,7 @@ static llvm::cl::opt<bool> no_control_flow_tracking(
         "When specified, do not instrument for control flow tracking"));
 
 namespace {
-indicators::ProgressBar create_progress_bar() {
+indicators::ProgressBar create_progress_bar(int max) {
   using namespace indicators;
   return ProgressBar{
       option::BarWidth{50},
@@ -52,8 +54,9 @@ indicators::ProgressBar create_progress_bar() {
       option::End{"]"},
       option::ShowPercentage{true},
       option::PostfixText{"Instrumenting"},
-      option::ForegroundColor{Color::green},
-      option::FontStyles{std::vector<FontStyle>{FontStyle::bold}}};
+      option::FontStyles{std::vector<FontStyle>{FontStyle::bold}},
+      option::MaxProgress{max},
+  };
 }
 } // namespace
 
@@ -74,7 +77,7 @@ const std::pair<llvm::Value *, llvm::Value *>
 PolytrackerPass::getIndicies(llvm::Instruction *inst) {
   llvm::LLVMContext &context = mod->getContext();
   if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
-    std::cerr << "Error: Cannot find block in block map" << std::endl;
+    spdlog::error("Cannot find block in block map");
     abort();
   }
   uint64_t gid = block_global_map[inst->getParent()];
@@ -104,7 +107,7 @@ void PolytrackerPass::logOp(llvm::Instruction *inst,
       IRB.CreateSExtOrTrunc(inst->getOperand(1), shadow_type);
 
   if (block_global_map.find(inst->getParent()) == block_global_map.end()) {
-    std::cerr << "Error! cmp parent block not in block_map" << std::endl;
+    spdlog::error("cmp parent block not in block_map");
     exit(1);
   }
   auto func_block_index = getIndicies(inst);
@@ -218,7 +221,6 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
                                    const bb_index_t &bb_index,
                                    std::vector<llvm::BasicBlock *> &split_bbs,
                                    llvm::DominatorTree &DT) {
-  // std::cout << "Visiting function!" << std::endl;
   // FIXME (Evan) Is this correct C++? I'm not sure if the pointer comparison is
   // always valid here Is the address returned by reference always the same?
   // Then yes it is
@@ -275,7 +277,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
       InsertBefore = InsertBefore->getNextNode();
     }
     if (InsertBefore == nullptr) {
-      std::cout << "ERROR No log func found!" << std::endl;
+      spdlog::error("No log func found!");
       InsertBefore = Inst;
     }
   } else {
@@ -306,7 +308,6 @@ If instructions have __polytracker, or they have __dfsan, ignore!
 */
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
-  // std::cout << "Visitng func" << std::endl;
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
   llvm::LLVMContext &context = f->getContext();
@@ -426,7 +427,7 @@ void PolytrackerPass::initializeTypes(llvm::Module &mod) {
 void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
   std::ifstream ignore_file(ignore_file_path);
   if (!ignore_file.is_open()) {
-    std::cerr << "Error! Could not read: " << ignore_file_path << std::endl;
+    spdlog::error("Error! Could not read: {}", ignore_file_path);
     exit(1);
   }
   std::string line;
@@ -468,7 +469,7 @@ parseGlobalCtors(llvm::GlobalVariable *GV) {
 static llvm::GlobalVariable *findGlobalCtors(llvm::Module &M) {
   llvm::GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
   if (!GV) {
-    std::cerr << "Warning: No constructors found, returning" << std::endl;
+    spdlog::warn("No constructors found, returning");
     return nullptr;
   }
   return GV;
@@ -592,6 +593,10 @@ static void createStartPolytrackerCall(llvm::Module &mod,
 }
 
 bool PolytrackerPass::runOnModule(llvm::Module &mod) {
+
+  // Load log level from environment variable
+  spdlog::cfg::load_env_levels();
+
   if (ignore_file_path.getNumOccurrences()) {
     for (auto &file_path : ignore_file_path) {
       readIgnoreFile(file_path);
@@ -605,18 +610,14 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
     function_index = (file_id << 24) | function_index;
   }
 
-  auto progress_bar = create_progress_bar();
-
   if (no_control_flow_tracking) {
-    std::cout << "Omitting PolyTracker control flow instrumentation."
-              << std::endl;
+    spdlog::info("Omitting PolyTracker control flow instrumentation.");
     // We still want to visit comparison instructions because they are useful
     // for detecting file cavities:
 
-    auto function_index = 1;
+    auto progress_bar = create_progress_bar(mod.size());
     for (auto &func : mod) {
-      progress_bar.set_progress(
-          (static_cast<double>(function_index++) / mod.size()) * 100);
+      progress_bar.tick();
       // Ignore if the func is in our ignore list
       if (func.hasName()) {
         std::string fname = func.getName().str();
@@ -658,17 +659,15 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
       func_index_map[func.getName().str()] = function_index++;
     }
 
-    auto function_index = 1;
+    auto progress_bar = create_progress_bar(functions.size());
     for (auto func : functions) {
-      progress_bar.set_progress(
-          (static_cast<double>(function_index++) / functions.size()) * 100);
+      progress_bar.tick();
 
       if (!func || func->isDeclaration()) {
         continue;
       }
       ret = analyzeFunction(func, func_index_map[func->getName().str()]) || ret;
     }
-    std::cerr << std::endl;
   }
 
   // Store function/block to id mappings (and corresponding counts) as global
