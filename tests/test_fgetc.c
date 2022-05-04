@@ -15,7 +15,7 @@ int main(int argc, char ** argv) {
   }
 
   // Read contents from file
-  char c = fgetc(fptr);
+  int c = fgetc(fptr);
   while (c != EOF) {
     __dummy__(c);
     printf ("%c", c);
