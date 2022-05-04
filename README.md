@@ -109,10 +109,10 @@ programs can be instrumented.
 
 ## Running and Analyzing an Instrumented Program
 
-The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are
+<!-- The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are
 meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as
 network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in
-a future release.)
+a future release.) -->
 
 The instrumented software will write its output to the path specified in `POLYDB`, or `polytracker.tdag` if omitted.
 This is a binary file that can be operated on by running:
@@ -155,8 +155,8 @@ This will automatically run the instrumented binary in a Docker container, if ne
 > from the host OS. This is particularly true when running PolyTracker in Docker from a macOS host. The solution is to
 > write the database to a path inside of the container/VM and then copy it out to the host system at the very end.
 
-The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
-level trace of the program.
+<!-- The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
+level trace of the program. -->
 
 The Python API documentation is available [here](https://trailofbits.github.io/polytracker/latest/).
 
@@ -172,13 +172,13 @@ PolyTracker accepts configuration parameters in the form of environment variable
 The current environment variables PolyTracker supports is:
 
 ```
-POLYPATH: The path to the file to mark as tainted 
+<!-- POLYPATH: The path to the file to mark as tainted  -->
 
-POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
+<!-- POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean.  -->
 
-POLYSTART: Start offset to track 
+<!-- POLYSTART: Start offset to track  -->
 
-POLYEND: End offset to track
+<!-- POLYEND: End offset to track -->
 
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
@@ -265,7 +265,8 @@ All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84
 
 ```commandline
 $ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
-$ POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf
+<!-- $ POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf -->
+$ ./pdfinfo_track some_pdf.pdf
 ```
 
 ## Building PolyTracker from Source
