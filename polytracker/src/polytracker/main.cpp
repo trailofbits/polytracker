@@ -76,54 +76,9 @@ void set_defaults() {
 
 // Parses the env looking to override current settings
 void polytracker_parse_env() {
-  // if (getenv("POLYPATH")) {
-  //   parse_target_files(getenv("POLYPATH"));
-  // }
-  // if (getenv("POLYSTART")) {
-  //   byte_start = atoi(getenv("POLYSTART"));
-  // }
-  // if (getenv("POLYEND")) {
-  //   byte_end = atoi(getenv("POLYEND"));
-  // }
   if (auto pdb = getenv("POLYDB")) {
     get_polytracker_db_name() = pdb;
   }
-  // if (getenv("POLYSAVEINPUT")) {
-  //   std::string trace_str = getenv("POLYSAVEINPUT");
-  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-  //                  [](unsigned char c) { return std::tolower(c); });
-  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-  //       trace_str == "false") {
-  //     polytracker_save_input_file = false;
-  //   } else {
-  //     polytracker_save_input_file = true;
-  //   }
-  // }
-  // if (getenv("POLYTRACE")) {
-  //   std::string trace_str = getenv("POLYTRACE");
-  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-  //                  [](unsigned char c) { return std::tolower(c); });
-  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-  //       trace_str == "false") {
-  //     polytracker_trace = false;
-  //   } else {
-  //     polytracker_trace = true;
-  //   }
-  // }
-  // if (auto ptrace = getenv("POLYFUNC")) {
-  //   std::string trace_str = ptrace;
-  //   std::transform(trace_str.begin(), trace_str.end(), trace_str.begin(),
-  //                  [](unsigned char c) { return std::tolower(c); });
-  //   if (trace_str == "off" || trace_str == "no" || trace_str == "0" ||
-  //       trace_str == "false") {
-  //     polytracker_trace_func = false;
-  //   } else {
-  //     polytracker_trace_func = true;
-  //   }
-  // }
-  // if (getenv("POLYTTL")) {
-  //   taint_node_ttl = atoi(getenv("POLYTTL"));
-  // }
 }
 
 /*
@@ -145,19 +100,7 @@ void polytracker_end() {
 }
 
 void polytracker_print_settings() {
-  // for (auto target_source : get_target_sources()) {
-  //   printf("POLYPATH:      %s\n", target_source.c_str());
-  // }
-  // if (get_target_sources().empty()) {
-  //   printf("POLYPATH:      *\n");
-  // }
   printf("POLYDB:        %s\n", get_polytracker_db_name().c_str());
-  // printf("POLYFUNC:      %u\n", polytracker_trace_func);
-  // printf("POLYTRACE:     %u\n", polytracker_trace);
-  // printf("POLYSTART:     %lu\n", byte_start);
-  // printf("POLYEND:       %lu\n", byte_end);
-  // printf("POLYTTL:       %u\n", taint_node_ttl);
-  // printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,

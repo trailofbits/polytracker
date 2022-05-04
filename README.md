@@ -115,11 +115,6 @@ programs can be instrumented.
 
 ## Running and Analyzing an Instrumented Program
 
-<!-- The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are
-meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as
-network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in
-a future release.) -->
-
 The instrumented software will write its output to the path specified in `POLYDB`, or `polytracker.tdag` if omitted.
 This is a binary file that can be operated on by running:
 
@@ -163,9 +158,6 @@ This will automatically run the instrumented binary in a Docker container, if ne
 > environment and either the input file or, especially, the output database are located in a directory mapped or mounted
 > from the host OS. This is particularly true when running PolyTracker in Docker from a macOS host. The solution is to
 > write the database to a path inside of the container/VM and then copy it out to the host system at the very end.
-
-<!-- The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
-level trace of the program. -->
 
 The Python API documentation is available [here](https://trailofbits.github.io/polytracker/latest/).
 
