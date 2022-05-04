@@ -21,7 +21,11 @@
 
 #define DEFAULT_TTL 32
 
+// If this is empty, taint everything.
+DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
+DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
+
 uint64_t byte_start = 0;
 uint64_t byte_end = 0;
 bool polytracker_trace = false;
@@ -31,34 +35,6 @@ bool polytracker_trace_func = false;
  */
 bool polytracker_save_input_file = true;
 decay_val taint_node_ttl = 0;
-// If this is empty, taint everything.
-DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
-DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
-
-/*
-Parse files deliminated by ; and add them to unordered set.
-*/
-void parse_target_files(const std::string polypath) {
-  std::string curr_str = "";
-  for (auto j : polypath) {
-    if (j == ':') {
-      if (curr_str.length()) {
-        // ignore empty strings
-        get_target_sources().insert(curr_str);
-      }
-      curr_str = "";
-    } else if (curr_str.length() > 0 ||
-               (j != ' ' && j != '\t' && j != '\n' && j != '\r')) {
-      // skip over leading whitespace
-      curr_str += j;
-    }
-  }
-  // Last file does not need a :, like test_data;other_data
-  // insert it
-  if (!curr_str.empty()) {
-    get_target_sources().insert(curr_str);
-  }
-}
 
 // For settings that have not been initialized, set to default if one exists
 void set_defaults() {
