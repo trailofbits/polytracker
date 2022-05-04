@@ -145,19 +145,19 @@ void polytracker_end() {
 }
 
 void polytracker_print_settings() {
-  for (auto target_source : get_target_sources()) {
-    printf("POLYPATH:      %s\n", target_source.c_str());
-  }
-  if (get_target_sources().empty()) {
-    printf("POLYPATH:      *\n");
-  }
+  // for (auto target_source : get_target_sources()) {
+  //   printf("POLYPATH:      %s\n", target_source.c_str());
+  // }
+  // if (get_target_sources().empty()) {
+  //   printf("POLYPATH:      *\n");
+  // }
   printf("POLYDB:        %s\n", get_polytracker_db_name().c_str());
-  printf("POLYFUNC:      %u\n", polytracker_trace_func);
-  printf("POLYTRACE:     %u\n", polytracker_trace);
-  printf("POLYSTART:     %lu\n", byte_start);
-  printf("POLYEND:       %lu\n", byte_end);
-  printf("POLYTTL:       %u\n", taint_node_ttl);
-  printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
+  // printf("POLYFUNC:      %u\n", polytracker_trace_func);
+  // printf("POLYTRACE:     %u\n", polytracker_trace);
+  // printf("POLYSTART:     %lu\n", byte_start);
+  // printf("POLYEND:       %lu\n", byte_end);
+  // printf("POLYTTL:       %u\n", taint_node_ttl);
+  // printf("POLYSAVEINPUT: %u\n", polytracker_save_input_file);
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
