@@ -172,14 +172,6 @@ PolyTracker accepts configuration parameters in the form of environment variable
 The current environment variables PolyTracker supports is:
 
 ```
-<!-- POLYPATH: The path to the file to mark as tainted  -->
-
-<!-- POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean.  -->
-
-<!-- POLYSTART: Start offset to track  -->
-
-<!-- POLYEND: End offset to track -->
-
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
@@ -248,7 +240,6 @@ All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84
 
 ```commandline
 $ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
-<!-- $ POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf -->
 $ ./pdfinfo_track some_pdf.pdf
 ```
 
