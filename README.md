@@ -67,7 +67,9 @@ inputs accepted by the program. You can explore these commands by running
 ```
 polytracker --help
 ```
+
 The `polytracker` script is also a REPL, if run with no command line arguments:
+
 ```python
 $ polytracker
 PolyTracker (4.0.0)
@@ -87,7 +89,7 @@ If you have a C target, you can instrument it by invoking `polybuild` and passin
 cflags:
 
 ```
-polybuild --instrument-target -g -o my_target my_target.c 
+polybuild --instrument-target -g -o my_target my_target.c
 ```
 
 Repeat the same steps above for a cxx file by invoking `polybuild++` instead of `polybuild`.
@@ -95,27 +97,27 @@ Repeat the same steps above for a cxx file by invoking `polybuild++` instead of 
 For more complex programs that use a build system like autotools or CMake, or generally for programs that have multiple
 compilation units, ensure that the build program uses `polybuild` or `polybuild++` (_e.g._, by setting the `CC` or `CXX`
 environment variable), and compile the program as normal:
+
 ```bash
 $ CC=polybuild make
 ```
+
 Then run this on the resulting binary:
+
 ```bash
 $ get-bc -b the_binary
 $ polybuild --lower-bitcode -i the_binary.bc -o the_binary_polytracker --libs LIST_OF_LIBRARIES_TO_LINK
 ```
+
 Then `the_binary_polytracker` will be the instrumented version. See the Dockerfiles in the
 [examples](https://github.com/trailofbits/polytracker/tree/master/examples) directory for examples of how real-world
 programs can be instrumented.
 
 ## Running and Analyzing an Instrumented Program
 
-The PolyTracker instrumentation looks for the `POLYPATH` environment variable to specify which input file's bytes are
-meant to be tracked. (Note: PolyTracker can in fact track multiple input files—and really any file-like stream such as
-network sockets—however, we have thus far only exposed the capability to specify a single file. This will be improved in
-a future release.)
-
 The instrumented software will write its output to the path specified in `POLYDB`, or `polytracker.tdag` if omitted.
 This is a binary file that can be operated on by running:
+
 ```python
 from polytracker import PolyTrackerTrace, taint_dag
 
@@ -141,6 +143,7 @@ print(
 ```
 
 You can also run an instrumented binary directly from the REPL:
+
 ```python
 $ polytracker
 PolyTracker (4.0.0)
@@ -148,6 +151,7 @@ https://github.com/trailofbits/polytracker
 Type "help" or "commands"
 >>> trace = run_trace("path_to_binary", "path_to_input_file")
 ```
+
 This will automatically run the instrumented binary in a Docker container, if necessary.
 
 > :warning: **If running PolyTracker inside Docker or a VM**: PolyTracker can be very slow if running in a virtualized
@@ -155,16 +159,12 @@ This will automatically run the instrumented binary in a Docker container, if ne
 > from the host OS. This is particularly true when running PolyTracker in Docker from a macOS host. The solution is to
 > write the database to a path inside of the container/VM and then copy it out to the host system at the very end.
 
-The optional `POLYTRACE` environment variable can be set to `POLYTRACE=1` to produce a basic-block
-level trace of the program.
-
 The Python API documentation is available [here](https://trailofbits.github.io/polytracker/latest/).
 
 ## Runtime Parameters and Instrumentation Tuning
 
-At runtime, PolyTracker instrumentation looks for a number of configuration parameters either specified through
-environment variables or a local configuration file. This allows one to modify instrumentation parameters without
-needing to recompile the binary.
+At runtime, PolyTracker instrumentation looks for a number of configuration parameters specified through
+environment variables. This allows one to modify instrumentation parameters without needing to recompile the binary.
 
 ### Environment Variables
 
@@ -172,44 +172,19 @@ PolyTracker accepts configuration parameters in the form of environment variable
 The current environment variables PolyTracker supports is:
 
 ```
-POLYPATH: The path to the file to mark as tainted 
-
-POLYTTL: This value is an initial "strength" value for taint nodes, when new nodes are formed, the average is taken. When the TTL value is 0, the node is considered clean. 
-
-POLYSTART: Start offset to track 
-
-POLYEND: End offset to track
-
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
-
-POLYCONFIG: Provides a path to a JSON file specifying settings
 
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
 ```
 
-### Configuration Files
-
-Rather than setting environment variables on every run, you can make a configuration file.
-
-Example:
-```
-{
-    "POLYSTART": 1,
-    "POLYEND": 3,
-    "POLYTTL": 16
-}
-```
-
 Polytracker will set its configuration parameters in the following order:
+
 1. If a parameter is specified via an environment variable, use that value
-2. Else if `POLYCONFIG` is specified and that configuration file contains the parameter, use that value
-3. Else if the current directory contains `polytracker_config.json` and that config contains the parameter, use that
-   value
-4. Else if `~/.config/polytracker/polytracker_config.json` exists and it contains the parameter, use that value
-5. Else if a default value for the parameter exists, use the default
-6. Else throw an error
+2. Else if a default value for the parameter exists, use the default
+3. Else throw an error
 
 ### ABI Lists
+
 DFSan uses ABI lists to determine what functions it should automatically instrument, what functions it should ignore,
 and what custom function wrappers exist. See the
 [dfsan documentation](https://clang.llvm.org/docs/DataFlowSanitizer.html) for more information.
@@ -265,7 +240,7 @@ All the poppler utils will be located in `/polytracker/the_klondike/poppler-0.84
 
 ```commandline
 $ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
-$ POLYPATH=some_pdf.pdf ./pdfinfo_track some_pdf.pdf
+$ ./pdfinfo_track some_pdf.pdf
 ```
 
 ## Building PolyTracker from Source
@@ -279,7 +254,8 @@ first replicating the install process from the
 by replicating the install process from the [PolyTracker Dockerfile](Dockerfile).
 
 ### Build Dependencies
-* [**PolyTracker LLVM**](https://github.com/trailofbits/polytracker-llvm).
+
+- [**PolyTracker LLVM**](https://github.com/trailofbits/polytracker-llvm).
   PolyTracker is built atop its own fork of LLVM,
   [`polytracker-llvm`](https://github.com/trailofbits/polytracker-llvm).
   This fork modifies the [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) to use increased label
@@ -287,22 +263,24 @@ by replicating the install process from the [PolyTracker Dockerfile](Dockerfile)
   We have investigated up-streaming our changes into LLVM proper, but there has been little interest. The changes are
   [relatively minor](https://github.com/trailofbits/polytracker-llvm/compare/main...trailofbits:polytracker), so keeping
   the fork in sync with upstream LLVM should be relatively straightforward.
-* [**CMake**](https://cmake.org)
-* [**Ninja**](https://ninja-build.org) (`ninja-build` on Ubuntu)
+- [**CMake**](https://cmake.org)
+- [**Ninja**](https://ninja-build.org) (`ninja-build` on Ubuntu)
 
 ### Runtime Dependencies
 
 The following tools are required to test and run PolyTracker:
-* Python 3.7+ and `pip` (`apt-get -y install python3.7 python3-pip`). These are used for both seamlessly interacting
+
+- Python 3.7+ and `pip` (`apt-get -y install python3.7 python3-pip`). These are used for both seamlessly interacting
   with the Docker container (if necessary), as well as post-processing and analyzing the artifacts produced from runtime
   traces.
-* [gllvm](https://github.com/SRI-CSL/gllvm) (`go get github.com/SRI-CSL/gllvm/cmd/...`) is used to create whole program
+- [gllvm](https://github.com/SRI-CSL/gllvm) (`go get github.com/SRI-CSL/gllvm/cmd/...`) is used to create whole program
   bitcode archives and to extract bitcode from targets.
 
 ### Building on Apple silicon:
 
 Prebuilt Docker images for `polytracker-llvm` are only available for `amd64`. Users with `arm64` systems will have to
 build the image locally and then change `polytracker`'s Dockerfile to point to it:
+
 ```commandline
 $ mkdir repos && cd repos
 $ git clone https://github.com/trailofbits/polytracker
@@ -314,8 +292,8 @@ $ ## Replace the first line of the Dockerfile with "FROM trailofbits/polytracker
 $ docker build -t trailofbits/polytracker .
 ```
 
-
 ## Building with LLVM Xray Instrumentation
+
 It's possible to build both Polytracker and target programs with [LLVM's Xray](https://llvm.org/docs/XRay.html)
 instrumentation. Pass the `XRAY_ON` option to Polytracker, and build targets with `--xray-instrument-target` or
 `--xray-lower-bitcode` to `polybuild` to build targets with xray instrumentation.
@@ -357,6 +335,7 @@ as a subcontractor to [Galois](https://galois.com). It is licensed
 under the [Apache 2.0 license](LICENSE). © 2019, Trail of Bits.
 
 ## Maintainers
+
 [Evan Sultanik](https://github.com/ESultanik)<br />
 [Henrik Brodin](https://github.com/hbrodin)<br />
 [Marek Surovič](https://github.com/surovic)<br />
