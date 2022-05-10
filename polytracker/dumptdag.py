@@ -4,6 +4,7 @@ from mmap import mmap, PROT_READ
 from pathlib import Path
 from typing import Generator, Iterable, List, Optional, Tuple, Union
 import sys
+from tqdm import tqdm
 
 
 # TODO (hbrodin): Completely unchecked values. Only parse files from trusted sources...
@@ -219,6 +220,8 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
             if lbl in seen:
                 continue
 
+            seen.add(lbl)
+
             t = f.decoded_taint(lbl)
 
             # It is already marked in the source labels if it affects control flow
@@ -279,7 +282,7 @@ def gen_source_taint_used(tdagpath: Path, sourcefile: Path) -> bytearray:
         # Now, iterate all source labels in the taint sink. As an optimization, if
         # the taint affects_control_flow, move one. It already spilled into the source
         # taint and was marked above
-        for lbl in f.sink_log_labels():
+        for lbl in tqdm(f.sink_log_labels()):
             t = f.decoded_taint(lbl)
             if t.affects_control_flow:
                 continue
