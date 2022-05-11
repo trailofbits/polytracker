@@ -9,35 +9,20 @@ from tqdm import tqdm
 
 from . import PolyTrackerTrace
 from .plugins import Command
-from .tracing import ByteOffset
 from .taint_dag import TDRangeNode, TDSourceNode, TDUnionNode
+
+
+OffsetType = int
+CavityType = Tuple[OffsetType, OffsetType]
 
 
 class InputOutputMapping:
     def __init__(self, trace: PolyTrackerTrace):
         self.trace: PolyTrackerTrace = trace
-        self._mapping: Dict[ByteOffset, Set[ByteOffset]] = defaultdict(set)
-        self._mapping_is_complete: bool = False
 
     @property
-    def mapping(self) -> Dict[ByteOffset, Set[ByteOffset]]:
-        if self._mapping_is_complete:
-            return self._mapping
-
-        for output_taint in tqdm(
-            self.trace.output_taints, unit=" output taints", leave=False
-        ):
-            inputs = {i.uid: i for i in self.trace.inputs}
-            written_to = inputs[output_taint.input_id]
-            output_byte_offset = ByteOffset(
-                source=written_to, offset=output_taint.offset
-            )
-            for byte_offset in output_taint.get_taints():
-                self._mapping[byte_offset].add(output_byte_offset)
-
-        self._mapping_is_complete = True
-
-        return self._mapping
+    def mapping(self) -> Dict[OffsetType, Set[OffsetType]]:
+        raise NotImplementedError()
 
     def marker_to_ranges(self, m: bytearray) -> List[Tuple[int, int]]:
         ranges = []
@@ -54,7 +39,7 @@ class InputOutputMapping:
             ranges.append((start, len(m) - 1))
         return ranges
 
-    def file_cavities(self) -> List[Tuple[Path, int, int]]:
+    def file_cavities(self) -> Dict[Path, List[CavityType]]:
         tdfile = self.trace.tdfile
         seen: Set[int] = set()
 
@@ -103,7 +88,7 @@ class InputOutputMapping:
                         else:
                             stack.append(rl)
 
-        result: List[Tuple[Path, int, int]] = []
+        result: Dict[Path, List[CavityType]] = defaultdict(list)
 
         for p, h in tdfile.fd_headers:
             begin = h.prealloc_label_begin
@@ -131,8 +116,7 @@ class InputOutputMapping:
                     for source in source_labels_not_affecting_cf(sink.label):
                         marker[source - begin] = 1
 
-            for cavity in self.marker_to_ranges(marker):
-                result.append((Path(p),) + cavity)
+            result[p] = self.marker_to_ranges(marker)
 
         return result
 
@@ -142,15 +126,13 @@ class MapInputsToOutputs(Command):
     help = "generate a mapping of input byte offsets to output byte offsets"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
 
     def run(self, args):
-        mapping = InputOutputMapping(PolyTrackerTrace.load(args.POLYTRACKER_DB)).mapping
-
-        print(mapping)
+        raise NotImplementedError()
 
 
-def bytes_to_ascii(b: bytes) -> str:
+def ascii(b: bytes) -> str:
     result = []
     for i in b:
         if i == ord("\\"):
@@ -179,7 +161,7 @@ class FileCavities(Command):
     help = "finds input byte offsets that do not affect any output byte offsets"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
         parser.add_argument(
             "--print-bytes",
             "-b",
@@ -188,29 +170,25 @@ class FileCavities(Command):
         )
 
     def run(self, args):
-        trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
+        trace = PolyTrackerTrace.load(args.POLYTRACKER_TF)
         cavities = InputOutputMapping(trace).file_cavities()
 
         def print_cavity(path: Path, begin: int, end: int) -> None:
-            print(f"{path}\t{begin} - {end}")
+            print(f"{path},{begin},{end}")
 
         if not args.print_bytes:
-            for c in cavities:
-                print_cavity(*c)
+            for path in cavities:
+                for begin, end in cavities[path]:
+                    print_cavity(path, begin, end)
             return
 
-        d: Dict[Path, List[Tuple[int, int]]] = defaultdict(list)
-
-        for path, *cavity in cavities:
-            d[path].append(tuple(cavity))
-
-        for path in d:
+        for path in cavities:
             with open(path, "rb") as f:
-                for begin, end in d[path]:
+                for begin, end in cavities[path]:
                     print_cavity(path, begin, end)
                     content = f.read()
-                    bytes_before = bytes_to_ascii(content[max(begin - 10, 0) : begin])
-                    bytes_after = bytes_to_ascii(content[end : end + 10])
-                    cavity_content = bytes_to_ascii(content[begin:end])
-                    print(f'\t"{bytes_before}{cavity_content}{bytes_after}"')
-                    print(f"\t {' ' * len(bytes_before)}{'^' * len(cavity_content)}")
+                    before = ascii(content[max(begin - 10, 0) : begin])
+                    after = ascii(content[end : end + 10])
+                    inside = ascii(content[begin:end])
+                    print(f'\t"{before}{inside}{after}"')
+                    print(f"\t {' ' * len(before)}{'^' * len(inside)}")
