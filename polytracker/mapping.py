@@ -6,10 +6,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from tqdm import tqdm
+from mmap import mmap, PROT_READ
 
-from . import PolyTrackerTrace
+
 from .plugins import Command
-from .taint_dag import TDRangeNode, TDSourceNode, TDUnionNode
+from .taint_dag import TDFile, TDRangeNode, TDSourceNode, TDUnionNode
 
 
 OffsetType = int
@@ -17,14 +18,13 @@ CavityType = Tuple[OffsetType, OffsetType]
 
 
 class InputOutputMapping:
-    def __init__(self, trace: PolyTrackerTrace):
-        self.trace: PolyTrackerTrace = trace
+    def __init__(self, f: TDFile):
+        self.tdfile: TDFile = f
 
-    @property
     def mapping(self) -> Dict[OffsetType, Set[OffsetType]]:
         raise NotImplementedError()
 
-    def marker_to_ranges(self, m: bytearray) -> List[Tuple[int, int]]:
+    def marker_to_ranges(self, m: bytearray) -> List[CavityType]:
         ranges = []
         start = None
         for i, v in enumerate(m):
@@ -40,7 +40,6 @@ class InputOutputMapping:
         return ranges
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
-        tdfile = self.trace.tdfile
         seen: Set[int] = set()
 
         def source_labels_not_affecting_cf(label: int) -> int:
@@ -53,7 +52,7 @@ class InputOutputMapping:
 
                 seen.add(lbl)
 
-                n = tdfile.decode_node(lbl)
+                n = self.tdfile.decode_node(lbl)
 
                 if n.affects_control_flow:
                     continue
@@ -62,14 +61,14 @@ class InputOutputMapping:
                     yield lbl
 
                 elif isinstance(n, TDUnionNode):
-                    nl = tdfile.decode_node(n.left)
+                    nl = self.tdfile.decode_node(n.left)
                     if not nl.affects_control_flow:
                         if isinstance(nl, TDSourceNode):
                             yield n.left
                         else:
                             stack.append(n.left)
 
-                    nr = tdfile.decode_node(n.right)
+                    nr = self.tdfile.decode_node(n.right)
                     if not nr.affects_control_flow:
                         if isinstance(nr, TDSourceNode):
                             yield n.right
@@ -80,7 +79,7 @@ class InputOutputMapping:
                     for rl in range(n.first, n.last + 1):
                         # NOTE: One could skip decoding here, but then we could end up with really long ranges
                         # being added the labels that really does nothing except cause overhead...
-                        rn = tdfile.decode_node(rl)
+                        rn = self.tdfile.decode_node(rl)
                         if rn.affects_control_flow:
                             continue
                         if isinstance(rn, TDSourceNode):
@@ -90,7 +89,7 @@ class InputOutputMapping:
 
         result: Dict[Path, List[CavityType]] = defaultdict(list)
 
-        for p, h in tdfile.fd_headers:
+        for p, h in self.tdfile.fd_headers:
             begin = h.prealloc_label_begin
             end = h.prealloc_label_end
             length = end - begin
@@ -101,13 +100,13 @@ class InputOutputMapping:
             marker = bytearray(length)
             # Initially, mark all source taint that affects control flow
             for i, label in enumerate(range(begin, end)):
-                if tdfile.decode_node(label).affects_control_flow:
+                if self.tdfile.decode_node(label).affects_control_flow:
                     marker[i] = 1
             # Now, iterate all source labels in the taint sink. As an optimization, if
             # the taint affects_control_flow, move one. It already spilled into the source
             # taint and was marked above
-            for sink in tqdm(list(tdfile.sinks)):
-                n = tdfile.decode_node(sink.label)
+            for sink in tqdm(list(self.tdfile.sinks)):
+                n = self.tdfile.decode_node(sink.label)
                 if n.affects_control_flow:
                     continue
                 if isinstance(n, TDSourceNode):
@@ -170,25 +169,27 @@ class FileCavities(Command):
         )
 
     def run(self, args):
-        trace = PolyTrackerTrace.load(args.POLYTRACKER_TF)
-        cavities = InputOutputMapping(trace).file_cavities()
-
         def print_cavity(path: Path, begin: int, end: int) -> None:
             print(f"{path},{begin},{end}")
 
-        if not args.print_bytes:
-            for path in cavities:
-                for begin, end in cavities[path]:
-                    print_cavity(path, begin, end)
-            return
+        with open(args.POLYTRACKER_TF, "rb") as f:
+            tdfile = TDFile(mmap(f.fileno(), 0, prot=PROT_READ))
+            cavities = InputOutputMapping(tdfile).file_cavities()
 
-        for path in cavities:
-            with open(path, "rb") as f:
-                for begin, end in cavities[path]:
-                    print_cavity(path, begin, end)
-                    content = f.read()
-                    before = ascii(content[max(begin - 10, 0) : begin])
-                    after = ascii(content[end : end + 10])
-                    inside = ascii(content[begin:end])
-                    print(f'\t"{before}{inside}{after}"')
-                    print(f"\t {' ' * len(before)}{'^' * len(inside)}")
+            if not args.print_bytes:
+                for path, cs in cavities.items():
+                    for cavity in cs:
+                        print_cavity(path, *cavity)
+                return
+
+            for path, cs in cavities.items():
+                with open(path, "rb") as f:
+                    for begin, end in cs:
+                        print_cavity(path, begin, end)
+                        contents = f.read()
+                        before = ascii(contents[max(begin - 10, 0) : begin])
+                        after = ascii(contents[end : end + 10])
+                        inside = ascii(contents[begin:end])
+                        print(f'\t"{before}{inside}{after}"')
+                        print(f"\t {' ' * len(before)}{'^' * len(inside)}")
+        
