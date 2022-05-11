@@ -3,13 +3,14 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, List, Set, Tuple
 from tqdm import tqdm
 
 from . import PolyTrackerTrace
 from .plugins import Command
 from .tracing import ByteOffset
-from .taint_dag import TDNode, TDRangeNode, TDSourceNode, TDUnionNode
+from .taint_dag import TDRangeNode, TDSourceNode, TDUnionNode
 
 
 class InputOutputMapping:
@@ -53,7 +54,7 @@ class InputOutputMapping:
             ranges.append((start, len(m) - 1))
         return ranges
 
-    def file_cavities(self) -> List[Tuple[str, int, int]]:
+    def file_cavities(self) -> List[Tuple[Path, int, int]]:
         tdfile = self.trace.tdfile
         seen: Set[int] = set()
 
@@ -64,7 +65,7 @@ class InputOutputMapping:
 
                 if lbl in seen:
                     continue
-                
+
                 seen.add(lbl)
 
                 n = tdfile.decode_node(lbl)
@@ -102,7 +103,7 @@ class InputOutputMapping:
                         else:
                             stack.append(rl)
 
-        result: List[Tuple[str, int, int]] = []
+        result: List[Tuple[Path, int, int]] = []
 
         for p, h in tdfile.fd_headers:
             begin = h.prealloc_label_begin
@@ -131,7 +132,7 @@ class InputOutputMapping:
                         marker[source - begin] = 1
 
             for cavity in self.marker_to_ranges(marker):
-                result.append((p,) + cavity)
+                result.append((Path(p),) + cavity)
 
         return result
 
@@ -150,27 +151,27 @@ class MapInputsToOutputs(Command):
 
 
 def bytes_to_ascii(b: bytes) -> str:
-    ret = []
+    result = []
     for i in b:
         if i == ord("\\"):
-            ret.append("\\\\")
+            result.append("\\\\")
         elif i == ord('"'):
-            ret.append('\\"')
+            result.append('\\"')
         elif ord(" ") <= i <= ord("~"):
-            ret.append(chr(i))
+            result.append(chr(i))
         elif i == 0:
-            ret.append("\\0")
+            result.append("\\0")
         elif i == ord("\n"):
-            ret.append("\\n")
+            result.append("\\n")
         elif i == ord("\t"):
-            ret.append("\\t")
+            result.append("\\t")
         elif i == ord("\r"):
-            ret.append("\\r")
+            result.append("\\r")
         elif i < 10:
-            ret.append(f"\\{i}")
+            result.append(f"\\{i}")
         else:
-            ret.append(f"\\x{i:x}")
-    return "".join(ret)
+            result.append(f"\\x{i:x}")
+    return "".join(result)
 
 
 class FileCavities(Command):
@@ -180,35 +181,36 @@ class FileCavities(Command):
     def __init_arguments__(self, parser):
         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
         parser.add_argument(
-            "--print-context",
-            "-c",
+            "--print-bytes",
+            "-b",
             action="store_true",
-            help="print the context for each file cavity",
+            help="print file bytes in and around the cavity",
         )
 
     def run(self, args):
-        for cavity in InputOutputMapping(
-            PolyTrackerTrace.load(args.POLYTRACKER_DB)
-        ).file_cavities():
-            print(
-                f"{cavity.source.path}\t{cavity.offset} - {cavity.offset + cavity.length - 1}"
-            )
-            if args.print_context:
-                content = cavity.source.content
-                if content:
-                    bytes_before = bytes_to_ascii(
-                        content[max(cavity.offset - 10, 0) : cavity.offset]
-                    )
-                    bytes_after = bytes_to_ascii(
-                        content[
-                            cavity.offset
-                            + cavity.length : cavity.offset
-                            + cavity.length
-                            + 10
-                        ]
-                    )
-                    cavity_content = bytes_to_ascii(
-                        content[cavity.offset : cavity.offset + cavity.length]
-                    )
+        trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
+        cavities = InputOutputMapping(trace).file_cavities()
+
+        def print_cavity(path: Path, begin: int, end: int) -> None:
+            print(f"{path}\t{begin} - {end}")
+
+        if not args.print_bytes:
+            for c in cavities:
+                print_cavity(*c)
+            return
+
+        d: Dict[Path, List[Tuple[int, int]]] = defaultdict(list)
+
+        for path, *cavity in cavities:
+            d[path].append(tuple(cavity))
+
+        for path in d:
+            with open(path, "rb") as f:
+                for begin, end in d[path]:
+                    print_cavity(path, begin, end)
+                    content = f.read()
+                    bytes_before = bytes_to_ascii(content[max(begin - 10, 0) : begin])
+                    bytes_after = bytes_to_ascii(content[end : end + 10])
+                    cavity_content = bytes_to_ascii(content[begin:end])
                     print(f'\t"{bytes_before}{cavity_content}{bytes_after}"')
                     print(f"\t {' ' * len(bytes_before)}{'^' * len(cavity_content)}")
