@@ -25,9 +25,10 @@
 import argparse
 import os
 import sys
+import json
 import subprocess
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 import sqlite3
 
 """
@@ -129,23 +130,6 @@ elif "--xray-lower-bitcode" in sys.argv:
     XRAY_BUILD = True
 
 
-# Helper function, check to see if non linking options are present.
-def is_linking(argv) -> bool:
-    nonlinking_options = ["-E", "-fsyntax-only", "-S", "-c"]
-    for option in argv:
-        if option in nonlinking_options:
-            return False
-    return True
-
-
-def is_building(argv) -> bool:
-    build_options = ["-c", "-o"]
-    for option in argv:
-        if option in build_options:
-            return True
-    return False
-
-
 # (2)
 def instrument_bitcode(
     bitcode_file: Path,
@@ -209,133 +193,65 @@ def instrument_bitcode(
     return output_bc
 
 
-# (3)
-# NOTE (Carson), no static here, but there might be times where we get-bc
-# on libcxx and llvm-link some bitcode together
-def modify_exec_args(argv: List[str]):
-    """
-    Replaces clang with gclang, uses our libcxx, and links our libraries if needed
-    """
-    compile_command = []
-    if is_cxx:
-        compile_command.append("gclang++")
-    else:
-        compile_command.append("gclang")
-
-    building: bool = is_building(argv)
-    linking: bool = is_linking(argv)
-    if building:
-        if linking and is_cxx:
-            compile_command.extend(
-                [
-                    "-stdlib=libc++",
-                    f"-I{CXX_INCLUDE_PATH!s}",
-                    f"-I{CXX_INCLUDE_PATH_ABI!s}",
-                    f"-L{CXX_LIB_PATH!s}",
-                ]
-            )
-        elif is_cxx:
-            compile_command.extend(
-                [
-                    "-stdlib=libc++",
-                    f"-I{CXX_INCLUDE_PATH!s}",
-                    f"-I{CXX_INCLUDE_PATH_ABI!s}",
-                ]
-            )
-
-    if not building and linking and is_cxx:
-        compile_command.extend(["-stdlib=libc++", f"-L{CXX_LIB_PATH!s}"])
-
-    for arg in argv[1:]:
-        if (
-            arg == "-Wall"
-            or arg == "-Wextra"
-            or arg == "-Wno-unused-parameter"
-            or arg == "-Werror"
-        ):
-            continue
-        compile_command.append(arg)
-
-    # Needed for compiling in AArch64
-    compile_command.append("-fPIC")
-
-    # If linking, need to add in libc++.a, libc++abi.a, pthread.
-    if linking:
-        compile_command.append("-Wl,--start-group")
-        compile_command.extend(LINK_LIBS)
-        compile_command.append("-Wl,--end-group")
-    subprocess.check_call(compile_command)
-
-
-# (4)
-def store_artifact(file_path: Path):
-    filename = file_path.name
-    artifact_file_path = ARTIFACT_STORE_PATH / filename
-    if artifact_file_path.exists():
-        return
-    # Check if its an absolute path
-    if not file_path.is_absolute():
-        targ_path = Path.cwd() / file_path
-    else:
-        targ_path = file_path
-    assert os.path.exists(targ_path)
-    subprocess.check_call(["cp", str(targ_path), str(artifact_file_path)])
-
-
-def handle_non_build(argv: List[str]):
-    cc = []
-    if is_cxx:
-        cc.append("gclang++")
-    else:
-        cc.append("gclang")
-    for arg in argv[1:]:
-        if arg == "-qversion":
-            cc.append("--version")
-            continue
-        cc.append(arg)
-    subprocess.check_call(cc)
-
-
 # This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
 # First, figure out whats being built by looking for -o or -c
 # Returns the output file for convenience
-def handle_cmd(argv: List[str]) -> Optional[Path]:
-    # If not building, then we are not producing an object with -o or -c
-    # We might just be checking something like a version. So just do whatever.
-    building: bool = is_building(argv)
-    if not building:
-        handle_non_build(argv)
+def handle_cmd(build_command: List[str]) -> Optional[Path]:
+    common_flags = ["-fPIC"]
+    linker_flags = ["-Wl,--start-group", *LINK_LIBS, "-Wl,--end-group"]
+    os.putenv("BLIGHT_ACTIONS", "InjectFlags:FindOutputs:IgnoreFlags")
+    os.putenv(
+        "BLIGHT_ACTION_IGNOREFLAGS",
+        "FLAGS='-Wall -Wextra -Wno-unused-parameter -Werror'",
+    )
+    os.putenv(
+        "BLIGHT_ACTION_INJECTFLAGS",
+        f"CFLAGS='{' '.join(common_flags)}' "
+        f"CFLAGS_LINKER='{' '.join(linker_flags)}' "
+        f"CXXFLAGS='{' '.join(common_flags)} -stdlib=libc++ -I{CXX_INCLUDE_PATH!s} -I{CXX_INCLUDE_PATH_ABI!s}' "
+        f"CXXFLAGS_LINKER='{' '.join(linker_flags)} -L{CXX_LIB_PATH!s}'",
+    )
+    # Copy artifacts to $ARTIFACT_STORE_PATH_ENV and store their info in `outputs.json`
+    outputs_blight = Path("outputs.json")
+    if outputs_blight.exists():
+        outputs_blight.unlink()
+    os.putenv(
+        "BLIGHT_ACTION_FINDOUTPUTS",
+        f"output={outputs_blight.absolute()} store={ARTIFACT_STORE_PATH} append_hash=false",
+    )
+    os.putenv("BLIGHT_WRAPPED_CC", "gclang")
+    os.putenv("BLIGHT_WRAPPED_CXX", "gclang++")
+
+    subprocess.check_call(
+        ["blight-exec", "--guess-wrapped", "--swizzle-path", "--", *build_command]
+    )
+
+    # Get build artifacts from Blight's JSON output
+    outputs: Dict[str, Dict] = {}
+    if outputs_blight.exists():
+        with open(outputs_blight, "r") as f:
+            for line in f:
+                outputs.update(
+                    {
+                        o["store_path"]: o
+                        for o in json.loads(line)["outputs"]
+                        if o["store_path"] is not None
+                        and o["kind"] in ["executable", "shared", "static"]
+                    }
+                )
+
+    if not outputs:
+        sys.stderr.write("Warning: command did not generate any outputs\n")
         return None
-
-    # Build the object
-    modify_exec_args(argv)
-    # Store artifacts.
-    for arg, next_arg in zip(argv, argv[1:]):
-        if arg == "-o":
-            output_file: Path = Path(next_arg)
-            break
-        elif arg == "-c":
-            output_file = Path(next_arg).with_suffix(".o")
-            break
-    else:
-        sys.stderr.write("Error: missing -o or -c argument\n\n")
-        sys.exit(1)
-
-    # Look for artifacts.
-    artifacts: List[Path] = []
-    for arg in argv:
-        # if its a static library, or an object.
-        arg_path = Path(arg)
-        if arg_path.suffix == ".o" or arg_path.suffix == ".a":
-            artifacts.append(arg_path)
-            store_artifact(arg_path)
+    first_key = list(outputs.keys())[0]
+    output_file = Path(outputs[first_key]["path"])
 
     conn = sqlite3.connect(MANIFEST_FILE)
     cur = conn.cursor()
-    for art in artifacts:
+    for o in outputs.values():
         query = (
             'INSERT INTO manifest (target, artifact) VALUES ("'
-            f'{output_file.absolute()}", "{art.absolute()}");'
+            f'{output_file.absolute()}", "{Path(o["store_path"]).absolute()}");'
         )
         cur.execute(query)
     conn.commit()
@@ -344,7 +260,7 @@ def handle_cmd(argv: List[str]) -> Optional[Path]:
 
 
 # (1)
-def do_everything(argv: List[str]):
+def do_everything(build_command: List[str], no_control_flow_tracking: bool):
     """
     Builds target
     Extracts bitcode from target
@@ -352,12 +268,7 @@ def do_everything(argv: List[str]):
     Recompiles executable.
     """
 
-    # If no control flow tracking, drop that arg because gclang have no idea what it means...
-    argv_nocf = [x for x in argv if x != "--no-control-flow-tracking"]
-    no_cf_track = len(argv_nocf) != len(argv)
-    argv = argv_nocf
-
-    output_file = handle_cmd(argv)
+    output_file = handle_cmd(build_command)
     if output_file is None:
         raise ValueError("Could not determine output file")
     assert output_file.exists()
@@ -366,7 +277,9 @@ def do_everything(argv: List[str]):
     subprocess.check_call(get_bc)
     assert bc_file.exists()
     temp_bc = append_to_stem(bc_file, "_instrumented")
-    instrument_bitcode(bc_file, temp_bc, no_control_flow_tracking=no_cf_track)
+    instrument_bitcode(
+        bc_file, temp_bc, no_control_flow_tracking=no_control_flow_tracking
+    )
     assert temp_bc.exists()
 
     # Lower bitcode. Creates a .o
@@ -505,21 +418,6 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     assert ret == 0
 
 
-def replay_build_instance(
-    input_bc: Path,
-    file_id: int,
-    ignore_lists,
-    non_track_artifacts,
-    bc_files,
-    no_control_flow_tracking: bool = False,
-):
-    output_bc = append_to_stem(input_bc, "_done")
-    bc_file = instrument_bitcode(
-        input_bc, output_bc, ignore_lists, file_id, no_control_flow_tracking
-    )
-    bc_files.append(os.path.realpath(bc_file))
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="""
@@ -595,6 +493,7 @@ def main():
         default=[],
         help="Specify additional ignore lists to Polytracker",
     )
+    parser.add_argument("build_command", action="store", nargs="*")
     if len(sys.argv) <= 1:
         return
     # Case 1, just instrument bitcode.
@@ -620,8 +519,8 @@ def main():
 
     # simple target.
     elif sys.argv[1] == "--instrument-target":
-        new_argv = [x for x in sys.argv if x != "--instrument-target"]
-        do_everything(new_argv)
+        args = parser.parse_args(sys.argv[1:])
+        do_everything(args.build_command, args.no_control_flow_tracking)
 
     elif sys.argv[1] == "--lower-bitcode":
         args = parser.parse_args(sys.argv[1:])
@@ -660,7 +559,8 @@ def main():
 
     # Do gllvm build
     else:
-        handle_cmd(sys.argv)
+        args = parser.parse_args(sys.argv[1:])
+        handle_cmd(args.build_command)
 
 
 if __name__ == "__main__":

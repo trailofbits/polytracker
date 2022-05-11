@@ -89,6 +89,7 @@ setup(
     packages=find_packages(),
     python_requires=PYTHON_REQUIRES,
     install_requires=[
+        'blight~=0.0.47',
         'cxxfilt~=0.2.2',
         'docker~=4.4.0',
         'graphviz~=0.14.1',
