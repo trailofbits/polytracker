@@ -8,7 +8,6 @@ from typing import Dict, List, Set, Tuple, Generator
 from tqdm import tqdm
 from mmap import mmap, PROT_READ
 
-
 from .plugins import Command
 from .taint_dag import TDFile, TDRangeNode, TDSourceNode, TDUnionNode
 
