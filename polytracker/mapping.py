@@ -4,7 +4,7 @@ This module maps input byte offsets to output byte offsets
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Generator
 from tqdm import tqdm
 from mmap import mmap, PROT_READ
 
@@ -42,7 +42,7 @@ class InputOutputMapping:
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
         seen: Set[int] = set()
 
-        def source_labels_not_affecting_cf(label: int) -> int:
+        def source_labels_not_affecting_cf(label: int) -> Generator[int, None, None]:
             stack = [label]
             while len(stack) > 0:
                 lbl = stack.pop()
@@ -115,7 +115,7 @@ class InputOutputMapping:
                     for source in source_labels_not_affecting_cf(sink.label):
                         marker[source - begin] = 1
 
-            result[p] = self.marker_to_ranges(marker)
+            result[Path(p)] = self.marker_to_ranges(marker)
 
         return result
 
@@ -192,4 +192,3 @@ class FileCavities(Command):
                         inside = ascii(contents[begin:end])
                         print(f'\t"{before}{inside}{after}"')
                         print(f"\t {' ' * len(before)}{'^' * len(inside)}")
-        
