@@ -127,9 +127,9 @@ class TDFile:
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
 
-        self.fd_headers: List[Tuple[str, TDFDHeader]] = list(self.read_fd_headers())
+        self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
 
-    def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
+    def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
         assert self.header.fd_mapping_offset > 0
 
         offset = self.header.fd_mapping_offset
@@ -137,7 +137,7 @@ class TDFile:
             header_offset = offset + sizeof(TDFDHeader) * i
             fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)  # type: ignore
             sbegin = offset + fdhdr.name_offset
-            path = str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8")
+            path = Path(str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8"))
             yield (path, fdhdr)
 
     @property
@@ -281,7 +281,7 @@ class TDProgramTrace(ProgramTrace):
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
             if isinstance(self.tdfile.decode_node(begin), TDSourceNode):
-                yield Input(fdhdr.fd, path, end - begin)
+                yield Input(fdhdr.fd, str(path), end - begin)
 
     @property
     def output_taints(self) -> Iterator[TDTaintOutput]:
@@ -386,7 +386,7 @@ class TDTaintForest(TaintForest):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
-            source = Input(fdhdr.fd, path, end - begin)
+            source = Input(fdhdr.fd, str(path), end - begin)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):
