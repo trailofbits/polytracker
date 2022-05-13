@@ -60,31 +60,12 @@ class InputOutputMapping:
                     yield lbl
 
                 elif isinstance(n, TDUnionNode):
-                    nl = self.tdfile.decode_node(n.left)
-                    if not nl.affects_control_flow:
-                        if isinstance(nl, TDSourceNode):
-                            yield n.left
-                        else:
-                            stack.append(n.left)
-
-                    nr = self.tdfile.decode_node(n.right)
-                    if not nr.affects_control_flow:
-                        if isinstance(nr, TDSourceNode):
-                            yield n.right
-                        else:
-                            stack.append(n.right)
+                    stack.append(n.left)
+                    stack.append(n.right)
 
                 elif isinstance(n, TDRangeNode):
                     for rl in range(n.first, n.last + 1):
-                        # NOTE: One could skip decoding here, but then we could end up with really long ranges
-                        # being added the labels that really does nothing except cause overhead...
-                        rn = self.tdfile.decode_node(rl)
-                        if rn.affects_control_flow:
-                            continue
-                        if isinstance(rn, TDSourceNode):
-                            yield rl
-                        else:
-                            stack.append(rl)
+                        stack.append(rl)
 
         result: Dict[Path, List[CavityType]] = defaultdict(list)
 
