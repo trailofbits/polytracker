@@ -67,6 +67,7 @@ class InputOutputMapping:
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
         result: Dict[Path, List[CavityType]] = defaultdict(list)
+        seen: Set[LabelType] = set()
 
         for p, h in self.tdfile.fd_headers:
             begin = h.prealloc_label_begin
@@ -91,8 +92,6 @@ class InputOutputMapping:
                 if isinstance(sn, TDSourceNode):
                     marker[sn.offset] = 1
                 else:
-                    seen: Set[LabelType] = set()
-
                     for lbl, n in self.dfs_walk(s.label, seen):
                         if isinstance(n, TDSourceNode):
                             marker[lbl - begin] = 1
