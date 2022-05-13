@@ -13,6 +13,7 @@ from .taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
 LabelType = int
 OffsetType = int
+FileOffsetType = Tuple[Path, OffsetType]
 CavityType = Tuple[OffsetType, OffsetType]
 
 
@@ -46,8 +47,16 @@ class InputOutputMapping:
             elif isinstance(n, TDRangeNode):
                 stack.extend(range(n.first, n.last + 1))
 
-    def mapping(self) -> Dict[OffsetType, Set[OffsetType]]:
-        raise NotImplementedError()
+    def mapping(self) -> Dict[FileOffsetType, Set[FileOffsetType]]:
+        result: Dict[FileOffsetType, Set[FileOffsetType]] = defaultdict(set)
+        for s in tqdm(list(self.tdfile.sinks)):
+            for _, n in self.dfs_walk(s.label):
+                if isinstance(n, TDSourceNode):
+                    sp = self.tdfile.fd_headers[s.fdidx][0]
+                    np = self.tdfile.fd_headers[n.idx][0]
+                    result[(np, n.offset)].add((sp, s.offset))
+
+        return result
 
     def marker_to_ranges(self, m: bytearray) -> List[CavityType]:
         ranges = []
@@ -114,7 +123,8 @@ class MapInputsToOutputs(Command):
         parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
 
     def run(self, args):
-        raise NotImplementedError()
+        with open(args.POLYTRACKER_TF, "rb") as f:
+            print(InputOutputMapping(TDFile(f)).mapping())
 
 
 def ascii(b: bytes) -> str:
