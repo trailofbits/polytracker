@@ -4,7 +4,7 @@ This module maps input byte offsets to output byte offsets
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Generator
+from typing import Dict, List, Set, Tuple, Iterator
 from tqdm import tqdm
 from mmap import mmap, PROT_READ
 
@@ -23,7 +23,7 @@ class InputOutputMapping:
 
     def dfs_walk(
         self, label: LabelType, seen: Set[LabelType] = set()
-    ) -> Generator[Tuple[LabelType, TDNode], None, None]:
+    ) -> Iterator[Tuple[LabelType, TDNode]]:
         stack = [label]
         while stack:
             lbl = stack.pop()
@@ -82,7 +82,7 @@ class InputOutputMapping:
                 if self.tdfile.decode_node(label).affects_control_flow:
                     marker[i] = 1
             # Now, iterate all source labels in the taint sink. As an optimization, if
-            # the taint affects_control_flow, move one. It already spilled into the source
+            # the taint affects_control_flow, move on. It already spilled into the source
             # taint and was marked above
             for s in tqdm(list(self.tdfile.sinks)):
                 sn = self.tdfile.decode_node(s.label)
