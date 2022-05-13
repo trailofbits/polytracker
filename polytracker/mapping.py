@@ -6,7 +6,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Iterator
 from tqdm import tqdm
-from mmap import mmap, PROT_READ
 
 from .plugins import Command
 from .taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
@@ -160,8 +159,7 @@ class FileCavities(Command):
             print(f"{path},{begin},{end}")
 
         with open(args.POLYTRACKER_TF, "rb") as f:
-            tdfile = TDFile(mmap(f.fileno(), 0, prot=PROT_READ))
-            cavities = InputOutputMapping(tdfile).file_cavities()
+            cavities = InputOutputMapping(TDFile(f)).file_cavities()
 
             if not args.print_bytes:
                 for path, cs in cavities.items():

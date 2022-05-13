@@ -1,8 +1,9 @@
 from typing import (
+    BinaryIO,
     Union,
     Iterable,
     Iterator,
-    Generator,
+    Iterator,
     Optional,
     Dict,
     Tuple,
@@ -109,7 +110,7 @@ class TDSink(Structure):
 
 
 class TDFile:
-    def __init__(self, buffer: mmap) -> None:
+    def __init__(self, file: BinaryIO) -> None:
         # This needs to be kept in sync with implementation in encoding.cpp
         self.source_taint_bit_shift = 63
         self.affects_control_flow_bit_shift = 62
@@ -120,7 +121,7 @@ class TDFile:
         self.source_index_bits = 8
         self.source_offset_mask = (1 << 54) - 1
 
-        self.buffer = buffer
+        self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
         self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
 
         self.raw_nodes: Dict[int, int] = {}
@@ -128,7 +129,7 @@ class TDFile:
 
         self.fd_headers: List[Tuple[str, TDFDHeader]] = list(self.read_fd_headers())
 
-    def read_fd_headers(self) -> Generator[Tuple[str, TDFDHeader], None, None]:
+    def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
         assert self.header.fd_mapping_offset > 0
 
         offset = self.header.fd_mapping_offset
@@ -174,7 +175,7 @@ class TDFile:
                 return TDRangeNode(v1, v2, affects_cf)
 
     @property
-    def nodes(self) -> Generator[TDNode, None, None]:
+    def nodes(self) -> Iterator[TDNode]:
         assert self.header.tdag_mapping_offset > 0
         assert self.header.tdag_mapping_size > 0
 
@@ -195,7 +196,7 @@ class TDFile:
         return result
 
     @property
-    def sinks(self) -> Generator[TDSink, None, None]:
+    def sinks(self) -> Iterator[TDSink]:
         assert self.header.sink_mapping_offset > 0
 
         offset = self.header.sink_mapping_offset
@@ -215,8 +216,8 @@ class TDTaintOutput(TaintOutput):
 
 
 class TDProgramTrace(ProgramTrace):
-    def __init__(self, tdfile: mmap) -> None:
-        self.tdfile: TDFile = TDFile(tdfile)
+    def __init__(self, file: BinaryIO) -> None:
+        self.tdfile: TDFile = TDFile(file)
         self.tforest: TDTaintForest = TDTaintForest(self)
 
     def __contains__(self, uid: int):
@@ -272,11 +273,10 @@ class TDProgramTrace(ProgramTrace):
     @PolyTrackerREPL.register("load_trace_tdag")
     def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
         """loads a trace from a .tdag file emitted by an instrumented binary"""
-        f = open(tdpath, "rb")
-        return TDProgramTrace(mmap(f.fileno(), 0, prot=PROT_READ))
+        return TDProgramTrace(open(tdpath, "rb"))
 
     @property
-    def inputs(self) -> Generator[Input, None, None]:
+    def inputs(self) -> Iterator[Input]:
         for path, fdhdr in self.tdfile.fd_headers:
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
@@ -284,7 +284,7 @@ class TDProgramTrace(ProgramTrace):
                 yield Input(fdhdr.fd, path, end - begin)
 
     @property
-    def output_taints(self) -> Generator[TDTaintOutput, None, None]:
+    def output_taints(self) -> Iterator[TDTaintOutput]:
         for sink in self.tdfile.sinks:
             path, fdhdr = self.tdfile.fd_headers[sink.fdidx]
             begin = fdhdr.prealloc_label_begin
@@ -435,7 +435,7 @@ class TDTaintForest(TaintForest):
 
         return result
 
-    def nodes(self) -> Generator[TDTaintForestNode, None, None]:
+    def nodes(self) -> Iterator[TDTaintForestNode]:
         label = max(self.node_cache.keys())
         while label in self.node_cache:
             yield self.get_node(label)
@@ -469,7 +469,7 @@ class TDInfo(Command):
 
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
-            tdfile = TDFile(mmap(f.fileno(), 0, prot=PROT_READ))
+            tdfile = TDFile(f)
             print(tdfile.header)
             print(f"Number of labels: {tdfile.label_count}")
 
