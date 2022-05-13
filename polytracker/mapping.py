@@ -30,7 +30,7 @@ class InputOutputMapping:
             if v == 0:
                 if start is None:
                     start = i
-            if v == 1:
+            else:
                 if start is not None:
                     ranges.append((start, i))
                     start = None
@@ -43,7 +43,7 @@ class InputOutputMapping:
 
         def source_labels_not_affecting_cf(label: int) -> Generator[int, None, None]:
             stack = [label]
-            while len(stack) > 0:
+            while stack:
                 lbl = stack.pop()
 
                 if lbl in seen:
