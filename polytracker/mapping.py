@@ -9,9 +9,10 @@ from tqdm import tqdm
 from mmap import mmap, PROT_READ
 
 from .plugins import Command
-from .taint_dag import TDFile, TDRangeNode, TDSourceNode, TDUnionNode
+from .taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
 
+LabelType = int
 OffsetType = int
 CavityType = Tuple[OffsetType, OffsetType]
 
@@ -19,6 +20,32 @@ CavityType = Tuple[OffsetType, OffsetType]
 class InputOutputMapping:
     def __init__(self, f: TDFile):
         self.tdfile: TDFile = f
+
+    def dfs_walk(
+        self, label: LabelType, seen: Set[LabelType] = set()
+    ) -> Generator[Tuple[LabelType, TDNode], None, None]:
+        stack = [label]
+        while stack:
+            lbl = stack.pop()
+
+            if lbl in seen:
+                continue
+
+            seen.add(lbl)
+
+            n = self.tdfile.decode_node(lbl)
+
+            yield (lbl, n)
+
+            if isinstance(n, TDSourceNode):
+                continue
+
+            elif isinstance(n, TDUnionNode):
+                stack.append(n.left)
+                stack.append(n.right)
+
+            elif isinstance(n, TDRangeNode):
+                stack.extend(range(n.first, n.last + 1))
 
     def mapping(self) -> Dict[OffsetType, Set[OffsetType]]:
         raise NotImplementedError()
@@ -39,34 +66,6 @@ class InputOutputMapping:
         return ranges
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
-        seen: Set[int] = set()
-
-        def source_labels_not_affecting_cf(label: int) -> Generator[int, None, None]:
-            stack = [label]
-            while stack:
-                lbl = stack.pop()
-
-                if lbl in seen:
-                    continue
-
-                seen.add(lbl)
-
-                n = self.tdfile.decode_node(lbl)
-
-                if n.affects_control_flow:
-                    continue
-
-                if isinstance(n, TDSourceNode):
-                    yield lbl
-
-                elif isinstance(n, TDUnionNode):
-                    stack.append(n.left)
-                    stack.append(n.right)
-
-                elif isinstance(n, TDRangeNode):
-                    for rl in range(n.first, n.last + 1):
-                        stack.append(rl)
-
         result: Dict[Path, List[CavityType]] = defaultdict(list)
 
         for p, h in self.tdfile.fd_headers:
@@ -85,15 +84,24 @@ class InputOutputMapping:
             # Now, iterate all source labels in the taint sink. As an optimization, if
             # the taint affects_control_flow, move one. It already spilled into the source
             # taint and was marked above
-            for sink in tqdm(list(self.tdfile.sinks)):
-                n = self.tdfile.decode_node(sink.label)
-                if n.affects_control_flow:
+            for s in tqdm(list(self.tdfile.sinks)):
+                sn = self.tdfile.decode_node(s.label)
+                if sn.affects_control_flow:
                     continue
-                if isinstance(n, TDSourceNode):
-                    marker[n.offset] = 1
+                if isinstance(sn, TDSourceNode):
+                    marker[sn.offset] = 1
                 else:
-                    for source in source_labels_not_affecting_cf(sink.label):
-                        marker[source - begin] = 1
+                    seen: Set[LabelType] = set()
+
+                    for lbl, n in self.dfs_walk(s.label, seen):
+                        if isinstance(n, TDSourceNode):
+                            marker[lbl - begin] = 1
+                        elif n.affects_control_flow:
+                            if isinstance(n, TDUnionNode):
+                                seen.add(n.left)
+                                seen.add(n.right)
+                            elif isinstance(n, TDRangeNode):
+                                seen.update(range(n.first, n.last + 1))
 
             result[Path(p)] = self.marker_to_ranges(marker)
 
@@ -149,7 +157,7 @@ class FileCavities(Command):
         )
 
     def run(self, args):
-        def print_cavity(path: Path, begin: int, end: int) -> None:
+        def print_cavity(path: Path, begin: LabelType, end: LabelType) -> None:
             print(f"{path},{begin},{end}")
 
         with open(args.POLYTRACKER_TF, "rb") as f:
