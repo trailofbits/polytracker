@@ -1,3 +1,21 @@
+from typing import (
+    BinaryIO,
+    Union,
+    Iterable,
+    Iterator,
+    Iterator,
+    Optional,
+    Dict,
+    Tuple,
+    List,
+    Set,
+    cast,
+)
+from pathlib import Path
+from mmap import mmap, PROT_READ
+from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+
+from .plugins import Command
 from .repl import PolyTrackerREPL
 from .polytracker import ProgramTrace
 from .inputs import Input
@@ -11,11 +29,6 @@ from .tracing import (
     TaintOutput,
     Taints,
 )
-
-from typing import Union, Iterable, Iterator, Optional, Dict, Tuple, List, Set, cast
-from pathlib import Path
-from mmap import mmap, PROT_READ
-from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
 
 
 class TDHeader(Structure):
@@ -97,7 +110,7 @@ class TDSink(Structure):
 
 
 class TDFile:
-    def __init__(self, buffer: mmap) -> None:
+    def __init__(self, file: BinaryIO) -> None:
         # This needs to be kept in sync with implementation in encoding.cpp
         self.source_taint_bit_shift = 63
         self.affects_control_flow_bit_shift = 62
@@ -108,23 +121,27 @@ class TDFile:
         self.source_index_bits = 8
         self.source_offset_mask = (1 << 54) - 1
 
-        self.buffer = buffer
+        self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
         self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
+
+        assert self.header.fd_mapping_offset > 0
+        assert self.header.tdag_mapping_offset > 0
+        assert self.header.tdag_mapping_size > 0
+        assert self.header.sink_mapping_offset > 0
 
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
 
-        self.fd_headers: List[Tuple[str, TDFDHeader]] = list(self.read_fd_headers())
+        self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
 
-    def read_fd_headers(self) -> Iterator[Tuple[str, TDFDHeader]]:
-        assert self.header.fd_mapping_offset > 0
+    def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
 
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
             header_offset = offset + sizeof(TDFDHeader) * i
             fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)  # type: ignore
             sbegin = offset + fdhdr.name_offset
-            path = str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8")
+            path = Path(str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8"))
             yield (path, fdhdr)
 
     @property
@@ -163,9 +180,6 @@ class TDFile:
 
     @property
     def nodes(self) -> Iterator[TDNode]:
-        assert self.header.tdag_mapping_offset > 0
-        assert self.header.tdag_mapping_size > 0
-
         for label in range(0, self.label_count):
             yield self.decode_node(label)
 
@@ -184,7 +198,6 @@ class TDFile:
 
     @property
     def sinks(self) -> Iterator[TDSink]:
-        assert self.header.sink_mapping_offset > 0
 
         offset = self.header.sink_mapping_offset
         end = offset + self.header.sink_mapping_size
@@ -203,8 +216,8 @@ class TDTaintOutput(TaintOutput):
 
 
 class TDProgramTrace(ProgramTrace):
-    def __init__(self, tdfile: mmap) -> None:
-        self.tdfile: TDFile = TDFile(tdfile)
+    def __init__(self, file: BinaryIO) -> None:
+        self.tdfile: TDFile = TDFile(file)
         self.tforest: TDTaintForest = TDTaintForest(self)
 
     def __contains__(self, uid: int):
@@ -260,8 +273,7 @@ class TDProgramTrace(ProgramTrace):
     @PolyTrackerREPL.register("load_trace_tdag")
     def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
         """loads a trace from a .tdag file emitted by an instrumented binary"""
-        f = open(tdpath, "rb")
-        return TDProgramTrace(mmap(f.fileno(), 0, prot=PROT_READ))
+        return TDProgramTrace(open(tdpath, "rb"))
 
     @property
     def inputs(self) -> Iterator[Input]:
@@ -269,7 +281,7 @@ class TDProgramTrace(ProgramTrace):
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
             if isinstance(self.tdfile.decode_node(begin), TDSourceNode):
-                yield Input(fdhdr.fd, path, end - begin)
+                yield Input(fdhdr.fd, str(path), end - begin)
 
     @property
     def output_taints(self) -> Iterator[TDTaintOutput]:
@@ -374,7 +386,7 @@ class TDTaintForest(TaintForest):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
             begin = fdhdr.prealloc_label_begin
             end = fdhdr.prealloc_label_end
-            source = Input(fdhdr.fd, path, end - begin)
+            source = Input(fdhdr.fd, str(path), end - begin)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):
@@ -428,3 +440,50 @@ class TDTaintForest(TaintForest):
         while label in self.node_cache:
             yield self.get_node(label)
             label -= 1
+
+
+class TDInfo(Command):
+    name = "info"
+    help = "print trace file information"
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
+        parser.add_argument(
+            "--print-fd-headers",
+            "-f",
+            action="store_true",
+            help="print file descriptor headers",
+        )
+        parser.add_argument(
+            "--print-taint-sinks",
+            "-s",
+            action="store_true",
+            help="print taint sinks",
+        )
+        parser.add_argument(
+            "--print-taint-nodes",
+            "-n",
+            action="store_true",
+            help="print taint nodes",
+        )
+
+    def run(self, args):
+        with open(args.POLYTRACKER_TF, "rb") as f:
+            tdfile = TDFile(f)
+            print(tdfile.header)
+            print(f"Number of labels: {tdfile.label_count}")
+
+            if args.print_fd_headers:
+                for i, h in enumerate(tdfile.fd_headers):
+                    path = h[0]
+                    lbl_begin = h[1].prealloc_label_begin
+                    lbl_end = h[1].prealloc_label_end
+                    print(f"{i}: {path} {lbl_begin} {lbl_end}")
+
+            if args.print_taint_sinks:
+                for s in tdfile.sinks:
+                    print(f"{s} -> {tdfile.decode_node(s.label)}")
+
+            if args.print_taint_nodes:
+                for lbl in range(1, tdfile.label_count):
+                    print(f"Label {lbl}: {tdfile.decode_node(lbl)}")

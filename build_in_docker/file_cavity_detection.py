@@ -13,7 +13,7 @@ from time import time
 from typing import Any, Dict, Generator, Iterable, List, Union
 
 # 10 minute timeout for detecting cavities
-TIMEOUT = 60*10
+TIMEOUT = 60 * 10
 SCRIPTDIR = Path(os.path.dirname(os.path.realpath(__file__)))
 TDAG = "polytracker.tdag"
 RESULTSCSV = "cavities.csv"
@@ -320,7 +320,7 @@ def file_cavity_detection(
 
     Output format (return string) is filename,cavityfirst,cavitylast
     -1 is used for cavityfirst/cavitylast if timeout of the draw command
-    -2 is used for cavityfirst/cavitylast if timeout of the dumptdag/cavity computation command
+    -2 is used for cavityfirst/cavitylast if timeout of the cavity computation command
     Result files are stored to output_dir,
     an additional file call {base}.meta.json is created, containing two keys
     draw_time and cavity_compute_time, which indicate runtime in seconds for
@@ -351,12 +351,7 @@ def file_cavity_detection(
             print(f"Error when processing {filename}")
             return f"{filename},-3,-3\n"
 
-        command = [
-            "python3",
-            str(SCRIPTDIR / "../polytracker/dumptdag.py"),
-            str(dst_tdag),
-            str(tool.container_input_path(filename)),
-        ]
+        command = ["polytracker", "cavities", str(dst_tdag)]
 
         result_cavity: Dict[str, Union[str, float]] = {}
         result_cavity["command"] = " ".join(command)

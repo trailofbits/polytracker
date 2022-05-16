@@ -3,81 +3,119 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
-from typing import Dict, List, Iterator, Set
-
-from intervaltree import Interval, IntervalTree
+from pathlib import Path
+from typing import Dict, List, Set, Tuple, Iterator
 from tqdm import tqdm
 
-from . import PolyTrackerTrace
-from .inputs import Input
 from .plugins import Command
-from .tracing import ByteOffset, TaintedRegion
-from .taint_forest import TaintForestNode
+from .taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
-# from .tracing import TaintOutput, Taints
+
+LabelType = int
+OffsetType = int
+FileOffsetType = Tuple[Path, OffsetType]
+CavityType = Tuple[OffsetType, OffsetType]
 
 
 class InputOutputMapping:
-    def __init__(self, trace: PolyTrackerTrace):
-        self.trace: PolyTrackerTrace = trace
-        # self.inputs = {i.uid: i for i in trace.inputs}
-        self._mapping: Dict[ByteOffset, Set[ByteOffset]] = defaultdict(set)
-        self._mapping_is_complete: bool = False
+    def __init__(self, f: TDFile):
+        self.tdfile: TDFile = f
 
-    @property
-    def mapping(self) -> Dict[ByteOffset, Set[ByteOffset]]:
-        if self._mapping_is_complete:
-            return self._mapping
+    def dfs_walk(
+        self, label: LabelType, seen: Set[LabelType] = None
+    ) -> Iterator[Tuple[LabelType, TDNode]]:
+        if seen is None:
+            seen = set()
 
-        for output_taint in tqdm(
-            self.trace.output_taints, unit=" output taints", leave=False
-        ):
-            inputs = {i.uid: i for i in self.trace.inputs}
-            written_to = inputs[output_taint.input_id]
-            output_byte_offset = ByteOffset(
-                source=written_to, offset=output_taint.offset
-            )
-            for byte_offset in output_taint.get_taints():
-                self._mapping[byte_offset].add(output_byte_offset)
+        stack = [label]
+        while stack:
+            lbl = stack.pop()
 
-        self._mapping_is_complete = True
+            if lbl in seen:
+                continue
 
-        return self._mapping
+            seen.add(lbl)
 
-    # TODO(surovic): unused
-    # def read_from(self, output: TaintOutput) -> Set[ByteOffset]:
-    #     written_to = self.inputs[output.source.uid]
-    #     output_byte_offset = ByteOffset(source=written_to, offset=output.offset)
-    #     ret: Set[ByteOffset] = set()
-    #     for byte_offset in output.taints():
-    #         self._mapping[byte_offset].add(output_byte_offset)
-    #         ret.add(byte_offset)
-    #     return ret
+            n = self.tdfile.decode_node(lbl)
 
-    def written_input_bytes(self) -> Iterator[ByteOffset]:
-        """Yields all of the input byte offsets from input files that are written to an output file"""
-        sink_nodes: List[TaintForestNode] = []
-        for t in self.trace.output_taints:
-            sink_nodes.append(self.trace.taint_forest.get_node(t.label))
-        yield from self.trace.taints(sink_nodes)
+            yield (lbl, n)
 
-    def file_cavities(self) -> Iterator[TaintedRegion]:
-        sources: Dict[Input, IntervalTree] = defaultdict(IntervalTree)
-        for offset in self.written_input_bytes():
-            sources[offset.source].addi(offset.offset, offset.offset + offset.length)
-        # also add any input bytes that affected control flow:
-        for offset in self.trace.inputs_affecting_control_flow():
-            sources[offset.source].addi(offset.offset, offset.offset + offset.length)
-        for source, tree in sources.items():
-            unused_bytes = IntervalTree([Interval(0, source.size)])
-            for interval in tree:
-                unused_bytes.chop(interval.begin, interval.end)
-            for interval in sorted(unused_bytes):
-                yield TaintedRegion(
-                    source=source,
-                    offset=interval.begin,
-                    length=interval.end - interval.begin,
-                )
+            if isinstance(n, TDSourceNode):
+                continue
+
+            elif isinstance(n, TDUnionNode):
+                stack.append(n.left)
+                stack.append(n.right)
+
+            elif isinstance(n, TDRangeNode):
+                stack.extend(range(n.first, n.last + 1))
+
+    def mapping(self) -> Dict[FileOffsetType, Set[FileOffsetType]]:
+        result: Dict[FileOffsetType, Set[FileOffsetType]] = defaultdict(set)
+        for s in tqdm(list(self.tdfile.sinks)):
+            for _, n in self.dfs_walk(s.label):
+                if isinstance(n, TDSourceNode):
+                    sp = self.tdfile.fd_headers[s.fdidx][0]
+                    np = self.tdfile.fd_headers[n.idx][0]
+                    result[(np, n.offset)].add((sp, s.offset))
+
+        return result
+
+    def marker_to_ranges(self, m: bytearray) -> List[CavityType]:
+        ranges = []
+        start = None
+        for i, v in enumerate(m):
+            if v == 0:
+                if start is None:
+                    start = i
+            else:
+                if start is not None:
+                    ranges.append((start, i))
+                    start = None
+        if start is not None:
+            ranges.append((start, len(m) - 1))
+        return ranges
+
+    def file_cavities(self) -> Dict[Path, List[CavityType]]:
+        result: Dict[Path, List[CavityType]] = defaultdict(list)
+        seen: Set[LabelType] = set()
+
+        for p, h in self.tdfile.fd_headers:
+            begin = h.prealloc_label_begin
+            end = h.prealloc_label_end
+            length = end - begin
+
+            if length < 1:
+                continue
+
+            marker = bytearray(length)
+            # Initially, mark all source taint that affects control flow
+            for i, label in enumerate(range(begin, end)):
+                if self.tdfile.decode_node(label).affects_control_flow:
+                    marker[i] = 1
+            # Now, iterate all source labels in the taint sink. As an optimization, if
+            # the taint affects_control_flow, move on. It already spilled into the source
+            # taint and was marked above
+            for s in tqdm(list(self.tdfile.sinks)):
+                sn = self.tdfile.decode_node(s.label)
+                if sn.affects_control_flow:
+                    continue
+                if isinstance(sn, TDSourceNode):
+                    marker[sn.offset] = 1
+                else:
+                    for lbl, n in self.dfs_walk(s.label, seen):
+                        if isinstance(n, TDSourceNode):
+                            marker[lbl - begin] = 1
+                        elif n.affects_control_flow:
+                            if isinstance(n, TDUnionNode):
+                                seen.add(n.left)
+                                seen.add(n.right)
+                            elif isinstance(n, TDRangeNode):
+                                seen.update(range(n.first, n.last + 1))
+
+            result[Path(p)] = self.marker_to_ranges(marker)
+
+        return result
 
 
 class MapInputsToOutputs(Command):
@@ -85,74 +123,70 @@ class MapInputsToOutputs(Command):
     help = "generate a mapping of input byte offsets to output byte offsets"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
 
     def run(self, args):
-        mapping = InputOutputMapping(PolyTrackerTrace.load(args.POLYTRACKER_DB)).mapping
+        with open(args.POLYTRACKER_TF, "rb") as f:
+            print(InputOutputMapping(TDFile(f)).mapping())
 
-        print(mapping)
 
-
-def bytes_to_ascii(b: bytes) -> str:
-    ret = []
+def ascii(b: bytes) -> str:
+    result = []
     for i in b:
         if i == ord("\\"):
-            ret.append("\\\\")
+            result.append("\\\\")
         elif i == ord('"'):
-            ret.append('\\"')
+            result.append('\\"')
         elif ord(" ") <= i <= ord("~"):
-            ret.append(chr(i))
+            result.append(chr(i))
         elif i == 0:
-            ret.append("\\0")
+            result.append("\\0")
         elif i == ord("\n"):
-            ret.append("\\n")
+            result.append("\\n")
         elif i == ord("\t"):
-            ret.append("\\t")
+            result.append("\\t")
         elif i == ord("\r"):
-            ret.append("\\r")
+            result.append("\\r")
         elif i < 10:
-            ret.append(f"\\{i}")
+            result.append(f"\\{i}")
         else:
-            ret.append(f"\\x{i:x}")
-    return "".join(ret)
+            result.append(f"\\x{i:x}")
+    return "".join(result)
 
 
 class FileCavities(Command):
     name = "cavities"
-    help = "finds input byte offsets that were never written to an output file"
+    help = "finds input byte offsets that do not affect any output byte offsets"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("POLYTRACKER_TF", type=str, help="the trace file")
         parser.add_argument(
-            "--print-context",
-            "-c",
+            "--print-bytes",
+            "-b",
             action="store_true",
-            help="print the context for each file cavity",
+            help="print file bytes in and around the cavity",
         )
 
     def run(self, args):
-        for cavity in InputOutputMapping(
-            PolyTrackerTrace.load(args.POLYTRACKER_DB)
-        ).file_cavities():
-            print(
-                f"{cavity.source.path}\t{cavity.offset}–{cavity.offset + cavity.length - 1}"
-            )
-            if args.print_context:
-                content = cavity.source.content
-                if content:
-                    bytes_before = bytes_to_ascii(
-                        content[max(cavity.offset - 10, 0) : cavity.offset]
-                    )
-                    bytes_after = bytes_to_ascii(
-                        content[
-                            cavity.offset
-                            + cavity.length : cavity.offset
-                            + cavity.length
-                            + 10
-                        ]
-                    )
-                    cavity_content = bytes_to_ascii(
-                        content[cavity.offset : cavity.offset + cavity.length]
-                    )
-                    print(f'\t"{bytes_before}{cavity_content}{bytes_after}"')
-                    print(f"\t {' ' * len(bytes_before)}{'^' * len(cavity_content)}")
+        def print_cavity(path: Path, begin: LabelType, end: LabelType) -> None:
+            print(f"{path},{begin},{end}")
+
+        with open(args.POLYTRACKER_TF, "rb") as f:
+            cavities = InputOutputMapping(TDFile(f)).file_cavities()
+
+            if not args.print_bytes:
+                for path, cs in cavities.items():
+                    for cavity in cs:
+                        print_cavity(path, *cavity)
+                return
+
+            for path, cs in cavities.items():
+                with open(path, "rb") as f:
+                    for begin, end in cs:
+                        print_cavity(path, begin, end)
+                        contents = f.read()
+                        before = ascii(contents[max(begin - 10, 0) : begin])
+                        after = ascii(contents[end : end + 10])
+                        inside = ascii(contents[begin:end])
+                        print(f'\t"{before}{inside}{after}"')
+                        print(f"\t {' ' * len(before)}{'^' * len(inside)}")
