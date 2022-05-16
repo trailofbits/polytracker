@@ -22,8 +22,11 @@ class InputOutputMapping:
         self.tdfile: TDFile = f
 
     def dfs_walk(
-        self, label: LabelType, seen: Set[LabelType] = set()
+        self, label: LabelType, seen: Set[LabelType] = None
     ) -> Iterator[Tuple[LabelType, TDNode]]:
+        if seen is None:
+            seen = set()
+
         stack = [label]
         while stack:
             lbl = stack.pop()
