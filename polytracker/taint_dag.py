@@ -124,13 +124,17 @@ class TDFile:
         self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
         self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
 
+        assert self.header.fd_mapping_offset > 0
+        assert self.header.tdag_mapping_offset > 0
+        assert self.header.tdag_mapping_size > 0
+        assert self.header.sink_mapping_offset > 0
+
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
-        assert self.header.fd_mapping_offset > 0
 
         offset = self.header.fd_mapping_offset
         for i in range(0, self.header.fd_mapping_count):
@@ -176,9 +180,6 @@ class TDFile:
 
     @property
     def nodes(self) -> Iterator[TDNode]:
-        assert self.header.tdag_mapping_offset > 0
-        assert self.header.tdag_mapping_size > 0
-
         for label in range(0, self.label_count):
             yield self.decode_node(label)
 
@@ -197,7 +198,6 @@ class TDFile:
 
     @property
     def sinks(self) -> Iterator[TDSink]:
-        assert self.header.sink_mapping_offset > 0
 
         offset = self.header.sink_mapping_offset
         end = offset + self.header.sink_mapping_size
