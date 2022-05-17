@@ -12,7 +12,7 @@
 
   llvm-link the bitcode together into a whole program archive
 
-  Then you can use polybuild(++) --instrument -f program.bc -o output -llib1 -llib2
+  Then you can use polybuild --instrument -f program.bc -o output -llib1 -llib2
 
   It will run opt to instrument your bitcode and then compile/link all instrumentation libraries with clang to create
   your output exec.
@@ -434,7 +434,9 @@ def main():
         polybuild --lower-bitcode -i input.bc -o output --libs pthread
 
     Run normally with gclang/gclang++:
-        polybuild <normal args>
+        polybuild -- clang <normal args>
+    or:
+        polybuild -- clang++ <normal args>
 
     Get bitcode from gclang built executables with get-bc -b
     """

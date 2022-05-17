@@ -72,7 +72,6 @@ def polytracker_version_string() -> str:
 CONSOLE_SCRIPTS = [
     'polytracker = polytracker.__main__:main',
     'polybuild = polytracker.build:main',
-    'polybuild++ = polytracker.build:main_plus_plus'
 ]
 
 with open(README_PATH, "r") as readme:

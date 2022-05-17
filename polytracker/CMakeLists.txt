@@ -24,5 +24,4 @@ endmacro(install_symlink)
 
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
 install_symlink(../share/polytracker/bin/polybuild.py ${CMAKE_INSTALL_PREFIX}/bin/polybuild_script)
-install_symlink(../share/polytracker/bin/polybuild.py ${CMAKE_INSTALL_PREFIX}/bin/polybuild_script++)
 install_symlink(../share/polytracker/bin/poly-link.py ${CMAKE_INSTALL_PREFIX}/bin/poly-link)
