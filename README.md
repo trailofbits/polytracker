@@ -80,26 +80,25 @@ Type "help" or "commands"
 
 ## Instrumenting a simple C/C++ program
 
-Installing PolyTracker will also install two build scripts: `polybuild` and `polybuild++`.
-These scripts are essentially wrappers around `clang` and `clang++` and have similar arguments.
-In the Docker container, these are mapped to `${CC}` and `${CXX}`. If run from the host system, these scripts will
-automatically and seamlessly perform the build within Docker, if necessary.
+Installing PolyTracker will also install a build script: `polybuild`.
+This script allows the user to run any build command in a modified environment with the right compilers and options to instrument a program.
+If you have a C/C++ target, you can instrument it by invoking `polybuild` and passing the `--instrument-target` before your
+flags:
 
-If you have a C target, you can instrument it by invoking `polybuild` and passing the `--instrument-target` before your
-cflags:
-
-```
+```bash
 polybuild --instrument-target -g -o my_target my_target.c
 ```
 
-Repeat the same steps above for a cxx file by invoking `polybuild++` instead of `polybuild`.
+If run from the host system, this script will automatically and seamlessly perform the build within Docker, if necessary.
 
-For more complex programs that use a build system like autotools or CMake, or generally for programs that have multiple
-compilation units, ensure that the build program uses `polybuild` or `polybuild++` (_e.g._, by setting the `CC` or `CXX`
-environment variable), and compile the program as normal:
+`polybuild` also supports more complex programs that use a build system like autotools or CMake:
 
 ```bash
-$ CC=polybuild make
+polybuild -- cmake .. -DCMAKE_BUILD_TYPE=Release
+polybuild -- ninja
+# or
+polybuild -- ./configure
+polybuild -- make
 ```
 
 Then run this on the resulting binary:

@@ -7,6 +7,7 @@ __pycache__
 .dmypy.json
 .DS_Store
 .vscode
+.idea
 *.db
 *.bc
 *.o

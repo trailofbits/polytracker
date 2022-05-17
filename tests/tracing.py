@@ -40,13 +40,15 @@ def polyclang_compile_target(target_name: str) -> int:
         # so if the binary is already here, it means we built it already this run
         return 0
     if target_name.endswith(".cpp"):
-        build_cmd: str = "polybuild++"
+        build_cmd: str = "clang++"
     else:
-        build_cmd = "polybuild"
+        build_cmd = "clang"
     compile_command = [
         "/usr/bin/env",
-        build_cmd,
+        "polybuild",
         "--instrument-target",
+        "--",
+        build_cmd,
         "-g",
         "-o",
         to_native_path(bin_path),

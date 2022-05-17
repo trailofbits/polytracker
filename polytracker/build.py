@@ -13,43 +13,10 @@ class PolyBuild(Command):
     _container: Optional[DockerContainer] = None
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "--c++", action="store_true", help="run polybuild++ in C++ mode"
-        )
         parser.add_argument("args", nargs=argparse.REMAINDER)
 
     def run(self, args: argparse.Namespace):
-        if getattr(args, "c++", False):
-            cmd = "polybuild_script++"
-        else:
-            cmd = "polybuild_script"
-            # Are we trying to compile C++ code without using `polybuild++`?
-            if (
-                sys.stderr.isatty()
-                and sys.stdin.isatty()
-                and any(
-                    arg.strip()[-4:].lower() in (".cpp", ".cxx", ".c++")
-                    for arg in args.args
-                )
-            ):
-                # one of the arguments ends in .cpp, .cxx, or .c++
-                sys.stderr.write(
-                    "It looks like you are trying to compile C++ code.\n"
-                    "This requires `polybuild++`, not `polybuild`!\n"
-                )
-                while True:
-                    sys.stderr.write(
-                        "Would you like to run with `polybuild++` instead? [Yn] "
-                    )
-                    try:
-                        choice = input().lower()
-                    except KeyboardInterrupt:
-                        exit(1)
-                    if choice == "n":
-                        break
-                    elif choice == "y" or choice == "":
-                        cmd = "polybuild_script++"
-                        break
+        cmd = "polybuild_script"
         args = [cmd] + args.args
         if CAN_RUN_NATIVELY:
             return subprocess.call(args)  # type: ignore
@@ -87,11 +54,5 @@ class PolyInst(Command):
 
 def main():
     PolyBuild(argparse.ArgumentParser(add_help=False)).run(
-        argparse.Namespace(args=sys.argv[1:], **{"c++": False})
-    )
-
-
-def main_plus_plus():
-    PolyBuild(argparse.ArgumentParser(add_help=False)).run(
-        argparse.Namespace(args=sys.argv[1:], **{"c++": True})
+        argparse.Namespace(args=sys.argv[1:])
     )
