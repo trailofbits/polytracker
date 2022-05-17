@@ -29,7 +29,6 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
-import sqlite3
 
 """
 Polybuild is supposed to do a few things.
@@ -93,13 +92,6 @@ if not ARTIFACT_STORE_PATH_ENV:
     sys.stderr.write("Error: the WLLVM_ARTIFACT_STORE environment variable must be set")
     sys.exit(1)
 ARTIFACT_STORE_PATH: Path = ensure_exists(Path(ARTIFACT_STORE_PATH_ENV))
-
-MANIFEST_FILE: Path = ARTIFACT_STORE_PATH / "manifest.db"
-db_conn = sqlite3.connect(MANIFEST_FILE)
-cur = db_conn.cursor()
-cur.execute("CREATE TABLE IF NOT EXISTS manifest (target TEXT, artifact TEXT);")
-db_conn.commit()
-db_conn.close()
 
 CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
 CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
@@ -245,17 +237,7 @@ def handle_cmd(build_command: List[str]) -> Optional[Path]:
         return None
     first_key = list(outputs.keys())[0]
     output_file = Path(outputs[first_key]["path"])
-
-    conn = sqlite3.connect(MANIFEST_FILE)
-    cur = conn.cursor()
-    for o in outputs.values():
-        query = (
-            'INSERT INTO manifest (target, artifact) VALUES ("'
-            f'{output_file.absolute()}", "{Path(o["store_path"]).absolute()}");'
-        )
-        cur.execute(query)
-    conn.commit()
-    conn.close()
+    
     return output_file
 
 
