@@ -13,8 +13,8 @@ ENV POLYPATH=/PLACEHOLDER
 WORKDIR file
 RUN autoreconf -f -i
 RUN ./configure --prefix=/polytracker/the_klondike/bin/ --disable-shared
-RUN make -j4 install
+RUN polybuild_script -- make -j4 install
 
 WORKDIR /polytracker/the_klondike/bin/bin
 RUN get-bc file
-RUN ${CXX} --lower-bitcode -i file.bc -o file_track --libs z --lists libz
+RUN polybuild_script --lower-bitcode -i file.bc -o file_track --libs z --lists libz

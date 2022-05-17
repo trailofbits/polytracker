@@ -13,7 +13,7 @@ COPY --from=ffmpeg-sources /polytracker/the_klondike/ffmpeg /polytracker/the_klo
 
 WORKDIR /polytracker/the_klondike/ffmpeg/build
 
-RUN ../configure --cc=${CC} --disable-everything \
+RUN ../configure --disable-everything \
         --enable-protocol=file \
         --enable-demuxer=mov \
         --enable-decoder=h264 \
@@ -26,10 +26,10 @@ RUN ../configure --cc=${CC} --disable-everything \
         --disable-stripping \
         --disable-asm
 
-RUN make -j$((`nproc`+1))
+RUN polybuild_script -- make -j$((`nproc`+1))
 
 RUN get-bc -o ffmpeg_track.bc -b ffmpeg
-RUN ${CC} --lower-bitcode  --no-control-flow-tracking -i ffmpeg_track.bc -o ffmpeg_track --lists libz --libs z
+RUN polybuild_script --lower-bitcode  --no-control-flow-tracking -i ffmpeg_track.bc -o ffmpeg_track --lists libz --libs z
 
 # Use the following command to transcode a `.mov` h264/aac file to an `.avi` raw/aac file
 # ffmpeg_track -i input.mov -pix_fmt yuvj422p -acodec aac -vcodec rawvideo -y output.avi
