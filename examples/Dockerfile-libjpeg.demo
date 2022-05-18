@@ -13,10 +13,10 @@ WORKDIR /polytracker/the_klondike/
 COPY --from=libjpeg-sources /polytracker/the_klondike/jpeg-9e /polytracker/the_klondike/jpeg-9e
 
 WORKDIR /polytracker/the_klondike/jpeg-9e/build
-RUN ../configure LDFLAGS="-static" && make -j$(nproc)
+RUN ../configure LDFLAGS="-static" && polybuild_script -- make -j$(nproc)
 
 #Extract bitcodes
 RUN get-bc -b djpeg
 
 # #Instrument and link
-RUN ${CC} --lower-bitcode --no-control-flow-tracking -i djpeg.bc -o djpeg_track
+RUN polybuild_script --lower-bitcode --no-control-flow-tracking -i djpeg.bc -o djpeg_track

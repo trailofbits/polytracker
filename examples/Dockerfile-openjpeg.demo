@@ -13,11 +13,11 @@ COPY --from=openjpg-sources /polytracker/the_klondike/openjpeg /polytracker/the_
 
 RUN mkdir -p openjpeg/build
 WORKDIR openjpeg/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=on -DBUILD_MJ2:bool=on
-RUN make install
+RUN polybuild_script -- cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=on -DBUILD_MJ2:bool=on
+RUN polybuild_script -- make install
 WORKDIR bin
 
 RUN get-bc -b opj_decompress
 RUN get-bc -b libopenjp2.a
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN ${CC} --lower-bitcode  --no-control-flow-tracking -i exec.bc -o opj_decompress_track --libs z m rt pthread libopenjp2.a
+RUN polybuild_script --lower-bitcode  --no-control-flow-tracking -i exec.bc -o opj_decompress_track --libs z m rt pthread libopenjp2.a
