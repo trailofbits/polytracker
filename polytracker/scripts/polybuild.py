@@ -23,10 +23,10 @@
   able to easily include other libraries they did not want tracking in.
 """
 import argparse
-import os
-import sys
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
@@ -49,13 +49,6 @@ def ensure_exists(path: Path) -> Path:
         sys.stderr.write(f"Error: {path!s} not found\n\n")
         sys.exit(1)
     return path
-
-
-def append_to_stem(path: Path, to_append: str) -> Path:
-    name = path.name
-    name_without_suffix = name[: -len(path.suffix)]
-    new_name = f"{name_without_suffix}{to_append}{path.suffix}"
-    return path.with_name(new_name)
 
 
 if not COMPILER_DIR.is_dir():
@@ -96,7 +89,7 @@ ARTIFACT_STORE_PATH: Path = ensure_exists(Path(ARTIFACT_STORE_PATH_ENV))
 CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
 CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
 CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
-# POLYCXX_INCLUDE_PATH = os.path.join(CXX_DIR_PATH, "poly_build/include/c++/v1")
+
 lib_str = subprocess.check_output(["llvm-config", "--libs"]).decode("utf-8").strip()
 LLVM_LIBS = lib_str.split(" ")
 POLYCXX_LIBS: List[str] = [
@@ -120,7 +113,6 @@ def instrument_bitcode(
     bitcode_file: Path,
     output_bc: Path,
     ignore_lists=None,
-    file_id=None,
     no_control_flow_tracking: bool = False,
 ) -> Path:
     """
@@ -154,8 +146,6 @@ def instrument_bitcode(
         "-ptrack",
         f"-ignore-list={POLY_ABI_LIST_PATH!s}",
     ]
-    if file_id is not None:
-        opt_command.append(f"-file-id={file_id}")
     if no_control_flow_tracking:
         opt_command.append("-no-control-flow-tracking")
     for item in ignore_lists:
@@ -243,14 +233,23 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
     Recompiles executable.
     """
 
+    def append_to_stem(path: Path, to_append: str) -> Path:
+        name = path.name
+        name_without_suffix = name[: -len(path.suffix)]
+        new_name = f"{name_without_suffix}{to_append}{path.suffix}"
+        return path.with_name(new_name)
+
     output_file = handle_cmd(build_command)
     if output_file is None:
         raise ValueError("Could not determine output file")
+
     assert output_file.exists()
+
     bc_file = output_file.with_suffix(".bc")
     get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
     subprocess.check_call(get_bc)
     assert bc_file.exists()
+
     temp_bc = append_to_stem(bc_file, "_instrumented")
     instrument_bitcode(
         bc_file, temp_bc, no_control_flow_tracking=no_control_flow_tracking
@@ -259,16 +258,14 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
 
     # Lower bitcode. Creates a .o
     obj_file = temp_bc.with_suffix(".o")
-    if is_cxx:
-        compiler = "gclang++"
-    else:
-        compiler = "gclang"
+    compiler = "gclang++" if is_cxx else "gclang"
+
     result = subprocess.call(
         [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
     )
 
     assert result == 0
-    re_comp: List[str]
+
     # Compile into executable
     re_comp = [
         compiler,
@@ -290,32 +287,23 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
 
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     # Lower bitcode. Creates a .o
-    if is_cxx:
-        subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
-
-    else:
-        subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+    compiler = "gclang++" if is_cxx else "gclang"
+    subprocess.check_call([compiler, "-fPIC", "-c", str(input_bitcode)])
 
     obj_file = input_bitcode.with_suffix(".o")
 
     # Compile into executable
-    if is_cxx:
-        re_comp = ["gclang++"]
-    else:
-        re_comp = ["gclang"]
-    
-    re_comp.extend(
-        [
-            "-pie",
-            f"-L{CXX_LIB_PATH!s}",
-            "-o",
-            str(output_file),
-            str(obj_file),
-            "-Wl,--allow-multiple-definition",
-            "-Wl,--start-group",
-            "-lc++abi",
-        ]
-    )
+    re_comp = [
+        compiler,
+        "-pie",
+        f"-L{CXX_LIB_PATH!s}",
+        "-o",
+        str(output_file),
+        str(obj_file),
+        "-Wl,--allow-multiple-definition",
+        "-Wl,--start-group",
+        "-lc++abi",
+    ]
 
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
@@ -351,21 +339,11 @@ def main():
     Get bitcode from gclang built executables with get-bc -b
     """
     )
+    # command flags
     parser.add_argument(
         "--instrument-bitcode",
         action="store_true",
         help="Specify to add polytracker instrumentation",
-    )
-    parser.add_argument(
-        "--input-file", "-i", type=Path, help="Path to the whole program bitcode file"
-    )
-    parser.add_argument(
-        "--output-file", "-o", type=Path, help="Specify binary output path"
-    )
-    parser.add_argument(
-        "--instrument-target",
-        action="store_true",
-        help="Specify to build a single source file " "with instrumentation",
     )
     parser.add_argument(
         "--lower-bitcode",
@@ -373,17 +351,24 @@ def main():
         help="Specify to compile bitcode into an object file",
     )
     parser.add_argument(
-        "--file-id", type=int, help="File id for lowering bitcode in parallel"
+        "--instrument-target",
+        action="store_true",
+        help="Specify to build a single source file " "with instrumentation",
     )
+    parser.add_argument("--compile-bitcode", action="store_true", help="for debugging")
+
+    # io flags
+    parser.add_argument(
+        "--input-file", "-i", type=Path, help="Path to the whole program bitcode file"
+    )
+    parser.add_argument(
+        "--output-file", "-o", type=Path, help="Specify binary output path"
+    )
+    # build modifier flags
     parser.add_argument(
         "--no-control-flow-tracking",
         action="store_true",
         help="do not instrument the program with any" " control flow tracking",
-    )
-    parser.add_argument(
-        "--rebuild-track",
-        type=str,
-        help="full path to artifact to auto rebuild with instrumentation",
     )
     parser.add_argument(
         "--libs",
@@ -393,49 +378,35 @@ def main():
         "--libs lib1 lib2 lib3 etc",
     )
     parser.add_argument(
-        "--num-opt",
-        type=int,
-        default=10,
-        help="When rebuilding with track, parallelize the instrumentation process with num opt instances",
-    )
-    parser.add_argument("--compile-bitcode", action="store_true", help="for debugging")
-    parser.add_argument(
         "--lists",
         nargs="+",
         default=[],
         help="Specify additional ignore lists to Polytracker",
     )
+    # catch-all
     parser.add_argument("build_command", action="store", nargs="*")
-    if len(sys.argv) <= 1:
+
+    if len(sys.argv) < 2:
         return
-    # Case 1, just instrument bitcode.
+
+    args = parser.parse_args(sys.argv[1:])
+
     if sys.argv[1] == "--instrument-bitcode":
-        args = parser.parse_args(sys.argv[1:])
         if not os.path.exists(args.input_file):
             print("Error! Input file could not be found!")
             sys.exit(1)
-        if args.output_file:
-            instrument_bitcode(
-                args.input_file,
-                args.output_file,
-                args.lists,
-                no_control_flow_tracking=args.no_control_flow_tracking,
-            )
-        else:
-            instrument_bitcode(
-                args.input_file,
-                Path("output.bc"),
-                args.lists,
-                no_control_flow_tracking=args.no_control_flow_tracking,
-            )
 
-    # simple target.
+        instrument_bitcode(
+            args.input_file,
+            args.output_file if args.output_file else Path("output.bc"),
+            args.lists,
+            no_control_flow_tracking=args.no_control_flow_tracking,
+        )
+
     elif sys.argv[1] == "--instrument-target":
-        args = parser.parse_args(sys.argv[1:])
         do_everything(args.build_command, args.no_control_flow_tracking)
 
     elif sys.argv[1] == "--lower-bitcode":
-        args = parser.parse_args(sys.argv[1:])
         if not args.input_file or not args.output_file:
             print("Error! Input and output file must be specified (-i and -o)")
             exit(1)
@@ -448,12 +419,9 @@ def main():
         lower_bc(bc_file, args.output_file, args.libs)
 
     elif sys.argv[1] == "--compile-bitcode":
-        args = parser.parse_args(sys.argv[1:])
         lower_bc(args.input_file, args.output_file, args.libs)
 
-    # Do gllvm build
     else:
-        args = parser.parse_args(sys.argv[1:])
         handle_cmd(args.build_command)
 
 
