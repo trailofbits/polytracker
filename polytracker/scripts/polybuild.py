@@ -115,13 +115,6 @@ LINK_LIBS: List[str] = [
     "-lpthread",
 ]
 
-XRAY_BUILD: bool = False
-if "--xray-instrument-target" in sys.argv:
-    XRAY_BUILD = True
-elif "--xray-lower-bitcode" in sys.argv:
-    XRAY_BUILD = True
-
-
 # (2)
 def instrument_bitcode(
     bitcode_file: Path,
@@ -237,7 +230,7 @@ def handle_cmd(build_command: List[str]) -> Optional[Path]:
         return None
     first_key = list(outputs.keys())[0]
     output_file = Path(outputs[first_key]["path"])
-    
+
     return output_file
 
 
@@ -270,52 +263,25 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
         compiler = "gclang++"
     else:
         compiler = "gclang"
-    if XRAY_BUILD:
-        result = subprocess.call(
-            [
-                compiler,
-                "-fxray-instrument",
-                "-fxray-instruction-threshold=1",
-                "-fPIC",
-                "-c",
-                str(temp_bc),
-                "-o",
-                str(obj_file),
-            ]
-        )
-    else:
-        result = subprocess.call(
-            [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
-        )
+    result = subprocess.call(
+        [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
+    )
+
     assert result == 0
     re_comp: List[str]
     # Compile into executable
-    if XRAY_BUILD:
-        re_comp = [
-            compiler,
-            "-fxray-instrument",
-            "-fxray-instruction-threshold=1",
-            "-pie",
-            f"-L{CXX_LIB_PATH!s}",
-            "-o",
-            str(output_file),
-            str(obj_file),
-            "-Wl,--allow-multiple-definition",
-            "-Wl,--start-group",
-            "-lc++abi",
-        ]
-    else:
-        re_comp = [
-            compiler,
-            "-pie",
-            f"-L{CXX_LIB_PATH!s}",
-            "-o",
-            str(output_file),
-            str(obj_file),
-            "-Wl,--allow-multiple-definition",
-            "-Wl,--start-group",
-            "-lc++abi",
-        ]
+    re_comp = [
+        compiler,
+        "-pie",
+        f"-L{CXX_LIB_PATH!s}",
+        "-o",
+        str(output_file),
+        str(obj_file),
+        "-Wl,--allow-multiple-definition",
+        "-Wl,--start-group",
+        "-lc++abi",
+    ]
+
     re_comp.extend(POLYCXX_LIBS)
     re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
     ret = subprocess.call(re_comp)
@@ -325,34 +291,10 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     # Lower bitcode. Creates a .o
     if is_cxx:
-        if XRAY_BUILD:
-            subprocess.check_call(
-                [
-                    "gclang++",
-                    "-fxray-instrument",
-                    "-fxray-instruction-threshold=1",
-                    "-fPIC",
-                    "-c",
-                    str(input_bitcode),
-                ]
-            )
-        else:
-            subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
+        subprocess.check_call(["gclang++", "-fPIC", "-c", str(input_bitcode)])
 
     else:
-        if XRAY_BUILD:
-            subprocess.check_call(
-                [
-                    "gclang",
-                    "-fxray-instrument",
-                    "-fxray-instruction-threshold=1",
-                    "-fPIC",
-                    "-c",
-                    str(input_bitcode),
-                ]
-            )
-        else:
-            subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
+        subprocess.check_call(["gclang", "-fPIC", "-c", str(input_bitcode)])
 
     obj_file = input_bitcode.with_suffix(".o")
 
@@ -361,34 +303,20 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
         re_comp = ["gclang++"]
     else:
         re_comp = ["gclang"]
-    if XRAY_BUILD:
-        re_comp.extend(
-            [
-                "-pie",
-                "-fxray-instrument",
-                "-fxray-instruction-threshold=1",
-                f"-L{CXX_LIB_PATH!s}",
-                "-o",
-                str(output_file),
-                str(obj_file),
-                "-Wl,--allow-multiple-definition",
-                "-Wl,--start-group",
-                "-lc++abi",
-            ]
-        )
-    else:
-        re_comp.extend(
-            [
-                "-pie",
-                f"-L{CXX_LIB_PATH!s}",
-                "-o",
-                str(output_file),
-                str(obj_file),
-                "-Wl,--allow-multiple-definition",
-                "-Wl,--start-group",
-                "-lc++abi",
-            ]
-        )
+    
+    re_comp.extend(
+        [
+            "-pie",
+            f"-L{CXX_LIB_PATH!s}",
+            "-o",
+            str(output_file),
+            str(obj_file),
+            "-Wl,--allow-multiple-definition",
+            "-Wl,--start-group",
+            "-lc++abi",
+        ]
+    )
+
     re_comp.extend(POLYCXX_LIBS)
     for lib in libs:
         if lib.endswith(".a") or lib.endswith(".o"):
@@ -522,24 +450,6 @@ def main():
     elif sys.argv[1] == "--compile-bitcode":
         args = parser.parse_args(sys.argv[1:])
         lower_bc(args.input_file, args.output_file, args.libs)
-
-    elif sys.argv[1] == "--xray-instrument-target":
-        new_argv = [x for x in sys.argv if x != "--xray-instrument-target"]
-        # Find the output file
-        do_everything(new_argv)
-
-    elif sys.argv[1] == "--xray-lower-bitcode":
-        args = parser.parse_args(sys.argv[2:])
-        if not args.input_file or not args.output_file:
-            print("Error! Input and output file must be specified (-i and -o)")
-            exit(1)
-        bc_file = instrument_bitcode(
-            args.input_file,
-            args.output_file.with_suffix(".bc"),
-            args.lists,
-            no_control_flow_tracking=args.no_control_flow_tracking,
-        )
-        lower_bc(bc_file, args.output_file, args.libs)
 
     # Do gllvm build
     else:
