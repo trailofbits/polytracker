@@ -218,6 +218,7 @@ def handle_cmd(build_command: List[str]) -> Optional[Path]:
     if not outputs:
         sys.stderr.write("Warning: command did not generate any outputs\n")
         return None
+    
     first_key = list(outputs.keys())[0]
     output_file = Path(outputs[first_key]["path"])
 
@@ -238,68 +239,36 @@ def do_everything(build_command: List[str], no_control_flow_tracking: bool):
         name_without_suffix = name[: -len(path.suffix)]
         new_name = f"{name_without_suffix}{to_append}{path.suffix}"
         return path.with_name(new_name)
-
+    # Builds target
     output_file = handle_cmd(build_command)
     if output_file is None:
         raise ValueError("Could not determine output file")
-
     assert output_file.exists()
-
+    # Extracts bitcode from target
     bc_file = output_file.with_suffix(".bc")
     get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
     subprocess.check_call(get_bc)
     assert bc_file.exists()
-
+    # Instruments bitcode
     temp_bc = append_to_stem(bc_file, "_instrumented")
     instrument_bitcode(
         bc_file, temp_bc, no_control_flow_tracking=no_control_flow_tracking
     )
     assert temp_bc.exists()
-
-    # Lower bitcode. Creates a .o
-    obj_file = temp_bc.with_suffix(".o")
-    compiler = "gclang++" if is_cxx else "gclang"
-
-    result = subprocess.call(
-        [compiler, "-fPIC", "-c", str(temp_bc), "-o", str(obj_file)]
-    )
-
-    assert result == 0
-
     # Compile into executable
-    re_comp = [
-        compiler,
-        "-pie",
-        f"-L{CXX_LIB_PATH!s}",
-        "-o",
-        str(output_file),
-        str(obj_file),
-        "-Wl,--allow-multiple-definition",
-        "-Wl,--start-group",
-        "-lc++abi",
-    ]
-
-    re_comp.extend(POLYCXX_LIBS)
-    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
-    ret = subprocess.call(re_comp)
-    assert ret == 0
+    lower_bc(temp_bc, output_file)
 
 
 def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
-    # Lower bitcode. Creates a .o
-    compiler = "gclang++" if is_cxx else "gclang"
-    subprocess.check_call([compiler, "-fPIC", "-c", str(input_bitcode)])
-
-    obj_file = input_bitcode.with_suffix(".o")
-
     # Compile into executable
     re_comp = [
-        compiler,
+        "gclang++" if is_cxx else "gclang",
+        "-fPIC",
         "-pie",
         f"-L{CXX_LIB_PATH!s}",
         "-o",
         str(output_file),
-        str(obj_file),
+        str(input_bitcode),
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group",
         "-lc++abi",
