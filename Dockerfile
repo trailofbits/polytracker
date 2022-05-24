@@ -1,7 +1,6 @@
 FROM trailofbits/polytracker-llvm:16daa680dcff0dc86ebf6ae81f5382859695cb35
 
-MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
-MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
+LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
