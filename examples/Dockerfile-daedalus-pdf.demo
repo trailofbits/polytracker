@@ -1,0 +1,43 @@
+FROM ubuntu:focal AS sources
+
+RUN mkdir -p /polytracker/the_klondike
+
+WORKDIR /polytracker/the_klondike
+
+ENV DEBIAN_FRONTEND=noninteractive 
+RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
+
+RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
+WORKDIR /polytracker/the_klondike/daedalus
+
+FROM trailofbits/polytracker:latest
+MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get update && apt-get install -y curl cmake libgmp-dev libssl-dev
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org > ghcup && chmod +x ghcup
+RUN ./ghcup install ghc 8.10.7 && ./ghcup install cabal 3.6
+ENV PATH=$PATH:/root/.ghcup/bin
+
+COPY --from=sources /polytracker/the_klondike/daedalus /polytracker/the_klondike/daedalus
+
+WORKDIR /polytracker/the_klondike/daedalus
+# RUN git checkout b5824574c398d5197247fe6ed534510771f6be8f
+
+RUN cabal update
+WORKDIR /polytracker/the_klondike/daedalus/formats/pdf/new/c++
+
+RUN polybuild_script -- cmake -S . -B build
+RUN polybuild_script -- cmake --build build -j`nproc`
+
+WORKDIR /polytracker/the_klondike/daedalus/formats/pdf/new/c++/build
+
+RUN get-bc -b parser-test
+
+RUN polybuild_script --lower-bitcode -i parser-test.bc -o parser-test-track
+# RUN polybuild_script --lower-bitcode -i parser-test.bc -o parser-test-track --libs ssl gmp --lists ssl gmp
+
+# # Note, the /workdir directory is intended to be mounted at runtime
+# VOLUME ["/workdir"]
+# WORKDIR /workdir
