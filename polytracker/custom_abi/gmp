@@ -1,0 +1,2 @@
+fun:gmpz_clear=uninstrumented
+fun:gmpz_clear=discard
