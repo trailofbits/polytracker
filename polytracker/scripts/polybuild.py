@@ -28,7 +28,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List
 
 """
 Polybuild is supposed to do a few things.
@@ -65,8 +65,6 @@ POLY_ABI_LIST_PATH: Path = ensure_exists(
     COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt"
 )
 ABI_PATH: Path = ensure_exists(COMPILER_DIR / "abi_lists")
-
-is_cxx: bool = "++" in sys.argv[0]
 
 CXX_LIB_PATH_ENV: str = os.getenv("CXX_LIB_PATH", default="")
 if not CXX_LIB_PATH_ENV:
@@ -108,7 +106,53 @@ LINK_LIBS: List[str] = [
     "-lpthread",
 ]
 
-# (2)
+# This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
+# First, figure out whats being built by looking for -o or -c
+# Returns the output file for convenience
+def handle_cmd(build_cmd: List[str]) -> List[Dict]:
+    common_flags = ["-fPIC"]
+    linker_flags = ["-Wl,--start-group", *LINK_LIBS, "-Wl,--end-group"]
+    os.putenv("BLIGHT_ACTIONS", "InjectFlags:Record:FindOutputs:IgnoreFlags")
+    os.putenv(
+        "BLIGHT_ACTION_IGNOREFLAGS",
+        "FLAGS='-Wall -Wextra -Wno-unused-parameter -Werror'",
+    )
+    os.putenv(
+        "BLIGHT_ACTION_INJECTFLAGS",
+        f"CFLAGS='{' '.join(common_flags)}' "
+        f"CFLAGS_LINKER='{' '.join(linker_flags)}' "
+        f"CXXFLAGS='{' '.join(common_flags)} -stdlib=libc++ -I{CXX_INCLUDE_PATH!s} -I{CXX_INCLUDE_PATH_ABI!s}' "
+        f"CXXFLAGS_LINKER='{' '.join(linker_flags)} -L{CXX_LIB_PATH!s}'",
+    )
+    # Copy artifacts to $ARTIFACT_STORE_PATH_ENV and store their info in `blight_journal.jsonl`
+    blight_journal = Path("blight_journal.jsonl")
+    if blight_journal.exists():
+        blight_journal.unlink()
+    os.putenv("BLIGHT_JOURNAL_PATH", str(blight_journal.absolute()))
+    os.putenv(
+        "BLIGHT_ACTION_FINDINPUTS",
+        f"store={ARTIFACT_STORE_PATH} append_hash=false",
+    )
+    os.putenv(
+        "BLIGHT_ACTION_FINDOUTPUTS",
+        f"store={ARTIFACT_STORE_PATH} append_hash=false",
+    )
+    os.putenv("BLIGHT_WRAPPED_CC", "gclang")
+    os.putenv("BLIGHT_WRAPPED_CXX", "gclang++")
+
+    subprocess.check_call(
+        ["blight-exec", "--guess-wrapped", "--swizzle-path", "--", *build_cmd]
+    )
+
+    # Get build artifacts from Blight's JSON output
+    result: List[Dict] = []
+    with open(blight_journal, "r") as f:
+        for line in f:
+            result.append(json.loads(line))
+
+    return result
+
+
 def instrument_bitcode(
     bitcode_file: Path,
     output_bc: Path,
@@ -168,101 +212,12 @@ def instrument_bitcode(
     return output_bc
 
 
-# This does the building and storing of artifacts for building examples like (mupdf, poppler, etc)
-# First, figure out whats being built by looking for -o or -c
-# Returns the output file for convenience
-def handle_cmd(build_command: List[str]) -> Optional[Path]:
-    common_flags = ["-fPIC"]
-    linker_flags = ["-Wl,--start-group", *LINK_LIBS, "-Wl,--end-group"]
-    os.putenv("BLIGHT_ACTIONS", "InjectFlags:FindOutputs:IgnoreFlags")
-    os.putenv(
-        "BLIGHT_ACTION_IGNOREFLAGS",
-        "FLAGS='-Wall -Wextra -Wno-unused-parameter -Werror'",
-    )
-    os.putenv(
-        "BLIGHT_ACTION_INJECTFLAGS",
-        f"CFLAGS='{' '.join(common_flags)}' "
-        f"CFLAGS_LINKER='{' '.join(linker_flags)}' "
-        f"CXXFLAGS='{' '.join(common_flags)} -stdlib=libc++ -I{CXX_INCLUDE_PATH!s} -I{CXX_INCLUDE_PATH_ABI!s}' "
-        f"CXXFLAGS_LINKER='{' '.join(linker_flags)} -L{CXX_LIB_PATH!s}'",
-    )
-    # Copy artifacts to $ARTIFACT_STORE_PATH_ENV and store their info in `outputs.json`
-    outputs_blight = Path("outputs.json")
-    if outputs_blight.exists():
-        outputs_blight.unlink()
-    os.putenv(
-        "BLIGHT_ACTION_FINDOUTPUTS",
-        f"output={outputs_blight.absolute()} store={ARTIFACT_STORE_PATH} append_hash=false",
-    )
-    os.putenv("BLIGHT_WRAPPED_CC", "gclang")
-    os.putenv("BLIGHT_WRAPPED_CXX", "gclang++")
-
-    subprocess.check_call(
-        ["blight-exec", "--guess-wrapped", "--swizzle-path", "--", *build_command]
-    )
-
-    # Get build artifacts from Blight's JSON output
-    outputs: Dict[str, Dict] = {}
-    if outputs_blight.exists():
-        with open(outputs_blight, "r") as f:
-            for line in f:
-                outputs.update(
-                    {
-                        o["store_path"]: o
-                        for o in json.loads(line)["outputs"]
-                        if o["store_path"] is not None
-                        and o["kind"] in ["executable", "shared", "static"]
-                    }
-                )
-
-    if not outputs:
-        sys.stderr.write("Warning: command did not generate any outputs\n")
-        return None
-    
-    first_key = list(outputs.keys())[0]
-    output_file = Path(outputs[first_key]["path"])
-
-    return output_file
-
-
-# (1)
-def do_everything(build_command: List[str], no_control_flow_tracking: bool):
-    """
-    Builds target
-    Extracts bitcode from target
-    Instruments bitcode
-    Recompiles executable.
-    """
-
-    def append_to_stem(path: Path, to_append: str) -> Path:
-        name = path.name
-        name_without_suffix = name[: -len(path.suffix)]
-        new_name = f"{name_without_suffix}{to_append}{path.suffix}"
-        return path.with_name(new_name)
-    # Builds target
-    output_file = handle_cmd(build_command)
-    if output_file is None:
-        raise ValueError("Could not determine output file")
-    assert output_file.exists()
-    # Extracts bitcode from target
-    bc_file = output_file.with_suffix(".bc")
-    get_bc = ["get-bc", "-o", str(bc_file), "-b", str(output_file)]
-    subprocess.check_call(get_bc)
-    assert bc_file.exists()
-    # Instruments bitcode
-    temp_bc = append_to_stem(bc_file, "_instrumented")
-    instrument_bitcode(
-        bc_file, temp_bc, no_control_flow_tracking=no_control_flow_tracking
-    )
-    assert temp_bc.exists()
-    # Compile into executable
-    lower_bc(temp_bc, output_file)
-
-
-def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
+def lower_bc(
+    input_bitcode: Path, output_file: Path, libs: Iterable[str] = (), cmd: Dict = {}
+):
     # Compile into executable
     re_comp = [
-        "gclang++" if is_cxx else "gclang",
+        cmd["Record"]["wrapped_tool"],
         "-fPIC",
         "-pie",
         f"-L{CXX_LIB_PATH!s}",
@@ -285,6 +240,41 @@ def lower_bc(input_bitcode: Path, output_file: Path, libs: Iterable[str] = ()):
     assert ret == 0
 
 
+def do_everything(
+    build_command: List[str], no_control_flow_tracking: bool, target: str
+):
+    """
+    Builds target
+    Extracts bitcode from target
+    Instruments bitcode
+    Recompiles executable.
+    """
+    # Run build command
+    blight_cmds = handle_cmd(build_command)
+    # Find build command of `target`
+    def find_target():
+        for cmd in blight_cmds:
+            for output in cmd["FindOutputs"].get("outputs", []):
+                output_path = Path(output["path"])
+                if output_path.name == target:
+                    return (cmd, output_path)
+        raise TypeError
+
+    target_cmd, target_path = find_target()
+    # Extract bitcode from target
+    bc_path = target_path.with_suffix(".bc")
+    subprocess.check_call(["get-bc", "-o", str(bc_path), "-b", str(target_path)])
+    assert bc_path.exists()
+    # Instruments bitcode
+    inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
+    instrument_bitcode(
+        bc_path, inst_bc_path, no_control_flow_tracking=no_control_flow_tracking
+    )
+    assert inst_bc_path.exists()
+    # Compile into executable
+    lower_bc(inst_bc_path, Path(inst_bc_path.stem), cmd=target_cmd)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="""
@@ -293,9 +283,6 @@ def main():
     For programs with a simple build system, you can quickstart the process
     by invoking:
         polybuild --instrument-target <your flags here> -o <output_file>
-
-    Instrumenting bitcode example:
-        polybuild --instrument-bitcode -i input.bc -o output.bc
 
     Lowering bitcode (just compiles into an executable and links) example:
         polybuild --lower-bitcode -i input.bc -o output --libs pthread
@@ -324,8 +311,6 @@ def main():
         action="store_true",
         help="Specify to build a single source file " "with instrumentation",
     )
-    parser.add_argument("--compile-bitcode", action="store_true", help="for debugging")
-
     # io flags
     parser.add_argument(
         "--input-file", "-i", type=Path, help="Path to the whole program bitcode file"
@@ -333,6 +318,7 @@ def main():
     parser.add_argument(
         "--output-file", "-o", type=Path, help="Specify binary output path"
     )
+    parser.add_argument("--target", "-t", type=str, help="Specify target to instrument")
     # build modifier flags
     parser.add_argument(
         "--no-control-flow-tracking",
@@ -360,20 +346,11 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
 
-    if sys.argv[1] == "--instrument-bitcode":
-        if not os.path.exists(args.input_file):
-            print("Error! Input file could not be found!")
-            sys.exit(1)
-
-        instrument_bitcode(
-            args.input_file,
-            args.output_file if args.output_file else Path("output.bc"),
-            args.lists,
-            no_control_flow_tracking=args.no_control_flow_tracking,
-        )
-
-    elif sys.argv[1] == "--instrument-target":
-        do_everything(args.build_command, args.no_control_flow_tracking)
+    if sys.argv[1] == "--instrument-target":
+        if not args.target:
+            print("Error! Build target must be specified (-t)")
+            exit(1)
+        do_everything(args.build_command, args.no_control_flow_tracking, args.target)
 
     elif sys.argv[1] == "--lower-bitcode":
         if not args.input_file or not args.output_file:
@@ -386,9 +363,6 @@ def main():
             no_control_flow_tracking=args.no_control_flow_tracking,
         )
         lower_bc(bc_file, args.output_file, args.libs)
-
-    elif sys.argv[1] == "--compile-bitcode":
-        lower_bc(args.input_file, args.output_file, args.libs)
 
     else:
         handle_cmd(args.build_command)
