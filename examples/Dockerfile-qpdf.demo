@@ -21,11 +21,7 @@ RUN polybuild_script -- make install -j$(nproc)
 
 WORKDIR /polytracker/the_klondike/qpdf
 RUN polybuild_script -- cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON
-RUN polybuild_script -- cmake --build build -j$(nproc)
-
-#Extract BC 
-WORKDIR /polytracker/the_klondike/qpdf/build/qpdf
-RUN get-bc -o qpdf.bc -b qpdf
-
 #Instrument and build track target
-RUN polybuild_script --lower-bitcode -i qpdf.bc -o qpdf_track --libs ../libqpdf/libqpdf.a atomic z --lists libz
+# --libs ../libqpdf/libqpdf.a atomic z
+RUN polybuild_script --instrument-targets qpdf --lists libz -- cmake --build build -j$(nproc)
+RUN mv qpdf.instrumented qpdf_track
