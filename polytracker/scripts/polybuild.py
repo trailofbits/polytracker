@@ -28,7 +28,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 """
 Polybuild is supposed to do a few things.
@@ -215,8 +215,7 @@ def instrument_bitcode(
 def lower_bc(
     input_bitcode: Path,
     output_file: Path,
-    libs: Iterable[str] = (),
-    blight_cmd: Dict = {},
+    blight_cmd: Dict,
 ):
     blight_record = blight_cmd["Record"]
     blight_inputs = blight_cmd["FindInputs"]["inputs"]
@@ -224,14 +223,16 @@ def lower_bc(
     # Get the compiler
     tool = blight_record["wrapped_tool"]
     # Get source inputs to the original build command
-    sources = list(filter(lambda i: i["kind"] == "source", blight_inputs))
-    sources = list(map(lambda i: i["prenormalized_path"], sources))
+    inputs = list(map(lambda i: i["prenormalized_path"], blight_inputs))
     # Get output of the original build command
     outputs = list(map(lambda o: o["prenormalized_path"], blight_outputs))
+    # Get static libraries used for linking
+    libs = list(filter(lambda i: i["kind"] in ["static", "shared"], blight_inputs))
+    libs = list(map(lambda i: i["path"], libs))
     # Get arguments of the original build command
     args = list(blight_record["args"])
     # Remove input sources and outputs
-    args = list(filter(lambda x: x not in sources + ["-o"] + outputs, args))
+    args = list(filter(lambda x: x not in inputs + ["-o"] + outputs, args))
     # Put together a new build command for the bitcode
     cmd = [
         tool,
@@ -242,26 +243,21 @@ def lower_bc(
         "-pie",
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group",
+        *libs,
         *POLYCXX_LIBS,
         str(DFSAN_LIB_PATH),
         "-ldl",
         "-Wl,--end-group",
     ]
 
-    if libs:
-        cmd += ["-Wl,--allow-multiple-definition","-Wl,--start-group"]
-        for lib in libs:
-            if lib.endswith(".a") or lib.endswith(".o"):
-                cmd.append(lib)
-            else:
-                cmd.append(f"-l{lib}")
-        cmd += ["-Wl,--end-group"]
-
-    assert subprocess.call(cmd) == 0
+    subprocess.check_call(cmd)
 
 
-def do_everything(
-    build_command: List[str], no_control_flow_tracking: bool, target: str
+def instrument_target(
+    blight_cmds: List[Dict],
+    no_control_flow_tracking: bool,
+    target: str,
+    ignore_lists=None,
 ):
     """
     Builds target
@@ -269,8 +265,6 @@ def do_everything(
     Instruments bitcode
     Recompiles executable.
     """
-    # Run build command
-    blight_cmds = handle_cmd(build_command)
     # Find build command of `target`
     def find_target():
         for cmd in blight_cmds:
@@ -288,7 +282,10 @@ def do_everything(
     # Instruments bitcode
     inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
     instrument_bitcode(
-        bc_path, inst_bc_path, no_control_flow_tracking=no_control_flow_tracking
+        bc_path,
+        inst_bc_path,
+        no_control_flow_tracking=no_control_flow_tracking,
+        ignore_lists=ignore_lists,
     )
     assert inst_bc_path.exists()
     # Compile into executable
@@ -300,57 +297,27 @@ def main():
         description="""
     Compiler wrapper around gllvm and instrumentation driver for PolyTracker
 
-    For programs with a simple build system, you can quickstart the process
-    by invoking:
-        polybuild --instrument-target <your flags here> -o <output_file>
+    For programs with a build system (e.g. cmake, make, ...) run:
+        polybuild --instrument-targets <polybuild flags> -- <build command>
 
-    Lowering bitcode (just compiles into an executable and links) example:
-        polybuild --lower-bitcode -i input.bc -o output --libs pthread
-
-    Run normally with gclang/gclang++:
-        polybuild -- clang <normal args>
+    With gclang/gclang++:
+        polybuild -- clang <compiler flags>
     or:
-        polybuild -- clang++ <normal args>
-
-    Get bitcode from gclang built executables with get-bc -b
+        polybuild -- clang++ <compiler flags>
     """
     )
     # command flags
     parser.add_argument(
-        "--instrument-bitcode",
-        action="store_true",
-        help="Specify to add polytracker instrumentation",
+        "--instrument-targets",
+        nargs="+",
+        type=str,
+        help="Specify build targets to instrument",
     )
-    parser.add_argument(
-        "--lower-bitcode",
-        action="store_true",
-        help="Specify to compile bitcode into an object file",
-    )
-    parser.add_argument(
-        "--instrument-target",
-        action="store_true",
-        help="Specify to build a single source file " "with instrumentation",
-    )
-    # io flags
-    parser.add_argument(
-        "--input-file", "-i", type=Path, help="Path to the whole program bitcode file"
-    )
-    parser.add_argument(
-        "--output-file", "-o", type=Path, help="Specify binary output path"
-    )
-    parser.add_argument("--target", "-t", type=str, help="Specify target to instrument")
     # build modifier flags
     parser.add_argument(
         "--no-control-flow-tracking",
         action="store_true",
         help="do not instrument the program with any" " control flow tracking",
-    )
-    parser.add_argument(
-        "--libs",
-        nargs="+",
-        default=[],
-        help="Specify libraries to link with the instrumented target, without the -l"
-        "--libs lib1 lib2 lib3 etc",
     )
     parser.add_argument(
         "--lists",
@@ -361,29 +328,17 @@ def main():
     # catch-all
     parser.add_argument("build_command", action="store", nargs="*")
 
-    if len(sys.argv) < 2:
-        return
-
     args = parser.parse_args(sys.argv[1:])
 
-    if sys.argv[1] == "--instrument-target":
-        if not args.target:
-            print("Error! Build target must be specified (-t)")
-            exit(1)
-        do_everything(args.build_command, args.no_control_flow_tracking, args.target)
-
-    elif sys.argv[1] == "--lower-bitcode":
-        if not args.input_file or not args.output_file:
-            print("Error! Input and output file must be specified (-i and -o)")
-            exit(1)
-        bc_file = instrument_bitcode(
-            args.input_file,
-            args.output_file.with_suffix(".bc"),
-            args.lists,
-            no_control_flow_tracking=args.no_control_flow_tracking,
-        )
-        lower_bc(bc_file, args.output_file, args.libs)
-
+    if args.instrument_targets:
+        blight_cmds = handle_cmd(args.build_command)
+        for target in args.instrument_targets:
+            instrument_target(
+                blight_cmds,
+                args.no_control_flow_tracking,
+                target,
+                args.lists,
+            )
     else:
         handle_cmd(args.build_command)
 
