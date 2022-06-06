@@ -257,7 +257,7 @@ def instrument_target(
     blight_cmds: List[Dict],
     no_control_flow_tracking: bool,
     target: str,
-    ignore_lists=None,
+    ignore_lists: List[str],
 ):
     """
     Builds target
@@ -281,12 +281,7 @@ def instrument_target(
     assert bc_path.exists()
     # Instruments bitcode
     inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
-    instrument_bitcode(
-        bc_path,
-        inst_bc_path,
-        no_control_flow_tracking=no_control_flow_tracking,
-        ignore_lists=ignore_lists,
-    )
+    instrument_bitcode(bc_path, inst_bc_path, ignore_lists, no_control_flow_tracking)
     assert inst_bc_path.exists()
     # Compile into executable
     lower_bc(inst_bc_path, Path(inst_bc_path.stem), blight_cmd=target_cmd)
