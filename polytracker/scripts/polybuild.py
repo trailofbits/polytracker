@@ -112,7 +112,7 @@ LINK_LIBS: List[str] = [
 def handle_cmd(build_cmd: List[str]) -> List[Dict]:
     common_flags = ["-fPIC"]
     linker_flags = ["-Wl,--start-group", *LINK_LIBS, "-Wl,--end-group"]
-    os.putenv("BLIGHT_ACTIONS", "InjectFlags:Record:FindOutputs:IgnoreFlags")
+    os.putenv("BLIGHT_ACTIONS", "InjectFlags:Record:FindInputs:FindOutputs:IgnoreFlags")
     os.putenv(
         "BLIGHT_ACTION_IGNOREFLAGS",
         "FLAGS='-Wall -Wextra -Wno-unused-parameter -Werror'",
@@ -213,31 +213,51 @@ def instrument_bitcode(
 
 
 def lower_bc(
-    input_bitcode: Path, output_file: Path, libs: Iterable[str] = (), cmd: Dict = {}
+    input_bitcode: Path,
+    output_file: Path,
+    libs: Iterable[str] = (),
+    blight_cmd: Dict = {},
 ):
-    # Compile into executable
-    re_comp = [
-        cmd["Record"]["wrapped_tool"],
-        "-fPIC",
-        "-pie",
-        f"-L{CXX_LIB_PATH!s}",
+    blight_record = blight_cmd["Record"]
+    blight_inputs = blight_cmd["FindInputs"]["inputs"]
+    blight_outputs = blight_cmd["FindOutputs"]["outputs"]
+    # Get the compiler
+    tool = blight_record["wrapped_tool"]
+    # Get source inputs to the original build command
+    sources = list(filter(lambda i: i["kind"] == "source", blight_inputs))
+    sources = list(map(lambda i: i["prenormalized_path"], sources))
+    # Get output of the original build command
+    outputs = list(map(lambda o: o["prenormalized_path"], blight_outputs))
+    # Get arguments of the original build command
+    args = list(blight_record["args"])
+    # Remove input sources and outputs
+    args = list(filter(lambda x: x not in sources + ["-o"] + outputs, args))
+    # Put together a new build command for the bitcode
+    cmd = [
+        tool,
+        str(input_bitcode),
         "-o",
         str(output_file),
-        str(input_bitcode),
+        *args,
+        "-pie",
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group",
-        "-lc++abi",
+        *POLYCXX_LIBS,
+        str(DFSAN_LIB_PATH),
+        "-ldl",
+        "-Wl,--end-group",
     ]
 
-    re_comp.extend(POLYCXX_LIBS)
-    for lib in libs:
-        if lib.endswith(".a") or lib.endswith(".o"):
-            re_comp.append(lib)
-        else:
-            re_comp.append(f"-l{lib}")
-    re_comp.extend([str(DFSAN_LIB_PATH), "-lpthread", "-ldl", "-Wl,--end-group"])
-    ret = subprocess.call(re_comp)
-    assert ret == 0
+    if libs:
+        cmd += ["-Wl,--allow-multiple-definition","-Wl,--start-group"]
+        for lib in libs:
+            if lib.endswith(".a") or lib.endswith(".o"):
+                cmd.append(lib)
+            else:
+                cmd.append(f"-l{lib}")
+        cmd += ["-Wl,--end-group"]
+
+    assert subprocess.call(cmd) == 0
 
 
 def do_everything(
@@ -272,7 +292,7 @@ def do_everything(
     )
     assert inst_bc_path.exists()
     # Compile into executable
-    lower_bc(inst_bc_path, Path(inst_bc_path.stem), cmd=target_cmd)
+    lower_bc(inst_bc_path, Path(inst_bc_path.stem), blight_cmd=target_cmd)
 
 
 def main():
