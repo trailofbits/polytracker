@@ -164,11 +164,13 @@ def instrument_bitcode(
     Instruments that with dfsan instrumentation
     Optimizes it all, asserts the output file exists.
     """
-    opt_command = ["opt", "-O3", str(bitcode_file), "-o", str(bitcode_file)]
-    subprocess.check_call(opt_command)
     if ignore_lists is None:
         ignore_lists = []
-    opt_command = [
+    
+    cmd = ["opt", "-O3", str(bitcode_file), "-o", str(bitcode_file)]
+    subprocess.check_call(cmd)
+    
+    cmd = [
         "opt",
         "-enable-new-pm=0",
         "-load",
@@ -178,11 +180,9 @@ def instrument_bitcode(
         "-o",
         str(bitcode_file),
     ]
-    ret = subprocess.call(opt_command)
-    if ret != 0:
-        print(f"Metadata pass exited with code {ret}:\n{' '.join(opt_command)}")
-        exit(1)
-    opt_command = [
+    subprocess.check_call(cmd)
+    
+    cmd = [
         "opt",
         "-enable-new-pm=0",
         "-load",
@@ -190,24 +190,28 @@ def instrument_bitcode(
         "-ptrack",
         f"-ignore-list={POLY_ABI_LIST_PATH!s}",
     ]
+    
     if no_control_flow_tracking:
-        opt_command.append("-no-control-flow-tracking")
+        cmd.append("-no-control-flow-tracking")
+    
     for item in ignore_lists:
-        opt_command.append(f"-ignore-list={ABI_PATH}/{item}")
-    opt_command += [str(bitcode_file), "-o", str(output_bc)]
-    ret = subprocess.call(opt_command)
-    if ret != 0:
-        print(f"PolyTracker pass exited with code {ret}:\n{' '.join(opt_command)}")
-    opt_command = [
+        cmd.append(f"-ignore-list={ABI_PATH}/{item}")
+    
+    cmd += [str(bitcode_file), "-o", str(output_bc)]
+    subprocess.check_call(cmd)
+    
+    cmd = [
         "opt",
         "-enable-new-pm=0",
         "-dfsan",
         f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}",
     ]
+    
     for item in ignore_lists:
-        opt_command.append(f"-dfsan-abilist={ABI_PATH}/{item}")
-    opt_command += [str(output_bc), "-o", str(output_bc)]
-    subprocess.check_call(opt_command)
+        cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+    
+    cmd += [str(output_bc), "-o", str(output_bc)]
+    subprocess.check_call(cmd)
     assert output_bc.exists()
     return output_bc
 
@@ -260,7 +264,6 @@ def instrument_target(
     ignore_lists: List[str],
 ):
     """
-    Builds target
     Extracts bitcode from target
     Instruments bitcode
     Recompiles executable.
@@ -272,7 +275,7 @@ def instrument_target(
                 output_path = Path(output["path"])
                 if output_path.name == target:
                     return (cmd, output_path)
-        raise TypeError
+        raise LookupError(f"'{target}' not found in build targets")
 
     target_cmd, target_path = find_target()
     # Extract bitcode from target
