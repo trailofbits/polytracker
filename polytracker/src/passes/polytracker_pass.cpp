@@ -99,8 +99,6 @@ void PolytrackerPass::logOp(llvm::Instruction *inst,
     return;
   }
   llvm::IRBuilder<> IRB(inst->getNextNode());
-  llvm::LLVMContext &context = mod->getContext();
-
   llvm::Value *int_val =
       IRB.CreateSExtOrTrunc(inst->getOperand(0), shadow_type);
   llvm::Value *int_val_two =
@@ -111,9 +109,8 @@ void PolytrackerPass::logOp(llvm::Instruction *inst,
     exit(1);
   }
   auto func_block_index = getIndicies(inst);
-  CallInst *Call =
-      IRB.CreateCall(callback, {int_val, int_val_two, func_block_index.first,
-                                func_block_index.second});
+  IRB.CreateCall(callback, {int_val, int_val_two, func_block_index.first,
+                            func_block_index.second});
 }
 
 void PolytrackerPass::visitCmpInst(llvm::CmpInst &CI) {
@@ -129,9 +126,8 @@ void PolytrackerPass::visitReturnInst(llvm::ReturnInst &RI) {
   auto func_block_index = getIndicies(inst);
   llvm::IRBuilder<> IRB(inst);
 
-  CallInst *ExitCall =
-      IRB.CreateCall(func_exit_log, {func_block_index.first,
-                                     func_block_index.second, stack_loc});
+  IRB.CreateCall(func_exit_log,
+                 {func_block_index.first, func_block_index.second, stack_loc});
 }
 
 void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
@@ -143,11 +139,8 @@ void PolytrackerPass::visitBranchInst(llvm::BranchInst &BI) {
     // conditional_branch_log
     if (!op_check(condition)) {
       llvm::IRBuilder<> IRB(&BI);
-      llvm::LLVMContext &context = mod->getContext();
-
       llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
-
-      CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+      IRB.CreateCall(conditional_branch_log, {int_val});
     }
   }
 }
@@ -160,7 +153,7 @@ void PolytrackerPass::visitGetElementPtrInst(llvm::GetElementPtrInst &GEP) {
     if (!llvm::isa<llvm::ConstantInt>(op)) {
       if (!op_check(op)) {
         llvm::Value *int_val = IRB.CreateSExtOrTrunc(op, shadow_type);
-        CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+        IRB.CreateCall(conditional_branch_log, {int_val});
       }
     }
   }
@@ -171,7 +164,7 @@ void PolytrackerPass::visitSwitchInst(llvm::SwitchInst &SI) {
   if (!op_check(condition)) {
     llvm::IRBuilder<> IRB(&SI);
     llvm::Value *int_val = IRB.CreateSExtOrTrunc(condition, shadow_type);
-    CallInst *Call = IRB.CreateCall(conditional_branch_log, {int_val});
+    IRB.CreateCall(conditional_branch_log, {int_val});
   }
 }
 
@@ -208,9 +201,8 @@ void PolytrackerPass::visitCallInst(llvm::CallInst &ci) {
   }
   // // Insert after
   llvm::IRBuilder<> IRB(inst->getNextNode());
-  CallInst *ExitCall =
-      IRB.CreateCall(call_exit_log, {func_block_indicies.first,
-                                     func_block_indicies.second, stack_loc});
+  IRB.CreateCall(call_exit_log, {func_block_indicies.first,
+                                 func_block_indicies.second, stack_loc});
 }
 
 // Pass in function, get context, get the entry block. create the DT?
@@ -231,7 +223,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
       &(*(func->getEntryBlock().getFirstInsertionPt()));
 
   llvm::IRBuilder<> IRB(insert_point);
-  llvm::Value *func_name = IRB.CreateGlobalStringPtr(func->getName());
+  IRB.CreateGlobalStringPtr(func->getName());
   // Add a callback for BB entry
   // we do not need to instrument the entry block of a function
   // because we do that above when we add the function instrumentation
@@ -295,7 +287,7 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), findex, false);
 
-  auto res = new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
+  new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
   uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
   block_global_map[curr_bb] = gid;
   block_type_map[gid] = bb_type;
@@ -310,8 +302,6 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
-  llvm::LLVMContext &context = f->getContext();
-
   // llvm::removeUnreachableBlocks(*f);
 
   std::vector<llvm::BasicBlock *> splitBBs = bbSplitter.analyzeFunction(*f);
@@ -322,7 +312,7 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::BasicBlock &bb = f->getEntryBlock();
   llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
   llvm::IRBuilder<> IRB(&insert_point);
-  llvm::Value *func_name = IRB.CreateGlobalStringPtr(f->getName());
+  IRB.CreateGlobalStringPtr(f->getName());
   llvm::Value *index_val =
       llvm::ConstantInt::get(shadow_type, func_index, false);
 
@@ -450,30 +440,30 @@ void PolytrackerPass::readIgnoreFile(const std::string &ignore_file_path) {
 
 /// Given a llvm.global_ctors list that we can understand,
 /// return a map of the function* for quick lookup
-static std::vector<llvm::Function *>
-parseGlobalCtors(llvm::GlobalVariable *GV) {
-  if (GV->getInitializer()->isNullValue())
-    return std::vector<llvm::Function *>();
-  llvm::ConstantArray *CA =
-      llvm::cast<llvm::ConstantArray>(GV->getInitializer());
-  std::vector<llvm::Function *> Result;
-  Result.reserve(CA->getNumOperands());
-  for (auto &V : CA->operands()) {
-    llvm::ConstantStruct *CS = llvm::cast<llvm::ConstantStruct>(V);
-    Result.push_back(llvm::dyn_cast<llvm::Function>(CS->getOperand(1)));
-  }
-  return Result;
-}
+// static std::vector<llvm::Function *>
+// parseGlobalCtors(llvm::GlobalVariable *GV) {
+//   if (GV->getInitializer()->isNullValue())
+//     return std::vector<llvm::Function *>();
+//   llvm::ConstantArray *CA =
+//       llvm::cast<llvm::ConstantArray>(GV->getInitializer());
+//   std::vector<llvm::Function *> Result;
+//   Result.reserve(CA->getNumOperands());
+//   for (auto &V : CA->operands()) {
+//     llvm::ConstantStruct *CS = llvm::cast<llvm::ConstantStruct>(V);
+//     Result.push_back(llvm::dyn_cast<llvm::Function>(CS->getOperand(1)));
+//   }
+//   return Result;
+// }
 
 /// Find the llvm.global_ctors list
-static llvm::GlobalVariable *findGlobalCtors(llvm::Module &M) {
-  llvm::GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
-  if (!GV) {
-    spdlog::warn("No constructors found, returning");
-    return nullptr;
-  }
-  return GV;
-}
+// static llvm::GlobalVariable *findGlobalCtors(llvm::Module &M) {
+//   llvm::GlobalVariable *GV = M.getGlobalVariable("llvm.global_ctors");
+//   if (!GV) {
+//     spdlog::warn("No constructors found, returning");
+//     return nullptr;
+//   }
+//   return GV;
+// }
 
 static llvm::Constant *create_str(llvm::Module &mod, std::string &str) {
   auto arr_ty = llvm::ArrayType::get(
@@ -582,7 +572,7 @@ static void createStartPolytrackerCall(llvm::Module &mod,
   BasicBlock *block = BasicBlock::Create(ctx, "entry", func);
   llvm::IRBuilder<> IRB(block);
 
-  llvm::Instruction *call = IRB.CreateCall(
+  IRB.CreateCall(
       polytracker_start_func,
       {global, llvm::ConstantInt::get(i64_type, global_count), block_map,
        llvm::ConstantInt::get(i64_type, block_count),
