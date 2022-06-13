@@ -10,4 +10,4 @@ struct MetadataPass : public llvm::ModulePass {
   bool runOnModule(llvm::Module &module) override;
 };
 
-} // namespace polymeta
+} // namespace polytracker
