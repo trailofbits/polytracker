@@ -7,7 +7,7 @@ WORKDIR /polytracker/the_klondike
 ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
 
-RUN git clone --recursive git://git.ghostscript.com/mupdf.git
+RUN git clone --recursive --branch 1.20.0 git://git.ghostscript.com/mupdf.git
 WORKDIR /polytracker/the_klondike/mupdf
 RUN git submodule update --init
 
