@@ -13,6 +13,3 @@ target_link_libraries(
   PUBLIC LLVMPassConfig
   PRIVATE indicators spdlog::spdlog_header_only)
 install(TARGETS PolytrackerPass DESTINATION ${POLYTRACK_PASS_DIR})
-add_library(MetadataPass SHARED metadata_pass.cpp)
-target_link_libraries(MetadataPass LLVMPassConfig)
-install(TARGETS MetadataPass DESTINATION ${POLYTRACK_PASS_DIR})
