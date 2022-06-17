@@ -35,6 +35,7 @@ def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
 def polyclang_compile_target(target_name: str) -> int:
     source_path = TESTS_DIR / target_name
     bin_path = BUILD_DIR / f"{target_name}.bin"
+    inst_bin_path = BUILD_DIR / f"{target_name}.instrumented"
     if bin_path.exists() and not is_out_of_date(bin_path, source_path):
         # we `rm -rf`'d the whole bin directory in setup_targets,
         # so if the binary is already here, it means we built it already this run
@@ -46,7 +47,8 @@ def polyclang_compile_target(target_name: str) -> int:
     compile_command = [
         "/usr/bin/env",
         "polybuild",
-        "--instrument-target",
+        "--instrument-targets",
+        bin_path.name,
         "--",
         build_cmd,
         "-g",
@@ -54,7 +56,17 @@ def polyclang_compile_target(target_name: str) -> int:
         to_native_path(bin_path),
         to_native_path(source_path),
     ]
-    return run_natively(*compile_command)
+
+    move_command = [
+        "mv",
+        inst_bin_path.name,
+        to_native_path(inst_bin_path),
+    ]
+
+    ret = run_natively(*compile_command)
+    run_natively(*move_command)
+
+    return ret
 
 
 # Returns the Polyprocess object
@@ -65,7 +77,7 @@ def validate_execute_target(
     return_exceptions: bool = False,
     taint_all: bool = False,
 ) -> Union[ProgramTrace, CalledProcessError]:
-    target_bin_path = BUILD_DIR / f"{target_name}.bin"
+    target_bin_path = BUILD_DIR / f"{target_name}.instrumented"
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
     db_path = TEST_RESULTS_DIR / f"{target_name}.db"
