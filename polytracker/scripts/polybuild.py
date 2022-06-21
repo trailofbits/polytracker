@@ -87,8 +87,6 @@ CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
 CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
 CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
 
-lib_str = subprocess.check_output(["llvm-config", "--libs"]).decode("utf-8").strip()
-LLVM_LIBS = lib_str.split(" ")
 POLYCXX_LIBS: List[str] = [
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
     str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
@@ -96,7 +94,7 @@ POLYCXX_LIBS: List[str] = [
     "-lm",
     "-ltinfo",
     "-lstdc++",
-] + LLVM_LIBS
+]
 
 # TODO (Carson), double check, also maybe need -ldl?
 LINK_LIBS: List[str] = [
@@ -166,7 +164,7 @@ def instrument_bitcode(
     if ignore_lists is None:
         ignore_lists = []
 
-    cmd = ["opt", "-O3", str(bitcode_file), "-o", str(bitcode_file)]
+    cmd = ["opt", "-O3", str(bitcode_file), "-o", str(output_bc)]
     subprocess.check_call(cmd)
 
     cmd = [
@@ -184,12 +182,7 @@ def instrument_bitcode(
     for item in ignore_lists:
         cmd.append(f"-ignore-list={ABI_PATH}/{item}")
 
-    cmd += [str(bitcode_file), "-o", str(output_bc)]
-    subprocess.check_call(cmd)
-
-    cmd = [
-        "opt",
-        "-enable-new-pm=0",
+    cmd += [
         "-dfsan",
         f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}",
     ]
@@ -199,6 +192,7 @@ def instrument_bitcode(
 
     cmd += [str(output_bc), "-o", str(output_bc)]
     subprocess.check_call(cmd)
+
     assert output_bc.exists()
     return output_bc
 
