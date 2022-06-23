@@ -38,3 +38,4 @@ RUN pip3 install .
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV PATH=/polytracker/build/bin:$PATH
 ENV DFSAN_OPTIONS="strict_data_dependencies=0"
+ENV COMPILER_DIR=/polytracker/build/share/polytracker
