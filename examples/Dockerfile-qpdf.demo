@@ -16,12 +16,13 @@ COPY --from=qpdf-sources /polytracker/the_klondike/jpeg-9e /polytracker/the_klon
 
 RUN apt remove -y --auto-remove libjpeg-dev
 WORKDIR /polytracker/the_klondike/jpeg-9e/build
-RUN polybuild_script -- ../configure LDFLAGS="-static" --prefix=/usr
-RUN polybuild_script -- make install -j$(nproc)
+RUN polytracker build ../configure LDFLAGS="-static" --prefix=/usr
+RUN polytracker build make install -j$(nproc)
 
 WORKDIR /polytracker/the_klondike/qpdf
-RUN polybuild_script -- cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON
+RUN polytracker build cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON
 #Instrument and build track target
 # --libs ../libqpdf/libqpdf.a atomic z
-RUN polybuild_script --instrument-targets qpdf --lists libz -- cmake --build build -j$(nproc)
+RUN polytracker build cmake --build build -j$(nproc)
+RUN polytracker instrument-targets qpdf --ignore-lists libz
 RUN mv qpdf.instrumented qpdf_track

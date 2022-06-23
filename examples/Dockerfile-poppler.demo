@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y libfreetype6-dev libfontconfig1-dev
 
 # Configure
 WORKDIR /polytracker/the_klondike/poppler
-RUN polybuild_script -- cmake -S . -B build \
+RUN polytracker build cmake -S . -B build \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DBUILD_GTK_TESTS=OFF \
@@ -42,6 +42,7 @@ RUN polybuild_script -- cmake -S . -B build \
 	-DCMAKE_EXE_LINKER_FLAGS="-pthread"
 
 # Build and instrument
-RUN polybuild_script --instrument-targets pdftotext pdftops --lists freetype fontconfig -- cmake --build build -j$(nproc)
+RUN polytracker build cmake --build build -j$(nproc)
+RUN polytracker instrument-targets pdftotext pdftops --ignore-lists freetype fontconfig
 RUN mv pdftotext.instrumented pdftotext_track
 RUN mv pdftops.instrumented pdftops_track
