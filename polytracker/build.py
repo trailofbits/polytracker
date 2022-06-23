@@ -236,11 +236,7 @@ class OptimizeBitcode(Command):
     help = "optimizes LLVM bitcode with O3"
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
-        parser.add_argument(
-            "input",
-            type=Path,
-            help="input bitcode file",
-        )
+        parser.add_argument("input", type=Path, help="input bitcode file")
 
         parser.add_argument("-o", "--output", type=Path, help="output bitcode file")
 
