@@ -40,22 +40,25 @@ def polyclang_compile_target(target_name: str) -> int:
         # we `rm -rf`'d the whole bin directory in setup_targets,
         # so if the binary is already here, it means we built it already this run
         return 0
+
+    build_cmd = ["polytracker", "build"]
+
     if target_name.endswith(".cpp"):
-        build_cmd: str = "clang++"
+        build_cmd.append("clang++")
     else:
-        build_cmd = "clang"
-    compile_command = [
-        "/usr/bin/env",
-        "polybuild",
-        "--instrument-targets",
-        bin_path.name,
-        "--",
-        build_cmd,
-        "-g",
-        "-o",
-        to_native_path(bin_path),
-        to_native_path(source_path),
-    ]
+        build_cmd.append("clang")
+
+    build_cmd += ["-g", "-o", to_native_path(bin_path), to_native_path(source_path)]
+
+    ret = run_natively(*build_cmd)
+    if ret:
+        return ret
+
+    instrument_cmd = ["polytracker", "instrument-targets", bin_path.name]
+
+    ret = run_natively(*instrument_cmd)
+    if ret:
+        return ret
 
     move_command = [
         "mv",
@@ -63,7 +66,6 @@ def polyclang_compile_target(target_name: str) -> int:
         to_native_path(inst_bin_path),
     ]
 
-    ret = run_natively(*compile_command)
     run_natively(*move_command)
 
     return ret
