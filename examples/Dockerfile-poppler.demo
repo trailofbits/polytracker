@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y libfreetype6-dev libfontconfig1-dev
 
 # Configure
 WORKDIR /polytracker/the_klondike/poppler
-RUN polybuild_script -- cmake -S . -B build \
+RUN polytracker build cmake -S . -B build \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DBUILD_GTK_TESTS=OFF \
@@ -41,14 +41,8 @@ RUN polybuild_script -- cmake -S . -B build \
 	-DWITH_FONTCONFIGURATION_FONTCONFIG=OFF \
 	-DCMAKE_EXE_LINKER_FLAGS="-pthread"
 
-# Build
-RUN polybuild_script -- cmake --build build -j$(nproc)
-
-# Extract and instrument pdftotext, other poppler tools should work the same
-WORKDIR /polytracker/the_klondike/poppler/build/utils
-
-RUN get-bc -b pdftotext
-RUN polybuild_script --lower-bitcode -i pdftotext.bc -o pdftotext_track --libs /build_artifacts/libpoppler.a freetype fontconfig pthread --lists freetype fontconfig
-
-RUN get-bc -b pdftops
-RUN polybuild_script --lower-bitcode -i pdftops.bc -o pdftops_track --libs /build_artifacts/libpoppler.a freetype fontconfig pthread --lists freetype fontconfig
+# Build and instrument
+RUN polytracker build cmake --build build -j$(nproc)
+RUN polytracker instrument-targets pdftotext pdftops --ignore-lists freetype fontconfig
+RUN mv pdftotext.instrumented pdftotext_track
+RUN mv pdftops.instrumented pdftops_track
