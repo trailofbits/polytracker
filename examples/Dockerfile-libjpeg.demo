@@ -16,6 +16,7 @@ WORKDIR /polytracker/the_klondike/jpeg-9e/build
 # Configure build
 RUN ../configure LDFLAGS="-static"
 # Build and instrument
-RUN polybuild_script --instrument-targets djpeg --no-control-flow-tracking -- make -j$(nproc)
+RUN polytracker build make -j$(nproc)
+RUN polytracker instrument-targets djpeg --no-control-flow-tracking
 # Create `djpeg_track`
 RUN mv djpeg.instrumented djpeg_track
