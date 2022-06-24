@@ -14,7 +14,6 @@ install(DIRECTORY "./custom_abi/" DESTINATION ${POLYTRACK_RULE_DIR}
         PATTERN "CMakeLists.txt" EXCLUDE PATTERN "Makefile" EXCLUDE PATTERN "*.cmake" EXCLUDE)
 add_subdirectory(custom_abi)
 
-install(PROGRAMS "scripts/polybuild.py" DESTINATION ${POLYTRACK_BIN_DIR})
 install(PROGRAMS "scripts/poly-link.py" DESTINATION ${POLYTRACK_BIN_DIR})
 
 macro(install_symlink filepath sympath)
@@ -23,5 +22,4 @@ macro(install_symlink filepath sympath)
 endmacro(install_symlink)
 
 install(DIRECTORY DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
-install_symlink(../share/polytracker/bin/polybuild.py ${CMAKE_INSTALL_PREFIX}/bin/polybuild_script)
 install_symlink(../share/polytracker/bin/poly-link.py ${CMAKE_INSTALL_PREFIX}/bin/poly-link)
