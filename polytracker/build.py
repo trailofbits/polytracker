@@ -8,33 +8,38 @@ from typing import List, Dict, Tuple
 from .plugins import Command
 
 
-def ensure_path_exists(path: Path) -> Path:
+def _ensure_path_exists(path: Path) -> Path:
     if not path.exists():
         raise FileNotFoundError(f"{path} does not exist")
     return path
 
 
-def ensure_env_set(name: str) -> str:
+def _ensure_env_set(name: str) -> str:
     var = os.getenv(name, default="")
     if not var:
         raise RuntimeError(f"{name} not set")
     return var
 
 
-COMPILER_DIR_ENV: str = ensure_env_set("COMPILER_DIR")
-COMPILER_DIR: Path = ensure_path_exists(Path(COMPILER_DIR_ENV))
-CXX_LIB_PATH_ENV: str = ensure_env_set("CXX_LIB_PATH")
-CXX_DIR_PATH: Path = ensure_path_exists(Path(CXX_LIB_PATH_ENV))
-DEFAULT_BLIGHT_JOURNAL_PATH: Path = Path.cwd() / "blight_journal.jsonl"
+def _compiler_dir_path() -> Path:
+    return _ensure_path_exists(Path(_ensure_env_set("COMPILER_DIR")))
+
+
+def _cxx_dir_path() -> Path:
+    return _ensure_path_exists(Path(_ensure_env_set("CXX_LIB_PATH")))
+
+
+def _default_blight_journal_path() -> Path:
+    return Path.cwd() / "blight_journal.jsonl"
 
 
 def _handle_cmd(build_cmd: List[str], blight_journal: Path) -> None:
-    ARTIFACT_STORE_PATH_ENV: str = ensure_env_set("WLLVM_ARTIFACT_STORE")
-    ARTIFACT_STORE_PATH: Path = ensure_path_exists(Path(ARTIFACT_STORE_PATH_ENV))
+    ARTIFACT_STORE_PATH_ENV: str = _ensure_env_set("WLLVM_ARTIFACT_STORE")
+    ARTIFACT_STORE_PATH: Path = _ensure_path_exists(Path(ARTIFACT_STORE_PATH_ENV))
 
-    CXX_INCLUDE_PATH: Path = CXX_DIR_PATH / "clean_build" / "include" / "c++" / "v1"
+    CXX_INCLUDE_PATH: Path = _cxx_dir_path() / "clean_build" / "include" / "c++" / "v1"
     CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
-    CXX_LIB_PATH: Path = CXX_DIR_PATH / "clean_build" / "lib"
+    CXX_LIB_PATH: Path = _cxx_dir_path() / "clean_build" / "lib"
 
     LINK_LIBS: List[str] = [
         str(CXX_LIB_PATH / "libc++.a"),
@@ -81,18 +86,20 @@ def _lower_bitcode(
     output_file: Path,
     blight_cmd: Dict,
 ) -> None:
-    POLY_LIB_PATH: Path = ensure_path_exists(COMPILER_DIR / "lib" / "libPolytracker.a")
+    POLY_LIB_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "lib" / "libPolytracker.a"
+    )
     POLYCXX_LIBS: List[str] = [
-        str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++.a"),
-        str(CXX_DIR_PATH / "poly_build" / "lib" / "libc++abi.a"),
+        str(_cxx_dir_path() / "poly_build" / "lib" / "libc++.a"),
+        str(_cxx_dir_path() / "poly_build" / "lib" / "libc++abi.a"),
         str(POLY_LIB_PATH),
         "-lm",
         "-ltinfo",
         "-lstdc++",
     ]
 
-    DFSAN_LIB_PATH_ENV: str = ensure_env_set("DFSAN_LIB_PATH")
-    DFSAN_LIB_PATH: Path = ensure_path_exists(Path(DFSAN_LIB_PATH_ENV))
+    DFSAN_LIB_PATH_ENV: str = _ensure_env_set("DFSAN_LIB_PATH")
+    DFSAN_LIB_PATH: Path = _ensure_path_exists(Path(DFSAN_LIB_PATH_ENV))
 
     blight_record = blight_cmd["Record"]
     blight_inputs = blight_cmd["FindInputs"]["inputs"]
@@ -146,15 +153,15 @@ def _instrument_bitcode(
     ignore_lists: List[str],
     no_control_flow_tracking: bool,
 ) -> None:
-    POLY_PASS_PATH: Path = ensure_path_exists(
-        COMPILER_DIR / "pass" / "libPolytrackerPass.so"
+    POLY_PASS_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
-    POLY_ABI_LIST_PATH: Path = ensure_path_exists(
-        COMPILER_DIR / "abi_lists" / "polytracker_abilist.txt"
+    POLY_ABI_LIST_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "abi_lists" / "polytracker_abilist.txt"
     )
-    ABI_PATH: Path = ensure_path_exists(COMPILER_DIR / "abi_lists")
-    DFSAN_ABI_LIST_PATH: Path = ensure_path_exists(
-        COMPILER_DIR / "abi_lists" / "dfsan_abilist.txt"
+    ABI_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists")
+    DFSAN_ABI_LIST_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "abi_lists" / "dfsan_abilist.txt"
     )
 
     cmd = [
@@ -209,7 +216,7 @@ class Build(Command):
         parser.add_argument(
             "--journal-path",
             type=Path,
-            default=DEFAULT_BLIGHT_JOURNAL_PATH,
+            default=_default_blight_journal_path(),
             help="path to blight journal",
         )
         parser.add_argument("cmd", nargs=argparse.REMAINDER)
@@ -291,7 +298,7 @@ class LowerBitcode(Command):
         parser.add_argument(
             "--journal-path",
             type=Path,
-            default=DEFAULT_BLIGHT_JOURNAL_PATH,
+            default=_default_blight_journal_path(),
             help="path to blight journal",
         )
         parser.add_argument("-o", "--output", type=Path, help="output file")
@@ -319,7 +326,7 @@ class InstrumentTargets(Command):
         parser.add_argument(
             "--journal-path",
             type=Path,
-            default=DEFAULT_BLIGHT_JOURNAL_PATH,
+            default=_default_blight_journal_path(),
             help="path to blight journal",
         )
 
