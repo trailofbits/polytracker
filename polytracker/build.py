@@ -232,7 +232,13 @@ class ExtractBitcode(Command):
     def __init_arguments__(self, parser: argparse.ArgumentParser):
         parser.add_argument("input", type=Path, help="input bitcode file")
 
-        parser.add_argument("-o", "--output", type=Path, help="output bitcode file")
+        parser.add_argument(
+            "-o",
+            "--output",
+            required=True,
+            type=Path,
+            help="output bitcode file",
+        )
 
     def run(self, args: argparse.Namespace):
         _extract_bitcode(args.input, args.output)
@@ -245,7 +251,13 @@ class OptimizeBitcode(Command):
     def __init_arguments__(self, parser: argparse.ArgumentParser):
         parser.add_argument("input", type=Path, help="input bitcode file")
 
-        parser.add_argument("-o", "--output", type=Path, help="output bitcode file")
+        parser.add_argument(
+            "-o",
+            "--output",
+            required=True,
+            type=Path,
+            help="output bitcode file",
+        )
 
     def run(self, args: argparse.Namespace):
         _optimize_bitcode(args.input, args.output)
@@ -258,7 +270,13 @@ class InstrumentBitcode(Command):
     def __init_arguments__(self, parser: argparse.ArgumentParser):
         parser.add_argument("input", type=Path, help="input bitcode file")
 
-        parser.add_argument("-o", "--output", type=Path, help="output bitcode file")
+        parser.add_argument(
+            "-o",
+            "--output",
+            required=True,
+            type=Path,
+            help="output bitcode file",
+        )
 
         parser.add_argument(
             "--no-control-flow-tracking",
@@ -301,7 +319,13 @@ class LowerBitcode(Command):
             default=_default_blight_journal_path(),
             help="path to blight journal",
         )
-        parser.add_argument("-o", "--output", type=Path, help="output file")
+        parser.add_argument(
+            "-o",
+            "--output",
+            required=True,
+            type=Path,
+            help="output file",
+        )
 
     def run(self, args: argparse.Namespace):
         _lower_bitcode(
