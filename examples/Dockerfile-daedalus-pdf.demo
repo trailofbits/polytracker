@@ -11,7 +11,7 @@ RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
 WORKDIR /polytracker/the_klondike/daedalus
 
 FROM trailofbits/polytracker:latest
-MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 WORKDIR /polytracker/the_klondike
 
@@ -28,16 +28,7 @@ WORKDIR /polytracker/the_klondike/daedalus
 RUN cabal update
 WORKDIR /polytracker/the_klondike/daedalus/formats/pdf/new/c++
 
-RUN polybuild_script -- cmake -S . -B build
-RUN polybuild_script -- cmake --build build -j`nproc`
-
-WORKDIR /polytracker/the_klondike/daedalus/formats/pdf/new/c++/build
-
-RUN get-bc -b parser-test
-
-RUN polybuild_script --lower-bitcode -i parser-test.bc -o parser-test-track
-# RUN polybuild_script --lower-bitcode -i parser-test.bc -o parser-test-track --libs ssl gmp --lists ssl gmp
-
-# # Note, the /workdir directory is intended to be mounted at runtime
-# VOLUME ["/workdir"]
-# WORKDIR /workdir
+RUN polytracker build cmake -S . -B build
+RUN polytracker build cmake --build build -j$(nproc)
+RUN polytracker instrument-targets parser-test --ignore-lists gmp ssl libz
+RUN mv parser-test.instrumented parser-test-track
