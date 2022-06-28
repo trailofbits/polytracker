@@ -11,6 +11,7 @@ from .data import *
 def _get_instrumented_bin_path(target_name: str) -> Path:
     return BUILD_DIR / f"{target_name}.instrumented"
 
+
 def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
     if not path.exists():
         return True
