@@ -8,6 +8,9 @@ from polytracker import PolyTrackerTrace, ProgramTrace
 from .data import *
 
 
+def _get_instrumented_bin_path(target_name: str) -> Path:
+    return BUILD_DIR / f"{target_name}.instrumented"
+
 def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
     if not path.exists():
         return True
@@ -35,7 +38,7 @@ def is_out_of_date(path: Path, *also_compare_to: Path) -> bool:
 def polyclang_compile_target(target_name: str) -> int:
     source_path = TESTS_DIR / target_name
     bin_path = BUILD_DIR / f"{target_name}.bin"
-    inst_bin_path = BUILD_DIR / f"{target_name}.instrumented"
+    inst_bin_path = _get_instrumented_bin_path(target_name)
     if bin_path.exists() and not is_out_of_date(bin_path, source_path):
         # we `rm -rf`'d the whole bin directory in setup_targets,
         # so if the binary is already here, it means we built it already this run
@@ -79,7 +82,7 @@ def validate_execute_target(
     return_exceptions: bool = False,
     taint_all: bool = False,
 ) -> Union[ProgramTrace, CalledProcessError]:
-    target_bin_path = BUILD_DIR / f"{target_name}.instrumented"
+    target_bin_path = _get_instrumented_bin_path(target_name)
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
     db_path = TEST_RESULTS_DIR / f"{target_name}.db"
