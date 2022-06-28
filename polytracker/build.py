@@ -110,7 +110,7 @@ def _lower_bitcode(
     inputs = list(map(lambda i: i["prenormalized_path"], blight_inputs))
     # Get output of the original build command
     outputs = list(map(lambda o: o["prenormalized_path"], blight_outputs))
-    # Get static libraries used for linking
+    # Get libraries used for linking
     libs = list(filter(lambda i: i["kind"] in ["static", "shared"], blight_inputs))
     libs = list(map(lambda i: i["path"], libs))
     # Get arguments of the original build command
