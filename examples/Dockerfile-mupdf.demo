@@ -12,7 +12,7 @@ WORKDIR /polytracker/the_klondike/mupdf
 RUN git submodule update --init
 
 FROM trailofbits/polytracker:latest
-MAINTAINER Evan Sultanik <evan.sultanik@trailofbits.com>
+LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 WORKDIR /polytracker/the_klondike
 
@@ -20,16 +20,10 @@ COPY --from=sources /polytracker/the_klondike/mupdf /polytracker/the_klondike/mu
 
 WORKDIR /polytracker/the_klondike/mupdf
 RUN git checkout d00de0e96a4a5ec90ffc30837d40cd624a6a89e0
-RUN polybuild_script -- make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=release install
-
-WORKDIR /polytracker/the_klondike/mupdf/build/release
-
-#Extract bitcode from mutool 
-RUN get-bc -b mutool 
-
-# Instrument and Lower the bitcode and link libs 
-RUN polybuild_script --lower-bitcode --no-control-flow-tracking -i mutool.bc -o mutool_track --libs libmupdf.a m pthread
-
+# Instrument mutool
+RUN polytracker build make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=release install
+RUN polytracker instrument-targets --no-control-flow-tracking mutool
+RUN mv mutool.instrumented mutool_track
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
 WORKDIR /workdir
