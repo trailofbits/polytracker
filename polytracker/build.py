@@ -166,23 +166,21 @@ def _instrument_bitcode(
 
     cmd = [
         "opt",
-        "-enable-new-pm=0",
         "-load",
         str(POLY_PASS_PATH),
-        "-ptrack",
+        "-load-pass-plugin",
+        str(POLY_PASS_PATH),
+        "-passes=taint,dfsan",
         f"-ignore-list={POLY_ABI_LIST_PATH}",
     ]
 
-    if no_control_flow_tracking:
-        cmd.append("-no-control-flow-tracking")
+    # if no_control_flow_tracking:
+    #     cmd.append("-no-control-flow-tracking")
 
     for item in ignore_lists:
         cmd.append(f"-ignore-list={ABI_PATH}/{item}")
 
-    cmd += [
-        "-dfsan",
-        f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}",
-    ]
+    cmd.append(f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
 
     for item in ignore_lists:
         cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
