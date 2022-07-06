@@ -1,15 +1,6 @@
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(LLVM 13 CONFIG)
-
-if(LLVM_FOUND)
-  message(STATUS "LLVM_VERSION_MAJOR: ${LLVM_VERSION_MAJOR}")
-  message(STATUS "LLVM_VERSION_MINOR: ${LLVM_VERSION_MINOR}")
-  message(STATUS "LLVM_VERSION_PATCH: ${LLVM_VERSION_PATCH}")
-else()
-  message(FATAL_ERROR "You need LLVM >=13 to build this (found LLVM
-  ${LLVM_VERSION_MAJOR}).")
-endif()
+find_package(LLVM 13 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
