@@ -7,7 +7,7 @@ if(APPLE)
       "${CMAKE_CXX_LINK_FLAGS} -Wl,-flat_namespace -Wl,-undefined,suppress")
 endif(APPLE)
 
-add_library(PolytrackerPass SHARED polytracker_pass.cpp bb_splitting_pass.cpp)
+add_library(PolytrackerPass SHARED taint_tracking.cpp polytracker_pass.cpp bb_splitting_pass.cpp)
 target_link_libraries(
   PolytrackerPass
   PUBLIC LLVMPassConfig
