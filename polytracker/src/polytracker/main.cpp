@@ -136,3 +136,16 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
   // Set up the atexit call
   atexit(polytracker_end);
 }
+
+void taint_start(void){
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
+
+  get_target_sources();
+  polytracker_get_settings();
+  polytracker_print_settings();
+  DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
+                     get_polytracker_db_name());
+  // Set up the atexit call
+  atexit(polytracker_end);
+}

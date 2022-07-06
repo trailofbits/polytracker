@@ -87,6 +87,8 @@ extern "C" void __polytracker_start(func_mapping const *globals,
                     no_control_flow_tracing);
 }
 
+extern "C" void __taint_start() { taint_start(); }
+
 extern "C" void
 __polytracker_store_function_mapping(const func_mapping *func_map,
                                      uint64_t *count) {
@@ -117,6 +119,11 @@ extern "C" void dfs$__polytracker_start(func_mapping const *globals,
                                         bool control_flow_tracking) {
   fprintf(stderr, "WARNING Using instrumented internal start func\n");
 }
+
+extern "C" void dfs$__taint_start() {
+  fprintf(stderr, "WARNING Using instrumented internal start func\n");
+}
+
 extern "C" int dfs$__polytracker_size() {
   fprintf(stderr, "WARNING Using instrumented internal size func\n");
   return __polytracker_size();
