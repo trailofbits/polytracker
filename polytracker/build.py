@@ -170,7 +170,7 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
         "-load-pass-plugin",
         str(POLY_PASS_PATH),
-        "-passes=taint,dfsan",
+        "-passes=taint,dfsan,fn_attr_remove",
         f"-ignore-list={POLY_ABI_LIST_PATH}",
     ]
 
