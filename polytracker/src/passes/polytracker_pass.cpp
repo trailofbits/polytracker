@@ -221,9 +221,6 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   llvm::LLVMContext &context = func->getContext();
   llvm::Instruction *insert_point =
       &(*(func->getEntryBlock().getFirstInsertionPt()));
-
-  llvm::IRBuilder<> IRB(insert_point);
-  IRB.CreateGlobalStringPtr(func->getName());
   // Add a callback for BB entry
   // we do not need to instrument the entry block of a function
   // because we do that above when we add the function instrumentation
@@ -282,12 +279,10 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
     InsertBefore = InsertBefore->getNextNode();
   }
 
-  // FIXME reuse IRB
-  llvm::IRBuilder<> new_IRB(InsertBefore);
+  llvm::IRBuilder<> IRB(InsertBefore);
   llvm::Value *FuncIndex = llvm::ConstantInt::get(
       llvm::IntegerType::getInt32Ty(context), findex, false);
-
-  new_IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
+  IRB.CreateCall(bb_entry_log, {FuncIndex, BBIndex, BBType});
   uint64_t gid = static_cast<uint64_t>(findex) << 32 | bb_index;
   block_global_map[curr_bb] = gid;
   block_type_map[gid] = bb_type;
@@ -312,7 +307,6 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
   llvm::BasicBlock &bb = f->getEntryBlock();
   llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
   llvm::IRBuilder<> IRB(&insert_point);
-  IRB.CreateGlobalStringPtr(f->getName());
   llvm::Value *index_val =
       llvm::ConstantInt::get(shadow_type, func_index, false);
 

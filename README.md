@@ -35,7 +35,7 @@ Angora system, PolyTracker is able to track the entire _provenance_ of a taint.
 In February of 2021, the LLVM DataFlowSanitizer added a new feature for tracking
 taint provenance called [_origin tracking_](https://reviews.llvm.org/D95835).
 However, it is only able to track at most 16 taints at once, while PolyTracker
-can track up to 2³².
+can track up to 2<sup>31</sup>-1.
 
 This README serves as the general usage guide for installing PolyTracker and
 compiling/instrumenting binaries. For programmatically interacting with or
@@ -53,8 +53,9 @@ pip3 install polytracker
 ```
 
 PolyTracker requires a very particular system environment to run, so almost all
-users are likely to run it in a virtualized environment. Luckily, `polytracker`
-makes this easy. All you need to do is have `docker` installed, then run:
+users are likely to run it in a containerized environment. Luckily,
+`polytracker` makes this easy. All you need to do is have `docker` installed,
+then run:
 
 ```
 polytracker docker pull
@@ -130,8 +131,8 @@ Then run `instrument-targets` on any targets of the build:
 $ polytracker instrument-targets a.bin b.so
 ```
 
-Then `a.instrumented.bin` and `b.instrumented.so` will be the instrumented versions. See the
-Dockerfiles in the
+Then `a.instrumented.bin` and `b.instrumented.so` will be the instrumented
+versions. See the Dockerfiles in the
 [examples](https://github.com/trailofbits/polytracker/tree/master/examples)
 directory for examples of how real-world programs can be instrumented.
 
@@ -301,10 +302,7 @@ followed by replicating the install process from the
   use increased label sizes (to allow for tracking orders of magnitude more
   taints), as well as alternative data structures to store them. We have
   investigated up-streaming our changes into LLVM proper, but there has been
-  little interest. The changes are
-  [relatively minor](https://github.com/trailofbits/polytracker-llvm/compare/main...trailofbits:polytracker),
-  so keeping the fork in sync with upstream LLVM should be relatively
-  straightforward.
+  little interest.
 - [**CMake**](https://cmake.org)
 - [**Ninja**](https://ninja-build.org) (`ninja-build` on Ubuntu)
 
