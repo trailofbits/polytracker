@@ -30,4 +30,11 @@ struct TaintTrackingPass : public llvm::PassInfoMixin<TaintTrackingPass>,
   void visitSwitchInst(llvm::SwitchInst &si);
 };
 
+struct FnAttrRemovePass : public llvm::PassInfoMixin<FnAttrRemovePass>,
+                          public llvm::InstVisitor<FnAttrRemovePass> {
+  llvm::PreservedAnalyses run(llvm::Module &mod,
+                              llvm::ModuleAnalysisManager &mam);
+  void visitCallInst(llvm::CallInst &ci);
+};
+
 } // namespace polytracker

@@ -110,15 +110,46 @@ TaintTrackingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
   insertLoggingFunctions(mod);
   auto ignore = readIgnoreLists(ignore_lists);
-  for (auto &func : mod) {
-    if (ignore.count(func.getName().str())) {
+  for (auto &fn : mod) {
+    if (ignore.count(fn.getName().str())) {
       continue;
     }
-    visit(func);
+    visit(fn);
   }
   insertTaintStartupCall(mod);
   return llvm::PreservedAnalyses::none();
 }
+
+void FnAttrRemovePass::visitCallInst(llvm::CallInst &ci) {
+  auto fn = ci.getCalledFunction();
+  if (!fn) {
+    return;
+  }
+  auto fname = fn->getName();
+  if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::InaccessibleMemOnly);
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::InaccessibleMemOrArgMemOnly);
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::ReadOnly);
+  }
+}
+
+llvm::PreservedAnalyses
+FnAttrRemovePass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
+  for (auto &fn : mod) {
+    auto fname = fn.getName();
+    if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
+      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOnly);
+      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOrArgMemOnly);
+      fn.removeFnAttr(llvm::Attribute::ReadOnly);
+    }
+    visit(fn);
+  }
+  return llvm::PreservedAnalyses::none();
+}
+
 } // namespace polytracker
 
 llvm::PassPluginLibraryInfo getTaintTrackingInfo() {
@@ -129,6 +160,10 @@ llvm::PassPluginLibraryInfo getTaintTrackingInfo() {
                    llvm::ArrayRef<llvm::PassBuilder::PipelineElement>) {
                   if (name == "taint") {
                     mpm.addPass(polytracker::TaintTrackingPass());
+                    return true;
+                  }
+                  if (name == "fn_attr_remove") {
+                    mpm.addPass(polytracker::FnAttrRemovePass());
                     return true;
                   }
                   return false;
