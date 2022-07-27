@@ -188,7 +188,7 @@ def _instrument_bitcode(
         cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
 
     cmd.append("-fn_attr_remove")
-    
+
     cmd += [str(input_bitcode), "-o", str(output_bitcode)]
     subprocess.check_call(cmd)
 
