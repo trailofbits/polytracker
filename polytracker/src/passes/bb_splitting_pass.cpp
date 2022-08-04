@@ -5,6 +5,7 @@
  *      Author: Evan Sultanik, Trail of Bits
  */
 
+#include <optional>
 #include <string>
 
 #include "spdlog/spdlog.h"
