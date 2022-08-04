@@ -163,31 +163,34 @@ def _instrument_bitcode(
     DFSAN_ABI_LIST_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "abi_lists" / "dfsan_abilist.txt"
     )
-
+    # load pass plugin and specify a pass pipeline
     cmd = [
         "opt",
         "-load",
         str(POLY_PASS_PATH),
         "-load-pass-plugin",
         str(POLY_PASS_PATH),
-        "-passes=taint,dfsan,fn_attr_remove",
-        f"-ignore-list={POLY_ABI_LIST_PATH}",
+        "-passes=pt-taint,pt-ftrace,dfsan",
     ]
 
     # if no_control_flow_tracking:
     #     cmd.append("-no-control-flow-tracking")
-
+    
+    # ignore lists for `pt-taint`
+    cmd.append(f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",)
     for item in ignore_lists:
-        cmd.append(f"-ignore-list={ABI_PATH}/{item}")
-
+        cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
+    # ignore lists for `pt-ftrace`
+    cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}",)
+    for item in ignore_lists:
+        cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
+    # abi lists for `dfsan`
     cmd.append(f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
-
     for item in ignore_lists:
         cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
-
-    cmd.append("-fn_attr_remove")
-
+    # input and output files
     cmd += [str(input_bitcode), "-o", str(output_bitcode)]
+    # execute `cmd`
     subprocess.check_call(cmd)
 
 

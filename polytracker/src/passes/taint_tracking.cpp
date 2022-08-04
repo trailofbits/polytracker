@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present, Trail of Bits, Inc.
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
  * All rights reserved.
  *
  * This source code is licensed in accordance with the terms specified in
@@ -9,59 +9,18 @@
 #include "polytracker/passes/taint_tracking.h"
 
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/Passes/PassBuilder.h>
-#include <llvm/Passes/PassPlugin.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
-#include <spdlog/spdlog.h>
-
-#include <fstream>
-#include <unordered_set>
-#include <vector>
-
 #include "polytracker/dfsan_types.h"
+#include "polytracker/passes/utils.h"
 
-static llvm::cl::list<std::string>
-    ignore_lists("ignore-lists",
-                 llvm::cl::desc("Files that spacify functions to ignore"));
+static llvm::cl::list<std::string> ignore_lists(
+    "pt-taint-ignore-list",
+    llvm::cl::desc(
+        "File that specifies functions that pt-taint should ignore"));
 
 namespace polytracker {
-
-namespace {
-using str_set_t = std::unordered_set<std::string>;
-using str_vec_t = std::vector<std::string>;
-
-static str_set_t readIgnoreLists(const str_vec_t &paths) {
-  str_set_t result;
-  for (auto &path : paths) {
-    std::ifstream fs(path);
-    if (!fs.is_open()) {
-      spdlog::error("Could not read: {}", path);
-      continue;
-    }
-    // read file line-by-line
-    for (std::string line; std::getline(fs, line);) {
-      llvm::StringRef ref(line);
-      // ignoring comments and empty lines
-      if (ref.startswith("#") || ref == "\n") {
-        continue;
-      }
-      // ignore `main`
-      if (ref.contains("main")) {
-        continue;
-      }
-      // process line with `discard` only
-      if (ref.contains("discard")) {
-        // function name is between ':' and '='
-        result.insert(ref.slice(ref.find(':') + 1, ref.find('=')).str());
-      }
-    }
-  }
-  return result;
-}
-
-} // namespace
 
 void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
                                             llvm::Value *val) {
@@ -120,58 +79,4 @@ TaintTrackingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   return llvm::PreservedAnalyses::none();
 }
 
-void FnAttrRemovePass::visitCallInst(llvm::CallInst &ci) {
-  auto fn = ci.getCalledFunction();
-  if (!fn) {
-    return;
-  }
-  auto fname = fn->getName();
-  if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
-    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::InaccessibleMemOnly);
-    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::InaccessibleMemOrArgMemOnly);
-    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
-                       llvm::Attribute::ReadOnly);
-  }
-}
-
-llvm::PreservedAnalyses
-FnAttrRemovePass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
-  for (auto &fn : mod) {
-    auto fname = fn.getName();
-    if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
-      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOnly);
-      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOrArgMemOnly);
-      fn.removeFnAttr(llvm::Attribute::ReadOnly);
-    }
-    visit(fn);
-  }
-  return llvm::PreservedAnalyses::none();
-}
-
 } // namespace polytracker
-
-llvm::PassPluginLibraryInfo getTaintTrackingInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "TaintTracking", LLVM_VERSION_STRING,
-          [](llvm::PassBuilder &pb) {
-            pb.registerPipelineParsingCallback(
-                [](llvm::StringRef name, llvm::ModulePassManager &mpm,
-                   llvm::ArrayRef<llvm::PassBuilder::PipelineElement>) {
-                  if (name == "taint") {
-                    mpm.addPass(polytracker::TaintTrackingPass());
-                    return true;
-                  }
-                  if (name == "fn_attr_remove") {
-                    mpm.addPass(polytracker::FnAttrRemovePass());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
-}
-
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-  return getTaintTrackingInfo();
-}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-present, Trail of Bits, Inc.
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
  * All rights reserved.
  *
  * This source code is licensed in accordance with the terms specified in
@@ -28,13 +28,6 @@ struct TaintTrackingPass : public llvm::PassInfoMixin<TaintTrackingPass>,
   void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
   void visitSwitchInst(llvm::SwitchInst &si);
-};
-
-struct FnAttrRemovePass : public llvm::PassInfoMixin<FnAttrRemovePass>,
-                          public llvm::InstVisitor<FnAttrRemovePass> {
-  llvm::PreservedAnalyses run(llvm::Module &mod,
-                              llvm::ModuleAnalysisManager &mam);
-  void visitCallInst(llvm::CallInst &ci);
 };
 
 } // namespace polytracker

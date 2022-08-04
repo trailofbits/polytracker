@@ -7,9 +7,19 @@ if(APPLE)
       "${CMAKE_CXX_LINK_FLAGS} -Wl,-flat_namespace -Wl,-undefined,suppress")
 endif(APPLE)
 
-add_library(PolytrackerPass SHARED taint_tracking.cpp polytracker_pass.cpp bb_splitting_pass.cpp)
+add_library(
+  PolytrackerPass SHARED
+  taint_tracking.cpp
+  remove_fn_attr.cpp
+  function_tracing.cpp
+  polytracker_pass.cpp
+  bb_splitting_pass.cpp
+  utils.cpp
+  pass_plugin.cpp)
+
 target_link_libraries(
   PolytrackerPass
   PUBLIC LLVMPassConfig
   PRIVATE indicators spdlog::spdlog_header_only)
+
 install(TARGETS PolytrackerPass DESTINATION ${POLYTRACK_PASS_DIR})
