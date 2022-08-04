@@ -49,7 +49,7 @@ set(TAINTDAG_SOURCES
 
 add_library(Polytracker STATIC ${POLY_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
-target_link_libraries(Polytracker LLVMPassConfig)
+target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only)
 install(TARGETS Polytracker DESTINATION ${POLYTRACK_LIB_DIR})
 
 add_subdirectory(taintdag/test)

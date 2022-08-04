@@ -7,6 +7,6 @@ include(CTest)
 include(Catch)
 
 add_executable(tests main.cpp taintdag.cpp output.cpp encoding.cpp fdmapping.cpp union.cpp labeldeq.cpp)
-target_link_libraries(tests PRIVATE Polytracker Catch2::Catch2)
+target_link_libraries(tests PRIVATE Polytracker Catch2::Catch2 spdlog::spdlog_header_only)
 
 catch_discover_tests(tests)
