@@ -16,7 +16,6 @@ set_target_properties(
 )
 
 add_subdirectory(passes)
-add_subdirectory(taintdag)
 
 set(POLY_DIR "polytracker")
 set(TAINT_DIR "taint_sources")
@@ -43,10 +42,14 @@ set(POLY_SOURCES ${POLY_DIR}/main.cpp ${POLY_DIR}/polytracker.cpp)
 set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
                   ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp)
 
-set(TAINTDAG_SOURCES ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/fdmapping.cpp
-                     ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp)
+set(TAINTDAG_SOURCES
+    ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/fdmapping.cpp
+    ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp
+    ${TAINTDAG_DIR}/print.cpp)
 
 add_library(Polytracker STATIC ${POLY_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
 target_link_libraries(Polytracker LLVMPassConfig)
 install(TARGETS Polytracker DESTINATION ${POLYTRACK_LIB_DIR})
+
+add_subdirectory(taintdag/test)
