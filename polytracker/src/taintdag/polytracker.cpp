@@ -1,4 +1,13 @@
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
 #include "taintdag/polytracker.h"
+#include "taintdag/fnmapping.h"
 #include <sanitizer/dfsan_interface.h>
 
 #include <sys/stat.h>
@@ -27,6 +36,7 @@ bool reuse_prealloc_labels() {
 
 PolyTracker::PolyTracker(std::filesystem::path const &outputfile)
     : of_{outputfile}, fdm_{of_.fd_mapping_begin(), of_.fd_mapping_end()},
+      fnm_{of_.fn_mapping_begin(), of_.fn_mapping_end()},
       tdag_{of_.tdag_mapping_begin(), of_.tdag_mapping_end()},
       sinklog_{of_.sink_mapping_begin(), of_.sink_mapping_end()} {}
 
@@ -162,5 +172,13 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
 void PolyTracker::affects_control_flow(label_t lbl) {
   tdag_.affects_control_flow(lbl);
 }
+
+FnMapping::index_t PolyTracker::function_entry(std::string_view name) {
+  auto maybe_index{fnm_.add_mapping(name)};
+  assert(maybe_index.has_value());
+  return *maybe_index;
+}
+
+void PolyTracker::function_exit(FnMapping::index_t index) { (void)index; }
 
 } // namespace taintdag

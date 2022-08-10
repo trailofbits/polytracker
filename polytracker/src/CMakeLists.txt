@@ -28,7 +28,7 @@ if(XRAY_ON)
   )
 else()
   set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -std=c++14 -fno-exceptions -fno-rtti -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
+      "${CMAKE_CXX_FLAGS} -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -fno-exceptions -fno-rtti -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g -O3")
   message(STATUS "Cmake flags: " ${CMAKE_CXX_FLAGS})
@@ -45,7 +45,7 @@ set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
 set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/fdmapping.cpp
     ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp
-    ${TAINTDAG_DIR}/print.cpp)
+    ${TAINTDAG_DIR}/print.cpp ${TAINTDAG_DIR}/fnmapping.cpp)
 
 add_library(Polytracker STATIC ${POLY_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})

@@ -61,8 +61,7 @@ void OutputFile::init_filehdr() {
   fh->sink_mapping_size = 0;
 }
 
-std::pair<char *, char *> OutputFile::offset_mapping(size_t offset,
-                                                     size_t length) {
+OutputFile::mapping_t OutputFile::offset_mapping(size_t offset, size_t length) {
   auto m = reinterpret_cast<char *>(mapping_);
   auto begin = m + offset;
   auto end = begin + length;
@@ -75,7 +74,18 @@ char *OutputFile::fd_mapping_begin() {
 char *OutputFile::fd_mapping_end() {
   return fd_mapping_begin() + fd_mapping_size;
 }
-std::pair<char *, char *> OutputFile::fd_mapping() {
+OutputFile::mapping_t OutputFile::fd_mapping() {
+  return {fd_mapping_begin(), fd_mapping_end()};
+}
+
+char *OutputFile::fn_mapping_begin() {
+  return reinterpret_cast<char *>(mapping_) + fn_mapping_offset;
+}
+char *OutputFile::fn_mapping_end() {
+  return fd_mapping_begin() + fn_mapping_size;
+}
+
+OutputFile::mapping_t OutputFile::fn_mapping() {
   return {fd_mapping_begin(), fd_mapping_end()};
 }
 
@@ -85,7 +95,7 @@ char *OutputFile::tdag_mapping_begin() {
 char *OutputFile::tdag_mapping_end() {
   return tdag_mapping_begin() + tdag_mapping_size;
 }
-std::pair<char *, char *> OutputFile::tdag_mapping() {
+OutputFile::mapping_t OutputFile::tdag_mapping() {
   return {tdag_mapping_begin(), tdag_mapping_end()};
 }
 
@@ -95,7 +105,7 @@ char *OutputFile::sink_mapping_begin() {
 char *OutputFile::sink_mapping_end() {
   return sink_mapping_begin() + sink_mapping_size;
 }
-std::pair<char *, char *> OutputFile::sink_mapping() {
+OutputFile::mapping_t OutputFile::sink_mapping() {
   return {sink_mapping_begin(), sink_mapping_end()};
 }
 
