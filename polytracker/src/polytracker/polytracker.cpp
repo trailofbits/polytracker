@@ -1,5 +1,6 @@
 #include "polytracker/polytracker.h"
 #include "polytracker/early_construct.h"
+#include "taintdag/fnmapping.h"
 #include "taintdag/polytracker.h"
 #include <atomic>
 #include <inttypes.h>
@@ -33,7 +34,12 @@ extern "C" void __dfsw___polytracker_log_taint_cmp(
     dfsan_label arg1_label, dfsan_label arg2_label, dfsan_label ignore_label1,
     dfsan_label ignore_label2) {}
 
-extern "C" int __polytracker_log_func_entry(uint32_t index) { return 0; }
+// extern "C" int __polytracker_log_func_entry(uint32_t index) { return 0; }
+
+extern "C" taintdag::FnMapping::index_t
+__polytracker_log_func_entry(char *name) {
+  return get_polytracker_tdag().function_entry(name);
+}
 
 extern "C" void __polytracker_log_func_exit(uint32_t func_index,
                                             uint32_t block_index,

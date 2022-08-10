@@ -22,17 +22,21 @@ static llvm::cl::list<std::string> ignore_lists(
 namespace polytracker {
 void FunctionTracingPass::insertLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
-  // trace_start_fn = mod.getOrInsertFunction("__polytracker_log_func_entry", );
+  func_entry_log_fn = mod.getOrInsertFunction(
+      "__polytracker_log_func_entry", ir.getInt16Ty(), ir.getInt8PtrTy());
 }
 
 llvm::PreservedAnalyses
 FunctionTracingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   insertLoggingFunctions(mod);
-  auto ignore = readIgnoreLists(ignore_lists);
+  auto ignore{readIgnoreLists(ignore_lists)};
   for (auto &fn : mod) {
-    if (ignore.count(fn.getName().str())) {
+    auto fname{fn.getName()};
+    if (fn.isDeclaration() || ignore.count(fname.str())) {
       continue;
     }
+    llvm::IRBuilder<> ir(&*fn.getEntryBlock().begin());
+    ir.CreateCall(func_entry_log_fn, ir.CreateGlobalStringPtr(fname));
     // visit(fn);
   }
   return llvm::PreservedAnalyses::none();
