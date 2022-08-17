@@ -11,11 +11,11 @@
 namespace polytracker {
 
 void RemoveFnAttrsPass::visitCallInst(llvm::CallInst &ci) {
-  auto fn = ci.getCalledFunction();
+  auto fn{ci.getCalledFunction()};
   if (!fn) {
     return;
   }
-  auto fname = fn->getName();
+  auto fname{fn->getName()};
   if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
     ci.removeAttribute(llvm::AttributeList::FunctionIndex,
                        llvm::Attribute::InaccessibleMemOnly);
@@ -29,7 +29,7 @@ void RemoveFnAttrsPass::visitCallInst(llvm::CallInst &ci) {
 llvm::PreservedAnalyses
 RemoveFnAttrsPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   for (auto &fn : mod) {
-    auto fname = fn.getName();
+    auto fname{fn.getName()};
     if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
       fn.removeFnAttr(llvm::Attribute::InaccessibleMemOnly);
       fn.removeFnAttr(llvm::Attribute::InaccessibleMemOrArgMemOnly);

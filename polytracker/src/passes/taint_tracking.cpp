@@ -25,15 +25,15 @@ namespace polytracker {
 void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
                                             llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
-  auto dummy_val = val;
+  auto dummy_val{val};
   if (inst.getType()->isVectorTy()) {
-    dummy_val = ir.CreateExtractElement(val, uint64_t(0u));
+    dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
   ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
 void TaintTrackingPass::insertTaintStartupCall(llvm::Module &mod) {
-  auto func = llvm::cast<llvm::Function>(taint_start_fn.getCallee());
+  auto func{llvm::cast<llvm::Function>(taint_start_fn.getCallee())};
   llvm::appendToGlobalCtors(mod, func, 0);
 }
 
@@ -68,7 +68,7 @@ llvm::PreservedAnalyses
 TaintTrackingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
   insertLoggingFunctions(mod);
-  auto ignore = readIgnoreLists(ignore_lists);
+  auto ignore{readIgnoreLists(ignore_lists)};
   for (auto &fn : mod) {
     if (ignore.count(fn.getName().str())) {
       continue;
