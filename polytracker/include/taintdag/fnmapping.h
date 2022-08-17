@@ -15,6 +15,7 @@
 #include <unordered_map>
 
 namespace taintdag {
+
 class FnMapping {
 public:
   using offset_t = uint32_t;
@@ -29,6 +30,7 @@ public:
 
   FnMapping(char *begin, char *end);
   std::optional<index_t> add_mapping(std::string_view name);
+  size_t get_mapping_count();
 
 private:
   // Map markers
@@ -36,12 +38,13 @@ private:
   char *map_end{nullptr};
   char *headers_end{nullptr};
   char *names_begin{nullptr};
-  // Write mutex
-  std::mutex write_m;
+  // Map mutex
+  std::mutex map_m;
   // Helpers
   std::optional<offset_t> write_name(std::string_view name);
   std::optional<offset_t> write_header(header_t header);
   // Cache
   std::unordered_map<std::string_view, index_t> mappings;
 };
+
 } // namespace taintdag

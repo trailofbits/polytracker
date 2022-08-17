@@ -59,6 +59,8 @@ void OutputFile::init_filehdr() {
   fh->tdag_mapping_size = 0;
   fh->sink_mapping_offset = sink_mapping_offset;
   fh->sink_mapping_size = 0;
+  fh->fn_mapping_offset = fn_mapping_offset;
+  fh->fn_mapping_count = 0;
 }
 
 OutputFile::mapping_t OutputFile::offset_mapping(size_t offset, size_t length) {
@@ -82,11 +84,11 @@ char *OutputFile::fn_mapping_begin() {
   return reinterpret_cast<char *>(mapping_) + fn_mapping_offset;
 }
 char *OutputFile::fn_mapping_end() {
-  return fd_mapping_begin() + fn_mapping_size;
+  return fn_mapping_begin() + fn_mapping_size;
 }
 
 OutputFile::mapping_t OutputFile::fn_mapping() {
-  return {fd_mapping_begin(), fd_mapping_end()};
+  return {fn_mapping_begin(), fn_mapping_end()};
 }
 
 char *OutputFile::tdag_mapping_begin() {
@@ -119,6 +121,10 @@ void OutputFile::fileheader_tdag_size(size_t tdag_size) {
 
 void OutputFile::fileheader_sink_size(size_t sink_size) {
   reinterpret_cast<FileHdr *>(mapping_)->sink_mapping_size = sink_size;
+}
+
+void OutputFile::fileheader_fn_count(size_t fn_count) {
+  reinterpret_cast<FileHdr *>(mapping_)->fn_mapping_count = fn_count;
 }
 
 } // namespace taintdag

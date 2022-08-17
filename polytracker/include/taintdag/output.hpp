@@ -25,7 +25,7 @@ struct FileHdr {
   uint64_t sink_mapping_offset;
   uint64_t sink_mapping_size;
   uint64_t fn_mapping_offset;
-  uint64_t fn_mapping_size;
+  uint64_t fn_mapping_count;
 };
 
 // Mapping sizes - correspond to output file region (max) sizes
@@ -88,6 +88,7 @@ public:
   void fileheader_fd_count(size_t fd_count);
   void fileheader_tdag_size(size_t tdag_size);
   void fileheader_sink_size(size_t tdag_size);
+  void fileheader_fn_count(size_t fn_count);
 
 private:
   void init_filehdr();

@@ -44,6 +44,7 @@ PolyTracker::~PolyTracker() {
   of_.fileheader_fd_count(fdm_.get_mapping_count());
   of_.fileheader_tdag_size(tdag_.label_count() * sizeof(storage_t));
   of_.fileheader_sink_size(sinklog_.size());
+  of_.fileheader_fn_count(fnm_.get_mapping_count());
 }
 
 label_t PolyTracker::union_labels(label_t l1, label_t l2) {
