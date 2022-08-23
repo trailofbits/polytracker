@@ -20,10 +20,18 @@ static llvm::cl::list<std::string> ignore_lists(
         "File that specifies functions that pt-ftrace should ignore"));
 
 namespace polytracker {
+
 void FunctionTracingPass::insertLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   func_entry_log_fn = mod.getOrInsertFunction(
       "__polytracker_log_func_entry", ir.getInt16Ty(), ir.getInt8PtrTy());
+  func_exit_log_fn = mod.getOrInsertFunction("__polytracker_log_func_exit",
+                                             ir.getVoidTy(), ir.getInt16Ty());
+}
+
+void FunctionTracingPass::visitReturnInst(llvm::ReturnInst &ri) {
+  llvm::IRBuilder<> ir(&ri);
+  ir.CreateCall(func_exit_log_fn, log_entry_calls[ri.getFunction()]);
 }
 
 llvm::PreservedAnalyses
@@ -36,8 +44,9 @@ FunctionTracingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
       continue;
     }
     llvm::IRBuilder<> ir(&*fn.getEntryBlock().begin());
-    ir.CreateCall(func_entry_log_fn, ir.CreateGlobalStringPtr(fname));
-    // visit(fn);
+    auto fname_ptr{ir.CreateGlobalStringPtr(fname)};
+    log_entry_calls[&fn] = ir.CreateCall(func_entry_log_fn, fname_ptr);
+    visit(fn);
   }
   return llvm::PreservedAnalyses::none();
 }

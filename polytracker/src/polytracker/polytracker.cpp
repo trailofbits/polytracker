@@ -41,9 +41,13 @@ __polytracker_log_func_entry(char *name) {
   return get_polytracker_tdag().function_entry(name);
 }
 
-extern "C" void __polytracker_log_func_exit(uint32_t func_index,
-                                            uint32_t block_index,
-                                            const int stack_loc) {}
+// extern "C" void __polytracker_log_func_exit(uint32_t func_index,
+//                                             uint32_t block_index,
+//                                             const int stack_loc) {}
+
+extern "C" void __polytracker_log_func_exit(uint16_t func_index) {
+  get_polytracker_tdag().function_exit(func_index);
+}
 
 extern "C" void __polytracker_log_call_exit(uint32_t func_index,
                                             uint32_t block_index,

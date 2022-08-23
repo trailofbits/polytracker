@@ -14,6 +14,7 @@
 
 #include "taintdag/fdmapping.hpp"
 #include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 #include "taintdag/taint.hpp"
 #include "taintdag/taint_sink_log.hpp"
 #include "taintdag/taintdag.hpp"
@@ -60,6 +61,7 @@ private:
   OutputFile of_;
   FDMapping fdm_;
   FnMapping fnm_;
+  FnTrace fnt_;
   TaintDAG tdag_;
   TaintSinkLog sinklog_;
 };

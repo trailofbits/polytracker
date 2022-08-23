@@ -40,6 +40,8 @@ class TDHeader(Structure):
         ("sink_mapping_size", c_uint64),
         ("fn_mapping_offset", c_uint64),
         ("fn_mapping_count", c_uint64),
+        ("fn_trace_offset", c_uint64),
+        ("fn_trace_count", c_uint64)
     ]
 
     def __repr__(self) -> str:
@@ -48,6 +50,7 @@ class TDHeader(Structure):
             f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
             f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
             f"fnmapping_offset: {self.fn_mapping_offset}\n\tfnmapping_count: {self.fn_mapping_count}\n\t"
+            f"fntrace_offset: {self.fn_trace_offset}\n\tfntrace_count: {self.fn_trace_count}\n\t"
         )
 
 

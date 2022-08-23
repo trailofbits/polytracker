@@ -39,7 +39,7 @@ private:
   char *headers_end{nullptr};
   char *names_begin{nullptr};
   // Map mutex
-  std::mutex map_m;
+  std::mutex memory_m;
   // Helpers
   std::optional<offset_t> write_name(std::string_view name);
   std::optional<offset_t> write_header(header_t header);

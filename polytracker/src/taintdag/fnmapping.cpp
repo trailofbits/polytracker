@@ -55,7 +55,7 @@ std::optional<offset_t> FnMapping::write_header(header_t header) {
 
 std::optional<index_t> FnMapping::add_mapping(std::string_view name) {
   // Lock
-  std::unique_lock write_lock{map_m};
+  std::unique_lock write_lock{memory_m};
   // Existing mapping
   if (auto it{mappings.find(name)}; it != mappings.end()) {
     return it->second;
@@ -76,7 +76,7 @@ std::optional<index_t> FnMapping::add_mapping(std::string_view name) {
 }
 
 size_t FnMapping::get_mapping_count() {
-  std::unique_lock read_lock{map_m};
+  std::unique_lock read_lock{memory_m};
   return mappings.size();
 }
 } // namespace taintdag

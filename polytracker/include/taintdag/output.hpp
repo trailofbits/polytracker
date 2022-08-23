@@ -6,6 +6,7 @@
 #include <limits>
 
 #include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 #include "taintdag/taint.hpp"
 
 namespace taintdag {
@@ -26,6 +27,8 @@ struct FileHdr {
   uint64_t sink_mapping_size;
   uint64_t fn_mapping_offset;
   uint64_t fn_mapping_count;
+  uint64_t fn_trace_offset;
+  uint64_t fn_trace_count;
 };
 
 // Mapping sizes - correspond to output file region (max) sizes
@@ -37,13 +40,15 @@ const size_t sink_mapping_size =
                        // doesn't necessarily have to be fixed..
 const size_t fn_mapping_size = sizeof(FnMapping::header_t) *
                                std::numeric_limits<FnMapping::index_t>::max();
-
+const size_t fn_trace_size =
+    sizeof(FnTrace::event_t) * std::numeric_limits<FnTrace::event_id_t>::max();
 // Mapping offsets - corresponds to output file offsets for regions (seek
 // offsets)
 const size_t fd_mapping_offset = sizeof(FileHdr);
 const size_t tdag_mapping_offset = fd_mapping_offset + fd_mapping_size;
 const size_t sink_mapping_offset = tdag_mapping_offset + tdag_mapping_size;
 const size_t fn_mapping_offset = sink_mapping_offset + sink_mapping_size;
+const size_t fn_trace_offset = fn_mapping_offset + fn_mapping_size;
 
 // Total mapping size
 const size_t mapping_size = fn_mapping_offset + fn_mapping_size;
@@ -74,6 +79,11 @@ public:
   char *fn_mapping_begin();
   char *fn_mapping_end();
 
+  // This mapping is allowed memory to use for function to index mapping
+  mapping_t fn_trace();
+  char *fn_trace_begin();
+  char *fn_trace_end();
+
   // This mapping is suitable for storing the TDAG
   mapping_t tdag_mapping();
   char *tdag_mapping_begin();
@@ -89,6 +99,7 @@ public:
   void fileheader_tdag_size(size_t tdag_size);
   void fileheader_sink_size(size_t tdag_size);
   void fileheader_fn_count(size_t fn_count);
+  void fileheader_trace_count(size_t event_count);
 
 private:
   void init_filehdr();
