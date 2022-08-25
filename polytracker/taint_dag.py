@@ -12,7 +12,7 @@ from typing import (
 )
 from pathlib import Path
 from mmap import mmap, PROT_READ
-from ctypes import Structure, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from ctypes import Structure, c_int64, c_uint64, c_int32, c_uint32, c_uint8, sizeof
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -102,7 +102,7 @@ class TDUnionNode(TDNode):
 
 class TDSink(Structure):
     _pack_ = 1
-    _fields_ = [("fdidx", c_uint8), ("offset", c_uint64), ("label", c_uint32)]
+    _fields_ = [("fdidx", c_uint8), ("offset", c_int64), ("label", c_uint32)]
 
     def __repr__(self) -> str:
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
