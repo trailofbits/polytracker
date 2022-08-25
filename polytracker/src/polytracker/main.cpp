@@ -71,6 +71,8 @@ void polytracker_get_settings() {
 }
 
 void polytracker_end() {
+  get_polytracker_tdag().close_file(fileno(stdout));
+  get_polytracker_tdag().close_file(fileno(stderr));
   // Explicitly destroy the PolyTracker instance to flush mapping to disk
   get_polytracker_tdag().~PolyTracker();
 }
@@ -95,6 +97,9 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
     printf("Program compiled without PolyTracker control flow tracking "
            "instrumentation.\n");
   }
+
+  get_polytracker_tdag().open_file(fileno(stdout), "/dev/stdout");
+  get_polytracker_tdag().open_file(fileno(stderr), "/dev/stderr");
 
   // Set up the atexit call
   atexit(polytracker_end);

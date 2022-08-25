@@ -27,9 +27,9 @@ EXT_C_FUNC ssize_t __dfsw_write(int fd, void *buf, size_t count,
                                 dfsan_label *ret_label) {
   auto current_offset = lseek(fd, 0, SEEK_CUR);
   auto write_count = write(fd, buf, count);
-  if (write_count > 0)
+  if (write_count > 0) {
     get_polytracker_tdag().taint_sink(fd, current_offset, buf, write_count);
-
+  }
   *ret_label = 0;
   return write_count;
 }
@@ -42,9 +42,10 @@ EXT_C_FUNC size_t __dfsw_fwrite(void *buf, size_t size, size_t count,
   auto current_offset = ftell(stream);
   auto write_count = fwrite(buf, size, count, stream);
   auto fd = fileno(stream);
-  if (write_count > 0)
+  if (write_count > 0) {
     get_polytracker_tdag().taint_sink(fd, current_offset, buf,
                                       write_count * size);
+  }
   *ret_label = 0;
   return write_count;
 }
