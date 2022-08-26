@@ -1,0 +1,20 @@
+name: Add Issues and PRs to project
+
+on:
+  issues:
+    types:
+      - opened
+  pull_request:
+    types:
+      - opened
+      
+
+jobs:
+  add-to-project:
+    name: Add to project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v0.3.0
+        with:
+          project-url: https://github.com/orgs/trailofbits/projects/12
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
