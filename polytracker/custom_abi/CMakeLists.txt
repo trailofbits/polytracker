@@ -1,1 +1,10 @@
-# All of the files in this directory are automatically installed into ${POLYTRACK_RULE_DIR} by ../CMakeLists.txt
+install(
+  FILES dfsan_abilist.txt
+        polytracker_abilist.txt
+        fontconfig
+        freetype
+        gmp
+        libz
+        ssl
+        xml2
+  DESTINATION ${POLYTRACK_RULE_DIR})
