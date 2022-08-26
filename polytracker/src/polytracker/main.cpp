@@ -88,8 +88,10 @@ void polytracker_end() {
 
 void polytracker_print_settings() {
   printf("POLYDB: %s\n", get_polytracker_db_name().c_str());
-  printf("POLYTRACKER_STDOUT_SINK: %s\n", get_polytracker_stdout_sink().c_str());
-  printf("POLYTRACKER_STDERR_SINK: %s\n", get_polytracker_stderr_sink().c_str());
+  printf("POLYTRACKER_STDOUT_SINK: %s\n",
+         get_polytracker_stdout_sink().c_str());
+  printf("POLYTRACKER_STDERR_SINK: %s\n",
+         get_polytracker_stderr_sink().c_str());
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
