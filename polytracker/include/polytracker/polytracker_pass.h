@@ -67,6 +67,14 @@ struct PolytrackerPass : public llvm::ModulePass,
   std::unordered_map<std::string, bool> ignore_funcs;
 };
 
+struct FnAttrRemovePass : public llvm::ModulePass,
+                          public llvm::InstVisitor<FnAttrRemovePass> {
+  static char ID;
+  FnAttrRemovePass() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &module) override;
+  void visitCallInst(llvm::CallInst &ci);
+};
+
 }; // namespace polytracker
 
 #endif /* POLYTRACKER_INCLUDE_POLYTRACKER_PASS_H_ */
