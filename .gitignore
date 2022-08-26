@@ -2,6 +2,7 @@
 *~
 .cmake_init
 .venv
+.cache
 __pycache__
 .mypy_cache
 .dmypy.json
