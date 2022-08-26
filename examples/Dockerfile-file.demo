@@ -13,8 +13,8 @@ ENV POLYPATH=/PLACEHOLDER
 WORKDIR file
 RUN autoreconf -f -i
 RUN ./configure --prefix=/polytracker/the_klondike/bin/ --disable-shared
-RUN polybuild_script -- make -j4 install
+RUN polytracker build make -j$((`nproc`+1)) install
 
 WORKDIR /polytracker/the_klondike/bin/bin
-RUN get-bc file
-RUN polybuild_script --lower-bitcode -i file.bc -o file_track --libs z --lists libz
+RUN polytracker instrument-targets file --ignore-lists libz
+RUN mv file.instrumented file_track
