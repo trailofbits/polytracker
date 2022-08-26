@@ -1,6 +1,6 @@
 name: Integration Tests
 
-on: pull_request
+on: [pull_request, workflow_dispatch]
 
 jobs:
   # TODO: Consider building the base image as a separate job and caching the result
