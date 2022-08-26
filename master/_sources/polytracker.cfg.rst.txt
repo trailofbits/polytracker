@@ -15,24 +15,6 @@ CFG
    :inherited-members:
    :show-inheritance:
 
-DAG
-***
-
-.. autoclass:: DAG
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-DiGraph
-*******
-
-.. autoclass:: DiGraph
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 FunctionInfo
 ************
 
@@ -41,11 +23,3 @@ FunctionInfo
    :undoc-members:
    :inherited-members:
    :show-inheritance:
-
-cfg functions
--------------
-
-non_disjoint_union_all
-**********************
-
-.. autofunction:: non_disjoint_union_all

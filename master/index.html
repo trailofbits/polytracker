@@ -5,11 +5,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>PolyTracker Documentation &mdash; PolyTracker 3.1.0 documentation</title>
+  <title>PolyTracker Documentation &mdash; PolyTracker 4.0.0 documentation</title>
   
 
   
@@ -27,6 +27,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -63,7 +64,7 @@
           
 
           
-<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
+<a href="https://github.com/trailofbits/polytracker"><div class="version">4.0.0</div></a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -150,7 +151,7 @@
            <div itemprop="articleBody">
             
   <section id="polytracker-documentation">
-<h1>PolyTracker Documentation<a class="headerlink" href="#polytracker-documentation" title="Permalink to this headline">¶</a></h1>
+<h1>PolyTracker Documentation<a class="headerlink" href="#polytracker-documentation" title="Permalink to this heading">¶</a></h1>
 <p>PolyTracker is a tool originally created for the Automated Lexical Annotation and Navigation of Parsers, a backronym
 devised solely for the purpose of referring to it as The ALAN Parsers Project. However, it has evolved into a general
 purpose tool for efficiently performing data-flow and control-flow analysis of programs. PolyTracker is an LLVM pass
@@ -173,13 +174,12 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 </li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.build.html">polytracker.build</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.build.html#build-classes">build classes</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#polybuild">PolyBuild</a></li>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#polyinst">PolyInst</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="polytracker.build.html#build-functions">build functions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#main">main</a></li>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#main-plus-plus">main_plus_plus</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#build">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#extractbitcode">ExtractBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#instrumentbitcode">InstrumentBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#instrumenttargets">InstrumentTargets</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#lowerbitcode">LowerBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.build.html#optimizebitcode">OptimizeBitcode</a></li>
 </ul>
 </li>
 </ul>
@@ -200,13 +200,7 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 <li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#cfg-classes">cfg classes</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="polytracker.cfg.html#cfg">CFG</a></li>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.cfg.html#dag">DAG</a></li>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.cfg.html#digraph">DiGraph</a></li>
 <li class="toctree-l4"><a class="reference internal" href="polytracker.cfg.html#functioninfo">FunctionInfo</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="polytracker.cfg.html#cfg-functions">cfg functions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.cfg.html#non-disjoint-union-all">non_disjoint_union_all</a></li>
 </ul>
 </li>
 </ul>
@@ -329,6 +323,18 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.graphs.html">polytracker.graphs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.graphs.html#graphs-classes">graphs classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.graphs.html#dag">DAG</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.graphs.html#digraph">DiGraph</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.graphs.html#graphs-functions">graphs functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.graphs.html#non-disjoint-union-all">non_disjoint_union_all</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.inputs.html#inputs-classes">inputs classes</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="polytracker.inputs.html#input">Input</a></li>
@@ -345,7 +351,7 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.mapping.html#mapping-functions">mapping functions</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="polytracker.mapping.html#bytes-to-ascii">bytes_to_ascii</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.mapping.html#ascii">ascii</a></li>
 </ul>
 </li>
 </ul>
@@ -400,8 +406,28 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 </li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_dag.html">polytracker.taint_dag</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polytracker.taint_dag.html#taint-dag-classes">taint_dag classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdfdheader">TDFDHeader</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdfile">TDFile</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdheader">TDHeader</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdinfo">TDInfo</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdnode">TDNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdprogramtrace">TDProgramTrace</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdrangenode">TDRangeNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdsink">TDSink</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdsourcenode">TDSourceNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdtaintforest">TDTaintForest</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdtaintforestnode">TDTaintForestNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdtaintoutput">TDTaintOutput</a></li>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_dag.html#tdunionnode">TDUnionNode</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="polytracker.taint_forest.html#taint-forest-classes">taint_forest classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="polytracker.taint_forest.html#exporttaintforest">ExportTaintForest</a></li>
 <li class="toctree-l4"><a class="reference internal" href="polytracker.taint_forest.html#taintforest">TaintForest</a></li>
 <li class="toctree-l4"><a class="reference internal" href="polytracker.taint_forest.html#taintforestnode">TaintForestNode</a></li>
 </ul>
@@ -456,7 +482,7 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
 </div>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -513,7 +539,7 @@ on the <a class="reference external" href="https://github.com/trailofbits/polytr
     <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
       <span class="rst-current-version" data-toggle="rst-current-version">
         <span class="fa fa-book"> PolyTracker Documentation</span>
-        3.1.0
+        4.0.0
         <span class="fa fa-caret-down"></span>
       </span>
       <div class="rst-other-versions">

@@ -6,33 +6,56 @@ polytracker.build
 build classes
 -------------
 
-PolyBuild
-*********
+Build
+*****
 
-.. autoclass:: PolyBuild
+.. autoclass:: Build
    :members:
    :undoc-members:
    :inherited-members:
    :show-inheritance:
 
-PolyInst
-********
-
-.. autoclass:: PolyInst
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-build functions
----------------
-
-main
-****
-
-.. autofunction:: main
-
-main_plus_plus
+ExtractBitcode
 **************
 
-.. autofunction:: main_plus_plus
+.. autoclass:: ExtractBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+InstrumentBitcode
+*****************
+
+.. autoclass:: InstrumentBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+InstrumentTargets
+*****************
+
+.. autoclass:: InstrumentTargets
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+LowerBitcode
+************
+
+.. autoclass:: LowerBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+OptimizeBitcode
+***************
+
+.. autoclass:: OptimizeBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

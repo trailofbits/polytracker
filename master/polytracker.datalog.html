@@ -5,11 +5,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>polytracker.datalog &mdash; PolyTracker 3.1.0 documentation</title>
+  <title>polytracker.datalog &mdash; PolyTracker 4.0.0 documentation</title>
   
 
   
@@ -27,6 +27,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -64,7 +65,7 @@
           
 
           
-<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
+<a href="https://github.com/trailofbits/polytracker"><div class="version">4.0.0</div></a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -116,11 +117,13 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.graphs.html">polytracker.graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.mapping.html">polytracker.mapping</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_dag.html">polytracker.taint_dag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
@@ -193,18 +196,18 @@
            <div itemprop="articleBody">
             
   <section id="module-polytracker.datalog">
-<span id="polytracker-datalog"></span><h1>polytracker.datalog<a class="headerlink" href="#module-polytracker.datalog" title="Permalink to this headline">¶</a></h1>
+<span id="polytracker-datalog"></span><h1>polytracker.datalog<a class="headerlink" href="#module-polytracker.datalog" title="Permalink to this heading">¶</a></h1>
 <section id="datalog-classes">
-<h2>datalog classes<a class="headerlink" href="#datalog-classes" title="Permalink to this headline">¶</a></h2>
+<h2>datalog classes<a class="headerlink" href="#datalog-classes" title="Permalink to this heading">¶</a></h2>
 <section id="datalogclause">
-<h3>DatalogClause<a class="headerlink" href="#datalogclause" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogClause<a class="headerlink" href="#datalogclause" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogClause">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogClause</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">head</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRule" title="polytracker.datalog.DatalogRule"><span class="pre">polytracker.datalog.DatalogRule</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRuleList" title="polytracker.datalog.DatalogRuleList"><span class="pre">polytracker.datalog.DatalogRuleList</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogClause" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogClause</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">head</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRule" title="polytracker.datalog.DatalogRule"><span class="pre">DatalogRule</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRuleList" title="polytracker.datalog.DatalogRuleList"><span class="pre">DatalogRuleList</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogClause" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogClause.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">head</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRule" title="polytracker.datalog.DatalogRule"><span class="pre">polytracker.datalog.DatalogRule</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRuleList" title="polytracker.datalog.DatalogRuleList"><span class="pre">polytracker.datalog.DatalogRuleList</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogClause.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">head</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRule" title="polytracker.datalog.DatalogRule"><span class="pre">DatalogRule</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">body</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#polytracker.datalog.DatalogRuleList" title="polytracker.datalog.DatalogRuleList"><span class="pre">DatalogRuleList</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogClause.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -216,7 +219,7 @@
 
 </section>
 <section id="datalogfact">
-<h3>DatalogFact<a class="headerlink" href="#datalogfact" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogFact<a class="headerlink" href="#datalogfact" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogFact">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogFact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_pos</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogFact" title="Permalink to this definition">¶</a></dt>
@@ -237,7 +240,7 @@ GEN_ByteVal(0, 1) for the byte at location 0 in the file</p>
 
 </section>
 <section id="datalogfactdecl">
-<h3>DatalogFactDecl<a class="headerlink" href="#datalogfactdecl" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogFactDecl<a class="headerlink" href="#datalogfactdecl" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogFactDecl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogFactDecl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">byte</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogFactDecl" title="Permalink to this definition">¶</a></dt>
@@ -259,10 +262,10 @@ y –&gt; end location</p>
 
 </section>
 <section id="dataloggrammar">
-<h3>DatalogGrammar<a class="headerlink" href="#dataloggrammar" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogGrammar<a class="headerlink" href="#dataloggrammar" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogGrammar">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogGrammar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">polytracker.tracing.ProgramTrace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogGrammar" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogGrammar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">ProgramTrace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogGrammar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogGrammar.RULE_START">
@@ -271,7 +274,7 @@ y –&gt; end location</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogGrammar.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">polytracker.tracing.ProgramTrace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogGrammar.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.ProgramTrace" title="polytracker.tracing.ProgramTrace"><span class="pre">ProgramTrace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogGrammar.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -288,7 +291,7 @@ y –&gt; end location</p>
 
 </section>
 <section id="datalogoutputdecl">
-<h3>DatalogOutputDecl<a class="headerlink" href="#datalogoutputdecl" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogOutputDecl<a class="headerlink" href="#datalogoutputdecl" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogOutputDecl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogOutputDecl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogOutputDecl" title="Permalink to this definition">¶</a></dt>
@@ -309,7 +312,7 @@ into csv. We always output &lt;START&gt;</p>
 
 </section>
 <section id="datalogrule">
-<h3>DatalogRule<a class="headerlink" href="#datalogrule" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogRule<a class="headerlink" href="#datalogrule" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogRule">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogRule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_char</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'a'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_char</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'a'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogRule" title="Permalink to this definition">¶</a></dt>
@@ -329,7 +332,7 @@ into csv. We always output &lt;START&gt;</p>
 
 </section>
 <section id="datalogruledecl">
-<h3>DatalogRuleDecl<a class="headerlink" href="#datalogruledecl" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogRuleDecl<a class="headerlink" href="#datalogruledecl" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogRuleDecl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogRuleDecl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogRuleDecl" title="Permalink to this definition">¶</a></dt>
@@ -350,7 +353,7 @@ Name(a: number, b: number)</p>
 
 </section>
 <section id="datalogrulelist">
-<h3>DatalogRuleList<a class="headerlink" href="#datalogrulelist" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogRuleList<a class="headerlink" href="#datalogrulelist" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogRuleList">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogRuleList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rule_sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogRuleList" title="Permalink to this definition">¶</a></dt>
@@ -371,7 +374,7 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 
 </section>
 <section id="datalogtruefact">
-<h3>DatalogTrueFact<a class="headerlink" href="#datalogtruefact" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogTrueFact<a class="headerlink" href="#datalogtruefact" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogTrueFact">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogTrueFact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.DatalogTrueFact" title="Permalink to this definition">¶</a></dt>
@@ -395,7 +398,7 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 
 </section>
 <section id="datalogtruefactdecl">
-<h3>DatalogTrueFactDecl<a class="headerlink" href="#datalogtruefactdecl" title="Permalink to this headline">¶</a></h3>
+<h3>DatalogTrueFactDecl<a class="headerlink" href="#datalogtruefactdecl" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogTrueFactDecl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">DatalogTrueFactDecl</span></span><a class="headerlink" href="#polytracker.datalog.DatalogTrueFactDecl" title="Permalink to this definition">¶</a></dt>
@@ -415,29 +418,29 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 
 </section>
 <section id="extractdatalogcommand">
-<h3>ExtractDatalogCommand<a class="headerlink" href="#extractdatalogcommand" title="Permalink to this headline">¶</a></h3>
+<h3>ExtractDatalogCommand<a class="headerlink" href="#extractdatalogcommand" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">ExtractDatalogCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">polytracker.plugins.Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.plugins.CommandExtension</span></code></a>[<a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.grammars.ExtractGrammarCommand</span></code></a>]</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">ExtractDatalogCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><code class="xref py py-class docutils literal notranslate"><span class="pre">CommandExtension</span></code></a>[<a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtractGrammarCommand</span></code></a>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">polytracker.plugins.Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.__init__" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls">
-<span class="sig-name descname"><span class="pre">datalog_fact_decls</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFactDecl" title="polytracker.datalog.DatalogFactDecl"><span class="pre">polytracker.datalog.DatalogFactDecl</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">datalog_fact_decls</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFactDecl" title="polytracker.datalog.DatalogFactDecl"><span class="pre">DatalogFactDecl</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_facts">
-<span class="sig-name descname"><span class="pre">datalog_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFact" title="polytracker.datalog.DatalogFact"><span class="pre">polytracker.datalog.DatalogFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_facts" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">datalog_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFact" title="polytracker.datalog.DatalogFact"><span class="pre">DatalogFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_facts" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_grammar">
-<span class="sig-name descname"><span class="pre">datalog_grammar</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogGrammar" title="polytracker.datalog.DatalogGrammar"><span class="pre">polytracker.datalog.DatalogGrammar</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_grammar" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">datalog_grammar</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogGrammar" title="polytracker.datalog.DatalogGrammar"><span class="pre">DatalogGrammar</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_grammar" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -459,7 +462,7 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent_command">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parent_command</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">polytracker.plugins.C</span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_command" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parent_command</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">C</span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_command" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the parent command associated with this extension</p>
 </dd></dl>
 
@@ -471,22 +474,22 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent_type">
 <span class="sig-name descname"><span class="pre">parent_type</span></span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.grammars.ExtractGrammarCommand</span></code></a></p>
+<dd><p>alias of <a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtractGrammarCommand</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><span class="pre">polytracker.grammars.ExtractGrammarCommand</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">argparse.Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.run" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><span class="pre">ExtractGrammarCommand</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.run" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.true_fact_decl">
-<span class="sig-name descname"><span class="pre">true_fact_decl</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFactDecl" title="polytracker.datalog.DatalogTrueFactDecl"><span class="pre">polytracker.datalog.DatalogTrueFactDecl</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_fact_decl" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">true_fact_decl</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFactDecl" title="polytracker.datalog.DatalogTrueFactDecl"><span class="pre">DatalogTrueFactDecl</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_fact_decl" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.true_facts">
-<span class="sig-name descname"><span class="pre">true_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFact" title="polytracker.datalog.DatalogTrueFact"><span class="pre">polytracker.datalog.DatalogTrueFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_facts" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">true_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFact" title="polytracker.datalog.DatalogTrueFact"><span class="pre">DatalogTrueFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_facts" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -494,9 +497,9 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 </section>
 </section>
 <section id="datalog-functions">
-<h2>datalog functions<a class="headerlink" href="#datalog-functions" title="Permalink to this headline">¶</a></h2>
+<h2>datalog functions<a class="headerlink" href="#datalog-functions" title="Permalink to this heading">¶</a></h2>
 <section id="datalog-repl-match">
-<h3>datalog_repl_match<a class="headerlink" href="#datalog-repl-match" title="Permalink to this headline">¶</a></h3>
+<h3>datalog_repl_match<a class="headerlink" href="#datalog-repl-match" title="Permalink to this heading">¶</a></h3>
 <dl class="py function">
 <dt class="sig sig-object py" id="polytracker.datalog.datalog_repl_match">
 <span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">datalog_repl_match</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matched_str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#polytracker.datalog.datalog_repl_match" title="Permalink to this definition">¶</a></dt>
@@ -504,7 +507,7 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 
 </section>
 <section id="get-valid-datalog-name">
-<h3>get_valid_datalog_name<a class="headerlink" href="#get-valid-datalog-name" title="Permalink to this headline">¶</a></h3>
+<h3>get_valid_datalog_name<a class="headerlink" href="#get-valid-datalog-name" title="Permalink to this heading">¶</a></h3>
 <dl class="py function">
 <dt class="sig sig-object py" id="polytracker.datalog.get_valid_datalog_name">
 <span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">get_valid_datalog_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.get_valid_datalog_name" title="Permalink to this definition">¶</a></dt>
@@ -565,7 +568,7 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
     <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
       <span class="rst-current-version" data-toggle="rst-current-version">
         <span class="fa fa-book"> PolyTracker Documentation</span>
-        3.1.0
+        4.0.0
         <span class="fa fa-caret-down"></span>
       </span>
       <div class="rst-other-versions">

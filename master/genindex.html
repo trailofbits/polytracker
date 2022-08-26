@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; PolyTracker 3.1.0 documentation</title>
+  <title>Index &mdash; PolyTracker 4.0.0 documentation</title>
   
 
   
@@ -26,6 +26,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -61,7 +62,7 @@
           
 
           
-<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
+<a href="https://github.com/trailofbits/polytracker"><div class="version">4.0.0</div></a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -191,9 +192,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__contains__">__contains__() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__contains__">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__contains__">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__contains__">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__contains__">(polytracker.graphs.DiGraph method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.__contains__">(polytracker.tracing.ProgramTrace method)</a>
 </li>
@@ -203,9 +204,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__getitem__">__getitem__() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__getitem__">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__getitem__">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__getitem__">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__getitem__">(polytracker.graphs.DiGraph method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ByteOffset.__getitem__">(polytracker.tracing.ByteOffset method)</a>
 </li>
@@ -214,10 +215,18 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TaintedRegion.__getitem__">(polytracker.tracing.TaintedRegion method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.__init__">__init__() (polytracker.build.PolyBuild method)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.__init__">__init__() (polytracker.build.Build method)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.__init__">(polytracker.build.PolyInst method)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.__init__">(polytracker.build.ExtractBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.__init__">(polytracker.build.InstrumentBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.__init__">(polytracker.build.InstrumentTargets method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.__init__">(polytracker.build.LowerBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.__init__">(polytracker.build.OptimizeBitcode method)</a>
 </li>
         <li><a href="polytracker.cache.html#polytracker.cache.LRUCache.__init__">(polytracker.cache.LRUCache method)</a>
 </li>
@@ -226,10 +235,6 @@
         <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet.__init__">(polytracker.cache.OrderedSet method)</a>
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__init__">(polytracker.cfg.CFG method)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__init__">(polytracker.cfg.DAG method)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__init__">(polytracker.cfg.DiGraph method)</a>
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.FunctionInfo.__init__">(polytracker.cfg.FunctionInfo method)</a>
 </li>
@@ -363,6 +368,10 @@
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ScannedTerminal.__init__">(polytracker.grammars.ScannedTerminal method)</a>
 </li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__init__">(polytracker.graphs.DAG method)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__init__">(polytracker.graphs.DiGraph method)</a>
+</li>
         <li><a href="polytracker.inputs.html#polytracker.inputs.Input.__init__">(polytracker.inputs.Input method)</a>
 </li>
         <li><a href="polytracker.inputs.html#polytracker.inputs.InputProperties.__init__">(polytracker.inputs.InputProperties method)</a>
@@ -406,6 +415,34 @@
         <li><a href="polytracker.repl.html#polytracker.repl.PolyTrackerREPL.__init__">(polytracker.repl.PolyTrackerREPL method)</a>
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.__init__">(polytracker.repl.REPLCommand method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.__init__">(polytracker.taint_dag.TDFDHeader method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.__init__">(polytracker.taint_dag.TDFile method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.__init__">(polytracker.taint_dag.TDHeader method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.__init__">(polytracker.taint_dag.TDInfo method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDNode.__init__">(polytracker.taint_dag.TDNode method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.__init__">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDRangeNode.__init__">(polytracker.taint_dag.TDRangeNode method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSink.__init__">(polytracker.taint_dag.TDSink method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSourceNode.__init__">(polytracker.taint_dag.TDSourceNode method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.__init__">(polytracker.taint_dag.TDTaintForest method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode.__init__">(polytracker.taint_dag.TDTaintForestNode method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintOutput.__init__">(polytracker.taint_dag.TDTaintOutput method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDUnionNode.__init__">(polytracker.taint_dag.TDUnionNode method)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.__init__">(polytracker.taint_forest.ExportTaintForest method)</a>
 </li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.__init__">(polytracker.taint_forest.TaintForest method)</a>
 </li>
@@ -479,11 +516,11 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__iter__">__iter__() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__iter__">(polytracker.cfg.DAG method)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__iter__">(polytracker.cfg.DiGraph method)</a>
-</li>
         <li><a href="polytracker.database.html#polytracker.database.DBFunctionInvocation.__iter__">(polytracker.database.DBFunctionInvocation method)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__iter__">(polytracker.graphs.DAG method)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__iter__">(polytracker.graphs.DiGraph method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionInvocation.__iter__">(polytracker.tracing.FunctionInvocation method)</a>
 </li>
@@ -495,11 +532,11 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__len__">__len__() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__len__">(polytracker.cfg.DAG method)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__len__">(polytracker.cfg.DiGraph method)</a>
-</li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.Dockerfile.__len__">(polytracker.containerization.Dockerfile method)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__len__">(polytracker.graphs.DAG method)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__len__">(polytracker.graphs.DiGraph method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.__len__">(polytracker.tracing.ProgramTrace method)</a>
 </li>
@@ -509,9 +546,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.__str__">__str__() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.__str__">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.__str__">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.__str__">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.__str__">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.plugins.html#polytracker.plugins.CommandExtensionMeta.__subclasscheck__">__subclasscheck__() (polytracker.plugins.CommandExtensionMeta method)</a>
@@ -557,6 +594,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.access_sequence">access_sequence() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.access_sequence">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.access_sequence">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -603,33 +642,33 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.add_edge">add_edge() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.add_edge">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.add_edge">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_edge">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.add_edge">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.add_edges_from">add_edges_from() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.add_edges_from">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.add_edges_from">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_edges_from">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.add_edges_from">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.add_node">add_node() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.add_node">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.add_node">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_node">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.add_node">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.add_nodes_from">add_nodes_from() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.add_nodes_from">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.add_nodes_from">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_nodes_from">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.add_nodes_from">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -649,41 +688,41 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.add_weighted_edges_from">add_weighted_edges_from() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.add_weighted_edges_from">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.add_weighted_edges_from">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.add_weighted_edges_from">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.add_weighted_edges_from">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adj">adj (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.adj">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.adj">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.adj">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.adj">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adjacency">adjacency() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.adjacency">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.adjacency">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.adjacency">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.adjacency">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adjlist_inner_dict_factory">adjlist_inner_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.adjlist_inner_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.adjlist_inner_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.adjlist_inner_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.adjlist_inner_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.adjlist_outer_dict_factory">adjlist_outer_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.adjlist_outer_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.adjlist_outer_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.adjlist_outer_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.adjlist_outer_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.affected_control_flow">affected_control_flow (polytracker.database.DBTaintForestNode attribute)</a>
@@ -691,9 +730,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.ancestors">ancestors() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.ancestors">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.ancestors">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.ancestors">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.ancestors">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerOutOfDateError.args">args (polytracker.containerization.DockerOutOfDateError attribute)</a>
@@ -708,6 +747,8 @@
         <li><a href="polytracker.grammars.html#polytracker.grammars.MissingProductionError.args">(polytracker.grammars.MissingProductionError attribute)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.ascii">ascii() (in module polytracker.mapping)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.attributes">attributes (polytracker.database.DBBasicBlock attribute)</a>
 </li>
   </ul></td>
@@ -758,6 +799,8 @@
 
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.basic_blocks">(polytracker.database.DBProgramTrace property)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.basic_blocks">(polytracker.taint_dag.TDProgramTrace property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.Function.basic_blocks">(polytracker.tracing.Function attribute)</a>
 </li>
@@ -812,6 +855,8 @@
 </li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree.bottom_up_pass">bottom_up_pass() (polytracker.parsing.NonGeneralizedParseTree method)</a>
 </li>
+      <li><a href="polytracker.build.html#polytracker.build.Build">Build (class in polytracker.build)</a>
+</li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType">ByteAccessType (class in polytracker.tracing)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteOffset">ByteOffset (class in polytracker.tracing)</a>
@@ -819,8 +864,6 @@
       <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_first">bytes_only_in_first (polytracker.tracing.TaintDiff property)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.TaintDiff.bytes_only_in_second">bytes_only_in_second (polytracker.tracing.TaintDiff property)</a>
-</li>
-      <li><a href="polytracker.mapping.html#polytracker.mapping.bytes_to_ascii">bytes_to_ascii() (in module polytracker.mapping)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -885,12 +928,16 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.cfg">cfg (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.cfg">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.cfg">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.cfg_roots">cfg_roots() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.cfg_roots">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.cfg_roots">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -917,17 +964,17 @@
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.clear">(polytracker.cfg.CFG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.clear">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.clear">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.clear">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.clear">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.clear_edges">clear_edges() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.clear_edges">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.clear_edges">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.clear_edges">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.clear_edges">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1003,9 +1050,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.contract">contract() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.contract">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.contract">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.contract">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.contract">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.diffing.html#polytracker.diffing.ControlFlowDiff">ControlFlowDiff (class in polytracker.diffing)</a>
@@ -1015,12 +1062,14 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.copy">copy() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.copy">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.copy">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.copy">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.copy">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.CorruptedGrammarError">CorruptedGrammarError (class in polytracker.grammars)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.create_node">create_node() (polytracker.taint_dag.TDTaintForest method)</a>
 </li>
       <li><a href="polytracker.repl.html#polytracker.repl.PolyTrackerREPL.current_instance">current_instance() (polytracker.repl.PolyTrackerREPL class method)</a>
 </li>
@@ -1030,7 +1079,7 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.DAG">DAG (class in polytracker.cfg)</a>
+      <li><a href="polytracker.graphs.html#polytracker.graphs.DAG">DAG (class in polytracker.graphs)</a>
 </li>
       <li><a href="polytracker.datalog.html#polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls">datalog_fact_decls (polytracker.datalog.ExtractDatalogCommand attribute)</a>
 </li>
@@ -1098,6 +1147,8 @@
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBUninstFunc">DBUninstFunc (class in polytracker.database)</a>
 </li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.decode_node">decode_node() (polytracker.taint_dag.TDFile method)</a>
+</li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree.deconflict_parent">deconflict_parent() (polytracker.parsing.NonGeneralizedParseTree method)</a>
 </li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree.deconflict_sibling">deconflict_sibling() (polytracker.parsing.NonGeneralizedParseTree method)</a>
@@ -1105,9 +1156,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.degree">degree (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.degree">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.degree">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.degree">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.degree">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1137,9 +1188,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.depth">depth() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.depth">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.depth">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.depth">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.depth">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.descendants">descendants (polytracker.parsing.ImmutableParseTree property)</a>
@@ -1155,18 +1206,20 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.descendants">descendants() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.descendants">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.descendants">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.descendants">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.descendants">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.dest">dest (polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.dest_id">dest_id (polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.dfs_walk">dfs_walk() (polytracker.mapping.InputOutputMapping method)</a>
+</li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.diff">diff() (polytracker.tracing.Taints method)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph">DiGraph (class in polytracker.cfg)</a>
+      <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph">DiGraph (class in polytracker.graphs)</a>
 </li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.Dockerfile.dir">dir() (polytracker.containerization.Dockerfile method)</a>
 </li>
@@ -1197,9 +1250,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.dominator_forest">dominator_forest (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.dominator_forest">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.dominator_forest">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.dominator_forest">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.dominator_forest">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1217,17 +1270,17 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.edge_attr_dict_factory">edge_attr_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.edge_attr_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.edge_attr_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.edge_attr_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.edge_attr_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.edge_subgraph">edge_subgraph() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.edge_subgraph">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.edge_subgraph">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.edge_subgraph">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.edge_subgraph">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.edge_type">edge_type (polytracker.database.FunctionCFGEdge attribute)</a>
@@ -1235,9 +1288,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.edges">edges (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.edges">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.edges">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.edges">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.edges">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.EdgeType">EdgeType (class in polytracker.database)</a>
@@ -1279,6 +1332,8 @@
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.entrypoint">(polytracker.database.DBProgramTrace property)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.entrypoint">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.FunctionEntry.entrypoint">(polytracker.tracing.FunctionEntry property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.entrypoint">(polytracker.tracing.ProgramTrace property)</a>
@@ -1318,8 +1373,6 @@
         <li><a href="polytracker.database.html#polytracker.database.FunctionEntries.event_id">(polytracker.database.FunctionEntries attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.event_type">event_type (polytracker.database.DBBasicBlockEntry attribute)</a>
 
       <ul>
@@ -1336,6 +1389,8 @@
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.event_type">(polytracker.database.DBTraceEvent attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.events">events (polytracker.database.DBBasicBlock attribute)</a>
 
       <ul>
@@ -1362,10 +1417,20 @@
         <li><a href="polytracker.grammars.html#polytracker.grammars.ScannedTerminal.expected">(polytracker.grammars.ScannedTerminal attribute)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.extension_types">extension_types (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest">ExportTaintForest (class in polytracker.taint_forest)</a>
+</li>
+      <li><a href="polytracker.build.html#polytracker.build.Build.extension_types">extension_types (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.extension_types">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.extension_types">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.extension_types">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.extension_types">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.extension_types">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.extension_types">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.extension_types">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -1397,6 +1462,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.extension_types">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.extension_types">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.extension_types">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.extension_types">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.extension_types">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -1411,6 +1480,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.extensions">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.extensions">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.extensions">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.extensions">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.extensions">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -1422,6 +1495,8 @@
 </li>
       <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogGrammar.extract_datalog_grammar">extract_datalog_grammar() (polytracker.datalog.DatalogGrammar method)</a>
 </li>
+      <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode">ExtractBitcode (class in polytracker.build)</a>
+</li>
       <li><a href="polytracker.datalog.html#polytracker.datalog.ExtractDatalogCommand">ExtractDatalogCommand (class in polytracker.datalog)</a>
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand">ExtractGrammarCommand (class in polytracker.grammars)</a>
@@ -1432,6 +1507,14 @@
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.fd">fd (polytracker.taint_dag.TDFDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fd_mapping_count">fd_mapping_count (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fd_mapping_offset">fd_mapping_offset (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSink.fdidx">fdidx (polytracker.taint_dag.TDSink attribute)</a>
+</li>
       <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.file_cavities">file_cavities() (polytracker.mapping.InputOutputMapping method)</a>
 </li>
       <li><a href="polytracker.visualizations.html#polytracker.visualizations.file_diff">file_diff() (in module polytracker.visualizations)</a>
@@ -1441,6 +1524,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.file_offset">file_offset() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.file_offset">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.file_offset">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -1472,10 +1557,18 @@
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.from_source">from_source() (polytracker.tracing.Taints method)</a>
 </li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.full_name">full_name (polytracker.build.PolyBuild property)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.full_name">full_name (polytracker.build.Build property)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.full_name">(polytracker.build.PolyInst property)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.full_name">(polytracker.build.ExtractBitcode property)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.full_name">(polytracker.build.InstrumentBitcode property)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.full_name">(polytracker.build.InstrumentTargets property)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.full_name">(polytracker.build.LowerBitcode property)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.full_name">(polytracker.build.OptimizeBitcode property)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.full_name">(polytracker.containerization.DockerCommand property)</a>
 </li>
@@ -1512,6 +1605,10 @@
         <li><a href="polytracker.plugins.html#polytracker.plugins.Subcommand.full_name">(polytracker.plugins.Subcommand property)</a>
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.full_name">(polytracker.repl.Commands property)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.full_name">(polytracker.taint_dag.TDInfo property)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.full_name">(polytracker.taint_forest.ExportTaintForest property)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.full_name">(polytracker.tracing.CFGTraceCommand property)</a>
 </li>
@@ -1589,6 +1686,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.function_cfg">function_cfg (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.function_cfg">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.function_cfg">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
@@ -1661,6 +1760,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.function_trace">function_trace() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.function_trace">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.function_trace">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -1681,6 +1782,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.functions">functions (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.functions">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.functions">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
@@ -1705,20 +1808,24 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.get_edge_data">get_edge_data() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.get_edge_data">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.get_edge_data">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.get_edge_data">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.get_edge_data">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.get_event">get_event() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.get_event">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.get_event">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.get_function">get_function() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.get_function">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.get_function">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -1729,9 +1836,13 @@
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.get_node">get_node() (polytracker.database.DBTaintForest method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.get_node">(polytracker.taint_dag.TDTaintForest method)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.get_node">(polytracker.taint_forest.TaintForest method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.get_synth_node_label">get_synth_node_label() (polytracker.taint_dag.TDTaintForest method)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.get_taints">get_taints() (polytracker.database.DBTaintForestNode static method)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.get_thread_event">get_thread_event() (polytracker.database.DBProgramTrace method)</a>
@@ -1745,9 +1856,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.graph_attr_dict_factory">graph_attr_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.graph_attr_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.graph_attr_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.graph_attr_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.graph_attr_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -1759,20 +1870,24 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_edge">has_edge() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.has_edge">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.has_edge">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_edge">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.has_edge">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.has_event">has_event() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.has_event">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.has_event">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.has_function">has_function() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.has_function">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.has_function">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -1783,43 +1898,49 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_node">has_node() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.has_node">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.has_node">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_node">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.has_node">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_one_predecessor">has_one_predecessor() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.has_one_predecessor">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.has_one_predecessor">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_one_predecessor">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.has_one_predecessor">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_predecessor">has_predecessor() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.has_predecessor">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.has_predecessor">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_predecessor">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.has_predecessor">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.has_successor">has_successor() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.has_successor">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.has_successor">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.has_successor">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.has_successor">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.has_thread_event">has_thread_event() (polytracker.database.DBProgramTrace method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.help">help (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.help">help (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.help">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.help">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.help">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.help">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.help">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.help">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.help">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -1853,6 +1974,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.help">(polytracker.repl.REPLCommand property)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.help">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.help">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.help">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.help">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -1860,6 +1985,8 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.help">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.parsing.html#polytracker.parsing.highlight_offset">highlight_offset() (in module polytracker.parsing)</a>
 </li>
   </ul></td>
@@ -1879,17 +2006,17 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_degree">in_degree (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.in_degree">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.in_degree">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.in_degree">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.in_degree">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.in_edges">in_edges (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.in_edges">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.in_edges">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.in_edges">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.in_edges">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBFunction.incoming_edges">incoming_edges (polytracker.database.DBFunction attribute)</a>
@@ -1971,6 +2098,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.input_properties">input_properties() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.input_properties">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.input_properties">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -1981,24 +2110,36 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs">inputs (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.inputs">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.inputs">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.inputs_affecting_control_flow">inputs_affecting_control_flow() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.inputs_affecting_control_flow">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.inputs_affecting_control_flow">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode">InstrumentBitcode (class in polytracker.build)</a>
+</li>
+      <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets">InstrumentTargets (class in polytracker.build)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.is_canonical">is_canonical() (polytracker.database.DBTaintForestNode method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode.is_canonical">(polytracker.taint_dag.TDTaintForestNode method)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.is_canonical">(polytracker.taint_forest.TaintForestNode method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.is_cfg_connected">is_cfg_connected() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.is_cfg_connected">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.is_cfg_connected">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -2011,9 +2152,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.is_directed">is_directed() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.is_directed">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.is_directed">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.is_directed">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.is_directed">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.is_leaf">is_leaf() (polytracker.parsing.ImmutableParseTree method)</a>
@@ -2035,9 +2176,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.is_multigraph">is_multigraph() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.is_multigraph">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.is_multigraph">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.is_multigraph">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.is_multigraph">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet.isdisjoint">isdisjoint() (polytracker.cache.OrderedSet method)</a>
@@ -2069,7 +2210,11 @@
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBTaintOutput.label">(polytracker.database.DBTaintOutput attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSink.label">(polytracker.taint_dag.TDSink attribute)</a>
+</li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.label_count">label_count (polytracker.taint_dag.TDFile property)</a>
+</li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.last_build_time">last_build_time() (polytracker.containerization.DockerContainer method)</a>
 </li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.leaves">leaves() (polytracker.parsing.ImmutableParseTree method)</a>
@@ -2093,10 +2238,14 @@
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.Rule.load">(polytracker.grammars.Rule static method)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.load">(polytracker.taint_dag.TDProgramTrace static method)</a>
+</li>
       </ul></li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.LOOP_ENTRY">LOOP_ENTRY (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.LOOP_EXIT">LOOP_EXIT (polytracker.tracing.BasicBlockType attribute)</a>
+</li>
+      <li><a href="polytracker.build.html#polytracker.build.LowerBitcode">LowerBitcode (class in polytracker.build)</a>
 </li>
       <li><a href="polytracker.cache.html#polytracker.cache.LRUCache">LRUCache (class in polytracker.cache)</a>
 </li>
@@ -2106,13 +2255,11 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.build.html#polytracker.build.main">main() (in module polytracker.build)</a>
-</li>
-      <li><a href="polytracker.build.html#polytracker.build.main_plus_plus">main_plus_plus() (in module polytracker.build)</a>
-</li>
       <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs">MapInputsToOutputs (class in polytracker.mapping)</a>
 </li>
-      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.mapping">mapping (polytracker.mapping.InputOutputMapping property)</a>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.mapping">mapping() (polytracker.mapping.InputOutputMapping method)</a>
+</li>
+      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.marker_to_ranges">marker_to_ranges() (polytracker.mapping.InputOutputMapping method)</a>
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Match">Match (class in polytracker.grammars)</a>
 </li>
@@ -2194,6 +2341,8 @@
 </li>
         <li><a href="polytracker.grammars.html#module-polytracker.grammars">polytracker.grammars</a>
 </li>
+        <li><a href="polytracker.graphs.html#module-polytracker.graphs">polytracker.graphs</a>
+</li>
         <li><a href="polytracker.inputs.html#module-polytracker.inputs">polytracker.inputs</a>
 </li>
         <li><a href="polytracker.mapping.html#module-polytracker.mapping">polytracker.mapping</a>
@@ -2203,6 +2352,8 @@
         <li><a href="polytracker.plugins.html#module-polytracker.plugins">polytracker.plugins</a>
 </li>
         <li><a href="polytracker.repl.html#module-polytracker.repl">polytracker.repl</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#module-polytracker.taint_dag">polytracker.taint_dag</a>
 </li>
         <li><a href="polytracker.taint_forest.html#module-polytracker.taint_forest">polytracker.taint_forest</a>
 </li>
@@ -2225,16 +2376,20 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.name">name (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.name">name (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.name">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.name">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.name">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.name">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.name">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.name">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.name">(polytracker.cfg.CFG property)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.name">(polytracker.cfg.DAG property)</a>
-</li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.name">(polytracker.cfg.DiGraph property)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.name">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -2262,6 +2417,10 @@
 </li>
         <li><a href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand.name">(polytracker.grammars.ExtractGrammarCommand attribute)</a>
 </li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.name">(polytracker.graphs.DAG property)</a>
+</li>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.name">(polytracker.graphs.DiGraph property)</a>
+</li>
         <li><a href="polytracker.mapping.html#polytracker.mapping.FileCavities.name">(polytracker.mapping.FileCavities attribute)</a>
 </li>
         <li><a href="polytracker.mapping.html#polytracker.mapping.MapInputsToOutputs.name">(polytracker.mapping.MapInputsToOutputs attribute)</a>
@@ -2280,6 +2439,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.name">(polytracker.repl.REPLCommand property)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.name">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.name">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.name">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.name">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -2287,20 +2450,24 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceCommand.name">(polytracker.tracing.TraceCommand attribute)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.name_len">name_len (polytracker.taint_dag.TDFDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.name_offset">name_offset (polytracker.taint_dag.TDFDHeader attribute)</a>
+</li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nbunch_iter">nbunch_iter() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.nbunch_iter">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.nbunch_iter">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.nbunch_iter">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.nbunch_iter">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.neighbors">neighbors() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.neighbors">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.neighbors">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.neighbors">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.neighbors">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.next_basic_block_in_function">next_basic_block_in_function() (polytracker.database.DBBasicBlockEntry method)</a>
@@ -2404,6 +2571,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.next_function_entry">next_function_entry() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.next_function_entry">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.next_function_entry">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
@@ -2446,75 +2615,87 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.node_attr_dict_factory">node_attr_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.node_attr_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.node_attr_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.node_attr_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.node_attr_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.node_dict_factory">node_dict_factory (polytracker.cfg.CFG attribute)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.node_dict_factory">(polytracker.cfg.DAG attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.node_dict_factory">(polytracker.graphs.DAG attribute)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.node_dict_factory">(polytracker.cfg.DiGraph attribute)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.node_dict_factory">(polytracker.graphs.DiGraph attribute)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nodes">nodes (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.nodes">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.nodes">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.nodes">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.nodes">(polytracker.graphs.DiGraph property)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.nodes">(polytracker.taint_dag.TDFile property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.nodes">nodes() (polytracker.database.DBTaintForest method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.nodes">(polytracker.taint_dag.TDTaintForest method)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.nodes">(polytracker.taint_forest.TaintForest method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.non_disjoint_union_all">non_disjoint_union_all() (in module polytracker.cfg)</a>
+      <li><a href="polytracker.graphs.html#polytracker.graphs.non_disjoint_union_all">non_disjoint_union_all() (in module polytracker.graphs)</a>
 </li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree">NonGeneralizedParseTree (class in polytracker.parsing)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_accesses">num_accesses (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.num_accesses">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.num_accesses">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_basic_block_entries">num_basic_block_entries() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.num_basic_block_entries">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.num_basic_block_entries">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_function_calls">num_function_calls() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.num_function_calls">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.num_function_calls">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.num_function_calls_that_touched_taint">num_function_calls_that_touched_taint() (polytracker.database.DBProgramTrace method)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.num_function_calls_that_touched_taint">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.num_function_calls_that_touched_taint">(polytracker.tracing.ProgramTrace method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.number_of_edges">number_of_edges() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.number_of_edges">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.number_of_edges">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.number_of_edges">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.number_of_edges">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.number_of_nodes">number_of_nodes() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.number_of_nodes">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.number_of_nodes">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.number_of_nodes">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.number_of_nodes">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -2524,13 +2705,19 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintOutput.offset">offset (polytracker.database.DBTaintOutput attribute)</a>
+
+      <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSink.offset">(polytracker.taint_dag.TDSink attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode">OptimizeBitcode (class in polytracker.build)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.order">order() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.order">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.order">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.order">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.order">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.OrderedSet">OrderedSet (class in polytracker.cache)</a>
@@ -2538,17 +2725,17 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_degree">out_degree (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.out_degree">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.out_degree">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.out_degree">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.out_degree">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.out_edges">out_edges (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.out_edges">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.out_edges">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.out_edges">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.out_edges">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -2562,12 +2749,16 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.output_taints">output_taints (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.output_taints">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.output_taints">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.outputs">outputs (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.outputs">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.outputs">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
@@ -2577,10 +2768,18 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.parent">parent (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.parent">parent (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.parent">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.parent">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.parent">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.parent">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.parent">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.parent">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.parent">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -2618,6 +2817,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.parent">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.parent">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.parent">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.parent">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.parent">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -2652,21 +2855,33 @@
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_labels">parent_labels (polytracker.database.DBTaintForestNode property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode.parent_labels">(polytracker.taint_dag.TDTaintForestNode property)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.parent_labels">(polytracker.taint_forest.TaintForestNode property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_one">parent_one (polytracker.database.DBTaintForestNode property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode.parent_one">(polytracker.taint_dag.TDTaintForestNode property)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.parent_one">(polytracker.taint_forest.TaintForestNode property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_one_id">parent_one_id (polytracker.database.DBTaintForestNode attribute)</a>
 </li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.parent_parsers">parent_parsers (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.parent_parsers">parent_parsers (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.parent_parsers">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.parent_parsers">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.parent_parsers">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.parent_parsers">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.parent_parsers">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.parent_parsers">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.parent_parsers">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -2702,6 +2917,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.parent_parsers">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.parent_parsers">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.parent_parsers">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.parent_parsers">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.parent_parsers">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -2712,6 +2931,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.parent_two">parent_two (polytracker.database.DBTaintForestNode property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode.parent_two">(polytracker.taint_dag.TDTaintForestNode property)</a>
+</li>
         <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForestNode.parent_two">(polytracker.taint_forest.TaintForestNode property)</a>
 </li>
       </ul></li>
@@ -2776,18 +2997,14 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.path_length">path_length() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.path_length">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.path_length">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.path_length">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.path_length">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.plugins.html#polytracker.plugins.Plugin">Plugin (class in polytracker.plugins)</a>
 </li>
       <li><a href="polytracker.plugins.html#polytracker.plugins.PluginMeta">PluginMeta (class in polytracker.plugins)</a>
-</li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild">PolyBuild (class in polytracker.build)</a>
-</li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyInst">PolyInst (class in polytracker.build)</a>
 </li>
       <li>
     polytracker
@@ -2838,6 +3055,8 @@
         <li><a href="polytracker.datalog.html#module-polytracker.datalog">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     polytracker.diffing
 
@@ -2852,8 +3071,13 @@
         <li><a href="polytracker.grammars.html#module-polytracker.grammars">module</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    polytracker.graphs
+
+      <ul>
+        <li><a href="polytracker.graphs.html#module-polytracker.graphs">module</a>
+</li>
+      </ul></li>
       <li>
     polytracker.inputs
 
@@ -2887,6 +3111,13 @@
 
       <ul>
         <li><a href="polytracker.repl.html#module-polytracker.repl">module</a>
+</li>
+      </ul></li>
+      <li>
+    polytracker.taint_dag
+
+      <ul>
+        <li><a href="polytracker.taint_dag.html#module-polytracker.taint_dag">module</a>
 </li>
       </ul></li>
       <li>
@@ -2934,12 +3165,16 @@
         <li><a href="polytracker.parsing.html#polytracker.parsing.ParseTree.postorder_traversal">(polytracker.parsing.ParseTree method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.prealloc_label_begin">prealloc_label_begin (polytracker.taint_dag.TDFDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.prealloc_label_end">prealloc_label_end (polytracker.taint_dag.TDFDHeader attribute)</a>
+</li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.pred">pred (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.pred">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.pred">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.pred">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.pred">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.predecessors">predecessors (polytracker.database.DBBasicBlock property)</a>
@@ -2961,9 +3196,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.predecessors">predecessors() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.predecessors">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.predecessors">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.predecessors">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.predecessors">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Prediction">Prediction (class in polytracker.grammars)</a>
@@ -3134,7 +3369,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType.READ_ACCESS">READ_ACCESS (polytracker.tracing.ByteAccessType attribute)</a>
 </li>
-      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.read_from">read_from() (polytracker.mapping.InputOutputMapping method)</a>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_fd_headers">read_fd_headers() (polytracker.taint_dag.TDFile method)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_node">read_node() (polytracker.taint_dag.TDFile method)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_sink">read_sink() (polytracker.taint_dag.TDFile method)</a>
 </li>
       <li><a href="polytracker.containerization.html#polytracker.containerization.DockerContainer.rebuild">rebuild() (polytracker.containerization.DockerContainer method)</a>
 </li>
@@ -3171,33 +3410,33 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.remove_edge">remove_edge() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.remove_edge">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.remove_edge">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.remove_edge">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.remove_edge">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.remove_edges_from">remove_edges_from() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.remove_edges_from">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.remove_edges_from">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.remove_edges_from">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.remove_edges_from">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.remove_node">remove_node() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.remove_node">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.remove_node">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.remove_node">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.remove_node">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.remove_nodes_from">remove_nodes_from() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.remove_nodes_from">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.remove_nodes_from">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.remove_nodes_from">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.remove_nodes_from">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Production.remove_recursive_rules">remove_recursive_rules() (polytracker.grammars.Production method)</a>
@@ -3231,9 +3470,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.reverse">reverse() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.reverse">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.reverse">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.reverse">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.reverse">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -3241,9 +3480,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.roots">roots (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.roots">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.roots">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.roots">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.roots">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.repl.html#polytracker.repl.PolyTrackerCompleter.rprompt">rprompt() (polytracker.repl.PolyTrackerCompleter method)</a>
@@ -3254,10 +3493,18 @@
 </li>
       <li><a href="polytracker.datalog.html#polytracker.datalog.DatalogGrammar.RULE_START">RULE_START (polytracker.datalog.DatalogGrammar attribute)</a>
 </li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.run">run() (polytracker.build.PolyBuild method)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.run">run() (polytracker.build.Build method)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.run">(polytracker.build.PolyInst method)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.run">(polytracker.build.ExtractBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.run">(polytracker.build.InstrumentBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.run">(polytracker.build.InstrumentTargets method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.run">(polytracker.build.LowerBitcode method)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.run">(polytracker.build.OptimizeBitcode method)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.run">(polytracker.containerization.DockerCommand method)</a>
 </li>
@@ -3297,6 +3544,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.PolyTrackerREPL.run">(polytracker.repl.PolyTrackerREPL method)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.run">(polytracker.taint_dag.TDInfo method)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.run">(polytracker.taint_forest.ExportTaintForest method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.run">(polytracker.tracing.CFGTraceCommand method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.run">(polytracker.tracing.RunTraceCommand method)</a>
@@ -3329,9 +3580,9 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.set_roots">set_roots() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.set_roots">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.set_roots">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.set_roots">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.set_roots">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cache.html#polytracker.cache.LRUCache.setdefault">setdefault() (polytracker.cache.LRUCache method)</a>
@@ -3342,14 +3593,20 @@
         <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree.simplify">(polytracker.parsing.NonGeneralizedParseTree method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.sink_mapping_offset">sink_mapping_offset (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.sink_mapping_size">sink_mapping_size (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.sinks">sinks (polytracker.taint_dag.TDFile property)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.DBInput.size">size (polytracker.database.DBInput attribute)</a>
 </li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.size">size() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.size">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.size">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.size">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.size">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.CanonicalMap.source">source (polytracker.database.CanonicalMap attribute)</a>
@@ -3388,10 +3645,18 @@
 </li>
       <li><a href="polytracker.plugins.html#polytracker.plugins.Subcommand">Subcommand (class in polytracker.plugins)</a>
 </li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.subcommand_types">subcommand_types (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.subcommand_types">subcommand_types (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.subcommand_types">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.subcommand_types">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.subcommand_types">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.subcommand_types">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.subcommand_types">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.subcommand_types">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.subcommand_types">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -3423,6 +3688,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.subcommand_types">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.subcommand_types">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.subcommand_types">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.subcommand_types">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.subcommand_types">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -3439,6 +3708,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.subcommands">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.subcommands">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.subcommands">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.subcommands">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.subcommands">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -3449,15 +3722,23 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.subgraph">subgraph() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.subgraph">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.subgraph">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.subgraph">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.subgraph">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
-      <li><a href="polytracker.build.html#polytracker.build.PolyBuild.subparser">subparser (polytracker.build.PolyBuild attribute)</a>
+      <li><a href="polytracker.build.html#polytracker.build.Build.subparser">subparser (polytracker.build.Build attribute)</a>
 
       <ul>
-        <li><a href="polytracker.build.html#polytracker.build.PolyInst.subparser">(polytracker.build.PolyInst attribute)</a>
+        <li><a href="polytracker.build.html#polytracker.build.ExtractBitcode.subparser">(polytracker.build.ExtractBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentBitcode.subparser">(polytracker.build.InstrumentBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.InstrumentTargets.subparser">(polytracker.build.InstrumentTargets attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.LowerBitcode.subparser">(polytracker.build.LowerBitcode attribute)</a>
+</li>
+        <li><a href="polytracker.build.html#polytracker.build.OptimizeBitcode.subparser">(polytracker.build.OptimizeBitcode attribute)</a>
 </li>
         <li><a href="polytracker.containerization.html#polytracker.containerization.DockerCommand.subparser">(polytracker.containerization.DockerCommand attribute)</a>
 </li>
@@ -3489,6 +3770,10 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.Commands.subparser">(polytracker.repl.Commands attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo.subparser">(polytracker.taint_dag.TDInfo attribute)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.ExportTaintForest.subparser">(polytracker.taint_forest.ExportTaintForest attribute)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.CFGTraceCommand.subparser">(polytracker.tracing.CFGTraceCommand attribute)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.RunTraceCommand.subparser">(polytracker.tracing.RunTraceCommand attribute)</a>
@@ -3499,17 +3784,17 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.succ">succ (polytracker.cfg.CFG property)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.succ">(polytracker.cfg.DAG property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.succ">(polytracker.graphs.DAG property)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.succ">(polytracker.cfg.DiGraph property)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.succ">(polytracker.graphs.DiGraph property)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.successors">successors() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.successors">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.successors">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.successors">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.successors">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -3523,6 +3808,8 @@
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.taint_forest">taint_forest (polytracker.database.DBProgramTrace property)</a>
 
       <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.taint_forest">(polytracker.taint_dag.TDProgramTrace property)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.ProgramTrace.taint_forest">(polytracker.tracing.ProgramTrace property)</a>
 </li>
       </ul></li>
@@ -3583,6 +3870,10 @@
 </li>
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.taints">(polytracker.database.DBTraceEvent method)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace.taints">(polytracker.taint_dag.TDProgramTrace method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintOutput.taints">(polytracker.taint_dag.TDTaintOutput method)</a>
+</li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlock.taints">(polytracker.tracing.BasicBlock method)</a>
 </li>
         <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry.taints">(polytracker.tracing.BasicBlockEntry method)</a>
@@ -3612,6 +3903,36 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.taints">(polytracker.tracing.TraceEvent method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.tdag_mapping_offset">tdag_mapping_offset (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.tdag_mapping_size">tdag_mapping_size (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader">TDFDHeader (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile">TDFile (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader">TDHeader (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDInfo">TDInfo (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDNode">TDNode (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDProgramTrace">TDProgramTrace (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDRangeNode">TDRangeNode (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSink">TDSink (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDSourceNode">TDSourceNode (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest">TDTaintForest (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForestNode">TDTaintForestNode (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintOutput">TDTaintOutput (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDUnionNode">TDUnionNode (class in polytracker.taint_dag)</a>
+</li>
       <li><a href="polytracker.visualizations.html#polytracker.visualizations.temporal_animation">temporal_animation() (in module polytracker.visualizations)</a>
 </li>
       <li><a href="polytracker.diffing.html#polytracker.diffing.TemporalVisualization">TemporalVisualization (class in polytracker.diffing)</a>
@@ -3656,6 +3977,8 @@
         <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.thread_id">(polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.to_dag">to_dag() (polytracker.parsing.ImmutableParseTree method)</a>
 
       <ul>
@@ -3666,22 +3989,20 @@
         <li><a href="polytracker.parsing.html#polytracker.parsing.ParseTree.to_dag">(polytracker.parsing.ParseTree method)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.to_directed">to_directed() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.to_directed">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.to_directed">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_directed">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.to_directed">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.to_directed_class">to_directed_class() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.to_directed_class">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.to_directed_class">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_directed_class">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.to_directed_class">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.to_dot">to_dot() (in module polytracker.grammars)</a>
@@ -3689,9 +4010,17 @@
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.to_dot">(polytracker.cfg.CFG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.to_dot">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.to_dot">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_dot">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.to_dot">(polytracker.graphs.DiGraph method)</a>
+</li>
+      </ul></li>
+      <li><a href="polytracker.database.html#polytracker.database.DBTaintForest.to_graph">to_graph() (polytracker.database.DBTaintForest method)</a>
+
+      <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDTaintForest.to_graph">(polytracker.taint_dag.TDTaintForest method)</a>
+</li>
+        <li><a href="polytracker.taint_forest.html#polytracker.taint_forest.TaintForest.to_graph">(polytracker.taint_forest.TaintForest method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.diffing.html#polytracker.diffing.TraceDiff.to_image">to_image() (polytracker.diffing.TraceDiff method)</a>
@@ -3713,17 +4042,17 @@
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.to_undirected">to_undirected() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.to_undirected">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.to_undirected">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_undirected">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.to_undirected">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.to_undirected_class">to_undirected_class() (polytracker.cfg.CFG method)</a>
 
       <ul>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.to_undirected_class">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.to_undirected_class">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.to_undirected_class">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.to_undirected_class">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.parsing.html#polytracker.parsing.NonGeneralizedParseTree.top_down_pass">top_down_pass() (polytracker.parsing.NonGeneralizedParseTree method)</a>
@@ -3845,9 +4174,9 @@
       <ul>
         <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.update">(polytracker.cfg.CFG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.update">(polytracker.cfg.DAG method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.update">(polytracker.graphs.DAG method)</a>
 </li>
-        <li><a href="polytracker.cfg.html#polytracker.cfg.DiGraph.update">(polytracker.cfg.DiGraph method)</a>
+        <li><a href="polytracker.graphs.html#polytracker.graphs.DiGraph.update">(polytracker.graphs.DiGraph method)</a>
 </li>
       </ul></li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Production.used_by">used_by (polytracker.grammars.Production property)</a>
@@ -3910,7 +4239,7 @@
 </li>
       <li><a href="polytracker.html#polytracker.version">version() (in module polytracker)</a>
 </li>
-      <li><a href="polytracker.cfg.html#polytracker.cfg.DAG.vertex_induced_subgraph">vertex_induced_subgraph() (polytracker.cfg.DAG method)</a>
+      <li><a href="polytracker.graphs.html#polytracker.graphs.DAG.vertex_induced_subgraph">vertex_induced_subgraph() (polytracker.graphs.DAG method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -3935,8 +4264,6 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBTaintForestNode.writes">writes (polytracker.database.DBTaintForestNode attribute)</a>
-</li>
-      <li><a href="polytracker.mapping.html#polytracker.mapping.InputOutputMapping.written_input_bytes">written_input_bytes() (polytracker.mapping.InputOutputMapping method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -3984,7 +4311,7 @@
     <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
       <span class="rst-current-version" data-toggle="rst-current-version">
         <span class="fa fa-book"> PolyTracker Documentation</span>
-        3.1.0
+        4.0.0
         <span class="fa fa-caret-down"></span>
       </span>
       <div class="rst-other-versions">

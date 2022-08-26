@@ -13,11 +13,13 @@ PolyTracker API
    polytracker.datalog
    polytracker.diffing
    polytracker.grammars
+   polytracker.graphs
    polytracker.inputs
    polytracker.mapping
    polytracker.parsing
    polytracker.plugins
    polytracker.repl
+   polytracker.taint_dag
    polytracker.taint_forest
    polytracker.tracing
    polytracker.visualizations

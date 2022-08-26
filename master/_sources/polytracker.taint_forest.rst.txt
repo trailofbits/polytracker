@@ -6,6 +6,15 @@ polytracker.taint_forest
 taint_forest classes
 --------------------
 
+ExportTaintForest
+*****************
+
+.. autoclass:: ExportTaintForest
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TaintForest
 ***********
 

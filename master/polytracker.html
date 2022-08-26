@@ -5,11 +5,11 @@
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>polytracker &mdash; PolyTracker 3.1.0 documentation</title>
+  <title>polytracker &mdash; PolyTracker 4.0.0 documentation</title>
   
 
   
@@ -27,6 +27,7 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -64,7 +65,7 @@
           
 
           
-<a href="https://github.com/trailofbits/polytracker"><div class="version">3.1.0</div></a>
+<a href="https://github.com/trailofbits/polytracker"><div class="version">4.0.0</div></a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -101,11 +102,13 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.graphs.html">polytracker.graphs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.mapping.html">polytracker.mapping</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_dag.html">polytracker.taint_dag</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
@@ -178,11 +181,11 @@
            <div itemprop="articleBody">
             
   <section id="module-polytracker">
-<span id="polytracker"></span><h1>polytracker<a class="headerlink" href="#module-polytracker" title="Permalink to this headline">¶</a></h1>
+<span id="polytracker"></span><h1>polytracker<a class="headerlink" href="#module-polytracker" title="Permalink to this heading">¶</a></h1>
 <section id="polytracker-functions">
-<h2>polytracker functions<a class="headerlink" href="#polytracker-functions" title="Permalink to this headline">¶</a></h2>
+<h2>polytracker functions<a class="headerlink" href="#polytracker-functions" title="Permalink to this heading">¶</a></h2>
 <section id="version">
-<h3>version<a class="headerlink" href="#version" title="Permalink to this headline">¶</a></h3>
+<h3>version<a class="headerlink" href="#version" title="Permalink to this heading">¶</a></h3>
 <dl class="py function">
 <dt class="sig sig-object py" id="polytracker.version">
 <span class="sig-prename descclassname"><span class="pre">polytracker.</span></span><span class="sig-name descname"><span class="pre">version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></span></span><a class="headerlink" href="#polytracker.version" title="Permalink to this definition">¶</a></dt>
@@ -243,7 +246,7 @@
     <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
       <span class="rst-current-version" data-toggle="rst-current-version">
         <span class="fa fa-book"> PolyTracker Documentation</span>
-        3.1.0
+        4.0.0
         <span class="fa fa-caret-down"></span>
       </span>
       <div class="rst-other-versions">
