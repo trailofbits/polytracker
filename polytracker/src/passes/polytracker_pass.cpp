@@ -668,8 +668,44 @@ bool PolytrackerPass::runOnModule(llvm::Module &mod) {
 
 char PolytrackerPass::ID = 0;
 
+void FnAttrRemovePass::visitCallInst(llvm::CallInst &ci) {
+  auto fn = ci.getCalledFunction();
+  if (!fn) {
+    return;
+  }
+  auto fname = fn->getName();
+  if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::InaccessibleMemOnly);
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::InaccessibleMemOrArgMemOnly);
+    ci.removeAttribute(llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::ReadOnly);
+  }
+}
+
+bool FnAttrRemovePass::runOnModule(llvm::Module &module) {
+  for (auto &fn : module) {
+    auto fname = fn.getName();
+    if (fname.startswith("__dfsw") || fname.startswith("dfs$")) {
+      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOnly);
+      fn.removeFnAttr(llvm::Attribute::InaccessibleMemOrArgMemOnly);
+      fn.removeFnAttr(llvm::Attribute::ReadOnly);
+    }
+    visit(fn);
+  }
+  return false;
+}
+
+char FnAttrRemovePass::ID = 0;
+
 }; // namespace polytracker
 
 static llvm::RegisterPass<polytracker::PolytrackerPass>
     X("ptrack", "Adds runtime monitoring calls to polytracker runtime",
+      false /* Only looks at CFG */, false /* Analysis Pass */);
+
+static llvm::RegisterPass<polytracker::FnAttrRemovePass>
+    Y("fn_attr_remove",
+      "Removes memory-related function attributes from dfsan wrappers",
       false /* Only looks at CFG */, false /* Analysis Pass */);
