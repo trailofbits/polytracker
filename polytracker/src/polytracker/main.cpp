@@ -25,8 +25,8 @@
 DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
-DECLARE_EARLY_CONSTRUCT(bool, polytracker_stderr_sink);
-DECLARE_EARLY_CONSTRUCT(bool, polytracker_stdout_sink);
+DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stderr_sink);
+DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stdout_sink);
 
 uint64_t byte_start = 0;
 uint64_t byte_end = 0;
@@ -58,8 +58,8 @@ void polytracker_parse_env() {
     get_polytracker_db_name() = pdb;
   }
 
-  get_polytracker_stdout_sink() = bool(getenv("POLYTRACKER_STDOUT_SINK"));
-  get_polytracker_stderr_sink() = bool(getenv("POLYTRACKER_STDERR_SINK"));
+  get_polytracker_stdout_sink() = getenv("POLYTRACKER_STDOUT_SINK");
+  get_polytracker_stderr_sink() = getenv("POLYTRACKER_STDERR_SINK");
 }
 
 /*
@@ -88,8 +88,8 @@ void polytracker_end() {
 
 void polytracker_print_settings() {
   printf("POLYDB: %s\n", get_polytracker_db_name().c_str());
-  printf("POLYTRACKER_STDOUT_SINK: %d\n", get_polytracker_stdout_sink());
-  printf("POLYTRACKER_STDERR_SINK: %d\n", get_polytracker_stderr_sink());
+  printf("POLYTRACKER_STDOUT_SINK: %s\n", get_polytracker_stdout_sink().c_str());
+  printf("POLYTRACKER_STDERR_SINK: %s\n", get_polytracker_stderr_sink().c_str());
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
@@ -109,11 +109,11 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
            "instrumentation.\n");
   }
 
-  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink()) {
+  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink() == "1") {
     get_polytracker_tdag().open_file(f, "/dev/stdout");
   }
 
-  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink()) {
+  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink() == "1") {
     get_polytracker_tdag().open_file(f, "/dev/stderr");
   }
 

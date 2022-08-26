@@ -103,8 +103,8 @@ def validate_execute_target(
         "POLYDB": to_native_path(db_path),
         "POLYTRACE": "1",
         "POLYFUNC": "1",
-        "POLYTRACKER_STDOUT_SINK": getenv("POLYTRACKER_STDOUT_SINK"),
-        "POLYTRACKER_STDERR_SINK": getenv("POLYTRACKER_STDERR_SINK"),
+        "POLYTRACKER_STDOUT_SINK": getenv("POLYTRACKER_STDOUT_SINK", "0"),
+        "POLYTRACKER_STDERR_SINK": getenv("POLYTRACKER_STDERR_SINK", "0"),
     }
     if taint_all:
         del env["POLYPATH"]
