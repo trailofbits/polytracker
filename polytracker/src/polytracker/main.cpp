@@ -58,8 +58,13 @@ void polytracker_parse_env() {
     get_polytracker_db_name() = pdb;
   }
 
-  get_polytracker_stdout_sink() = getenv("POLYTRACKER_STDOUT_SINK");
-  get_polytracker_stderr_sink() = getenv("POLYTRACKER_STDERR_SINK");
+  if (auto out = getenv("POLYTRACKER_STDOUT_SINK")) {
+    get_polytracker_stdout_sink() = out;
+  }
+
+  if (auto err = getenv("POLYTRACKER_STDERR_SINK")) {
+    get_polytracker_stderr_sink() = err;
+  }
 }
 
 /*
@@ -87,17 +92,26 @@ void polytracker_end() {
 }
 
 void polytracker_print_settings() {
+  // db name
   printf("POLYDB: %s\n", get_polytracker_db_name().c_str());
-  printf("POLYTRACKER_STDOUT_SINK: %s\n",
-         get_polytracker_stdout_sink().c_str());
-  printf("POLYTRACKER_STDERR_SINK: %s\n",
-         get_polytracker_stderr_sink().c_str());
+  // stdout sink flag
+  if (!get_polytracker_stdout_sink().empty()) {
+    printf("POLYTRACKER_STDOUT_SINK: %s\n",
+           get_polytracker_stdout_sink().c_str());
+  }
+  // stderr sink flag
+  if (!get_polytracker_stderr_sink().empty()) {
+    printf("POLYTRACKER_STDERR_SINK: %s\n",
+           get_polytracker_stderr_sink().c_str());
+  }
 }
 
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
                        block_mapping const *block_map, uint64_t block_map_count,
                        bool control_flow_tracking) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 
   get_target_sources();
