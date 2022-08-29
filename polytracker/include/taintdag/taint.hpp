@@ -46,7 +46,7 @@ const source_index_t source_index_mask = max_source_index;
 
 // Use the remaining bits for source file offset
 const size_t source_offset_bits = storage_bits - source_index_bits - 2;
-using source_offset_t = storage_t;
+using source_offset_t = int64_t;
 const source_offset_t max_source_offset =
     (static_cast<source_offset_t>(1) << source_offset_bits) - 1;
 
