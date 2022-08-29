@@ -110,6 +110,8 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
                        block_mapping const *block_map, uint64_t block_map_count,
                        bool control_flow_tracking) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 
   get_target_sources();
