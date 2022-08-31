@@ -137,7 +137,7 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
   atexit(polytracker_end);
 }
 
-void taint_start(void){
+void taint_start(void) {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 

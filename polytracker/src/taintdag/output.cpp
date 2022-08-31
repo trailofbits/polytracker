@@ -96,9 +96,9 @@ OutputFile::mapping_t OutputFile::fn_mapping() {
 char *OutputFile::fn_trace_begin() {
   return reinterpret_cast<char *>(mapping_) + fn_trace_offset;
 }
-char *OutputFile::fn_trace_end() {
-  return fn_trace_begin() + fn_trace_size;
-}
+
+char *OutputFile::fn_trace_end() { return fn_trace_begin() + fn_trace_size; }
+
 OutputFile::mapping_t OutputFile::fn_trace() {
   return {fn_trace_begin(), fn_trace_end()};
 }

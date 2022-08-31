@@ -41,7 +41,7 @@ class TDHeader(Structure):
         ("fn_mapping_offset", c_uint64),
         ("fn_mapping_count", c_uint64),
         ("fn_trace_offset", c_uint64),
-        ("fn_trace_count", c_uint64)
+        ("fn_trace_count", c_uint64),
     ]
 
     def __repr__(self) -> str:

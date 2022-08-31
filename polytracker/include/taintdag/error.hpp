@@ -10,12 +10,12 @@
 
 #include <spdlog/spdlog.h>
 
-#include <sstream>
 #include <cstdlib>
+#include <sstream>
 
 namespace taintdag {
 
-template <typename... Msgs> void error_exit(Msgs &&...msgs) {
+template <typename... Msgs> void error_exit(Msgs &&... msgs) {
   std::stringstream ss;
   (ss << ... << msgs);
   spdlog::error(ss.str());
