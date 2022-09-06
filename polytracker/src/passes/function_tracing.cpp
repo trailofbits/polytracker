@@ -12,8 +12,6 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/CommandLine.h>
 
-#include <spdlog/spdlog.h>
-
 static llvm::cl::list<std::string> ignore_lists(
     "pt-ftrace-ignore-list",
     llvm::cl::desc(

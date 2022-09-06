@@ -10,9 +10,19 @@ from typing import (
     Set,
     cast,
 )
+
 from pathlib import Path
 from mmap import mmap, PROT_READ
-from ctypes import Structure, c_int64, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from ctypes import (
+    Structure,
+    c_int64,
+    c_uint64,
+    c_int32,
+    c_uint32,
+    c_uint8,
+    c_uint16,
+    sizeof,
+)
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -119,6 +129,13 @@ class TDSink(Structure):
 
     def __repr__(self) -> str:
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
+
+
+class TDEvent(Structure):
+    _fields_ = [("id", c_uint32), ("kind", c_uint8), ("fnidx", c_uint16)]
+
+    def __repr__(self) -> str:
+        return f"TDEvent id: {self.id} kind: {self.kind} fnidx: {self.fnidx}"
 
 
 class TDFile:
@@ -231,6 +248,19 @@ class TDFile:
         while offset < end:
             yield self.read_sink(offset)
             offset += sizeof(TDSink)
+
+    def read_event(self, offset: int) -> TDEvent:
+        return TDEvent.from_buffer_copy(self.buffer, offset)
+
+    @property
+    def events(self) -> Iterator[TDEvent]:
+
+        offset = self.header.fn_trace_offset
+        end = offset + self.header.fn_trace_count * sizeof(TDEvent)
+
+        while offset < end:
+            yield self.read_event(offset)
+            offset += sizeof(TDEvent)
 
 
 class TDTaintOutput(TaintOutput):
@@ -499,6 +529,13 @@ class TDInfo(Command):
             help="print taint nodes",
         )
 
+        parser.add_argument(
+            "--print-function-trace",
+            "-t",
+            action="store_true",
+            help="print function trace events",
+        )
+
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
             tdfile = TDFile(f)
@@ -524,3 +561,7 @@ class TDInfo(Command):
             if args.print_taint_nodes:
                 for lbl in range(1, tdfile.label_count):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
+
+            if args.print_function_trace:
+                for e in tdfile.events:
+                    print(f"{e}")

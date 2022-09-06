@@ -51,7 +51,7 @@ const size_t fn_mapping_offset = sink_mapping_offset + sink_mapping_size;
 const size_t fn_trace_offset = fn_mapping_offset + fn_mapping_size;
 
 // Total mapping size
-const size_t mapping_size = fn_mapping_offset + fn_mapping_size;
+const size_t mapping_size = fn_trace_offset + fn_trace_size;
 
 // TODO (hbrodin): Check alignment of returned pointers to ensure is allowed to
 // cast to e.g. storage_t Relies on sparse file support to generate the output

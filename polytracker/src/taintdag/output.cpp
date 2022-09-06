@@ -61,7 +61,7 @@ void OutputFile::init_filehdr() {
   fh->sink_mapping_size = 0;
   fh->fn_mapping_offset = fn_mapping_offset;
   fh->fn_mapping_count = 0;
-  fh->fn_trace_offset = fn_mapping_offset;
+  fh->fn_trace_offset = fn_trace_offset;
   fh->fn_trace_count = 0;
 }
 
