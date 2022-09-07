@@ -76,6 +76,9 @@ polytrackers settings
 3. Set rest to default if possible and error if no polypath.
 */
 void polytracker_get_settings() {
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   polytracker_parse_env();
   set_defaults();
 }
@@ -106,14 +109,21 @@ void polytracker_print_settings() {
   }
 }
 
+void sink_streams() {
+  // Sink stdout
+  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink() == "1") {
+    get_polytracker_tdag().open_file(f, "/dev/stdout");
+  }
+  // Sink stderr
+  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink() == "1") {
+    get_polytracker_tdag().open_file(f, "/dev/stderr");
+  }
+}
+
 void polytracker_start(func_mapping const *globals, uint64_t globals_count,
                        block_mapping const *block_map, uint64_t block_map_count,
                        bool control_flow_tracking) {
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
-
   get_target_sources();
   polytracker_get_settings();
   polytracker_print_settings();
@@ -124,28 +134,19 @@ void polytracker_start(func_mapping const *globals, uint64_t globals_count,
     printf("Program compiled without PolyTracker control flow tracking "
            "instrumentation.\n");
   }
-
-  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink() == "1") {
-    get_polytracker_tdag().open_file(f, "/dev/stdout");
-  }
-
-  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink() == "1") {
-    get_polytracker_tdag().open_file(f, "/dev/stderr");
-  }
-
+  sink_streams();
   // Set up the atexit call
   atexit(polytracker_end);
 }
 
 void taint_start(void) {
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
-
   get_target_sources();
   polytracker_get_settings();
   polytracker_print_settings();
   DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
                      get_polytracker_db_name());
+  sink_streams();
   // Set up the atexit call
   atexit(polytracker_end);
 }
