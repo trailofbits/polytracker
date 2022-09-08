@@ -185,12 +185,12 @@ FnMapping::index_t PolyTracker::function_entry(std::string_view name) {
   if (!maybe_index) {
     error_exit("Failed to add function mapping for: ", name);
   }
-  fnt_.log_fn_event(FnTrace::event_kind_t::entry, *maybe_index);
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::entry, *maybe_index);
   return *maybe_index;
 }
 
 void PolyTracker::function_exit(FnMapping::index_t index) {
-  fnt_.log_fn_event(FnTrace::event_kind_t::exit, index);
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::exit, index);
 }
 
 } // namespace taintdag

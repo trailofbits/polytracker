@@ -41,7 +41,7 @@ const size_t sink_mapping_size =
 const size_t fn_mapping_size = sizeof(FnMapping::header_t) *
                                std::numeric_limits<FnMapping::index_t>::max();
 const size_t fn_trace_size =
-    sizeof(FnTrace::event_t) * std::numeric_limits<FnTrace::event_id_t>::max();
+    sizeof(FnTrace::event_t) * std::numeric_limits<std::uint32_t>::max();
 // Mapping offsets - corresponds to output file offsets for regions (seek
 // offsets)
 const size_t fd_mapping_offset = sizeof(FileHdr);

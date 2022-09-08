@@ -17,7 +17,6 @@ namespace taintdag {
 namespace {
 
 using offset_t = FnTrace::offset_t;
-using event_kind_t = FnTrace::event_kind_t;
 using fn_index_t = FnMapping::index_t;
 
 } // namespace
@@ -39,12 +38,11 @@ size_t FnTrace::get_event_count() {
   return (events_end - trace_begin) / sizeof(event_t);
 }
 
-void FnTrace::log_fn_event(event_kind_t kind, fn_index_t idx) {
+void FnTrace::log_fn_event(event_t::kind_t kind, fn_index_t idx) {
   std::unique_lock write_lock{memory_m};
-  auto id{event_id_t(get_event_count())};
-  auto maybe_offset{write_event({id, kind, idx})};
+  auto maybe_offset{write_event({kind, idx})};
   if (!maybe_offset) {
-    error_exit("Failed to log event with id: ", id);
+    error_exit("Failed to log event with id: ", get_event_count());
   }
   events_end += sizeof(event_t);
 }

@@ -18,19 +18,16 @@ namespace taintdag {
 class FnTrace {
 public:
   using offset_t = uint32_t;
-  using event_id_t = uint32_t;
   using fn_index_t = FnMapping::index_t;
 
-  enum class event_kind_t : uint8_t { entry, exit };
-
   struct event_t {
-    event_id_t id;
-    event_kind_t kind;
+    enum class kind_t : uint8_t { entry, exit };
+    kind_t kind;
     fn_index_t function;
   };
 
   FnTrace(char *begin, char *end);
-  void log_fn_event(event_kind_t kind, fn_index_t idx);
+  void log_fn_event(event_t::kind_t kind, fn_index_t idx);
   size_t get_event_count();
 
 private:

@@ -11,6 +11,7 @@ from typing import (
     cast,
 )
 
+from enum import Enum
 from pathlib import Path
 from mmap import mmap, PROT_READ
 from ctypes import (
@@ -132,10 +133,14 @@ class TDSink(Structure):
 
 
 class TDEvent(Structure):
-    _fields_ = [("id", c_uint32), ("kind", c_uint8), ("fnidx", c_uint16)]
+    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
+
+    class Kind(Enum):
+        ENTRY = 0
+        EXIT = 1
 
     def __repr__(self) -> str:
-        return f"TDEvent id: {self.id} kind: {self.kind} fnidx: {self.fnidx}"
+        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
 
 
 class TDFile:
