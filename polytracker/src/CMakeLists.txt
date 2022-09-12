@@ -1,5 +1,3 @@
-set(CMAKE_CXX_STANDARD 17)
-
 find_package(LLVM 13 CONFIG)
 
 if(LLVM_FOUND)
