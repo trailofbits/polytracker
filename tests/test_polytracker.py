@@ -241,7 +241,7 @@ def test_taint_forest(program_trace: ProgramTrace):
         desc="validating",
         unit=" taint nodes",
     ):
-    # TODO (hbrodin): proper evaluation
+        # TODO (hbrodin): proper evaluation
         if taint_node.is_canonical():
             assert taint_node.parent_one is None
             assert taint_node.parent_two is None
