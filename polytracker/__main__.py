@@ -10,18 +10,6 @@ from . import polytracker
 
 logger = logging.getLogger("polytracker")
 
-TEST_DIR = Path(__file__).parent.parent / "tests"
-
-if __name__ == "polytracker.__main__" and (TEST_DIR / "test_polytracker.py").exists():
-    import pytest
-
-    class TestCommand(Command):
-        name = "test"
-        help = "run the PolyTracker tests"
-
-        def run(self, args: Namespace):
-            return pytest.main([str(TEST_DIR)])
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -61,7 +49,7 @@ def main():
             retval = 0
         else:
             retval = 1
-    
+
     return retval
 
 
