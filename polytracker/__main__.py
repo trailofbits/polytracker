@@ -38,7 +38,7 @@ def main():
 
     add_command_subparsers(parser)
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not hasattr(args, "func"):
         if args.version:
@@ -61,8 +61,9 @@ def main():
             retval = 0
         else:
             retval = 1
-    exit(retval)
+    
+    return retval
 
 
 if __name__ == "__main__":
-    main()
+    exit(main(sys.argv))
