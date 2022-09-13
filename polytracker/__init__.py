@@ -3,6 +3,7 @@ from pkgutil import iter_modules
 from importlib import import_module
 
 # from .database import DBProgramTrace as PolyTrackerTrace
+from .__main__ import main
 from .taint_dag import TDProgramTrace as PolyTrackerTrace
 from .polytracker import *
 
@@ -22,8 +23,6 @@ for module_to_subsume in SUBMODULES_TO_SUBSUME:
 package_dir = Path(__file__).resolve().parent
 for (_, module_name, _) in iter_modules([str(package_dir)]):  # type: ignore
     if module_name == "__main__":
-        module = import_module(f"{__name__}.{module_name}")
-        globals()["main"] = getattr(module, "main")
         continue
 
     # import the module and iterate through its attributes
