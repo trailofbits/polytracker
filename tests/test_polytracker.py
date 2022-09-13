@@ -220,12 +220,6 @@ def test_taint_forest(program_trace: ProgramTrace):
     assert had_taint_union
 
 
-@pytest.mark.program_trace("test_retcode.c", return_exceptions=True)
-def test_retcode(program_trace: Union[ProgramTrace, Exception]):
-    # test_retcode.c should cause a CalledProcessError to be returned since it has a non-zero exit code
-    assert isinstance(program_trace, CalledProcessError)
-
-
 @pytest.mark.program_trace("test_stack.c", return_exceptions=True)
 def test_stack(program_trace: Union[ProgramTrace, Exception]):
     # test_retcode.c should cause a CalledProcessError to be returned since it has a non-zero exit code
