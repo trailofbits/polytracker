@@ -1,10 +1,11 @@
-from os import getenv
 import pytest
+
+from os import getenv
 from shutil import copyfile
 from subprocess import CalledProcessError
 from tempfile import NamedTemporaryFile
 
-from polytracker import PolyTrackerTrace, ProgramTrace
+import polytracker
 
 from .data import *
 
@@ -89,7 +90,7 @@ def validate_execute_target(
     input_bytes: Optional[bytes] = None,
     return_exceptions: bool = False,
     taint_all: bool = False,
-) -> Union[ProgramTrace, CalledProcessError]:
+) -> Union[polytracker.ProgramTrace, CalledProcessError]:
     target_bin_path = _get_instrumented_bin_path(target_name)
     if CAN_RUN_NATIVELY:
         assert target_bin_path.exists()
@@ -136,11 +137,11 @@ def validate_execute_target(
         else:
             raise error
     # Assert that the appropriate files were created
-    return PolyTrackerTrace.load(db_path)
+    return polytracker.PolyTrackerTrace.load(db_path)
 
 
 @pytest.fixture
-def program_trace(request):
+def program_trace_(request):
     marker = request.node.get_closest_marker("program_trace")
     if marker is None:
         raise ValueError(
@@ -186,3 +187,42 @@ def program_trace(request):
         return_exceptions=return_exceptions,
         taint_all=taint_all,
     )
+
+
+def build(target: Path, binary: Path) -> None:
+    assert target.exists
+
+    cmd = ["build"]
+    if target.suffix == ".cpp":
+        cmd.append("clang++")
+    else:
+        cmd.append("clang")
+
+    cmd += ["-g", "-o", str(binary), str(target)]
+    assert polytracker.main(cmd) == 0
+
+
+def instrument(target: str) -> None:
+    cmd = ["instrument-targets", target]
+    assert polytracker.main(cmd) == 0
+
+
+@pytest.fixture
+def program_trace(monkeypatch, request):
+    marker = request.node.get_closest_marker("program_trace")
+    tstdir = Path(request.fspath).parent
+    target = tstdir / Path(marker.args[0])
+    binary = Path(f"{target.stem}.bin").resolve()
+    build(target, binary)
+    trace_file = Path(f"{target.stem}.db").resolve()
+    trace_file.unlink(missing_ok=True)
+    instrument(binary.name)
+    monkeypatch.setenv("POLYDB", str(trace_file))
+    cmd = [
+        # instrumented binary
+        Path(f"{binary.stem}.instrumented").resolve(),
+        # input data
+        str(tstdir / "test_data" / "test_data.txt"),
+    ]
+    subprocess.call(cmd)
+    return polytracker.PolyTrackerTrace.load(trace_file)
