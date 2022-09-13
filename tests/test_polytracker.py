@@ -230,3 +230,24 @@ def test_retcode(program_trace: Union[ProgramTrace, Exception]):
 def test_stack(program_trace: Union[ProgramTrace, Exception]):
     # test_retcode.c should cause a CalledProcessError to be returned since it has a non-zero exit code
     assert not isinstance(program_trace, CalledProcessError)
+
+
+@pytest.mark.program_trace("test_argv.cpp", input="ignored")
+def test_taint_forest(program_trace: ProgramTrace):
+    had_taint_union = False
+    for taint_node in tqdm(
+        program_trace.taint_forest.nodes(),
+        leave=False,
+        desc="validating",
+        unit=" taint nodes",
+    ):
+    # TODO (hbrodin): proper evaluation
+        if taint_node.is_canonical():
+            assert taint_node.parent_one is None
+            assert taint_node.parent_two is None
+        else:
+            assert taint_node.parent_one is not None
+            assert taint_node.parent_two is not None
+            had_taint_union = True
+    # There was at least one taint union
+    assert had_taint_union

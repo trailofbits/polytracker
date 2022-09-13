@@ -48,7 +48,8 @@ set(CMAKE_EXE_LINKER_FLAGS
 set(POLY_SOURCES ${POLY_DIR}/main.cpp ${POLY_DIR}/polytracker.cpp)
 
 set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
-                  ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp)
+                  ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp
+                  ${TAINT_DIR}/argv.cpp)
 
 set(TAINTDAG_SOURCES ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/fdmapping.cpp
                      ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp)
