@@ -309,17 +309,22 @@ static void emitTaintArgvCall(llvm::Function &main) {
   }
   auto argv_ty = argv->getType();
 
+  // IRBuilder for emitting a call to __polytracker_taint_argv. Need to
+  // specify insertion point first, to ensure that no instruction can
+  // use argv before it is tainted.
+  llvm::IRBuilder<> irb(&*(main.getEntryBlock().getFirstInsertionPt()));
+
   // Define the target function type and make it available in the module
-  auto taint_argv_ty = llvm::FunctionType::get(
-      llvm::Type::getVoidTy(main.getContext()), {argc_ty, argv_ty}, false);
+  auto taint_argv_ty =
+      llvm::FunctionType::get(irb.getVoidTy(), {argc_ty, argv_ty}, false);
   llvm::FunctionCallee taint_argv = main.getParent()->getOrInsertFunction(
       "__polytracker_taint_argv", taint_argv_ty);
-  assert(taint_argv);
+  if (!taint_argv) {
+    spdlog::error("Failed to declare __polytracker_taint_argv.");
+    return;
+  }
 
-  // Emit a call to the taint_argv function using parameters from main.
-  auto &bb = main.getEntryBlock();
-  llvm::Instruction &insert_point = *(bb.getFirstInsertionPt());
-  llvm::IRBuilder<> irb(&insert_point);
+  // Emit the call using parameters from main.
   auto ci = irb.CreateCall(taint_argv, {argc, argv});
   if (!ci) {
     spdlog::error("Failed to insert call to taint_argv.");
