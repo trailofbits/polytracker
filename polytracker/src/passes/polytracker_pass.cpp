@@ -5,6 +5,7 @@
 // #include "polytracker/thread_pool.h"
 #include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -289,12 +290,54 @@ bool PolytrackerPass::analyzeBlock(llvm::Function *func,
   return true;
 }
 
+// Inserts a function call to polytracker::taint_argv(argc, argv)
+// Assumes main is actually the main function of the program and
+// interprets first arg as argc and second as argv.
+static void emitTaintArgvCall(llvm::Function &main) {
+  // Get the parameters of the main function, argc, argv
+  auto argc = main.getArg(0);
+  if (!argc) {
+    spdlog::error("Failed to instrument argv. No argc available.");
+    return;
+  }
+  auto argc_ty = argc->getType();
+
+  auto argv = main.getArg(1);
+  if (!argv) {
+    spdlog::error("Failed to instrument argv. No argv available.");
+    return;
+  }
+  auto argv_ty = argv->getType();
+
+  // IRBuilder for emitting a call to __polytracker_taint_argv. Need to
+  // specify insertion point first, to ensure that no instruction can
+  // use argv before it is tainted.
+  llvm::IRBuilder<> irb(&*(main.getEntryBlock().getFirstInsertionPt()));
+
+  // Define the target function type and make it available in the module
+  auto taint_argv_ty =
+      llvm::FunctionType::get(irb.getVoidTy(), {argc_ty, argv_ty}, false);
+  llvm::FunctionCallee taint_argv = main.getParent()->getOrInsertFunction(
+      "__polytracker_taint_argv", taint_argv_ty);
+  if (!taint_argv) {
+    spdlog::error("Failed to declare __polytracker_taint_argv.");
+    return;
+  }
+
+  // Emit the call using parameters from main.
+  auto ci = irb.CreateCall(taint_argv, {argc, argv});
+  if (!ci) {
+    spdlog::error("Failed to insert call to taint_argv.");
+  }
+}
+
 /*
 We should instrument everything we have bitcode for, right?
 If instructions have __polytracker, or they have __dfsan, ignore!
 */
 bool PolytrackerPass::analyzeFunction(llvm::Function *f,
                                       const func_index_t &func_index) {
+
   // Add Function entry
   polytracker::BBSplittingPass bbSplitter;
   // llvm::removeUnreachableBlocks(*f);
@@ -338,6 +381,11 @@ bool PolytrackerPass::analyzeFunction(llvm::Function *f,
 
   for (auto &inst : insts) {
     visit(inst);
+  }
+
+  // If this is the main function, insert a taint-argv call
+  if (f && f->getName() == "main") {
+    emitTaintArgvCall(*f);
   }
 
   return true;

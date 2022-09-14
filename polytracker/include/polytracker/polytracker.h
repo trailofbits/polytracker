@@ -46,3 +46,6 @@ extern uint64_t func_mapping_count;
 
 extern const block_mapping *block_mappings;
 extern uint64_t block_mapping_count;
+
+// Controls argv being a taint source
+extern bool polytracker_taint_argv;

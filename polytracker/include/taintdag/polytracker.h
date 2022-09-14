@@ -2,6 +2,7 @@
 #define POLYTRACKER_TAINTDAG_POLYTRACKER_H
 
 #include <filesystem>
+#include <span>
 
 #include "taintdag/fdmapping.hpp"
 #include "taintdag/output.hpp"
@@ -31,6 +32,13 @@ public:
   // Just return the taint_range e.g. for return values
   std::optional<taint_range_t> source_taint(int fd, source_offset_t offset,
                                             size_t length);
+
+  // Create a new taint source (not a file) and assigns taint labels
+  // A new taint source named 'name' is created
+  // Memory in 'dst' is assigned source taint labels referring to source 'name'
+  // and in increasing offset.
+  std::optional<taint_range_t> create_taint_source(std::string_view name,
+                                                   std::span<uint8_t> dst);
 
   // Update the label, it affects control flow
   void affects_control_flow(label_t taint_label);
