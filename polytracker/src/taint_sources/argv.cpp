@@ -22,7 +22,7 @@ void taint_argv(int argc, char *argv[]) {
 
   auto &polyt = get_polytracker_tdag();
 
-  for (int i = 0; i < argc; i++) {
+  for (int i = 0; i < argc; ++i) {
     auto name = std::string{"argv["} + std::to_string(i) + "]";
     // NOTE(hbrodin): Currently not tainting terminating null char.
     polyt.create_taint_source(
