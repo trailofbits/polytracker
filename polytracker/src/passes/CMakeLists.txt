@@ -12,8 +12,6 @@ add_library(
   taint_tracking.cpp
   remove_fn_attr.cpp
   function_tracing.cpp
-  polytracker_pass.cpp
-  bb_splitting_pass.cpp
   utils.cpp
   pass_plugin.cpp)
 
