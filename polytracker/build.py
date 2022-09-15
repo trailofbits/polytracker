@@ -151,7 +151,6 @@ def _instrument_bitcode(
     input_bitcode: Path,
     output_bitcode: Path,
     ignore_lists: List[str],
-    no_control_flow_tracking: bool,
 ) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -172,10 +171,6 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
         "-passes=pt-taint,pt-ftrace,dfsan,pt-rm-fn-attr",
     ]
-
-    # if no_control_flow_tracking:
-    #     cmd.append("-no-control-flow-tracking")
-
     # ignore lists for `pt-taint`
     cmd.append(
         f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",
@@ -284,12 +279,6 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
-            "--no-control-flow-tracking",
-            action="store_true",
-            help="do not instrument the program with any control flow tracking",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -301,7 +290,6 @@ class InstrumentBitcode(Command):
             args.input,
             args.output,
             args.ignore_lists,
-            args.no_control_flow_tracking,
         )
 
 
@@ -384,6 +372,5 @@ class InstrumentTargets(Command):
                 bc_path,
                 inst_bc_path,
                 args.ignore_lists,
-                args.no_control_flow_tracking,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)
