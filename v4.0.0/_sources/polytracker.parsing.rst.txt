@@ -1,0 +1,84 @@
+polytracker.parsing
+===================
+
+.. automodule:: polytracker.parsing
+
+parsing classes
+---------------
+
+ImmutableParseTree
+******************
+
+.. autoclass:: ImmutableParseTree
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+MutableParseTree
+****************
+
+.. autoclass:: MutableParseTree
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+NonGeneralizedParseTree
+***********************
+
+.. autoclass:: NonGeneralizedParseTree
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ParseTree
+*********
+
+.. autoclass:: ParseTree
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Start
+*****
+
+.. autoclass:: Start
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+Terminal
+********
+
+.. autoclass:: Terminal
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+parsing functions
+-----------------
+
+escape_byte
+***********
+
+.. autofunction:: escape_byte
+
+highlight_offset
+****************
+
+.. autofunction:: highlight_offset
+
+trace_to_non_generalized_tree
+*****************************
+
+.. autofunction:: trace_to_non_generalized_tree
+
+trace_to_tree
+*************
+
+.. autofunction:: trace_to_tree

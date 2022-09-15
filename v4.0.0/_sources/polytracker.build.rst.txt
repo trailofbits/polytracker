@@ -1,0 +1,61 @@
+polytracker.build
+=================
+
+.. automodule:: polytracker.build
+
+build classes
+-------------
+
+Build
+*****
+
+.. autoclass:: Build
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+ExtractBitcode
+**************
+
+.. autoclass:: ExtractBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+InstrumentBitcode
+*****************
+
+.. autoclass:: InstrumentBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+InstrumentTargets
+*****************
+
+.. autoclass:: InstrumentTargets
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+LowerBitcode
+************
+
+.. autoclass:: LowerBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+OptimizeBitcode
+***************
+
+.. autoclass:: OptimizeBitcode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

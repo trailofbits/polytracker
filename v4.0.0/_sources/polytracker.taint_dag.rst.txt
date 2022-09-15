@@ -1,0 +1,124 @@
+polytracker.taint_dag
+=====================
+
+.. automodule:: polytracker.taint_dag
+
+taint_dag classes
+-----------------
+
+TDFDHeader
+**********
+
+.. autoclass:: TDFDHeader
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDFile
+******
+
+.. autoclass:: TDFile
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDHeader
+********
+
+.. autoclass:: TDHeader
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDInfo
+******
+
+.. autoclass:: TDInfo
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDNode
+******
+
+.. autoclass:: TDNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDProgramTrace
+**************
+
+.. autoclass:: TDProgramTrace
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDRangeNode
+***********
+
+.. autoclass:: TDRangeNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDSink
+******
+
+.. autoclass:: TDSink
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDSourceNode
+************
+
+.. autoclass:: TDSourceNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDTaintForest
+*************
+
+.. autoclass:: TDTaintForest
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDTaintForestNode
+*****************
+
+.. autoclass:: TDTaintForestNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDTaintOutput
+*************
+
+.. autoclass:: TDTaintOutput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDUnionNode
+***********
+
+.. autoclass:: TDUnionNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:

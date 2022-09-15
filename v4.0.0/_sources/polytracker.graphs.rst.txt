@@ -1,0 +1,33 @@
+polytracker.graphs
+==================
+
+.. automodule:: polytracker.graphs
+
+graphs classes
+--------------
+
+DAG
+***
+
+.. autoclass:: DAG
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+DiGraph
+*******
+
+.. autoclass:: DiGraph
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+graphs functions
+----------------
+
+non_disjoint_union_all
+**********************
+
+.. autofunction:: non_disjoint_union_all

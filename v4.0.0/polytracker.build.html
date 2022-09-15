@@ -1,0 +1,700 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>polytracker.build &mdash; PolyTracker 4.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://trailofbits.github.io/polytracker/latest/polytracker.build.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="polytracker.cache" href="polytracker.cache.html" />
+    <link rel="prev" title="polytracker" href="polytracker.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PolyTracker
+          
+
+          
+          </a>
+
+          
+
+          
+<a href="https://github.com/trailofbits/polytracker"><div class="version">4.0.0</div></a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="package.html">PolyTracker API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="polytracker.html">polytracker</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.build</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#build-classes">build classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#build">Build</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#extractbitcode">ExtractBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instrumentbitcode">InstrumentBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instrumenttargets">InstrumentTargets</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lowerbitcode">LowerBitcode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#optimizebitcode">OptimizeBitcode</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.graphs.html">polytracker.graphs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.inputs.html">polytracker.inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.mapping.html">polytracker.mapping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.parsing.html">polytracker.parsing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.plugins.html">polytracker.plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_dag.html">polytracker.taint_dag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.taint_forest.html">polytracker.taint_forest</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.tracing.html">polytracker.tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="polytracker.visualizations.html">polytracker.visualizations</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PolyTracker</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content style-external-links">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="package.html">PolyTracker API</a> &raquo;</li>
+        
+      <li>polytracker.build</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/polytracker.build.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="module-polytracker.build">
+<span id="polytracker-build"></span><h1>polytracker.build<a class="headerlink" href="#module-polytracker.build" title="Permalink to this heading">¶</a></h1>
+<section id="build-classes">
+<h2>build classes<a class="headerlink" href="#build-classes" title="Permalink to this heading">¶</a></h2>
+<section id="build">
+<h3>Build<a class="headerlink" href="#build" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.Build">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">Build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.Build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.Build.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.Build.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.Build.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.Build.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.Build.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'runs</span> <span class="pre">a</span> <span class="pre">build</span> <span class="pre">command</span> <span class="pre">with</span> <span class="pre">blight</span> <span class="pre">instrumentation'</span></em><a class="headerlink" href="#polytracker.build.Build.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'build'</span></em><a class="headerlink" href="#polytracker.build.Build.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.Build.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.Build.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.Build.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.Build.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.Build.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.Build.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.Build.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="extractbitcode">
+<h3>ExtractBitcode<a class="headerlink" href="#extractbitcode" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">ExtractBitcode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.ExtractBitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.ExtractBitcode.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'extracts</span> <span class="pre">LLVM</span> <span class="pre">bitcode</span> <span class="pre">from</span> <span class="pre">a</span> <span class="pre">binary</span> <span class="pre">(executable,</span> <span class="pre">library,</span> <span class="pre">object</span> <span class="pre">file,</span> <span class="pre">...)'</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'extract-bc'</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.ExtractBitcode.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.ExtractBitcode.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.ExtractBitcode.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="instrumentbitcode">
+<h3>InstrumentBitcode<a class="headerlink" href="#instrumentbitcode" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">InstrumentBitcode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentBitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentBitcode.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'instruments</span> <span class="pre">LLVM</span> <span class="pre">bitcode</span> <span class="pre">with</span> <span class="pre">polytracker</span> <span class="pre">passes'</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'instrument-bc'</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentBitcode.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentBitcode.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentBitcode.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="instrumenttargets">
+<h3>InstrumentTargets<a class="headerlink" href="#instrumenttargets" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">InstrumentTargets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentTargets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentTargets.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'instruments</span> <span class="pre">blight</span> <span class="pre">journal</span> <span class="pre">build</span> <span class="pre">targets</span> <span class="pre">with</span> <span class="pre">polytracker'</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'instrument-targets'</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.InstrumentTargets.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.InstrumentTargets.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.InstrumentTargets.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="lowerbitcode">
+<h3>LowerBitcode<a class="headerlink" href="#lowerbitcode" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">LowerBitcode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.LowerBitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.LowerBitcode.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.LowerBitcode.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lowers</span> <span class="pre">an</span> <span class="pre">LLVM</span> <span class="pre">bitcode</span> <span class="pre">file</span> <span class="pre">to</span> <span class="pre">an</span> <span class="pre">executable</span> <span class="pre">according</span> <span class="pre">to</span> <span class="pre">a</span> <span class="pre">blight</span> <span class="pre">journal</span> <span class="pre">file'</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lower-bc'</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.LowerBitcode.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.LowerBitcode.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.LowerBitcode.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="optimizebitcode">
+<h3>OptimizeBitcode<a class="headerlink" href="#optimizebitcode" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.build.</span></span><span class="sig-name descname"><span class="pre">OptimizeBitcode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.OptimizeBitcode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.OptimizeBitcode.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.extension_types">
+<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.extension_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of eny extensions to this command.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.full_name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.full_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.help">
+<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'optimizes</span> <span class="pre">LLVM</span> <span class="pre">bitcode</span> <span class="pre">with</span> <span class="pre">O3'</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.help" title="Permalink to this definition">¶</a></dt>
+<dd><p>Help string for this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'opt-bc'</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of this plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.parent" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.parent_parsers">
+<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.10)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.parent_parsers" title="Permalink to this definition">¶</a></dt>
+<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.10)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.build.OptimizeBitcode.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callback for when the command is run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.subcommand_types">
+<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.10)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.10)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.subcommand_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>An auto-populated list of subcommands of this command.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.build.OptimizeBitcode.subparser">
+<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.10)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.build.OptimizeBitcode.subparser" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="polytracker.cache.html" class="btn btn-neutral float-right" title="polytracker.cache" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="polytracker.html" class="btn btn-neutral float-left" title="polytracker" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019–2021, Trail of Bits
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+  
+  
+    <div class="rst-versions" data-toggle="rst-versions" role="note" aria-label="versions">
+      <span class="rst-current-version" data-toggle="rst-current-version">
+        <span class="fa fa-book"> PolyTracker Documentation</span>
+        4.0.0
+        <span class="fa fa-caret-down"></span>
+      </span>
+      <div class="rst-other-versions">
+        <dl>
+          <dt>Versions</dt>
+          
+            <dd><a href="/polytracker/latest">latest</a></dd>
+          
+        </dl>
+        <dl>
+          <dt>Source Code</dt>
+            <dd>
+              <a href="https://github.com/trailofbits/polytracker">GitHub Page</a>
+            </dd>
+        </dl>
+      </div>
+    </div>
+  
+
+
+</body>
+</html>

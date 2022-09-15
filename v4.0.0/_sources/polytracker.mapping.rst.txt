@@ -1,0 +1,42 @@
+polytracker.mapping
+===================
+
+.. automodule:: polytracker.mapping
+
+mapping classes
+---------------
+
+FileCavities
+************
+
+.. autoclass:: FileCavities
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+InputOutputMapping
+******************
+
+.. autoclass:: InputOutputMapping
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+MapInputsToOutputs
+******************
+
+.. autoclass:: MapInputsToOutputs
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+mapping functions
+-----------------
+
+ascii
+*****
+
+.. autofunction:: ascii

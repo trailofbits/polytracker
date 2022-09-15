@@ -1,0 +1,25 @@
+polytracker.cfg
+===============
+
+.. automodule:: polytracker.cfg
+
+cfg classes
+-----------
+
+CFG
+***
+
+.. autoclass:: CFG
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+FunctionInfo
+************
+
+.. autoclass:: FunctionInfo
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
