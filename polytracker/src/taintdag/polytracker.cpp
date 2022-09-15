@@ -137,6 +137,28 @@ PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
   return create_source_taint(fd, offset, length);
 }
 
+std::optional<taint_range_t>
+PolyTracker::create_taint_source(std::string_view name,
+                                 std::span<uint8_t> dst) {
+  // Reserve a contiguous range of labels for this source
+  auto rng = tdag_.reserve_source_labels(dst.size());
+
+  // Register the source by name (and its preallocated range).
+  auto idx = fdm_.add_mapping(-1, name, rng);
+  if (!idx)
+    return {};
+
+  // Construct the allocated labels as source labels belonging to source 'idx'
+  tdag_.assign_source_labels(rng, *idx, 0);
+
+  // Mark memory with corresponding labels
+  auto lbl = rng.first;
+  for (auto &c : dst) {
+    dfsan_set_label(lbl++, &c, sizeof(char));
+  }
+  return rng;
+}
+
 void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
                              size_t length) {
   auto idx = fdm_.mapping_idx(fd);

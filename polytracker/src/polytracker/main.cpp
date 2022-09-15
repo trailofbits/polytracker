@@ -28,10 +28,14 @@ DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stderr_sink);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stdout_sink);
 
+// Controls argv being a taint source
+bool polytracker_taint_argv = false;
+
 uint64_t byte_start = 0;
 uint64_t byte_end = 0;
 bool polytracker_trace = false;
 bool polytracker_trace_func = false;
+
 /**
  * Whether or not to save the input files to the output database
  */
@@ -64,6 +68,10 @@ void polytracker_parse_env() {
 
   if (auto err = getenv("POLYTRACKER_STDERR_SINK")) {
     get_polytracker_stderr_sink() = err;
+  }
+
+  if (auto argv = getenv("POLYTRACKER_TAINT_ARGV")) {
+    polytracker_taint_argv = argv[0] == '1';
   }
 }
 

@@ -64,6 +64,8 @@ fun:__polytracker_store_blob=uninstrumented
 fun:__polytracker_store_blob=discard
 fun:__polytracker_preserve_map=uninstrumented
 fun:__polytracker_preserve_map=discard
+fun:__polytracker_taint_argv=uninstrumented
+fun:__polytracker_taint_argv=discard
 
 fun:__remill_jump=uninstrumented
 fun:__remill_jump=discard

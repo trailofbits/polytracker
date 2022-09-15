@@ -1,6 +1,7 @@
 #include "polytracker/polytracker.h"
 #include "polytracker/early_construct.h"
 #include "taintdag/fnmapping.h"
+#include "polytracker/taint_sources.h"
 #include "taintdag/polytracker.h"
 #include <atomic>
 #include <inttypes.h>
@@ -98,6 +99,10 @@ extern "C" void __polytracker_start(func_mapping const *globals,
 }
 
 extern "C" void __taint_start() { taint_start(); }
+
+extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
+  polytracker::taint_argv(argc, argv);
+}
 
 extern "C" void
 __polytracker_store_function_mapping(const func_mapping *func_map,

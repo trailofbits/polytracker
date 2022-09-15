@@ -8,4 +8,8 @@
 #define EXT_C_FUNC extern "C" __attribute__((visibility("default")))
 #define EXT_CXX_FUNC extern __attribute__((visibility("default")))
 
+namespace polytracker {
+void taint_argv(int argc, char *argv[]);
+}
+
 #endif

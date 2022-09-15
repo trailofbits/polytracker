@@ -1,5 +1,3 @@
-set(CMAKE_CXX_STANDARD 17)
-
 find_package(LLVM 13 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
@@ -40,7 +38,8 @@ set(CMAKE_EXE_LINKER_FLAGS
 set(POLY_SOURCES ${POLY_DIR}/main.cpp ${POLY_DIR}/polytracker.cpp)
 
 set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
-                  ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp)
+                  ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp
+                  ${TAINT_DIR}/argv.cpp)
 
 set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/encoding.cpp
