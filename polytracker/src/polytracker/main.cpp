@@ -115,6 +115,9 @@ void polytracker_print_settings() {
     printf("POLYTRACKER_STDERR_SINK: %s\n",
            get_polytracker_stderr_sink().c_str());
   }
+  if (polytracker_taint_argv) {
+    printf("POLYTRACKER_TAINT_ARGV: 1\n");
+  }
 }
 
 void sink_streams() {
