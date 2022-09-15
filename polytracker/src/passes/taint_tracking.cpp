@@ -12,6 +12,8 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
+#include <spdlog/spdlog.h>
+
 #include "polytracker/dfsan_types.h"
 #include "polytracker/passes/utils.h"
 
@@ -21,6 +23,51 @@ static llvm::cl::list<std::string> ignore_lists(
         "File that specifies functions that pt-taint should ignore"));
 
 namespace polytracker {
+
+namespace {
+
+// Inserts a function call to polytracker::taint_argv(argc, argv)
+// Assumes main is actually the main function of the program and
+// interprets first arg as argc and second as argv.
+static void emitTaintArgvCall(llvm::Function &main) {
+  // Get the parameters of the main function, argc, argv
+  auto argc = main.getArg(0);
+  if (!argc) {
+    spdlog::error("Failed to instrument argv. No argc available.");
+    return;
+  }
+  auto argc_ty = argc->getType();
+
+  auto argv = main.getArg(1);
+  if (!argv) {
+    spdlog::error("Failed to instrument argv. No argv available.");
+    return;
+  }
+  auto argv_ty = argv->getType();
+
+  // IRBuilder for emitting a call to __polytracker_taint_argv. Need to
+  // specify insertion point first, to ensure that no instruction can
+  // use argv before it is tainted.
+  llvm::IRBuilder<> irb(&*(main.getEntryBlock().getFirstInsertionPt()));
+
+  // Define the target function type and make it available in the module
+  auto taint_argv_ty =
+      llvm::FunctionType::get(irb.getVoidTy(), {argc_ty, argv_ty}, false);
+  llvm::FunctionCallee taint_argv = main.getParent()->getOrInsertFunction(
+      "__polytracker_taint_argv", taint_argv_ty);
+  if (!taint_argv) {
+    spdlog::error("Failed to declare __polytracker_taint_argv.");
+    return;
+  }
+
+  // Emit the call using parameters from main.
+  auto ci = irb.CreateCall(taint_argv, {argc, argv});
+  if (!ci) {
+    spdlog::error("Failed to insert call to taint_argv.");
+  }
+}
+
+} // namespace
 
 void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
                                             llvm::Value *val) {
@@ -74,6 +121,10 @@ TaintTrackingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
       continue;
     }
     visit(fn);
+    // If this is the main function, insert a taint-argv call
+    if (fn.getName() == "main") {
+      emitTaintArgvCall(fn);
+    }
   }
   insertTaintStartupCall(mod);
   return llvm::PreservedAnalyses::none();
