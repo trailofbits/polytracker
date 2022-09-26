@@ -10,10 +10,19 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cstdlib>
-#include <sstream>
+#include <functional>
+#include <iostream>
 
 namespace taintdag {
+
+extern std::function<void(int)> error_function;
+
+template <typename... Msgs> void error_exit(Msgs &&...msgs) {
+  std::cerr << "Fatal error. Abort.\n";
+  (std::cerr << ... << msgs) << std::endl;
+  error_function(-1);
+}
+} // namespace taintdag
 
 template <typename... Msgs> void error_exit(Msgs &&... msgs) {
   std::stringstream ss;

@@ -35,7 +35,14 @@ set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/fnmapping.cpp
     ${TAINTDAG_DIR}/fntrace.cpp)
 
-add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
+set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
+                  ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp
+                  ${TAINT_DIR}/argv.cpp)
+
+set(TAINTDAG_SOURCES ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/error.cpp ${TAINTDAG_DIR}/fdmapping.cpp
+                     ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp)
+
+add_library(Polytracker STATIC ${POLY_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
 
 set(POLYTRACKER_COMPILE_OPTS -fno-exceptions -fno-rtti -Wall -Werror

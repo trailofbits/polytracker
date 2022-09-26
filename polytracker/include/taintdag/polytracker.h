@@ -13,20 +13,21 @@
 #include <filesystem>
 #include <span>
 
-#include "taintdag/fdmapping.hpp"
-#include "taintdag/fnmapping.h"
-#include "taintdag/fntrace.h"
-#include "taintdag/taint.hpp"
-#include "taintdag/taint_sink_log.hpp"
-#include "taintdag/taintdag.hpp"
+#include "taintdag/outputfile.hpp"
+#include "taintdag/labels.hpp"
+#include "taintdag/sink.hpp"
+#include "taintdag/string_table.hpp"
+#include "taintdag/taint_source.hpp"
 
 namespace taintdag {
 
 // Main interface towards polytracker
 class PolyTracker {
+
+  using NewOutputFile = OutputFile2<Sources, Labels, StringTable, TaintSink>;
+
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
-  ~PolyTracker();
 
   label_t union_labels(label_t l1, label_t l2);
 
@@ -63,15 +64,10 @@ public:
   void function_exit(FnMapping::index_t index);
 
 private:
-  std::optional<taint_range_t>
-  create_source_taint(int fd, source_offset_t offset, size_t length);
-
-  OutputFile of_;
-  FDMapping fdm_;
-  FnMapping fnm_;
-  FnTrace fnt_;
-  TaintDAG tdag_;
-  TaintSinkLog sinklog_;
+  taint_range_t create_source_taint(source_index_t src,
+                                    std::span<uint8_t const> dst,
+                                    size_t offset = 0);
+  NewOutputFile output_file_;
 };
 
 } // namespace taintdag
