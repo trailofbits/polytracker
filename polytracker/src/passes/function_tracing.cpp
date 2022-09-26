@@ -21,8 +21,9 @@ namespace polytracker {
 
 void FunctionTracingPass::insertLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
-  func_entry_log_fn = mod.getOrInsertFunction(
-      "__polytracker_log_func_entry", ir.getInt16Ty(), ir.getInt8PtrTy());
+  func_entry_log_fn =
+      mod.getOrInsertFunction("__polytracker_log_func_entry", ir.getInt16Ty(),
+                              ir.getInt8PtrTy(), ir.getInt16Ty());
   func_exit_log_fn = mod.getOrInsertFunction("__polytracker_log_func_exit",
                                              ir.getVoidTy(), ir.getInt16Ty());
 }
@@ -43,7 +44,8 @@ FunctionTracingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
     }
     llvm::IRBuilder<> ir(&*fn.getEntryBlock().begin());
     auto fname_ptr{ir.CreateGlobalStringPtr(fname)};
-    log_entry_calls[&fn] = ir.CreateCall(func_entry_log_fn, fname_ptr);
+    log_entry_calls[&fn] = ir.CreateCall(
+        func_entry_log_fn, {fname_ptr, ir.getInt16(fname.size())});
     visit(fn);
   }
   return llvm::PreservedAnalyses::none();

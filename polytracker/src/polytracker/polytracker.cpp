@@ -11,8 +11,8 @@
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 extern "C" taintdag::FnMapping::index_t
-__polytracker_log_func_entry(char *name) {
-  return get_polytracker_tdag().function_entry(name);
+__polytracker_log_func_entry(char *name, uint16_t len) {
+  return get_polytracker_tdag().function_entry({name, len});
 }
 
 extern "C" void __polytracker_log_func_exit(uint16_t func_index) {
