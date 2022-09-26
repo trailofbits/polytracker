@@ -16,8 +16,10 @@ struct mem {
 
   mem(size_t num_slots = max_label) :size{num_slots*sizeof(storage_t)} {
     auto m = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (m == MAP_FAILED)
-      throw std::runtime_error("Failed to map memory");
+    if (m == MAP_FAILED) {
+      std::cerr << "Failed to map memory" << std::endl;
+      exit(-1);
+    }
     begin = reinterpret_cast<char*>(m);
     end = begin + size;
   }
@@ -227,7 +229,7 @@ TEST_CASE("Serialize deserialize for different events") {
 
 
   SECTION("No recursive taint") {
-    auto [n, ofs, srcidx, tr_] = rand_source_labels(td, RandomCount{32});
+    rand_source_labels(td, RandomCount{32});
 
     for (auto iter =0;iter<10000;iter++) {
       auto max_label = td.label_count() -1;
@@ -287,8 +289,8 @@ TEST_CASE("Serialize deserialize for different events") {
   SECTION("Create duplicate label, but not same as last") {
     auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
     auto u01 = td.union_taint(tr.first, tr.first+1);
-    auto u02 = td.union_taint(tr.first, tr.first+2);
-    auto u23 = td.union_taint(tr.first+2, tr.first+3);
+    td.union_taint(tr.first, tr.first+2);
+    td.union_taint(tr.first+2, tr.first+3);
     auto u01_2 = td.union_taint(tr.first, tr.first+1);
     REQUIRE(u01 == u01_2);
   }

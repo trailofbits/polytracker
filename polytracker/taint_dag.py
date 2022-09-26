@@ -12,7 +12,7 @@ from typing import (
 )
 from pathlib import Path
 from mmap import mmap, PROT_READ
-from ctypes import Structure, c_int64, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from ctypes import Structure, c_char, c_int64, c_uint64, c_int32, c_uint32, c_uint8, c_uint16, sizeof
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -28,6 +28,69 @@ from .tracing import (
     TaintOutput,
     Taints,
 )
+
+class TDFileMeta(Structure):
+    _fields_ = [
+        ("tdag", c_char*4),
+        ("magic", c_uint16),
+        ("section_count", c_uint16),
+    ]
+
+    def __repr__(self) -> str:
+        return f"TDFileMeta:\n\ttdag: {self.tdag}\n\tmagic: {self.magic}\n\tsection count: {self.section_count}\n"
+        
+
+class TDSectionMeta(Structure):
+    _fields_ = [
+        ("tag", c_uint32),
+        ("align", c_uint32),
+        ("offset", c_uint64),
+        ("size", c_uint64),
+    ]
+
+    def __repr__(self) -> str:
+        return f"TDSectionMeta:\n\ttag: {self.tag}\n\talign: {self.align}\n\toffset: {self.offset}\n\tsize: {self.size}\n" 
+
+
+class TDSourceSection:
+    def __init__(self, mem, hdr):
+        self.mem = mem[hdr.offset:hdr.offset+hdr.size]
+
+    def enumerate(self):
+        for offset in range(0,len(self.mem), sizeof(TDFDHeader)):
+            yield TDFDHeader.from_buffer_copy(self.mem[offset:])
+
+
+    
+class TDStringSection:
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+        self.align = hdr.align
+    
+    def read_string(self, offset):
+        n = c_uint16.from_buffer_copy(self.section[offset:]).value
+        assert len(self.section) > offset + n
+        return str(self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n], "utf-8")
+    
+class TDLabelSection:
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+
+    def read_raw(self, label):
+        return c_uint64.from_buffer_copy(self.section[label * sizeof(c_uint64):]).value
+
+    def count(self):
+        return len(self.section) // sizeof(c_uint64)
+
+class TDSinkSection:
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+
+    def enumerate(self):
+        for offset in range(0, len(self.section), sizeof(TDSink)):
+            yield TDSink.from_buffer_copy(self.section[offset:])
+
+
 
 
 class TDHeader(Structure):
@@ -50,13 +113,8 @@ class TDHeader(Structure):
 
 class TDFDHeader(Structure):
     _fields_ = [
-        ("fd", c_int32),
         ("name_offset", c_uint32),
-        ("name_len", c_uint32),
-        # First label of the pre-allocated range
-        ("prealloc_label_begin", c_uint32),
-        # One-past last label of the pre-allocated range
-        ("prealloc_label_end", c_uint32),
+        ("fd", c_int32),
     ]
 
 
@@ -101,8 +159,8 @@ class TDUnionNode(TDNode):
 
 
 class TDSink(Structure):
-    _pack_ = 1
-    _fields_ = [("fdidx", c_uint8), ("offset", c_int64), ("label", c_uint32)]
+    # _pack_ = 1
+    _fields_ = [("offset", c_int64), ("label", c_uint32), ("fdidx", c_uint8)]
 
     def __repr__(self) -> str:
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
@@ -121,6 +179,28 @@ class TDFile:
         self.source_offset_mask = (1 << 54) - 1
 
         self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
+
+        self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
+        print(self.filemeta)
+        section_offset = sizeof(TDFileMeta)
+        self.sections = []
+        for i in range(0, self.filemeta.section_count):
+            hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
+            if hdr.tag == 1:
+                self.sections.append(TDSourceSection(self.buffer, hdr))
+            elif hdr.tag == 2:
+                self.sections.append(TDLabelSection(self.buffer, hdr))
+            elif hdr.tag == 3:
+                self.sections.append(TDStringSection(self.buffer, hdr))
+            elif hdr.tag == 4:
+                self.sections.append(TDSinkSection(self.buffer, hdr))
+            else:
+                raise Exception("Unsupported section tag")
+                
+            section_offset += sizeof(TDSectionMeta)
+
+        print(self.sections)
+
         self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
 
         assert self.header.fd_mapping_offset > 0
@@ -133,29 +213,25 @@ class TDFile:
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
 
-    def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
+    def _get_section(self, wanted_type):
+        return next(filter(lambda x: isinstance(x, wanted_type), self.sections))
 
-        offset = self.header.fd_mapping_offset
-        for i in range(0, self.header.fd_mapping_count):
-            header_offset = offset + sizeof(TDFDHeader) * i
-            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)  # type: ignore
-            sbegin = offset + fdhdr.name_offset
-            path = Path(str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8"))
-            yield (path, fdhdr)
+    def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
+        sources = self._get_section(TDSourceSection)
+        strings = self._get_section(TDStringSection)
+
+        yield from map(lambda x: (Path(strings.read_string(x.name_offset)), x), sources.enumerate())
 
     @property
     def label_count(self):
-        return int(self.header.tdag_mapping_size / sizeof(c_uint64))
+        return self._get_section(TDLabelSection).count()
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
 
-        offset = self.header.tdag_mapping_offset + sizeof(c_uint64) * label
+        result = self._get_section(TDLabelSection).read_raw(label)
 
-        assert self.header.tdag_mapping_offset + self.header.tdag_mapping_size > offset
-
-        result = c_uint64.from_buffer_copy(self.buffer, offset).value  # type: ignore
         self.raw_nodes[label] = result
         return result
 
@@ -182,28 +258,9 @@ class TDFile:
         for label in range(0, self.label_count):
             yield self.decode_node(label)
 
-    def read_sink(self, offset: int) -> TDSink:
-        if offset in self.sink_cache:
-            return self.sink_cache[offset]
-
-        assert self.header.sink_mapping_offset <= offset
-        assert self.header.sink_mapping_offset + self.header.sink_mapping_size > offset
-
-        result = TDSink.from_buffer_copy(self.buffer, offset)  # type: ignore
-
-        self.sink_cache[offset] = result
-
-        return result
-
     @property
     def sinks(self) -> Iterator[TDSink]:
-
-        offset = self.header.sink_mapping_offset
-        end = offset + self.header.sink_mapping_size
-
-        while offset < end:
-            yield self.read_sink(offset)
-            offset += sizeof(TDSink)
+        yield from self._get_section(TDSinkSection).enumerate()
 
 
 class TDTaintOutput(TaintOutput):
@@ -475,9 +532,7 @@ class TDInfo(Command):
             if args.print_fd_headers:
                 for i, h in enumerate(tdfile.fd_headers):
                     path = h[0]
-                    lbl_begin = h[1].prealloc_label_begin
-                    lbl_end = h[1].prealloc_label_end
-                    print(f"{i}: {path} {lbl_begin} {lbl_end}")
+                    print(f"{i}: {path}")
 
             if args.print_taint_sinks:
                 for s in tdfile.sinks:
