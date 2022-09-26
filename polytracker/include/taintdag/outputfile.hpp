@@ -41,7 +41,7 @@ template <typename T> struct SectionArg {
 // An OutputFile is made up from Sections. Each section is assigned
 // a range of memory it can use freely. Requirements on a section
 // is captured in the Section concept.
-template <Section... Sections> class OutputFile2 {
+template <Section... Sections> class OutputFile {
 
   static_assert(sizeof...(Sections) > 0,
                 "OutputFile requires at least one section");
@@ -86,11 +86,11 @@ public:
                      .size = Sections::allocation_size})...};
   };
 
-  OutputFile2(std::filesystem::path const &filename)
+  OutputFile(std::filesystem::path const &filename)
       : mm_{std::move(filename), required_allocation_size()},
         hdr_{new (mm_.begin) FileHeader}, alloc_ptr_{mm_.begin +
                                                      sizeof(FileHeader)},
-        sections_{(SectionArg<OutputFile2>{
+        sections_{(SectionArg<OutputFile>{
             .output_file = *this, .range = do_allocation<Sections>()})...} {
     // Assumes that the mmap:ed memory is page aligned and FileHeader
     // has less alignment requirements.
@@ -99,7 +99,7 @@ public:
     }
   }
 
-  ~OutputFile2() {
+  ~OutputFile() {
     // Update the memory actually used by each section
     // TODO(hbrodin): Consider other implementation strategies.
     size_t _[] = {

@@ -15,7 +15,7 @@ namespace taintdag {
 // Main interface towards polytracker
 class PolyTracker {
 
-  using NewOutputFile = OutputFile2<Sources, Labels, StringTable, TaintSink>;
+  using NewOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink>;
 
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");

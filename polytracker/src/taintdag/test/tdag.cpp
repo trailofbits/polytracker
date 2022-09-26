@@ -29,7 +29,7 @@ namespace taintdag {
 TEST_CASE("Test TDAG", "Integration") {
   std::span<uint8_t> s;
   std::atomic<std::uint8_t *> write_ptr_{s.data()};
-  OutputFile2<Sources, Labels, StringTable> tdg("filename.bin");
+  OutputFile<Sources, Labels, StringTable> tdg("filename.bin");
   auto offset1 = tdg.section<StringTable>().add_string("Hello");
   auto offset2 = tdg.section<StringTable>().add_string("World!");
   std::cout << "Hello: " << std::dec << static_cast<size_t>(*offset1)
