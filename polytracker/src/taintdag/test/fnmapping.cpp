@@ -35,7 +35,7 @@ TEST_CASE("Test fnmapping operations") {
     auto foo_1{fnm.add_mapping("foo").value_or(3)};
     fnm.add_mapping("bar");
     fnm.add_mapping("baz");
-    auto foo_2{fnm.add_mapping("foo").value_or(3)};
+    auto foo_2{fnm.add_mapping("foo").value_or(4)};
     REQUIRE(foo_1 == foo_2);
   }
 }
