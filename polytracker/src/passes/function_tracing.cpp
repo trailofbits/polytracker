@@ -7,10 +7,12 @@
  */
 
 #include "polytracker/passes/function_tracing.h"
-#include "polytracker/passes/utils.h"
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/CommandLine.h>
+
+#include "polytracker/passes/utils.h"
+#include "taintdag/fnmapping.h"
 
 static llvm::cl::list<std::string> ignore_lists(
     "pt-ftrace-ignore-list",
@@ -21,11 +23,12 @@ namespace polytracker {
 
 void FunctionTracingPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
+  auto fn_index_t{ir.getIntNTy(sizeof(taintdag::FnMapping::index_t) * 8)};
   func_entry_log_fn =
-      mod.getOrInsertFunction("__polytracker_log_func_entry", ir.getInt16Ty(),
+      mod.getOrInsertFunction("__polytracker_log_func_entry", fn_index_t,
                               ir.getInt8PtrTy(), ir.getInt16Ty());
   func_exit_log_fn = mod.getOrInsertFunction("__polytracker_log_func_exit",
-                                             ir.getVoidTy(), ir.getInt16Ty());
+                                             ir.getVoidTy(), fn_index_t);
 }
 
 void FunctionTracingPass::visitReturnInst(llvm::ReturnInst &ri) {

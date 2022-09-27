@@ -15,7 +15,8 @@ __polytracker_log_func_entry(char *name, uint16_t len) {
   return get_polytracker_tdag().function_entry({name, len});
 }
 
-extern "C" void __polytracker_log_func_exit(uint16_t func_index) {
+extern "C" void
+__polytracker_log_func_exit(taintdag::FnMapping::index_t func_index) {
   get_polytracker_tdag().function_exit(func_index);
 }
 
