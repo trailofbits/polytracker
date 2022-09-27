@@ -104,7 +104,7 @@ void TaintTrackingPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertCondBrLogCall(si, si.getCondition());
 }
 
-void TaintTrackingPass::insertLoggingFunctions(llvm::Module &mod) {
+void TaintTrackingPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   taint_start_fn = mod.getOrInsertFunction("__taint_start", ir.getVoidTy());
   cond_br_log_fn = mod.getOrInsertFunction(
@@ -114,7 +114,7 @@ void TaintTrackingPass::insertLoggingFunctions(llvm::Module &mod) {
 llvm::PreservedAnalyses
 TaintTrackingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
-  insertLoggingFunctions(mod);
+  declareLoggingFunctions(mod);
   auto ignore{readIgnoreLists(ignore_lists)};
   for (auto &fn : mod) {
     if (ignore.count(fn.getName().str())) {

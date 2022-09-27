@@ -19,7 +19,7 @@ static llvm::cl::list<std::string> ignore_lists(
 
 namespace polytracker {
 
-void FunctionTracingPass::insertLoggingFunctions(llvm::Module &mod) {
+void FunctionTracingPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   func_entry_log_fn =
       mod.getOrInsertFunction("__polytracker_log_func_entry", ir.getInt16Ty(),
@@ -35,7 +35,7 @@ void FunctionTracingPass::visitReturnInst(llvm::ReturnInst &ri) {
 
 llvm::PreservedAnalyses
 FunctionTracingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
-  insertLoggingFunctions(mod);
+  declareLoggingFunctions(mod);
   auto ignore{readIgnoreLists(ignore_lists)};
   for (auto &fn : mod) {
     auto fname{fn.getName()};

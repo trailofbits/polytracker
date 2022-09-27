@@ -15,17 +15,24 @@
 
 namespace polytracker {
 
-struct FunctionTracingPass : public llvm::PassInfoMixin<FunctionTracingPass>,
-                             public llvm::InstVisitor<FunctionTracingPass> {
+class FunctionTracingPass : public llvm::PassInfoMixin<FunctionTracingPass>,
+                            public llvm::InstVisitor<FunctionTracingPass> {
+  // Function tracing startup
   llvm::FunctionCallee trace_start_fn;
+  // Log entry to a function
   llvm::FunctionCallee func_entry_log_fn;
+  // Log returns from a function
   llvm::FunctionCallee func_exit_log_fn;
+  // Maps functions to entry logging calls inside them. The return value
+  // of these calls is used as a parameter to the return logging function.
+  std::unordered_map<llvm::Function *, llvm::CallInst *> log_entry_calls;
+  // Helpers
+  void declareLoggingFunctions(llvm::Module &mod);
 
+public:
   llvm::PreservedAnalyses run(llvm::Module &mod,
                               llvm::ModuleAnalysisManager &mam);
-  void insertLoggingFunctions(llvm::Module &mod);
   void visitReturnInst(llvm::ReturnInst &ri);
-  std::unordered_map<llvm::Function *, llvm::CallInst *> log_entry_calls;
 };
 
 } // namespace polytracker
