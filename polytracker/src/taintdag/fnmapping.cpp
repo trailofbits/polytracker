@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 #include <string_view>
 
 namespace taintdag {
@@ -68,11 +69,15 @@ std::optional<index_t> FnMapping::add_mapping(std::string_view name) {
   if (!write_header({*name_offset, length_t(name.size())})) {
     return {};
   }
+  auto new_headers_end = headers_end + sizeof(header_t);
+  auto new_header_index{(new_headers_end - map_begin) / sizeof(header_t) - 1};
+  if (new_header_index > std::numeric_limits<index_t>::max()) {
+    return {};
+  }
+  headers_end = new_headers_end;
   names_begin -= name.size();
-  headers_end += sizeof(header_t);
-  auto result{(headers_end - map_begin) / sizeof(header_t) - 1};
-  mappings[{names_begin, name.size()}] = result;
-  return result;
+  mappings[{names_begin, name.size()}] = new_header_index;
+  return new_header_index;
 }
 
 size_t FnMapping::get_mapping_count() {
