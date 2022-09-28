@@ -151,6 +151,8 @@ def _instrument_bitcode(
     input_bitcode: Path,
     output_bitcode: Path,
     ignore_lists: List[str],
+    add_taint_tracking: bool,
+    add_function_tracing: bool,
 ) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -169,22 +171,38 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
         "-load-pass-plugin",
         str(POLY_PASS_PATH),
-        "-passes=pt-taint,pt-ftrace,dfsan,pt-rm-fn-attr",
     ]
-    # ignore lists for `pt-taint`
-    cmd.append(
-        f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",
-    )
-    for item in ignore_lists:
-        cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
-    # ignore lists for `pt-ftrace`
-    cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
-    for item in ignore_lists:
-        cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
-    # abi lists for `dfsan`
-    cmd.append(f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
-    for item in ignore_lists:
-        cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+
+    pass_pipeline: List[str] = []
+    if add_taint_tracking:
+        pass_pipeline.append("pt-taint")
+
+    if add_function_tracing:
+        pass_pipeline.append("pt-ftrace")
+
+    if add_taint_tracking:
+        pass_pipeline += ["dfsan", "pt-rm-fn-attr"]
+
+    cmd.append(f"-passes={','.join(pass_pipeline)}")
+
+    if add_taint_tracking:
+        # ignore lists for `pt-taint`
+        cmd.append(
+            f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",
+        )
+        for item in ignore_lists:
+            cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
+        # abi lists for `dfsan`
+        cmd.append(f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
+        for item in ignore_lists:
+            cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+
+    if add_function_tracing:
+        # ignore lists for `pt-ftrace`
+        cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
+        for item in ignore_lists:
+            cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
+
     # input and output files
     cmd += [str(input_bitcode), "-o", str(output_bitcode)]
     # execute `cmd`
@@ -290,6 +308,8 @@ class InstrumentBitcode(Command):
             args.input,
             args.output,
             args.ignore_lists,
+            add_taint_tracking=True,
+            add_function_tracing=True,
         )
 
 
@@ -372,5 +392,7 @@ class InstrumentTargets(Command):
                 bc_path,
                 inst_bc_path,
                 args.ignore_lists,
+                add_taint_tracking=True,
+                add_function_tracing=True,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)
