@@ -297,6 +297,18 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
+            "--taint",
+            action="store_true",
+            help="instrument with taint tracking",
+        )
+
+        parser.add_argument(
+            "--ftrace",
+            action="store_true",
+            help="instrument with function tracing",
+        )
+
+        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -308,8 +320,8 @@ class InstrumentBitcode(Command):
             args.input,
             args.output,
             args.ignore_lists,
-            add_taint_tracking=True,
-            add_function_tracing=True,
+            args.taint,
+            args.ftrace,
         )
 
 
@@ -368,9 +380,15 @@ class InstrumentTargets(Command):
         )
 
         parser.add_argument(
-            "--no-control-flow-tracking",
+            "--taint",
             action="store_true",
-            help="do not instrument the program with any control flow tracking",
+            help="instrument with taint tracking",
+        )
+
+        parser.add_argument(
+            "--ftrace",
+            action="store_true",
+            help="instrument with function tracing",
         )
 
         parser.add_argument(
@@ -392,7 +410,7 @@ class InstrumentTargets(Command):
                 bc_path,
                 inst_bc_path,
                 args.ignore_lists,
-                add_taint_tracking=True,
-                add_function_tracing=True,
+                args.taint,
+                args.ftrace,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)
