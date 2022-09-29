@@ -30,5 +30,5 @@ WORKDIR /polytracker/the_klondike/daedalus/formats/pdf/new/c++
 
 RUN polytracker build cmake -S . -B build
 RUN polytracker build cmake --build build -j$(nproc)
-RUN polytracker instrument-targets parser-test --ignore-lists gmp ssl libz
+RUN polytracker instrument-targets --taint --ftrace parser-test --ignore-lists gmp ssl libz
 RUN mv parser-test.instrumented parser-test-track

@@ -23,5 +23,5 @@ WORKDIR /polytracker/the_klondike/qpdf
 RUN polytracker build cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DBUILD_STATIC_LIBS=ON
 #Instrument and build track target
 RUN polytracker build cmake --build build -j$((`nproc`+1))
-RUN polytracker instrument-targets qpdf --ignore-lists libz
+RUN polytracker instrument-targets --taint --ftrace qpdf --ignore-lists libz
 RUN mv qpdf.instrumented qpdf_track

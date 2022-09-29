@@ -16,5 +16,5 @@ RUN ./configure --prefix=/polytracker/the_klondike/bin/ --disable-shared
 RUN polytracker build make -j$((`nproc`+1)) install
 
 WORKDIR /polytracker/the_klondike/bin/bin
-RUN polytracker instrument-targets file --ignore-lists libz
+RUN polytracker instrument-targets --taint --ftrace file --ignore-lists libz
 RUN mv file.instrumented file_track
