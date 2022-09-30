@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pytest
 from subprocess import CalledProcessError
-from typing import Dict
+from typing import Dict, Union
 
 from tqdm import tqdm
 
@@ -11,8 +11,6 @@ from polytracker import (
     FunctionReturn,
     ProgramTrace,
 )
-
-from .data import *
 
 
 @pytest.mark.skip(reason="taint_dag does not support traces yet")
