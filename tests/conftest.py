@@ -7,6 +7,13 @@ from pathlib import Path
 from typing import List
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "program_trace: mark the C/C++ source file to be automatically compiled, instrumented, and run for the test",
+    )
+
+
 def run_polytracker(cmd: List[str]) -> None:
     tmp = sys.argv
     setattr(sys, "argv", [sys.argv[0], *cmd])
