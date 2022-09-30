@@ -5,7 +5,7 @@ from .plugins import add_command_subparsers
 from . import polytracker
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser(
         description=(
             "PolyTracker can instrument programs to track data-flow and control-flow"
@@ -22,7 +22,7 @@ def main(argv):
 
     add_command_subparsers(parser)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
 
     if not hasattr(args, "func"):
         if args.version:
@@ -50,4 +50,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    exit(main(sys.argv))
+    sys.exit(main())
