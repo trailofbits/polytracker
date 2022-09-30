@@ -1,8 +1,17 @@
+import sys
 import pytest
 import subprocess
 import polytracker
 
 from pathlib import Path
+from typing import List
+
+
+def run_polytracker(cmd: List[str]) -> None:
+    tmp = sys.argv
+    setattr(sys, "argv", [sys.argv[0], *cmd])
+    assert polytracker.main() == 0
+    setattr(sys, "argv", tmp)
 
 
 def build(target: Path, binary: Path) -> None:
@@ -15,12 +24,12 @@ def build(target: Path, binary: Path) -> None:
         cmd.append("clang")
 
     cmd += ["-g", "-o", str(binary), str(target)]
-    assert polytracker.main(cmd) == 0
+    run_polytracker(cmd)
 
 
 def instrument(target: str) -> None:
     cmd = ["instrument-targets", target]
-    assert polytracker.main(cmd) == 0
+    run_polytracker(cmd)
 
 
 @pytest.fixture
