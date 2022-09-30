@@ -112,20 +112,6 @@ def test_taint_log(program_trace: ProgramTrace):
 
 
 @pytest.mark.skip(reason="taint_dag does not support traces yet")
-@pytest.mark.program_trace(
-    "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
-)
-def test_config_files(program_trace: ProgramTrace):
-    # the new_range.json config changes the polystart/polyend to
-    # POLYSTART: 1, POLYEND: 3
-    taints = program_trace.get_function("main").taints()
-    for i in range(1, 4):
-        assert any(i == offset.offset for offset in taints)
-    for i in range(4, 10):
-        assert all(i != offset.offset for offset in taints)
-
-
-@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fopen.c")
 def test_source_fopen(program_trace: ProgramTrace):
     taints = program_trace.get_function("main").taints()
