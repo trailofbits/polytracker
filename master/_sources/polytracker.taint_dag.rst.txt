@@ -6,6 +6,15 @@ polytracker.taint_dag
 taint_dag classes
 -----------------
 
+TDEvent
+*******
+
+.. autoclass:: TDEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDFDHeader
 **********
 
@@ -19,6 +28,15 @@ TDFile
 ******
 
 .. autoclass:: TDFile
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDFnHeader
+**********
+
+.. autoclass:: TDFnHeader
    :members:
    :undoc-members:
    :inherited-members:

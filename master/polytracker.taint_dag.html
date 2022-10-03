@@ -104,8 +104,10 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.taint_dag</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#taint-dag-classes">taint_dag classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#tdevent">TDEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfdheader">TDFDHeader</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfile">TDFile</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdfnheader">TDFnHeader</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdheader">TDHeader</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdinfo">TDInfo</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdnode">TDNode</a></li>
@@ -196,6 +198,49 @@
 <span id="polytracker-taint-dag"></span><h1>polytracker.taint_dag<a class="headerlink" href="#module-polytracker.taint_dag" title="Permalink to this heading">¶</a></h1>
 <section id="taint-dag-classes">
 <h2>taint_dag classes<a class="headerlink" href="#taint-dag-classes" title="Permalink to this heading">¶</a></h2>
+<section id="tdevent">
+<h3>TDEvent<a class="headerlink" href="#tdevent" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDEvent</span></span><a class="headerlink" href="#polytracker.taint_dag.TDEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.Kind">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Kind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEvent.Kind" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/enum.html#enum.Enum" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a></p>
+<p>An enumeration.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.Kind.ENTRY">
+<span class="sig-name descname"><span class="pre">ENTRY</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#polytracker.taint_dag.TDEvent.Kind.ENTRY" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.Kind.EXIT">
+<span class="sig-name descname"><span class="pre">EXIT</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#polytracker.taint_dag.TDEvent.Kind.EXIT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.fnidx">
+<span class="sig-name descname"><span class="pre">fnidx</span></span><a class="headerlink" href="#polytracker.taint_dag.TDEvent.fnidx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEvent.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><a class="headerlink" href="#polytracker.taint_dag.TDEvent.kind" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="tdfdheader">
 <h3>TDFDHeader<a class="headerlink" href="#tdfdheader" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
@@ -257,6 +302,11 @@
 <dd></dd></dl>
 
 <dl class="py property">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.events">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">events</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.10)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.taint_dag.TDEvent" title="polytracker.taint_dag.TDEvent"><span class="pre">TDEvent</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.taint_dag.TDFile.events" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.label_count">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">label_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.label_count" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -267,8 +317,18 @@
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.read_event">
+<span class="sig-name descname"><span class="pre">read_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.10)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.taint_dag.TDEvent" title="polytracker.taint_dag.TDEvent"><span class="pre">TDEvent</span></a></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.read_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.read_fd_headers">
 <span class="sig-name descname"><span class="pre">read_fd_headers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.10)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.10)"><span class="pre">Path</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.taint_dag.TDFDHeader" title="polytracker.taint_dag.TDFDHeader"><span class="pre">TDFDHeader</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.read_fd_headers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.read_fn_headers">
+<span class="sig-name descname"><span class="pre">read_fn_headers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.10)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.10)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.taint_dag.TDFnHeader" title="polytracker.taint_dag.TDFnHeader"><span class="pre">TDFnHeader</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.read_fn_headers" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -285,6 +345,32 @@
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.sinks">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sinks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.10)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.taint_dag.TDSink" title="polytracker.taint_dag.TDSink"><span class="pre">TDSink</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.taint_dag.TDFile.sinks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdfnheader">
+<h3>TDFnHeader<a class="headerlink" href="#tdfnheader" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDFnHeader</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader.name_len">
+<span class="sig-name descname"><span class="pre">name_len</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader.name_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader.name_offset">
+<span class="sig-name descname"><span class="pre">name_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader.name_offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -309,6 +395,30 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fd_mapping_offset">
 <span class="sig-name descname"><span class="pre">fd_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fd_mapping_offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_mapping_count">
+<span class="sig-name descname"><span class="pre">fn_mapping_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_mapping_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_mapping_offset">
+<span class="sig-name descname"><span class="pre">fn_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_mapping_offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_trace_count">
+<span class="sig-name descname"><span class="pre">fn_trace_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_trace_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_trace_offset">
+<span class="sig-name descname"><span class="pre">fn_trace_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_trace_offset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Structure/Union member</p>
 </dd></dl>
 

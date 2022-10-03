@@ -416,9 +416,13 @@
 </li>
         <li><a href="polytracker.repl.html#polytracker.repl.REPLCommand.__init__">(polytracker.repl.REPLCommand method)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.__init__">(polytracker.taint_dag.TDEvent method)</a>
+</li>
         <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.__init__">(polytracker.taint_dag.TDFDHeader method)</a>
 </li>
         <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.__init__">(polytracker.taint_dag.TDFile method)</a>
+</li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFnHeader.__init__">(polytracker.taint_dag.TDFnHeader method)</a>
 </li>
         <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.__init__">(polytracker.taint_dag.TDHeader method)</a>
 </li>
@@ -1319,6 +1323,8 @@
         <li><a href="polytracker.database.html#polytracker.database.FunctionEntries.entry">(polytracker.database.FunctionEntries attribute)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.Kind.ENTRY">ENTRY (polytracker.taint_dag.TDEvent.Kind attribute)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.BlockEntries.entry_count">entry_count (polytracker.database.BlockEntries attribute)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.entry_count">entry_count() (polytracker.database.DBBasicBlockEntry method)</a>
@@ -1396,6 +1402,8 @@
       <ul>
         <li><a href="polytracker.database.html#polytracker.database.DBInput.events">(polytracker.database.DBInput attribute)</a>
 </li>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.events">(polytracker.taint_dag.TDFile property)</a>
+</li>
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.EventType">EventType (class in polytracker.database)</a>
 </li>
@@ -1405,6 +1413,8 @@
         <li><a href="polytracker.containerization.html#polytracker.containerization.Dockerfile.exists">(polytracker.containerization.Dockerfile method)</a>
 </li>
       </ul></li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.Kind.EXIT">EXIT (polytracker.taint_dag.TDEvent.Kind attribute)</a>
+</li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Completion.expected">expected (polytracker.grammars.Completion attribute)</a>
 
       <ul>
@@ -1553,6 +1563,16 @@
 </li>
       <li><a href="polytracker.grammars.html#polytracker.grammars.Production.first_rule">first_rule() (polytracker.grammars.Production method)</a>
 </li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fn_mapping_count">fn_mapping_count (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fn_mapping_offset">fn_mapping_offset (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fn_trace_count">fn_trace_count (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.fn_trace_offset">fn_trace_offset (polytracker.taint_dag.TDHeader attribute)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.fnidx">fnidx (polytracker.taint_dag.TDEvent attribute)</a>
+</li>
       <li><a href="polytracker.database.html#polytracker.database.EdgeType.FORWARD">FORWARD (polytracker.database.EdgeType attribute)</a>
 </li>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Taints.from_source">from_source() (polytracker.tracing.Taints method)</a>
@@ -1639,6 +1659,8 @@
       </ul></li>
       <li><a href="polytracker.database.html#polytracker.database.EventType.FUNC_RET">FUNC_RET (polytracker.database.EventType attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.Function">Function (class in polytracker.tracing)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlock.function">function (polytracker.database.DBBasicBlock attribute)</a>
@@ -1679,8 +1701,6 @@
         <li><a href="polytracker.tracing.html#polytracker.tracing.TraceEvent.function">(polytracker.tracing.TraceEvent property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.BasicBlockType.FUNCTION_CALL">FUNCTION_CALL (polytracker.tracing.BasicBlockType attribute)</a>
 </li>
       <li><a href="polytracker.database.html#polytracker.database.DBProgramTrace.function_cfg">function_cfg (polytracker.database.DBProgramTrace property)</a>
@@ -2198,6 +2218,10 @@
       <li><a href="polytracker.cache.html#polytracker.cache.LRUCache.keys">keys() (polytracker.cache.LRUCache method)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.kind">kind (polytracker.taint_dag.TDEvent attribute)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="L">L</h2>
@@ -2451,9 +2475,17 @@
 </li>
       </ul></li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.name_len">name_len (polytracker.taint_dag.TDFDHeader attribute)</a>
+
+      <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFnHeader.name_len">(polytracker.taint_dag.TDFnHeader attribute)</a>
 </li>
+      </ul></li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader.name_offset">name_offset (polytracker.taint_dag.TDFDHeader attribute)</a>
+
+      <ul>
+        <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFnHeader.name_offset">(polytracker.taint_dag.TDFnHeader attribute)</a>
 </li>
+      </ul></li>
       <li><a href="polytracker.cfg.html#polytracker.cfg.CFG.nbunch_iter">nbunch_iter() (polytracker.cfg.CFG method)</a>
 
       <ul>
@@ -3369,7 +3401,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.tracing.html#polytracker.tracing.ByteAccessType.READ_ACCESS">READ_ACCESS (polytracker.tracing.ByteAccessType attribute)</a>
 </li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_event">read_event() (polytracker.taint_dag.TDFile method)</a>
+</li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_fd_headers">read_fd_headers() (polytracker.taint_dag.TDFile method)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_fn_headers">read_fn_headers() (polytracker.taint_dag.TDFile method)</a>
 </li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile.read_node">read_node() (polytracker.taint_dag.TDFile method)</a>
 </li>
@@ -3907,9 +3943,15 @@
 </li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader.tdag_mapping_size">tdag_mapping_size (polytracker.taint_dag.TDHeader attribute)</a>
 </li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent">TDEvent (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDEvent.Kind">TDEvent.Kind (class in polytracker.taint_dag)</a>
+</li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFDHeader">TDFDHeader (class in polytracker.taint_dag)</a>
 </li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFile">TDFile (class in polytracker.taint_dag)</a>
+</li>
+      <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDFnHeader">TDFnHeader (class in polytracker.taint_dag)</a>
 </li>
       <li><a href="polytracker.taint_dag.html#polytracker.taint_dag.TDHeader">TDHeader (class in polytracker.taint_dag)</a>
 </li>
@@ -3959,6 +4001,8 @@
         <li><a href="polytracker.database.html#polytracker.database.DBTraceEvent.thread_event_id">(polytracker.database.DBTraceEvent attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.database.html#polytracker.database.DBBasicBlockEntry.thread_id">thread_id (polytracker.database.DBBasicBlockEntry attribute)</a>
 
       <ul>
@@ -3977,8 +4021,6 @@
         <li><a href="polytracker.database.html#polytracker.database.FunctionCFGEdge.thread_id">(polytracker.database.FunctionCFGEdge attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="polytracker.parsing.html#polytracker.parsing.ImmutableParseTree.to_dag">to_dag() (polytracker.parsing.ImmutableParseTree method)</a>
 
       <ul>
