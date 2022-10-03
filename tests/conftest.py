@@ -35,20 +35,25 @@ def build(target: Path, binary: Path) -> None:
 
 
 def instrument(target: str) -> None:
-    cmd = ["instrument-targets", target]
+    cmd = ["instrument-targets", "--taint", "--ftrace", target]
     run_polytracker(cmd)
 
 
 @pytest.fixture
-def program_trace(monkeypatch, request):
+def program_trace(tmpdir, monkeypatch, request):
+    # Run everything in a per-test temporary directory
+    monkeypatch.chdir(tmpdir)
+    # Build a clean test binary to get a blight journal
     marker = request.node.get_closest_marker("program_trace")
     tstdir = Path(request.fspath).parent
     target = tstdir / Path(marker.args[0])
     binary = Path(f"{target.stem}.bin").resolve()
     build(target, binary)
+    # Build an instrumented test binary
     trace_file = Path(f"{target.stem}.db").resolve()
     trace_file.unlink(missing_ok=True)
     instrument(binary.name)
+    # Run the instrumented binary to get a trace file
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
         # instrumented binary
@@ -57,4 +62,5 @@ def program_trace(monkeypatch, request):
         str(tstdir / "test_data" / "test_data.txt"),
     ]
     subprocess.check_call(cmd)
+    # Read the trace file
     return polytracker.PolyTrackerTrace.load(trace_file)
