@@ -8,6 +8,7 @@
 
 #include "polytracker/passes/utils.h"
 
+#include <cstddef>
 #include <llvm/ADT/StringRef.h>
 
 #include <spdlog/spdlog.h>
@@ -36,9 +37,15 @@ str_set_t readIgnoreLists(const str_vec_t &paths) {
         continue;
       }
       // process line with `discard` only
-      if (ref.contains("discard")) {
-        // function name is between ':' and '='
-        result.insert(ref.slice(ref.find(':') + 1, ref.find('=')).str());
+      if (!ref.contains("discard")) {
+        continue;
+      }
+      // function name is between ':' and '='
+      constexpr auto npos = llvm::StringRef::npos;
+      auto s{ref.find(':')};
+      auto e{ref.find('=')};
+      if (s != npos && e != npos && s + 1 < e) {
+        result.insert(ref.slice(s + 1, e).str());
       }
     }
   }
