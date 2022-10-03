@@ -38,10 +38,12 @@ const size_t tdag_mapping_size =
 const size_t sink_mapping_size =
     tdag_mapping_size; // TODO (hbrodin): What is a reasonable size??? It
                        // doesn't necessarily have to be fixed..
-const size_t fn_mapping_size = sizeof(FnMapping::header_t) *
-                               std::numeric_limits<FnMapping::index_t>::max();
+const size_t fn_mapping_size =
+    sizeof(FnMapping::header_t) *
+        std::numeric_limits<FnMapping::index_t>::max() +
+    1;
 const size_t fn_trace_size =
-    sizeof(FnTrace::event_t) * std::numeric_limits<std::uint32_t>::max();
+    sizeof(FnTrace::event_t) * std::numeric_limits<std::uint32_t>::max() + 1;
 // Mapping offsets - corresponds to output file offsets for regions (seek
 // offsets)
 const size_t fd_mapping_offset = sizeof(FileHdr);
