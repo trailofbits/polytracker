@@ -40,9 +40,9 @@ def instrument(target: str) -> None:
 
 
 @pytest.fixture
-def program_trace(tmpdir, monkeypatch, request):
+def program_trace(tmp_path, monkeypatch, request):
     # Run everything in a per-test temporary directory
-    monkeypatch.chdir(tmpdir)
+    monkeypatch.chdir(tmp_path)
     # Build a clean test binary to get a blight journal
     marker = request.node.get_closest_marker("program_trace")
     tstdir = Path(request.fspath).parent
@@ -53,13 +53,16 @@ def program_trace(tmpdir, monkeypatch, request):
     trace_file = Path(f"{target.stem}.db").resolve()
     trace_file.unlink(missing_ok=True)
     instrument(binary.name)
+    # Create a file with input data
+    input = tmp_path / "test_data.txt"
+    input.write_text("{abcdefgh9jklmnopqrstuvwxyz}\n")
     # Run the instrumented binary to get a trace file
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
         # instrumented binary
         Path(f"{binary.stem}.instrumented").resolve(),
         # input data
-        str(tstdir / "test_data" / "test_data.txt"),
+        str(input),
     ]
     subprocess.check_call(cmd)
     # Read the trace file
