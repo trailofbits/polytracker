@@ -59,7 +59,13 @@ def polyclang_compile_target(target_name: str) -> int:
     if ret:
         return ret
 
-    instrument_cmd = ["polytracker", "instrument-targets", bin_path.name]
+    instrument_cmd = [
+        "polytracker",
+        "instrument-targets",
+        "--taint",
+        "--ftrace",
+        bin_path.name,
+    ]
 
     ret = run_natively(*instrument_cmd)
     if ret:

@@ -10,9 +10,20 @@ from typing import (
     Set,
     cast,
 )
+
+from enum import Enum
 from pathlib import Path
 from mmap import mmap, PROT_READ
-from ctypes import Structure, c_int64, c_uint64, c_int32, c_uint32, c_uint8, sizeof
+from ctypes import (
+    Structure,
+    c_int64,
+    c_uint64,
+    c_int32,
+    c_uint32,
+    c_uint8,
+    c_uint16,
+    sizeof,
+)
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -38,6 +49,10 @@ class TDHeader(Structure):
         ("tdag_mapping_size", c_uint64),
         ("sink_mapping_offset", c_uint64),
         ("sink_mapping_size", c_uint64),
+        ("fn_mapping_offset", c_uint64),
+        ("fn_mapping_count", c_uint64),
+        ("fn_trace_offset", c_uint64),
+        ("fn_trace_count", c_uint64),
     ]
 
     def __repr__(self) -> str:
@@ -45,6 +60,8 @@ class TDHeader(Structure):
             f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_count: {self.fd_mapping_count}\n\t"
             f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
             f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
+            f"fnmapping_offset: {self.fn_mapping_offset}\n\tfnmapping_count: {self.fn_mapping_count}\n\t"
+            f"fntrace_offset: {self.fn_trace_offset}\n\tfntrace_count: {self.fn_trace_count}\n\t"
         )
 
 
@@ -57,6 +74,13 @@ class TDFDHeader(Structure):
         ("prealloc_label_begin", c_uint32),
         # One-past last label of the pre-allocated range
         ("prealloc_label_end", c_uint32),
+    ]
+
+
+class TDFnHeader(Structure):
+    _fields_ = [
+        ("name_offset", c_uint32),
+        ("name_len", c_uint32),
     ]
 
 
@@ -108,6 +132,17 @@ class TDSink(Structure):
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
+class TDEvent(Structure):
+    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
+
+    class Kind(Enum):
+        ENTRY = 0
+        EXIT = 1
+
+    def __repr__(self) -> str:
+        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
+
+
 class TDFile:
     def __init__(self, file: BinaryIO) -> None:
         # This needs to be kept in sync with implementation in encoding.cpp
@@ -127,21 +162,35 @@ class TDFile:
         assert self.header.tdag_mapping_offset > 0
         assert self.header.tdag_mapping_size > 0
         assert self.header.sink_mapping_offset > 0
+        assert self.header.fn_mapping_offset > 0
 
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
+        self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
+
+    def _read_mapping_header(
+        self, offset: int, count: int, header_type
+    ) -> Iterator[Tuple[str, Structure]]:
+        for i in range(0, count):
+            header_offset = offset + sizeof(header_type) * i
+            hdr = header_type.from_buffer_copy(self.buffer, header_offset)  # type: ignore
+            sbegin = offset + hdr.name_offset
+            name = str(self.buffer[sbegin : sbegin + hdr.name_len], "utf-8")
+            yield name, hdr
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
-
         offset = self.header.fd_mapping_offset
-        for i in range(0, self.header.fd_mapping_count):
-            header_offset = offset + sizeof(TDFDHeader) * i
-            fdhdr = TDFDHeader.from_buffer_copy(self.buffer, header_offset)  # type: ignore
-            sbegin = offset + fdhdr.name_offset
-            path = Path(str(self.buffer[sbegin : sbegin + fdhdr.name_len], "utf-8"))
-            yield (path, fdhdr)
+        count = self.header.fd_mapping_count
+        for name, hdr in self._read_mapping_header(offset, count, TDFDHeader):
+            yield Path(name), cast(TDFDHeader, hdr)
+
+    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+        offset = self.header.fn_mapping_offset
+        count = self.header.fn_mapping_count
+        for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
+            yield name, cast(TDFnHeader, hdr)
 
     @property
     def label_count(self):
@@ -204,6 +253,19 @@ class TDFile:
         while offset < end:
             yield self.read_sink(offset)
             offset += sizeof(TDSink)
+
+    def read_event(self, offset: int) -> TDEvent:
+        return TDEvent.from_buffer_copy(self.buffer, offset)
+
+    @property
+    def events(self) -> Iterator[TDEvent]:
+
+        offset = self.header.fn_trace_offset
+        end = offset + self.header.fn_trace_count * sizeof(TDEvent)
+
+        while offset < end:
+            yield self.read_event(offset)
+            offset += sizeof(TDEvent)
 
 
 class TDTaintOutput(TaintOutput):
@@ -454,6 +516,12 @@ class TDInfo(Command):
             help="print file descriptor headers",
         )
         parser.add_argument(
+            "--print-fn-headers",
+            "-x",
+            action="store_true",
+            help="print function headers",
+        )
+        parser.add_argument(
             "--print-taint-sinks",
             "-s",
             action="store_true",
@@ -464,6 +532,13 @@ class TDInfo(Command):
             "-n",
             action="store_true",
             help="print taint nodes",
+        )
+
+        parser.add_argument(
+            "--print-function-trace",
+            "-t",
+            action="store_true",
+            help="print function trace events",
         )
 
     def run(self, args):
@@ -479,6 +554,11 @@ class TDInfo(Command):
                     lbl_end = h[1].prealloc_label_end
                     print(f"{i}: {path} {lbl_begin} {lbl_end}")
 
+            if args.print_fn_headers:
+                for i, h in enumerate(tdfile.fn_headers):
+                    name = h[0]
+                    print(f"{i}: {name}")
+
             if args.print_taint_sinks:
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
@@ -486,3 +566,7 @@ class TDInfo(Command):
             if args.print_taint_nodes:
                 for lbl in range(1, tdfile.label_count):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
+
+            if args.print_function_trace:
+                for e in tdfile.events:
+                    print(f"{e}")

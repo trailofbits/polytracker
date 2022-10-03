@@ -1,11 +1,21 @@
-#ifndef POLYTRACKER_TAINTDAG_POLYTRACKER_H
-#define POLYTRACKER_TAINTDAG_POLYTRACKER_H
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
+
+#include "taintdag/output.hpp"
 
 #include <filesystem>
 #include <span>
 
 #include "taintdag/fdmapping.hpp"
-#include "taintdag/output.hpp"
+#include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 #include "taintdag/taint.hpp"
 #include "taintdag/taint_sink_log.hpp"
 #include "taintdag/taintdag.hpp"
@@ -14,7 +24,6 @@ namespace taintdag {
 
 // Main interface towards polytracker
 class PolyTracker {
-
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
   ~PolyTracker();
@@ -48,14 +57,21 @@ public:
   // Same as before, but use same label for all data
   void taint_sink(int fd, sink_offset_t offset, label_t label, size_t length);
 
+  // Log function entry
+  FnMapping::index_t function_entry(std::string_view name);
+  // Log function exit
+  void function_exit(FnMapping::index_t index);
+
 private:
   std::optional<taint_range_t>
   create_source_taint(int fd, source_offset_t offset, size_t length);
 
   OutputFile of_;
   FDMapping fdm_;
+  FnMapping fnm_;
+  FnTrace fnt_;
   TaintDAG tdag_;
   TaintSinkLog sinklog_;
 };
+
 } // namespace taintdag
-#endif

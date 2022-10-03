@@ -1,13 +1,4 @@
-find_package(LLVM 13 CONFIG)
-
-if(LLVM_FOUND)
-  message(STATUS "LLVM_VERSION_MAJOR: ${LLVM_VERSION_MAJOR}")
-  message(STATUS "LLVM_VERSION_MINOR: ${LLVM_VERSION_MINOR}")
-  message(STATUS "LLVM_VERSION_PATCH: ${LLVM_VERSION_PATCH}")
-else()
-  message(FATAL_ERROR "You need LLVM >=13 to build this (found LLVM
-  ${LLVM_VERSION_MAJOR}).")
-endif()
+find_package(LLVM 13 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -23,7 +14,6 @@ set_target_properties(
 )
 
 add_subdirectory(passes)
-add_subdirectory(taintdag)
 
 set(POLY_DIR "polytracker")
 set(TAINT_DIR "taint_sources")
@@ -36,7 +26,7 @@ if(XRAY_ON)
   )
 else()
   set(CMAKE_CXX_FLAGS
-      "${CMAKE_CXX_FLAGS} -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -std=c++14 -fno-exceptions -fno-rtti -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
+      "${CMAKE_CXX_FLAGS} -stdlib=libc++ -static -I${POLYTRACK_CXX_INCLUDE} -fno-exceptions -fno-rtti -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
   )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -g -O3")
   message(STATUS "Cmake flags: " ${CMAKE_CXX_FLAGS})
@@ -51,10 +41,18 @@ set(TAINT_SOURCES ${TAINT_DIR}/taint_sources.cpp ${TAINT_DIR}/string_taints.cpp
                   ${TAINT_DIR}/memory_taints.cpp ${TAINT_DIR}/write_taints.cpp
                   ${TAINT_DIR}/argv.cpp)
 
-set(TAINTDAG_SOURCES ${TAINTDAG_DIR}/encoding.cpp ${TAINTDAG_DIR}/fdmapping.cpp
-                     ${TAINTDAG_DIR}/output.cpp ${TAINTDAG_DIR}/polytracker.cpp)
+set(TAINTDAG_SOURCES
+    ${TAINTDAG_DIR}/encoding.cpp
+    ${TAINTDAG_DIR}/fdmapping.cpp
+    ${TAINTDAG_DIR}/output.cpp
+    ${TAINTDAG_DIR}/polytracker.cpp
+    ${TAINTDAG_DIR}/print.cpp
+    ${TAINTDAG_DIR}/fnmapping.cpp
+    ${TAINTDAG_DIR}/fntrace.cpp)
 
 add_library(Polytracker STATIC ${POLY_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
-target_link_libraries(Polytracker LLVMPassConfig)
+target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only)
 install(TARGETS Polytracker DESTINATION ${POLYTRACK_LIB_DIR})
+
+add_subdirectory(taintdag/test)

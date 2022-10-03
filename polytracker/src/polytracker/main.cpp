@@ -1,7 +1,4 @@
-#include "polytracker/dfsan_types.h"
-#include "polytracker/early_construct.h"
-#include "polytracker/polytracker.h"
-#include "polytracker/write_taints.h"
+// #include "polytracker/write_taints.h"
 #include <atomic>
 #include <fcntl.h>
 #include <fstream>
@@ -17,12 +14,14 @@
 #include <unistd.h>
 #include <unordered_set>
 
+#include "polytracker/dfsan_types.h"
+#include "polytracker/early_construct.h"
+#include "polytracker/polytracker.h"
 #include "taintdag/polytracker.h"
 
 #define DEFAULT_TTL 32
 
 // If this is empty, taint everything.
-DECLARE_EARLY_CONSTRUCT(std::unordered_set<std::string>, target_sources);
 DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stderr_sink);
@@ -84,6 +83,9 @@ polytrackers settings
 3. Set rest to default if possible and error if no polypath.
 */
 void polytracker_get_settings() {
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   polytracker_parse_env();
   set_defaults();
 }
@@ -112,35 +114,28 @@ void polytracker_print_settings() {
     printf("POLYTRACKER_STDERR_SINK: %s\n",
            get_polytracker_stderr_sink().c_str());
   }
+  if (polytracker_taint_argv) {
+    printf("POLYTRACKER_TAINT_ARGV: 1\n");
+  }
 }
 
-void polytracker_start(func_mapping const *globals, uint64_t globals_count,
-                       block_mapping const *block_map, uint64_t block_map_count,
-                       bool control_flow_tracking) {
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
-  DO_EARLY_DEFAULT_CONSTRUCT(std::unordered_set<std::string>, target_sources);
+void sink_streams() {
+  // Sink stdout
+  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink() == "1") {
+    get_polytracker_tdag().open_file(f, "/dev/stdout");
+  }
+  // Sink stderr
+  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink() == "1") {
+    get_polytracker_tdag().open_file(f, "/dev/stderr");
+  }
+}
 
-  get_target_sources();
+void taint_start(void) {
   polytracker_get_settings();
   polytracker_print_settings();
   DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
                      get_polytracker_db_name());
-
-  if (!control_flow_tracking) {
-    printf("Program compiled without PolyTracker control flow tracking "
-           "instrumentation.\n");
-  }
-
-  if (int f = fileno(stdout); f >= 0 && get_polytracker_stdout_sink() == "1") {
-    get_polytracker_tdag().open_file(f, "/dev/stdout");
-  }
-
-  if (int f = fileno(stderr); f >= 0 && get_polytracker_stderr_sink() == "1") {
-    get_polytracker_tdag().open_file(f, "/dev/stderr");
-  }
-
+  sink_streams();
   // Set up the atexit call
   atexit(polytracker_end);
 }

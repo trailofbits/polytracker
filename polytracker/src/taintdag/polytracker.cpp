@@ -1,7 +1,20 @@
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
 #include "taintdag/polytracker.h"
+
 #include <sanitizer/dfsan_interface.h>
 
 #include <sys/stat.h>
+
+#include "taintdag/error.hpp"
+#include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 
 namespace fs = std::filesystem;
 
@@ -27,6 +40,8 @@ bool reuse_prealloc_labels() {
 
 PolyTracker::PolyTracker(std::filesystem::path const &outputfile)
     : of_{outputfile}, fdm_{of_.fd_mapping_begin(), of_.fd_mapping_end()},
+      fnm_{of_.fn_mapping_begin(), of_.fn_mapping_end()},
+      fnt_{of_.fn_trace_begin(), of_.fn_trace_end()},
       tdag_{of_.tdag_mapping_begin(), of_.tdag_mapping_end()},
       sinklog_{of_.sink_mapping_begin(), of_.sink_mapping_end()} {}
 
@@ -34,6 +49,8 @@ PolyTracker::~PolyTracker() {
   of_.fileheader_fd_count(fdm_.get_mapping_count());
   of_.fileheader_tdag_size(tdag_.label_count() * sizeof(storage_t));
   of_.fileheader_sink_size(sinklog_.size());
+  of_.fileheader_fn_count(fnm_.get_mapping_count());
+  of_.fileheader_trace_count(fnt_.get_event_count());
 }
 
 label_t PolyTracker::union_labels(label_t l1, label_t l2) {
@@ -183,6 +200,19 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
 
 void PolyTracker::affects_control_flow(label_t lbl) {
   tdag_.affects_control_flow(lbl);
+}
+
+FnMapping::index_t PolyTracker::function_entry(std::string_view name) {
+  auto maybe_index{fnm_.add_mapping(name)};
+  if (!maybe_index) {
+    error_exit("Failed to add function mapping for: ", name);
+  }
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::entry, *maybe_index);
+  return *maybe_index;
+}
+
+void PolyTracker::function_exit(FnMapping::index_t index) {
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::exit, index);
 }
 
 } // namespace taintdag

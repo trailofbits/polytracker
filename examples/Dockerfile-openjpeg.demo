@@ -21,5 +21,5 @@ RUN polytracker extract-bc opj_decompress -o opj_decompress.bc
 RUN polytracker extract-bc libopenjp2.a -o libopenjp2.a.bc
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
 RUN polytracker optimize-bc exec.bc -o exec.bc
-RUN polytracker instrument-bc exec.bc -o exec.bc --no-control-flow-tracking -o exec.instrumented.bc
+RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
 RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_track
