@@ -1,0 +1,12 @@
+polytracker.__main__
+====================
+
+.. automodule:: polytracker.__main__
+
+__main__ functions
+------------------
+
+main
+****
+
+.. autofunction:: main

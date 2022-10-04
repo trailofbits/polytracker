@@ -5,6 +5,7 @@ PolyTracker API
    :maxdepth: 4
 
    polytracker
+   polytracker.__main__
    polytracker.build
    polytracker.cache
    polytracker.cfg
