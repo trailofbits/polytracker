@@ -1,0 +1,39 @@
+FROM ubuntu:focal AS sources
+
+RUN mkdir -p /polytracker/the_klondike
+
+WORKDIR /polytracker/the_klondike
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
+
+RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
+WORKDIR /polytracker/the_klondike/daedalus
+
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
+
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get update && apt-get install -y curl cmake libgmp-dev libssl-dev libnuma-dev
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org > ghcup && chmod +x ghcup
+RUN ./ghcup install ghc 8.10.7 && ./ghcup install cabal 3.6
+ENV PATH=$PATH:/root/.ghcup/bin
+
+COPY --from=sources /polytracker/the_klondike/daedalus /polytracker/the_klondike/daedalus
+
+WORKDIR /polytracker/the_klondike/daedalus
+# RUN git checkout b5824574c398d5197247fe6ed534510771f6be8f
+
+RUN cabal update
+WORKDIR /polytracker/the_klondike/daedalus/formats/nitf
+
+ENV CC=clang
+ENV CXX=clang++
+
+RUN cabal run ../../:daedalus -- compile-c++ nitf_main.ddl --out-dir=cpp_parser
+
+WORKDIR /polytracker/the_klondike/daedalus/formats/nitf/cpp_parser
+# RUN polytracker build make parser
+# RUN polytracker instrument-targets --taint --ftrace parser-test --ignore-lists gmp ssl libz
+# RUN mv parser-test.instrumented parser-test-track
