@@ -42,5 +42,4 @@ jobs:
       - name: Build the base image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: PolyTracker tests
-        run: |
-          pytest
+        run: docker run --rm trailofbits/polytracker pytest

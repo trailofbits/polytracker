@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pytest
 from subprocess import CalledProcessError
-from typing import Dict
+from typing import Dict, Union
 
 from tqdm import tqdm
 
@@ -11,8 +11,6 @@ from polytracker import (
     FunctionReturn,
     ProgramTrace,
 )
-
-from .data import *
 
 
 @pytest.mark.skip(reason="taint_dag does not support traces yet")
@@ -112,20 +110,6 @@ def test_taint_log(program_trace: ProgramTrace):
 
 
 @pytest.mark.skip(reason="taint_dag does not support traces yet")
-@pytest.mark.program_trace(
-    "test_taint_log.c", config_path=CONFIG_DIR / "new_range.json"
-)
-def test_config_files(program_trace: ProgramTrace):
-    # the new_range.json config changes the polystart/polyend to
-    # POLYSTART: 1, POLYEND: 3
-    taints = program_trace.get_function("main").taints()
-    for i in range(1, 4):
-        assert any(i == offset.offset for offset in taints)
-    for i in range(4, 10):
-        assert all(i != offset.offset for offset in taints)
-
-
-@pytest.mark.skip(reason="taint_dag does not support traces yet")
 @pytest.mark.program_trace("test_fopen.c")
 def test_source_fopen(program_trace: ProgramTrace):
     taints = program_trace.get_function("main").taints()
@@ -218,12 +202,6 @@ def test_taint_forest(program_trace: ProgramTrace):
             assert taint_node.parent_two is not None
             had_taint_union = True
     assert had_taint_union
-
-
-@pytest.mark.program_trace("test_retcode.c", return_exceptions=True)
-def test_retcode(program_trace: Union[ProgramTrace, Exception]):
-    # test_retcode.c should cause a CalledProcessError to be returned since it has a non-zero exit code
-    assert isinstance(program_trace, CalledProcessError)
 
 
 @pytest.mark.program_trace("test_stack.c", return_exceptions=True)

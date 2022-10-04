@@ -35,3 +35,6 @@ set(SPDLOG_NO_EXCEPTIONS TRUE)
 add_subdirectory(third_party/spdlog)
 
 add_subdirectory(polytracker)
+
+enable_testing()
+add_subdirectory(unittests/src/taintdag)
