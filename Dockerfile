@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:16daa680dcff0dc86ebf6ae81f5382859695cb35
+FROM trailofbits/polytracker-llvm:latest
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
@@ -28,14 +28,14 @@ COPY . /polytracker
 
 RUN mkdir /polytracker/build
 WORKDIR /polytracker/build
-RUN cmake -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE -DCXX_LIB_PATH=/cxx_libs .. 
+RUN cmake -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE -DCXX_LIB_PATH=/cxx_libs ..
 RUN ninja install
 
 
 WORKDIR /polytracker
 RUN pip3 install .
 
-# Setting up build enviornment for targets 
+# Setting up build enviornment for targets
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV PATH=/polytracker/build/bin:$PATH
 ENV DFSAN_OPTIONS="strict_data_dependencies=0"
