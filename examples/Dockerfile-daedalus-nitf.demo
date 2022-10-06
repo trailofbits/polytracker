@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 WORKDIR /polytracker/the_klondike
 
-RUN apt-get update && apt-get install -y curl cmake libgmp-dev libssl-dev libnuma-dev
+RUN apt-get update && apt-get install -y curl cmake libgmp-dev libssl-dev libnuma-dev file
 RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org > ghcup && chmod +x ghcup
 RUN ./ghcup install ghc 8.10.7 && ./ghcup install cabal 3.6
 ENV PATH=$PATH:/root/.ghcup/bin
@@ -28,12 +28,9 @@ WORKDIR /polytracker/the_klondike/daedalus
 RUN cabal update
 WORKDIR /polytracker/the_klondike/daedalus/formats/nitf
 
-ENV CC=clang
-ENV CXX=clang++
-
 RUN cabal run ../../:daedalus -- compile-c++ nitf_main.ddl --out-dir=cpp_parser
 
 WORKDIR /polytracker/the_klondike/daedalus/formats/nitf/cpp_parser
-# RUN polytracker build make parser
-# RUN polytracker instrument-targets --taint --ftrace parser-test --ignore-lists gmp ssl libz
-# RUN mv parser-test.instrumented parser-test-track
+RUN polytracker build make parser
+RUN polytracker instrument-targets --taint --ftrace parser --ignore-lists gmp ssl libz
+RUN mv parser.instrumented parser-track
