@@ -19,7 +19,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
 
 RUN update-ca-certificates
 
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 10
 RUN python3 -m pip install pip && python3 -m pip install pytest
 
 WORKDIR /blight
