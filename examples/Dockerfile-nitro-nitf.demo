@@ -1,0 +1,103 @@
+FROM ubuntu:focal AS nitro-sources
+ENV DEBIAN_FRONTEND=noninteractive
+
+#=================================
+# sources for the project to be instrumented
+
+WORKDIR /polytracker/the_klondike
+RUN apt-get update && \
+	apt-get install -y git
+RUN git clone https://github.com/mdaus/nitro.git
+
+#=================================
+# Create a separate image with the latest polytracker source
+
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+WORKDIR /polytracker/the_klondike
+
+#=================================
+# set up zip related dependencies for nitro: zlib, minizip
+
+RUN apt-get update && \ 
+	apt-get install -y \
+		apt-utils \
+		autoconf \
+		automake \
+		build-essential \
+		libtool \
+		wget && \
+	wget https://www.zlib.net/zlib-1.2.12.tar.gz && \
+	tar -xzvf zlib-1.2.12.tar.gz
+
+WORKDIR /polytracker/the_klondike/zlib-1.2.12
+RUN ./configure --prefix=/usr && \
+	make -j$((`nproc`+1)) test && \
+	make -j$((`nproc`+1)) install 
+
+WORKDIR /polytracker/the_klondike/zlib-1.2.12/contrib/minizip
+# moves .h files to /usr/include for nitro, which has an overly specific check for them
+RUN autoreconf --install && \
+	./configure --prefix=/usr && \
+	make -j$((`nproc`+1)) all && \
+	make -j$((`nproc`+1)) install && \
+	mv /usr/include/minizip/* /usr/include && \
+	rm -rf zlib-1.2.12*
+
+#=================================
+# add nitro and cmake dependencies from ubuntu package repos
+
+RUN apt-get update && \ 
+	apt-get install -y \
+		libcurl4-openssl-dev \
+		libssl-dev \
+		swig
+
+#=================================
+# the cmake version in the container base is 3.16, so upgrade
+
+WORKDIR /polytracker/the_klondike/
+RUN apt-get remove -y --purge --auto-remove cmake && \ 
+	wget https://github.com/Kitware/CMake/releases/download/v3.24.2/cmake-3.24.2.tar.gz && \
+	tar -xzvf cmake-3.24.2.tar.gz
+	
+WORKDIR /polytracker/the_klondike/cmake-3.24.2
+RUN ./bootstrap --prefix=/usr && \
+ 	make -j$((`nproc`+1)) && \
+ 	make install && \
+	rm -rf cmake-3.24.2*
+
+#=================================
+# Manage the nitro configuration & build
+
+COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
+WORKDIR /polytracker/the_klondike/nitro
+RUN	mkdir build && \
+	mkdir poly_artifacts && \
+	export WLLVM_ARTIFACT_STORE=poly_artifacts
+
+WORKDIR /polytracker/the_klondike/nitro/build
+RUN polytracker build cmake \
+	-S ../ \
+	-B . \
+	-Wno-dev \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DBUILD_SHARED_LIBS=OFF \
+	-DCMAKE_C_COMPILER=clang \
+	-DCMAKE_CXX_COMPILER=clang \
+	-DPYTHON_HOME=/usr/bin/python3 \
+	-DENABLE_SWIG=ON \
+	-DENABLE_BOOST=OFF \
+	-DZIP_HOME=/usr \
+	-DCODA_INSTALL_TESTS=OFF \
+	-DCODA_BUILD_TESTS=OFF
+
+WORKDIR /polytracker/the_klondike/nitro
+RUN polytracker build cmake \
+	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
+	--build build -j$((`nproc`+1)) \
+	--target install 
+
+# Now instrument the output binary
+RUN polytracker instrument-targets --taint --ftrace nitro
+RUN mv nitro.instrumented nitro_track
