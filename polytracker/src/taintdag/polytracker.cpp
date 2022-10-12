@@ -1,8 +1,20 @@
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
 #include "taintdag/polytracker.h"
 #include "taintdag/util.hpp"
 #include <sanitizer/dfsan_interface.h>
 
 #include <sys/stat.h>
+
+#include "taintdag/error.hpp"
+#include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 
 namespace fs = std::filesystem;
 
@@ -124,6 +136,19 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
 
 void PolyTracker::affects_control_flow(label_t lbl) {
   output_file_.section<Labels>().affects_control_flow(lbl);
+}
+
+FnMapping::index_t PolyTracker::function_entry(std::string_view name) {
+  auto maybe_index{fnm_.add_mapping(name)};
+  if (!maybe_index) {
+    error_exit("Failed to add function mapping for: ", name);
+  }
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::entry, *maybe_index);
+  return *maybe_index;
+}
+
+void PolyTracker::function_exit(FnMapping::index_t index) {
+  fnt_.log_fn_event(FnTrace::event_t::kind_t::exit, index);
 }
 
 } // namespace taintdag

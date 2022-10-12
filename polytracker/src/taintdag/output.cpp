@@ -59,46 +59,69 @@ void OutputFile::init_filehdr() {
   fh->tdag_mapping_size = 0;
   fh->sink_mapping_offset = sink_mapping_offset;
   fh->sink_mapping_size = 0;
+  fh->fn_mapping_offset = fn_mapping_offset;
+  fh->fn_mapping_count = 0;
+  fh->fn_trace_offset = fn_trace_offset;
+  fh->fn_trace_count = 0;
 }
 
-std::pair<char *, char *> OutputFile::offset_mapping(size_t offset,
-                                                     size_t length) {
+OutputFile::mapping_t OutputFile::offset_mapping(size_t offset, size_t length) {
   auto m = reinterpret_cast<char *>(mapping_);
   auto begin = m + offset;
   auto end = begin + length;
   return {begin, end};
 }
-
+// files
 char *OutputFile::fd_mapping_begin() {
   return reinterpret_cast<char *>(mapping_) + fd_mapping_offset;
 }
 char *OutputFile::fd_mapping_end() {
   return fd_mapping_begin() + fd_mapping_size;
 }
-std::pair<char *, char *> OutputFile::fd_mapping() {
+OutputFile::mapping_t OutputFile::fd_mapping() {
   return {fd_mapping_begin(), fd_mapping_end()};
 }
+// functions
+char *OutputFile::fn_mapping_begin() {
+  return reinterpret_cast<char *>(mapping_) + fn_mapping_offset;
+}
+char *OutputFile::fn_mapping_end() {
+  return fn_mapping_begin() + fn_mapping_size;
+}
 
+OutputFile::mapping_t OutputFile::fn_mapping() {
+  return {fn_mapping_begin(), fn_mapping_end()};
+}
+// trace
+char *OutputFile::fn_trace_begin() {
+  return reinterpret_cast<char *>(mapping_) + fn_trace_offset;
+}
+
+char *OutputFile::fn_trace_end() { return fn_trace_begin() + fn_trace_size; }
+
+OutputFile::mapping_t OutputFile::fn_trace() {
+  return {fn_trace_begin(), fn_trace_end()};
+}
+// tdag
 char *OutputFile::tdag_mapping_begin() {
   return reinterpret_cast<char *>(mapping_) + tdag_mapping_offset;
 }
 char *OutputFile::tdag_mapping_end() {
   return tdag_mapping_begin() + tdag_mapping_size;
 }
-std::pair<char *, char *> OutputFile::tdag_mapping() {
+OutputFile::mapping_t OutputFile::tdag_mapping() {
   return {tdag_mapping_begin(), tdag_mapping_end()};
 }
-
+// sink
 char *OutputFile::sink_mapping_begin() {
   return reinterpret_cast<char *>(mapping_) + sink_mapping_offset;
 }
 char *OutputFile::sink_mapping_end() {
   return sink_mapping_begin() + sink_mapping_size;
 }
-std::pair<char *, char *> OutputFile::sink_mapping() {
+OutputFile::mapping_t OutputFile::sink_mapping() {
   return {sink_mapping_begin(), sink_mapping_end()};
 }
-
 void OutputFile::fileheader_fd_count(size_t fd_count) {
   reinterpret_cast<FileHdr *>(mapping_)->fd_mapping_count = fd_count;
 }
@@ -109,6 +132,14 @@ void OutputFile::fileheader_tdag_size(size_t tdag_size) {
 
 void OutputFile::fileheader_sink_size(size_t sink_size) {
   reinterpret_cast<FileHdr *>(mapping_)->sink_mapping_size = sink_size;
+}
+
+void OutputFile::fileheader_fn_count(size_t fn_count) {
+  reinterpret_cast<FileHdr *>(mapping_)->fn_mapping_count = fn_count;
+}
+
+void OutputFile::fileheader_trace_count(size_t event_count) {
+  reinterpret_cast<FileHdr *>(mapping_)->fn_trace_count = event_count;
 }
 
 } // namespace taintdag

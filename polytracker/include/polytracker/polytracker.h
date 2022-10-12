@@ -24,28 +24,7 @@
 
 #endif
 
-// Mapping from function name to id, created by polytracker-pass
-struct func_mapping {
-  char *func_name;
-  uint32_t id;
-};
-
-// Block function-id and type representations, created by polytracker-pass
-struct block_mapping {
-  uint64_t func_bb;
-  uint8_t btype;
-};
-
-void polytracker_end();
-void polytracker_start(func_mapping const *globals, uint64_t globals_count,
-                       block_mapping const *block_map, uint64_t block_map_count,
-                       bool control_flow_tracking);
-
-extern const func_mapping *func_mappings;
-extern uint64_t func_mapping_count;
-
-extern const block_mapping *block_mappings;
-extern uint64_t block_mapping_count;
+void taint_start();
 
 // Controls argv being a taint source
 extern bool polytracker_taint_argv;

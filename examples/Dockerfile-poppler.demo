@@ -43,6 +43,6 @@ RUN polytracker build cmake -S . -B build \
 
 # Build and instrument
 RUN polytracker build cmake --build build -j$(nproc)
-RUN polytracker instrument-targets pdftotext pdftops --ignore-lists freetype fontconfig
+RUN polytracker instrument-targets --taint --ftrace pdftotext pdftops --ignore-lists freetype fontconfig
 RUN mv pdftotext.instrumented pdftotext_track
 RUN mv pdftops.instrumented pdftops_track
