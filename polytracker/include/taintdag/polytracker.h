@@ -8,16 +8,16 @@
 
 #pragma once
 
-#include "taintdag/output.hpp"
+#include "taintdag/outputfile.hpp"
 
 #include <filesystem>
 #include <span>
 
-#include "taintdag/outputfile.hpp"
 #include "taintdag/labels.hpp"
 #include "taintdag/sink.hpp"
 #include "taintdag/string_table.hpp"
 #include "taintdag/taint_source.hpp"
+#include "taintdag/fnmapping.h"
 
 namespace taintdag {
 

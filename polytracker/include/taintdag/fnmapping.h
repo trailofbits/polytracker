@@ -47,4 +47,18 @@ private:
   std::unordered_map<std::string_view, index_t> mappings;
 };
 
+#include "taintdag/section.hpp"
+
+struct Functions : public FixedSizeAlloc<FunctionEntry> {
+  template <typename OF>
+  Functions(SectionArg<OF> of)
+      : FixedSizeAlloc{of.range},
+        st_{of.output_file.template section<StringTable>()} {
+    // TODO(hbrodin): Drop the assert, replace with error_exit.
+    // assert(of.range.size() <=
+    //        std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
+    util::dump_range("Functions", of.range);
+  }
+}
+
 } // namespace taintdag
