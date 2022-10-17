@@ -29,7 +29,6 @@ set(TAINTDAG_DIR taintdag)
 set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/encoding.cpp
     ${TAINTDAG_DIR}/fdmapping.cpp
-    ${TAINTDAG_DIR}/output.cpp
     ${TAINTDAG_DIR}/polytracker.cpp
     ${TAINTDAG_DIR}/print.cpp
     ${TAINTDAG_DIR}/fnmapping.cpp
