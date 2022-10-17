@@ -13,7 +13,8 @@ add_executable(
   fdmapping.cpp
   fnmapping.cpp
   union.cpp
-  labeldeq.cpp)
+  labeldeq.cpp
+  tdag.cpp)
 
 target_link_libraries(tests PRIVATE Polytracker Catch2::Catch2
                                     spdlog::spdlog_header_only)

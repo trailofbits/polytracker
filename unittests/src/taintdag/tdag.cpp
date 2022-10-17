@@ -11,6 +11,7 @@
 #include "taintdag/storage.hpp"
 #include "taintdag/string_table.hpp"
 #include "taintdag/taint_source.hpp"
+#include "taintdag/labels.hpp"
 
 #include "taintdag/error.hpp"
 namespace taintdag {
@@ -35,7 +36,7 @@ TEST_CASE("Test TDAG", "Integration") {
   std::cout << "Hello: " << std::dec << static_cast<size_t>(*offset1)
             << " world " << static_cast<size_t>(*offset2) << std::endl;
 
-  auto idx = tdg.section<Sources>().add_source("sourcename");
+  auto idx = tdg.section<Sources>().add_source("sourcename", -1);
   REQUIRE(idx);
   REQUIRE(*idx == 0);
   auto idx2 = tdg.section<Sources>().add_source("next-source", 2);
@@ -294,19 +295,15 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
     auto m1 = src.get(*m);
     REQUIRE(m1.fd == fd);
     REQUIRE(m1.name(st) == "test");
-    REQUIRE(m1.prealloc_begin == 0);
-    REQUIRE(m1.prealloc_end == 0);
 
     int fd2 = 99;
-    auto s2 = src.add_source("test2", fd2, 1, 100);
+    auto s2 = src.add_source("test2", fd2);
     REQUIRE(s2);
     auto idx2 = src.mapping_idx(fd2);
     REQUIRE(idx2);
     auto m2 = src.get(*idx2);
     REQUIRE(m2.fd == fd2);
     REQUIRE(m2.name(st) == "test2");
-    REQUIRE(m2.prealloc_begin == 1);
-    REQUIRE(m2.prealloc_end == 100);
   }
 
   SECTION("Latest wins in case of multiple mappings for same fd") {
@@ -320,20 +317,6 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
     auto m = src.get(*mm);
     REQUIRE(m.fd == fd);
     REQUIRE(m.name(st) == "second");
-  }
-
-  SECTION("Reuse label range if exists") {
-    REQUIRE(!src.existing_label_range("thefile"));
-
-    int fd1 = 12;
-    uint32_t pa_low = 1, pa_high = 123;
-    src.add_source("thefile", fd1, pa_low, pa_high);
-
-    auto paopt = src.existing_label_range("thefile");
-    REQUIRE(paopt);
-    auto [pal, pah] = *paopt;
-    REQUIRE(pal == pa_low);
-    REQUIRE(pah == pa_high);
   }
 }
 
