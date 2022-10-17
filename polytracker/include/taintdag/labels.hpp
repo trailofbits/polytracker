@@ -19,7 +19,6 @@ struct Labels : public FixedSizeAlloc<storage_t> {
   static constexpr label_t redundant_label_range = 100;
 
   template <typename OF> Labels(SectionArg<OF> of) : FixedSizeAlloc{of.range} {
-    util::dump_range("Labels", of.range);
     // Create the initial 'untainted' label. It will have label 0.
     construct(0u);
   }

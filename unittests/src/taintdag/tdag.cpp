@@ -16,25 +16,22 @@
 #include "taintdag/error.hpp"
 namespace taintdag {
 
-// struct ErrorExit {};
+struct ErrorExit {};
 
-// void throwing_error_function(int) { throw ErrorExit{}; }
+void throwing_error_function(int) { throw ErrorExit{}; }
 
-// struct ErrorExitReplace {
-//   std::function<void(int)> old;
-//   ErrorExitReplace()
-//       : old{std::exchange(error_function, throwing_error_function)} {}
-//   ~ErrorExitReplace() { error_function = old; }
-// };
+struct ErrorExitReplace {
+  std::function<void(int)> old;
+  ErrorExitReplace()
+      : old{std::exchange(error_function, throwing_error_function)} {}
+  ~ErrorExitReplace() { error_function = old; }
+};
 
 TEST_CASE("Test TDAG", "Integration") {
-  std::span<uint8_t> s;
-  std::atomic<std::uint8_t *> write_ptr_{s.data()};
   OutputFile<Sources, Labels, StringTable> tdg("filename.bin");
   auto offset1 = tdg.section<StringTable>().add_string("Hello");
   auto offset2 = tdg.section<StringTable>().add_string("World!");
-  std::cout << "Hello: " << std::dec << static_cast<size_t>(*offset1)
-            << " world " << static_cast<size_t>(*offset2) << std::endl;
+  REQUIRE(offset1 != offset2);
 
   auto idx = tdg.section<Sources>().add_source("sourcename", -1);
   REQUIRE(idx);
@@ -43,7 +40,7 @@ TEST_CASE("Test TDAG", "Integration") {
   REQUIRE(*idx2 == 1);
 }
 
-TEST_CASE("Type properties", "[FixedSizeFile]") {
+TEST_CASE("Type properties FixedSizeFile", "[FixedSizeFile]") {
   // Don't want multiple copies referring to the same file
   REQUIRE(!std::is_copy_constructible_v<FixedSizeFile>);
   REQUIRE(!std::is_copy_assignable_v<FixedSizeFile>);
@@ -55,7 +52,7 @@ TEST_CASE("Type properties", "[FixedSizeFile]") {
   REQUIRE(!std::is_move_constructible_v<FixedSizeFile>);
 }
 
-TEST_CASE("Type properties", "[MMapFile]") {
+TEST_CASE("Type properties MMapFile", "[MMapFile]") {
   // Don't want multiple copies referring to the same regions
   REQUIRE(!std::is_copy_constructible_v<MMapFile>);
   REQUIRE(!std::is_copy_assignable_v<MMapFile>);
@@ -70,7 +67,7 @@ TEST_CASE("Type properties", "[MMapFile]") {
 TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
 
   // To be able to capture error_exits
-  // ErrorExitReplace errthrow;
+  ErrorExitReplace errthrow;
 
   // Exposing the members of SectionBase
   struct TestSectionBase : public SectionBase {
@@ -137,19 +134,19 @@ TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
 
   // If offset is requirested for out of bounds memory, just abort. Something
   // is seriously wrong.
-  // REQUIRE_THROWS_AS(sb.offset(SectionBase::span_t::iterator{}), ErrorExit);
-  // REQUIRE_THROWS_AS(sb.offset(last.end()), ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(SectionBase::span_t::iterator{}), ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(last.end()), ErrorExit);
 
-  // REQUIRE_THROWS_AS(sb.offset(nullptr), ErrorExit);
-  // REQUIRE_THROWS_AS(
-  //     sb.offset(reinterpret_cast<uint8_t const *>(&backing + sizeof(backing))),
-  //     ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(nullptr), ErrorExit);
+  REQUIRE_THROWS_AS(
+      sb.offset(reinterpret_cast<uint8_t const *>(&backing + sizeof(backing))),
+      ErrorExit);
 }
 
 TEST_CASE("FixedSizeAlloc operations are consistent", "[FixedSizeAlloc]") {
 
   // To be able to capture error_exits
-  // ErrorExitReplace errthrow;
+  ErrorExitReplace errthrow;
 
   struct Dummy {
     int32_t i;
@@ -217,27 +214,27 @@ TEST_CASE("FixedSizeAlloc operations are consistent", "[FixedSizeAlloc]") {
     REQUIRE(!ctx);
   }
 
-  // SECTION("Require aligned construction") {
-  //   SectionBase::span_t b1{&backing[1], sizeof(backing) - 7};
-  //   REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
+  SECTION("Require aligned construction") {
+    SectionBase::span_t b1{&backing[1], sizeof(backing) - 7};
+    REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
 
-  //   SectionBase::span_t b2{&backing[2], sizeof(backing) - 6};
-  //   REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
+    SectionBase::span_t b2{&backing[2], sizeof(backing) - 6};
+    REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
 
-  //   SectionBase::span_t b3{&backing[3], sizeof(backing) - 5};
-  //   REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
-  // }
+    SectionBase::span_t b3{&backing[3], sizeof(backing) - 5};
+    REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
+  }
 
-  // SECTION("Require size to be a multiple of align_of") {
-  //   SectionBase::span_t b1{&backing[0], sizeof(backing) - 1};
-  //   REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
+  SECTION("Require size to be a multiple of align_of") {
+    SectionBase::span_t b1{&backing[0], sizeof(backing) - 1};
+    REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
 
-  //   SectionBase::span_t b2{&backing[0], sizeof(backing) - 2};
-  //   REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
+    SectionBase::span_t b2{&backing[0], sizeof(backing) - 2};
+    REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
 
-  //   SectionBase::span_t b3{&backing[0], sizeof(backing) - 3};
-  //   REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
-  // }
+    SectionBase::span_t b3{&backing[0], sizeof(backing) - 3};
+    REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
+  }
 
   SECTION("Iteration") {
     s.construct(-1, 'a');
@@ -322,7 +319,7 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
 
 TEST_CASE("StringTable add/iterate", "[StringTable]") {
   // To be able to capture error_exits
-  // ErrorExitReplace errthrow;
+  ErrorExitReplace errthrow;
 
   alignas(StringTable::length_t) uint8_t backing[64];
 
@@ -386,22 +383,22 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
     }
   }
 
-  // SECTION("Errors") {
-  //   // Trying to store a string larger than can be represented by the length_t
-  //   auto len =
-  //       static_cast<size_t>(std::numeric_limits<StringTable::length_t>::max()) +
-  //       1;
-  //   char const *strp = reinterpret_cast<char const *>(&backing[0]);
-  //   REQUIRE_THROWS_AS(st.add_string({strp, len}), ErrorExit);
+  SECTION("Errors") {
+    // Trying to store a string larger than can be represented by the length_t
+    auto len =
+        static_cast<size_t>(std::numeric_limits<StringTable::length_t>::max()) +
+        1;
+    char const *strp = reinterpret_cast<char const *>(&backing[0]);
+    REQUIRE_THROWS_AS(st.add_string({strp, len}), ErrorExit);
 
-  //   // Allocation is larger than can be represented by the offset type.
-  //   auto alloc_size =
-  //       static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
-  //       1;
-  //   auto span = StringTable::span_t{&backing[0], alloc_size};
-  //   REQUIRE_THROWS_AS(
-  //       (StringTable{SectionArg<int>{.output_file = dummy, .range = span}}),
-  //       ErrorExit);
-  // }
+    // Allocation is larger than can be represented by the offset type.
+    auto alloc_size =
+        static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
+        1;
+    auto span = StringTable::span_t{&backing[0], alloc_size};
+    REQUIRE_THROWS_AS(
+        (StringTable{SectionArg<int>{.output_file = dummy, .range = span}}),
+        ErrorExit);
+  }
 }
 } // namespace taintdag
