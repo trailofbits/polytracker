@@ -20,7 +20,7 @@ struct TypeIndex<T, std::tuple<Types...>> {
   }();
 };
 
-void dump_range(std::string name, std::span<uint8_t> range) {
+inline void dump_range(std::string name, std::span<uint8_t> range) {
   auto begin = reinterpret_cast<uintptr_t>(&*range.begin());
   auto end = reinterpret_cast<uintptr_t>(&*range.end());
   printf("Name: %s begin: %lx end: %lx\n", name.data(), begin, end);

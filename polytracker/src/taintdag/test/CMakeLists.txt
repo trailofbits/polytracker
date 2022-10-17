@@ -9,7 +9,6 @@ add_executable(
   tests
   main.cpp
   taintdag.cpp
-  output.cpp
   encoding.cpp
   fdmapping.cpp
   fnmapping.cpp
