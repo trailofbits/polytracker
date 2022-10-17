@@ -42,7 +42,6 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
     // TODO(hbrodin): Drop the assert, replace with error_exit.
     assert(of.range.size() <=
            std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
-    util::dump_range("Sources", of.range);
   }
 
   std::optional<index_t> add_source(std::string_view name, int fd) {

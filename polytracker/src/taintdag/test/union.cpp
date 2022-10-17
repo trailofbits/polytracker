@@ -126,7 +126,7 @@ TEST_CASE("Union Represents Same") {
     }
   }
 
-  WARN("#labels " << nlabels << " #values " << nvalues);
+  INFO("#labels " << nlabels << " #values " << nvalues);
 }
 
 #if 0

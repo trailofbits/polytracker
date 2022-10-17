@@ -38,7 +38,6 @@ struct StringTableBase : public SectionBase {
       error_exit("Tried to use an allocation of size ", of.range.size(),
                  " max in current offset_t config is ", max_offset);
     }
-    util::dump_range("StringTable", of.range);
   }
 
   std::optional<offset_t> add_string(std::string_view sv) {
