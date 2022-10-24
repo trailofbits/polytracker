@@ -11,10 +11,8 @@ LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
 COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
-
 RUN apt-get update && \ 
 	apt-get install -y \
-		clang-11 \
 		libcurl4-openssl-dev \
 		libssl-dev \
 		swig
@@ -35,12 +33,13 @@ RUN	mkdir -p build/llvm_artifacts && \
 
 WORKDIR /polytracker/the_klondike/nitro/build
 
-# linking some of the internal "Coda" deps of Nitro fails without libstdc/++
+# linking some of the internal Nitro "Coda" deps fails without libstdc/++ since Coda 
+# does some macro stuff around whether various std functions it redefines are there
 RUN polytracker build cmake \
 	-DCMAKE_BUILD_TYPE=Release \
-	-DCMAKE_C_COMPILER=/usr/bin/clang-11 \
+	-DCMAKE_C_COMPILER=/polytracker_clang/bin/clang \
 	-DCMAKE_C_FLAGS="-w -stdlib=libstdc" \
-	-DCMAKE_CXX_COMPILER=/usr/bin/clang++-11 \
+	-DCMAKE_CXX_COMPILER=/polytracker_clang/bin/clang++ \
 	-DCMAKE_CXX_FLAGS="-w -stdlib=libstdc++" \
 	-DCODA_INSTALL_TESTS=OFF \
 	-DCODA_BUILD_TESTS=OFF \
