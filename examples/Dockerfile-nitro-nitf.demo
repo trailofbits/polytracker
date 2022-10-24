@@ -1,51 +1,49 @@
 FROM ubuntu:focal AS nitro-sources
 ENV DEBIAN_FRONTEND=noninteractive
 
-#=================================
-# sources for the project to be instrumented
-
 WORKDIR /polytracker/the_klondike
 RUN apt-get update && \
 	apt-get install -y git
 RUN git clone https://github.com/mdaus/nitro.git
 
-#=================================
-# Create a separate image with the latest polytracker source
-
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
-#=================================
-# Manage the nitro configuration & build
+COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
 
+		#libboost-all-dev \
+		#g++-11 \
 RUN apt-get update && \ 
 	apt-get install -y \
 		apt-utils \
-		libboost-all-dev \
 		libcurl4-openssl-dev \
 		libssl-dev \
-		g++-11 \
 		swig
 
-COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
+#=================================
+# Patch Nitro to disable a GCC GNU version based hack so we can use Clang thus LLVM!
+
 WORKDIR /polytracker/the_klondike/nitro
+#COPY clang_version_symbols.patch .
+#RUN git apply clang_version_symbols.patch
+
+#=================================
+
 RUN	mkdir build && \
 	mkdir poly_artifacts && \
 	export WLLVM_ARTIFACT_STORE=poly_artifacts
 
 WORKDIR /polytracker/the_klondike/nitro/build
 
-# set cxx flags based on https://releases.llvm.org/5.0.1/tools/clang/docs/Toolchain.html#id6
-# so that we get stdlib functions with clang yay
 RUN polytracker build cmake \
 	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DCMAKE_C_COMPILER=clang \
-	-DCMAKE_C_FLAGS="-w" \
+	-DCMAKE_C_FLAGS="-w -stdlib=libstdc" \
 	-DCMAKE_CXX_COMPILER=clang++ \
-	-DCMAKE_CXX_FLAGS="-w" \
+	-DCMAKE_CXX_FLAGS="-w -stdlib=libstdc++" \
 	-DCODA_INSTALL_TESTS=OFF \
 	-DCODA_BUILD_TESTS=OFF \
 	-DPYTHON_HOME=/usr/bin/python3 \
