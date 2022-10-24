@@ -21,9 +21,11 @@ WORKDIR /polytracker/the_klondike
 
 RUN apt-get update && \ 
 	apt-get install -y \
+		apt-utils \
 		libboost-all-dev \
 		libcurl4-openssl-dev \
 		libssl-dev \
+		g++-11 \
 		swig
 
 COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
@@ -34,31 +36,31 @@ RUN	mkdir build && \
 
 WORKDIR /polytracker/the_klondike/nitro/build
 
+# set cxx flags based on https://releases.llvm.org/5.0.1/tools/clang/docs/Toolchain.html#id6
+# so that we get stdlib functions with clang yay
 RUN polytracker build cmake \
-	-S ../ \
-	-B . \
-	-Wno-dev \
+	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DCMAKE_C_COMPILER=clang \
-	-DCMAKE_CXX_COMPILER=clang \
-	-DPYTHON_HOME=/usr/bin/python3 \
-	-DENABLE_BOOST=ON \
-	-DENABLE_SWIG=ON \
-	-DENABLE_ZIP=ON \
+	-DCMAKE_C_FLAGS="-w" \
+	-DCMAKE_CXX_COMPILER=clang++ \
+	-DCMAKE_CXX_FLAGS="-w" \
 	-DCODA_INSTALL_TESTS=OFF \
-	-DCODA_BUILD_TESTS=OFF
+	-DCODA_BUILD_TESTS=OFF \
+	-DPYTHON_HOME=/usr/bin/python3 \
+	-DENABLE_BOOST=OFF \
+	-DENABLE_SWIG=OFF \
+	-DENABLE_ZIP=ON \
+	..
 
 RUN polytracker build cmake \
-	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
-	-j \
-	--build .
+	--build . -j
 
 RUN polytracker build cmake \
-	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
-	--target install \
-	--build .
+	--build . \
+	--target install
 
-# Now instrument the output binary
-RUN polytracker instrument-targets --taint --ftrace nitro
-RUN mv nitro.instrumented nitro_track
+# # Now instrument the output binary
+# RUN polytracker instrument-targets --taint --ftrace nitro
+# RUN mv nitro.instrumented nitro_track
