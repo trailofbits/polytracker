@@ -12,37 +12,35 @@ WORKDIR /polytracker/the_klondike
 
 COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
 
-		#libboost-all-dev \
-		#g++-11 \
 RUN apt-get update && \ 
 	apt-get install -y \
-		apt-utils \
+		clang-11 \
 		libcurl4-openssl-dev \
 		libssl-dev \
 		swig
 
 #=================================
 # Patch Nitro to disable a GCC GNU version based hack so we can use Clang thus LLVM!
+# The internal "Code" deps of Nitro cannot be built with Clang since "Coda" attempts
+# to alias a stdlib function, is_trivially_copyable, and does a version hack to figure
+# out how it should add in the custom reimplementation.
 
 WORKDIR /polytracker/the_klondike/nitro
-#COPY clang_version_symbols.patch .
-#RUN git apply clang_version_symbols.patch
+COPY clang_version_symbols.patch .
+RUN git apply clang_version_symbols.patch
 
 #=================================
-
-RUN	mkdir build && \
-	mkdir poly_artifacts && \
-	export WLLVM_ARTIFACT_STORE=poly_artifacts
+RUN	mkdir -p build/llvm_artifacts && \
+	export WLLVM_ARTIFACT_STORE=build/llvm_artifacts
 
 WORKDIR /polytracker/the_klondike/nitro/build
 
+# linking some of the internal "Coda" deps of Nitro fails without libstdc/++
 RUN polytracker build cmake \
-	-DCMAKE_INSTALL_PREFIX=/polytracker/the_klondike/nitro/poly_artifacts \
 	-DCMAKE_BUILD_TYPE=Release \
-	-DBUILD_SHARED_LIBS=OFF \
-	-DCMAKE_C_COMPILER=clang \
+	-DCMAKE_C_COMPILER=/usr/bin/clang-11 \
 	-DCMAKE_C_FLAGS="-w -stdlib=libstdc" \
-	-DCMAKE_CXX_COMPILER=clang++ \
+	-DCMAKE_CXX_COMPILER=/usr/bin/clang++-11 \
 	-DCMAKE_CXX_FLAGS="-w -stdlib=libstdc++" \
 	-DCODA_INSTALL_TESTS=OFF \
 	-DCODA_BUILD_TESTS=OFF \
