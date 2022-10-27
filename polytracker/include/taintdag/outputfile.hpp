@@ -87,15 +87,18 @@ public:
   };
 
   OutputFile(std::filesystem::path const &filename)
-      : mm_{std::move(filename), required_allocation_size()},
-        hdr_{new (mm_.begin) FileHeader}, alloc_ptr_{mm_.begin +
-                                                     sizeof(FileHeader)},
+      : mapped_memory_{std::move(filename), required_allocation_size()},
+        file_header_{new (mapped_memory_.begin) FileHeader},
+        alloc_ptr_{mapped_memory_.begin + sizeof(FileHeader)},
         sections_{(SectionArg<OutputFile>{
             .output_file = *this, .range = do_allocation<Sections>()})...} {
     // Assumes that the mmap:ed memory is page aligned and FileHeader
     // has less alignment requirements.
-    if (reinterpret_cast<uintptr_t>(mm_.begin) % alignof(FileHeader) != 0) {
-      error_exit("Mapped memory does not meet alignment requirement of FileHeader");
+    if (reinterpret_cast<uintptr_t>(mapped_memory_.begin) %
+            alignof(FileHeader) !=
+        0) {
+      error_exit(
+          "Mapped memory does not meet alignment requirement of FileHeader");
     }
   }
 
@@ -103,7 +106,8 @@ public:
     // Update the memory actually used by each section
     // TODO(hbrodin): Consider other implementation strategies.
     size_t _[] = {
-        hdr_->sections[util::TypeIndex<Sections,
+        file_header_
+            ->sections[util::TypeIndex<Sections,
                                        std::tuple<Sections...>>::index]
             .size = std::get<Sections>(sections_).size()...};
 
@@ -128,7 +132,7 @@ private :
     constexpr auto align = T::align_of;
     auto begin = alloc_ptr_ + (reinterpret_cast<uintptr_t>(alloc_ptr_) % align);
     auto end = alloc_ptr_ = begin + T::allocation_size;
-    hdr_->sections[idx].offset = begin - mm_.begin;
+    file_header_->sections[idx].offset = begin - mapped_memory_.begin;
     return {begin, end};
   }
 
@@ -148,8 +152,8 @@ private :
     return header_size + sections_accumulated + alignment_accumulated;
   }
 
-  MMapFile mm_;
-  FileHeader *hdr_;
+  MMapFile mapped_memory_;
+  FileHeader *file_header_;
   uint8_t *alloc_ptr_;
   std::tuple<Sections...> sections_;
 };
