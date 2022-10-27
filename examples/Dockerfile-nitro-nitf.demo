@@ -11,50 +11,42 @@ LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
 COPY --from=nitro-sources /polytracker/the_klondike/nitro /polytracker/the_klondike/nitro
-RUN apt-get update && \ 
+RUN apt-get update && \
 	apt-get install -y \
+		libc++-11-dev \
 		libcurl4-openssl-dev \
 		libssl-dev \
 		swig
 
-# Patch Nitro to disable a GCC GNU version based hack so we can use Clang thus LLVM!
-# The internal "coda-oss" deps of Nitro cannot be built with Clang. It attempts
-# to alias std::is_trivially_copyable, and does a version hack to figure
-# out how it should add in the custom reimplementation.
-
+# Patch Nitro so we can use Clang thus LLVM! Otherwise, assumes GNU or MSVC.
 WORKDIR /polytracker/the_klondike/nitro
-COPY clang_version_symbols.patch .
-RUN git apply clang_version_symbols.patch
+COPY allow_clang_usage.patch .
+RUN git apply allow_clang_usage.patch
 
 RUN	mkdir -p build/artifacts/wllvm && \
 	export WLLVM_ARTIFACT_STORE=build/artifacts/wllvm
 
 WORKDIR /polytracker/the_klondike/nitro/build
 
-# linking some of the internal Nitro "coda-oss" deps fails without libstdc/++ since coda-oss 
+# linking some of the internal Nitro "coda-oss" deps fails without libstdc/++ since coda-oss
 # does some macro stuff around whether various std functions it redefines are there
-RUN polytracker build --journal-path=artifacts/blight_journal.jsonl \
+RUN polytracker build \
 		cmake \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DCMAKE_C_COMPILER=/polytracker_clang/bin/clang \
-		-DCMAKE_C_FLAGS="-w" \
-		-DCMAKE_CXX_COMPILER=/polytracker_clang/bin/clang++ \
-		-DCMAKE_CXX_FLAGS="-w" \
-		-DCODA_INSTALL_TESTS=OFF \
-		-DCODA_BUILD_TESTS=OFF \
-		-DPYTHON_HOME=/usr/bin/python3 \
-		-DENABLE_BOOST=OFF \
-		-DENABLE_SWIG=OFF \
-		-DENABLE_ZIP=ON \
-		-DCMAKE_INSTALL_PREFIX=artifacts \
-		.. && \
-	polytracker build --journal-path=artifacts/blight_journal.jsonl \
-		cmake --build . -j
+			-DCMAKE_C_COMPILER=clang\
+			-DCMAKE_C_FLAGS="-pthread -w -D_POSIX_C_SOURCE=200809L" \
+			-DCMAKE_CXX_COMPILER=clang++ \
+			-DCMAKE_CXX_FLAGS="-pthread -w -D_POSIX_C_SOURCE=200809L" \
+			-DPYTHON_HOME=/usr/bin/python3 \
+			-DCODA_BUILD_TESTS=OFF \
+			-DCMAKE_INSTALL_PREFIX=artifacts \
+			-DENABLE_SWIG=ON \
+			.. && \
+	polytracker build \
+		cmake --build . -j$(nproc)
 
-# Now instrument the output binary
-RUN polytracker instrument-targets \
-	--journal-path=artifacts/blight_journal.jsonl \
-	--taint \
-	--ftrace \
-	show_nitf++
+#RUN polytracker instrument-targets \
+#	--journal-path=artifacts/blight_journal.jsonl \
+#	--taint \
+#	--ftrace \
+#	show_nitf++
 #RUN mv show_nitf++.instrumented nitro_track
