@@ -219,7 +219,7 @@ index 9f578f36..abece532 100644
      void setEnabled(bool flag)
      {
 diff --git a/externals/coda-oss/modules/c++/io/include/io/StringStream.h b/externals/coda-oss/modules/c++/io/include/io/StringStream.h
-index d8a03ddb..dea51f33 100644
+index d8a03ddb..611ca3fe 100644
 --- a/externals/coda-oss/modules/c++/io/include/io/StringStream.h
 +++ b/externals/coda-oss/modules/c++/io/include/io/StringStream.h
 @@ -1,7 +1,7 @@
@@ -243,16 +243,31 @@ index d8a03ddb..dea51f33 100644
   * see <http://www.gnu.org/licenses/>.
   *
   */
-@@ -27,7 +27,7 @@
+@@ -25,9 +25,9 @@
+ #pragma once
+ 
  /*! \file StringStream.h
-  *  \brief  A stream interface to the std::stringstream from C++ STL.
+- *  \brief  A stream interface to the std::stringstream from C++ STL.
++ *  \brief  A stream interface to the std::basic_stringstream<T> from C++ STL.
   *
 - *  String streams are very useful.  They are even more useful with cafe 
 + *  String streams are very useful.  They are even more useful with cafe
   *  streaming capabilities.  The capabilities are added by making the class
   *  inherit from a stream -- a class that can pipe information back and
   *  forth to other streams.
-@@ -63,12 +63,12 @@ struct StringStreamT final : public SeekableBidirectionalStream
+@@ -52,23 +52,21 @@ struct StringStreamT final : public SeekableBidirectionalStream
+     StringStreamT(const StringStreamT&) = delete;
+     StringStreamT& operator=(const StringStreamT&) = delete;
+ 
+-    using stringstream = std::basic_stringstream<CharT>;
+-
+     /*!
+      *  Returns the stringstream associated with this StringStream
+      *  \return the stringstream
+      */
+-    const stringstream& stream() const
++    const std::basic_stringstream<CharT>& stream() const
+     {
          return mData;
      }
  
@@ -267,7 +282,7 @@ index d8a03ddb..dea51f33 100644
      {
          std::ios::seekdir flags = std::ios::cur;
          switch (whence)
-@@ -94,7 +94,7 @@ struct StringStreamT final : public SeekableBidirectionalStream
+@@ -94,7 +92,7 @@ struct StringStreamT final : public SeekableBidirectionalStream
       *  Returns the available bytes to read from the stream
       *  \return the available bytes to read
       */
@@ -276,7 +291,7 @@ index d8a03ddb..dea51f33 100644
      {
          const auto where = tell();
  
-@@ -112,7 +112,7 @@ struct StringStreamT final : public SeekableBidirectionalStream
+@@ -112,14 +110,14 @@ struct StringStreamT final : public SeekableBidirectionalStream
       *  \param buffer the data to write to the stream
       *  \param size the number of bytes to write to the stream
       */
@@ -285,7 +300,16 @@ index d8a03ddb..dea51f33 100644
      {
          auto buffer_ = static_cast<const CharT*>(buffer);
          mData.write(buffer_, gsl::narrow<std::streamsize>(size));
-@@ -145,17 +145,17 @@ private:
+     }
+ 
+-    //! Returns the internal std::stringstream
+-    stringstream& stream()
++    //! Returns the internal std::basic_stringstream<CharT>
++    std::basic_stringstream<CharT>& stream()
+     {
+         return mData;
+     }
+@@ -145,23 +143,23 @@ private:
          const auto maxSize = available();
          if (maxSize <= 0)
              return ::io::InputStream::IS_END;
@@ -307,6 +331,13 @@ index d8a03ddb..dea51f33 100644
          // Could be problem if streams are broken alternately could
          // return gcount in else case above
          return gsl::narrow<sys::SSize_T>(len);
+     }
+ 
+-    stringstream mData{stringstream::in | stringstream::out | stringstream::binary};
++    std::basic_stringstream<CharT> mData{std::basic_stringstream<CharT>::in | std::basic_stringstream<CharT>::out | std::basic_stringstream<CharT>::binary};
+ };
+ 
+ using StringStream = StringStreamT<std::string::value_type>;
 diff --git a/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h b/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h
 index 479696d6..8721ef64 100644
 --- a/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h
@@ -578,6 +609,209 @@ index beca1fa5..5a0007a0 100644
  
      static const void* getWindows1252Encoding();
  
+diff --git a/externals/coda-oss/modules/c++/xml.lite/source/ValidatorInterface.cpp b/externals/coda-oss/modules/c++/xml.lite/source/ValidatorInterface.cpp
+index d639655c..de6fd9b0 100644
+--- a/externals/coda-oss/modules/c++/xml.lite/source/ValidatorInterface.cpp
++++ b/externals/coda-oss/modules/c++/xml.lite/source/ValidatorInterface.cpp
+@@ -1,7 +1,7 @@
+ /* =========================================================================
+- * This file is part of xml.lite-c++ 
++ * This file is part of xml.lite-c++
+  * =========================================================================
+- * 
++ *
+  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
+  * (C) Copyright 2022, Maxar Technologies, Inc.
+  *
+@@ -15,8 +15,8 @@
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU Lesser General Public License for more details.
+  *
+- * You should have received a copy of the GNU Lesser General Public 
+- * License along with this program; If not, 
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this program; If not,
+  * see <http://www.gnu.org/licenses/>.
+  *
+  */
+@@ -27,5 +27,6 @@
+ #include <std/filesystem>
+ #include <std/memory>
+ 
++#include <coda_oss/string.h>
+ #include <xml/lite/xml_lite_config.h>
+ 
+diff --git a/externals/coda-oss/modules/c++/xml.lite/source/ValidatorXerces.cpp b/externals/coda-oss/modules/c++/xml.lite/source/ValidatorXerces.cpp
+index 41968be2..d09ad398 100644
+--- a/externals/coda-oss/modules/c++/xml.lite/source/ValidatorXerces.cpp
++++ b/externals/coda-oss/modules/c++/xml.lite/source/ValidatorXerces.cpp
+@@ -1,7 +1,7 @@
+ /* =========================================================================
+- * This file is part of xml.lite-c++ 
++ * This file is part of xml.lite-c++
+  * =========================================================================
+- * 
++ *
+  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
+  *
+  * xml.lite-c++ is free software; you can redistribute it and/or modify
+@@ -14,8 +14,8 @@
+  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  * GNU Lesser General Public License for more details.
+  *
+- * You should have received a copy of the GNU Lesser General Public 
+- * License along with this program; If not, 
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this program; If not,
+  * see <http://www.gnu.org/licenses/>.
+  *
+  */
+@@ -27,6 +27,7 @@
+ #include <std/string>
+ #include <regex>
+ 
++#include <coda_oss/string.h>
+ #include <sys/OS.h>
+ #include <io/StringStream.h>
+ #include <mem/ScopedArray.h>
+@@ -43,7 +44,7 @@ namespace xml
+ {
+ namespace lite
+ {
+-std::ostream& operator<< (std::ostream& out, 
++std::ostream& operator<< (std::ostream& out,
+                           const ValidationErrorHandler& errorHandler)
+ {
+     out << errorHandler.toString() << std::endl;
+@@ -56,17 +57,17 @@ bool ValidationErrorHandler::handleError(
+     std::string level;
+     switch(err.getSeverity())
+     {
+-    case xercesc::DOMError::DOM_SEVERITY_WARNING : 
+-        level = "WARNING"; 
++    case xercesc::DOMError::DOM_SEVERITY_WARNING :
++        level = "WARNING";
+         break;
+-    case xercesc::DOMError::DOM_SEVERITY_ERROR : 
+-        level = "ERROR"; 
++    case xercesc::DOMError::DOM_SEVERITY_ERROR :
++        level = "ERROR";
+         break;
+-    case xercesc::DOMError::DOM_SEVERITY_FATAL_ERROR : 
+-        level = "FATAL"; 
++    case xercesc::DOMError::DOM_SEVERITY_FATAL_ERROR :
++        level = "FATAL";
+         break;
+     default :
+-        level = "WARNING"; 
++        level = "WARNING";
+         break;
+     }
+ 
+@@ -75,7 +76,7 @@ bool ValidationErrorHandler::handleError(
+ 
+     // create o
+     ValidationInfo info (
+-        message.str(), level, mID, 
++        message.str(), level, mID,
+         (size_t)err.getLocation()->getLineNumber());
+     mErrorLog.push_back(info);
+ 
+@@ -97,7 +98,7 @@ ValidatorXerces::ValidatorXerces(
+ {
+ }
+ ValidatorXerces::ValidatorXerces(
+-    const std::vector<std::string>& schemaPaths, 
++    const std::vector<std::string>& schemaPaths,
+     logging::Logger* log,
+     bool recursive) :
+     ValidatorInterface(schemaPaths, log, recursive)
+@@ -108,8 +109,8 @@ ValidatorXerces::ValidatorXerces(
+         new xercesc::XMLGrammarPoolImpl(
+             xercesc::XMLPlatformUtils::fgMemoryManager));
+ 
+-    const XMLCh ls_id [] = {xercesc::chLatin_L, 
+-                            xercesc::chLatin_S, 
++    const XMLCh ls_id [] = {xercesc::chLatin_L,
++                            xercesc::chLatin_S,
+                             xercesc::chNull};
+ 
+     // create the validator
+@@ -117,7 +118,7 @@ ValidatorXerces::ValidatorXerces(
+         xercesc::DOMImplementationRegistry::
+             getDOMImplementation (ls_id)->createLSParser(
+                 xercesc::DOMImplementationLS::MODE_SYNCHRONOUS,
+-                0, 
++                0,
+                 xercesc::XMLPlatformUtils::fgMemoryManager,
+                 mSchemaPool.get()));
+ 
+@@ -149,19 +150,19 @@ ValidatorXerces::ValidatorXerces(
+     // add a error handler we still have control over
+     mErrorHandler.reset(
+             new ValidationErrorHandler());
+-    config->setParameter(xercesc::XMLUni::fgDOMErrorHandler, 
++    config->setParameter(xercesc::XMLUni::fgDOMErrorHandler,
+                          mErrorHandler.get());
+ 
+     // load our schemas --
+     // search each directory for schemas
+     sys::OS os;
+-    std::vector<std::string> schemas = 
++    std::vector<std::string> schemas =
+         os.search(schemaPaths, "", ".xsd", recursive);
+ 
+     //  add the schema to the validator
+     for (size_t i = 0; i < schemas.size(); ++i)
+     {
+-        if (!mValidator->loadGrammar(schemas[i].c_str(), 
++        if (!mValidator->loadGrammar(schemas[i].c_str(),
+                                      xercesc::Grammar::SchemaGrammarType,
+                                      true))
+         {
+@@ -216,16 +217,16 @@ static std::unique_ptr<XMLCh_string> setStringData(xercesc::DOMLSInputImpl& inpu
+     return retval;
+ }
+ 
+-bool ValidatorXerces::validate_(const std::u8string& xml, 
++bool ValidatorXerces::validate_(const std::u8string& xml,
+                                const std::string& xmlID,
+                                std::vector<ValidationInfo>& errors) const
+ {
+-    // clear the log before its use -- 
+-    // however we do not clear the users 'errors' because 
++    // clear the log before its use --
++    // however we do not clear the users 'errors' because
+     // they might want an accumulation of errors
+     mErrorHandler->clearErrorLog();
+ 
+-    // set the id so all errors coming from this session 
++    // set the id so all errors coming from this session
+     // get a matching id
+     mErrorHandler->setID(xmlID);
+ 
+@@ -239,9 +240,9 @@ bool ValidatorXerces::validate_(const std::u8string& xml,
+     // validate the document
+     mValidator->parse(&input)->release();
+ 
+-    // add the new errors to the vector 
+-    errors.insert(errors.end(), 
+-                  mErrorHandler->getErrorLog().begin(), 
++    // add the new errors to the vector
++    errors.insert(errors.end(),
++                  mErrorHandler->getErrorLog().begin(),
+                   mErrorHandler->getErrorLog().end());
+ 
+     // reset the id
+@@ -270,7 +271,7 @@ static str::EncodedStringView encodeXml(const std::string& xml)
+         return str::EncodedStringView::fromWindows1252(xml);
+     }
+ 
+-    // No "... encoding= ..."; let EncodedStringView deal with it   
++    // No "... encoding= ..."; let EncodedStringView deal with it
+     return str::EncodedStringView(xml);
+ }
+ 
 diff --git a/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt b/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt
 index cab4e56a..7661c68e 100644
 --- a/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt
@@ -593,6 +827,26 @@ index cab4e56a..7661c68e 100644
  
  include(FindPkgConfig)
  include(ExternalProject)
+diff --git a/externals/coda-oss/modules/drivers/xml/xerces/CMakeLists.txt b/externals/coda-oss/modules/drivers/xml/xerces/CMakeLists.txt
+index 0204349a..a331ffb4 100644
+--- a/externals/coda-oss/modules/drivers/xml/xerces/CMakeLists.txt
++++ b/externals/coda-oss/modules/drivers/xml/xerces/CMakeLists.txt
+@@ -21,12 +21,14 @@ if (XML_HOME)
+     find_library(${TARGET_NAME}_PATH
+                  ${TARGET_NAME}
+                  PATHS ${XML_HOME}
+-                 PATH_SUFFIXES lib lib64
++                 PATH_SUFFIXES lib lib64 x86_64-linux-gnu
+                  NO_DEFAULT_PATH)
+     if ("${${TARGET_NAME}_PATH}" STREQUAL "${TARGET_NAME}_PATH-NOTFOUND")
+         message(FATAL_ERROR "Xerces not found at XML_HOME ${XML_HOME}")
+     else()
+         message("Found Xerces at ${${TARGET_NAME}_PATH}")
++        message("Excluding Coda's local xerces from build since we don't need it")
++        set_directory_properties(PROPERTIES EXCLUDE_FROM_ALL ON)
+     endif()
+ 
+     # verify we can link this library
 diff --git a/externals/coda-oss/modules/python/config/source/generated/coda_config.py b/externals/coda-oss/modules/python/config/source/generated/coda_config.py
 index 66260e39..df09b261 100644
 --- a/externals/coda-oss/modules/python/config/source/generated/coda_config.py
