@@ -32,14 +32,13 @@ WORKDIR /polytracker/the_klondike/nitro/build
 # does some macro stuff around whether various std functions it redefines are there
 RUN polytracker build \
 		cmake \
-			-DCMAKE_C_COMPILER=clang\
+			-DCMAKE_C_COMPILER=/polytracker_clang/bin/clang \
 			-DCMAKE_C_FLAGS="-pthread -w -D_POSIX_C_SOURCE=200809L" \
-			-DCMAKE_CXX_COMPILER=clang++ \
+			-DCMAKE_CXX_COMPILER=/polytracker_clang/bin/clang++ \
 			-DCMAKE_CXX_FLAGS="-pthread -w -D_POSIX_C_SOURCE=200809L" \
 			-DPYTHON_HOME=/usr/bin/python3 \
 			-DCODA_BUILD_TESTS=OFF \
 			-DCMAKE_INSTALL_PREFIX=artifacts \
-			-DENABLE_SWIG=ON \
 			.. && \
 	polytracker build \
 		cmake --build . -j$(nproc)
