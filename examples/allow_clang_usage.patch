@@ -1,8 +1,28 @@
+diff --git a/.gitignore b/.gitignore
+index df928c02..50f9619c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -46,3 +46,7 @@ cmake-build*/
+ # unit tests
+ outputPathname.ntf
+ sicd_*_nitf__*_band_*.man
++
++#Swig 
++externals/coda-oss/modules/python/*/source/generated/
++modules/python/nitf/source/*/generated/
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f1bc2dde..9ad39129 100644
+index f1bc2dde..ad8d82dd 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -21,7 +21,7 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
+@@ -8,7 +8,6 @@ set(CXX_STANDARD_REQUIRED true)
+ 
+ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
+     # we are the top-level project and are responsible for configuration
+-
+     # set up warnings
+     if (MSVC)
+         # set warning level to /W4
+@@ -21,7 +20,7 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
              # https://docs.microsoft.com/en-us/cpp/sanitizers/asan?view=msvc-160
              add_compile_options(/fsanitize=address)
          endif()
@@ -11,7 +31,7 @@ index f1bc2dde..9ad39129 100644
          add_compile_options(
              -Wall
              -Wno-deprecated
-@@ -32,6 +32,15 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
+@@ -32,6 +31,15 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
              # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
              add_compile_options(-fsanitize=address)
          endif()
@@ -27,153 +47,113 @@ index f1bc2dde..9ad39129 100644
      endif()
  
      if (EXISTS "${CMAKE_BINARY_DIR}/conan_paths.cmake")
-diff --git a/allow_clang_usage.patch b/allow_clang_usage.patch
-index 6186e498..e69de29b 100644
---- a/allow_clang_usage.patch
-+++ b/allow_clang_usage.patch
-@@ -1,142 +0,0 @@
--diff --git a/CMakeLists.txt b/CMakeLists.txt
--index f1bc2dde..2ce971e3 100644
----- a/CMakeLists.txt
--+++ b/CMakeLists.txt
--@@ -21,7 +21,7 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
--             # https://docs.microsoft.com/en-us/cpp/sanitizers/asan?view=msvc-160
--             add_compile_options(/fsanitize=address)
--         endif()
---    elseif (UNIX)
--+    elseif ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND UNIX)
--         add_compile_options(
--             -Wall
--             -Wno-deprecated
--@@ -32,6 +32,15 @@ if (${CMAKE_PROJECT_NAME} STREQUAL nitro)
--             # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
--             add_compile_options(-fsanitize=address)
--         endif()
--+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
--+           # -Wall
--+        add_compile_options(
--+            -Wno-deprecated
--+            -Wno-unused-value
--+        )
--+        if (ENABLE_ASAN)
--+            add_compile_options(-fsanitize=address)
--+        endif()
--     endif()
-- 
--     if (EXISTS "${CMAKE_BINARY_DIR}/conan_paths.cmake")
--diff --git a/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h b/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h
--index 2992e5b8..c5980df8 100644
----- a/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h
--+++ b/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h
--@@ -54,7 +54,7 @@ namespace Gsl
--         template <typename Exception>
--         [[noreturn]] void throw_exception(Exception&& e)
--         {
---            throw e;
--+            throw std::move(e);
--         }
-- 
--         template <class T, class U>
--diff --git a/externals/coda-oss/modules/c++/std/include/std/type_traits b/externals/coda-oss/modules/c++/std/include/std/type_traits
--index 519877b6..7e14c8ce 100644
----- a/externals/coda-oss/modules/c++/std/include/std/type_traits
--+++ b/externals/coda-oss/modules/c++/std/include/std/type_traits
--@@ -28,7 +28,9 @@
-- #ifndef CODA_OSS_NO_is_trivially_copyable
-- 	// https://stackoverflow.com/a/31798726/8877
-- 	// workaround missing "is_trivially_copyable" in g++ < 5.0
---	#if defined(__GNUC__) && (__GNUC__ < 5)
--+	// later note: non-GNU C and C++ compilers like Clang may also define __GNUC__ < 5.
--+	// c.f. https://stackoverflow.com/questions/38499462/how-to-tell-clang-to-stop-pretending-to-be-other-compilers
--+	#if defined(__GNUC__) && (__GNUC__ < 5) && !defined(__clang__)
-- 		#include "coda_oss/type_traits.h"
-- 		#define CODA_OSS_NO_is_trivially_copyable 0  // *need* our own
-- 	#else
--diff --git a/externals/coda-oss/modules/c++/str/include/str/Convert.h b/externals/coda-oss/modules/c++/str/include/str/Convert.h
--index 90d0c87d..52066aaa 100644
----- a/externals/coda-oss/modules/c++/str/include/str/Convert.h
--+++ b/externals/coda-oss/modules/c++/str/include/str/Convert.h
--@@ -101,7 +101,7 @@ T toType(const std::string& s)
--                                 std::string(""),
--                                 std::string("Empty string")));
-- 
---    T value;
--+    T value = 0;
-- 
--     std::stringstream buf(s);
--     buf.precision(str::getPrecision(value));
--diff --git a/externals/coda-oss/modules/c++/sys/include/sys/Conf.h b/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
--index 5537b1b3..a4d1031c 100644
----- a/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
--+++ b/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
--@@ -30,9 +30,23 @@
-- // "If no feature test macros are explicitly defined, then the following feature test macros
-- // are defined by default: ... _POSIX_SOURCE, and _POSIX_C_SOURCE=200809L. [...] 
-- // _POSIX_SOURCE Defining this obsolete macro ... is equivalent to defining _POSIX_C_SOURCE ..."
---#define CODA_OSS_POSIX_SOURCE (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 1))
---#define CODA_OSS_POSIX2001_SOURCE CODA_OSS_POSIX_SOURCE && (_POSIX_C_SOURCE >= 200112L)
---#define CODA_OSS_POSIX2008_SOURCE CODA_OSS_POSIX2001_SOURCE && (_POSIX_C_SOURCE >= 200809L)
--+#if (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 1))
--+    #define CODA_OSS_POSIX_SOURCE 1
--+#else 
--+    #define CODA_OSS_POSIX_SOURCE 0
--+#endif
--+
--+#if ((defined(CODA_OSS_POSIX_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || defined(__clang__))
--+    #define CODA_OSS_POSIX2001_SOURCE 1
--+#else 
--+    #define CODA_OSS_POSIX2001_SOURCE 0
--+#endif
--+
--+#if (defined(CODA_OSS_POSIX2001_SOURCE) && (_POSIX_C_SOURCE >= 200809L))
--+    #define CODA_OSS_POSIX2008_SOURCE 1
--+#else 
--+    #define CODA_OSS_POSIX2008_SOURCE 0
--+#endif
-- 
-- #include <config/Version.h>
-- #include <config/Exports.h>
--diff --git a/externals/coda-oss/modules/c++/sys/source/DateTime.cpp b/externals/coda-oss/modules/c++/sys/source/DateTime.cpp
--index 2b701af9..5404d1a3 100644
----- a/externals/coda-oss/modules/c++/sys/source/DateTime.cpp
--+++ b/externals/coda-oss/modules/c++/sys/source/DateTime.cpp
--@@ -122,7 +122,7 @@ char* strptime(const char *buf, const char *fmt, struct tm& tm, double& millis)
--             bc = *bp++;
--             if (bc != '%')
--                 throw except::Exception(Ctxt(
---                        "Value does not match format (%%):  " + bc));
--+                        "Value does not match format (%%):  " + str::toString(bc)));
--             break;
-- 
--         /*
--@@ -344,7 +344,7 @@ char* strptime(const char *buf, const char *fmt, struct tm& tm, double& millis)
-- 
--         default:               // Unknown/unsupported conversion.
--             throw except::Exception(Ctxt(
---                    "Unknown/unsupported format type:  %" + fc));
--+                    "Unknown/unsupported format type:  %" + str::toString(fc)));
--         }
--     }
-- 
--diff --git a/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp b/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
--index 95f96889..c450e82b 100644
----- a/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
--+++ b/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
--@@ -37,10 +37,10 @@ static inline std::string make_what(const char* curfile, const int lineNum, cons
--     what << "ERROR: " << curfile << ", Line " << lineNum << ": " << msg;
--     return what.str();
-- }
---static inline std::string make_what(const char* curfile, const int lineNum, const std::ostringstream& msg)
---{
---    return make_what(curfile, lineNum, msg.str());
---}
--+// static inline std::string make_what(const char* curfile, const int lineNum, const std::ostringstream& msg)
--+// {
--+//     return make_what(curfile, lineNum, msg.str());
--+// }
-- // A macro for conveniently throwing errors.
-- // Need "throw" to be visible, not hidden inside of a function, so that code-analysis tools can see it.
-- #define CODA_OSS_sys_filesystem_THROW_ERR(MSG) throw std::runtime_error(make_what(__FILE__, __LINE__, MSG)) // TODO: std::filesystem_error
+diff --git a/externals/coda-oss/CMakeLists.txt b/externals/coda-oss/CMakeLists.txt
+index 43ab0ca8..731aeac4 100644
+--- a/externals/coda-oss/CMakeLists.txt
++++ b/externals/coda-oss/CMakeLists.txt
+@@ -25,12 +25,24 @@ if (${CMAKE_PROJECT_NAME} STREQUAL coda-oss)
+         # set warning level to /W3
+         string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+         string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+-    elseif (UNIX)
++    elseif ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") AND UNIX)
+         add_compile_options(
+             -Wno-deprecated
+             -Wno-unused-value
+             -Wno-unused-but-set-variable
+         )
++        if (ENABLE_ASAN)
++            # https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html
++            add_compile_options(-fsanitize=address)
++        endif()
++    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
++        add_compile_options(
++            -Wno-deprecated
++            -Wno-unused-value
++        )
++        if (ENABLE_ASAN)
++            add_compile_options(-fsanitize=address)
++        endif()
+     endif()
+ 
+     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+diff --git a/externals/coda-oss/cmake/CodaBuild.cmake b/externals/coda-oss/cmake/CodaBuild.cmake
+index 69a143c1..d3dd67f0 100644
+--- a/externals/coda-oss/cmake/CodaBuild.cmake
++++ b/externals/coda-oss/cmake/CodaBuild.cmake
+@@ -307,25 +307,31 @@ endfunction()
+ #                     automated running.
+ #
+ function(coda_add_tests)
+-    if (CODA_BUILD_TESTS)
+-        cmake_parse_arguments(
+-            ARG                         # prefix
+-            "UNITTEST"                  # options
+-            "MODULE_NAME;DIRECTORY"     # single args
+-            "DEPS;SOURCES;ARGS;FILTER_LIST"  # multi args
+-            "${ARGN}"
+-        )
+-        if (ARG_UNPARSED_ARGUMENTS)
+-            message(FATAL_ERROR "received unexpected argument(s): ${ARG_UNPARSED_ARGUMENTS}")
+-        endif()
++    cmake_parse_arguments(
++        ARG                         # prefix
++        "UNITTEST"                  # options
++        "MODULE_NAME;DIRECTORY"     # single args
++        "DEPS;SOURCES;ARGS;FILTER_LIST"  # multi args
++        "${ARGN}"
++    )
++    if (ARG_UNPARSED_ARGUMENTS)
++        message(FATAL_ERROR "received unexpected argument(s): ${ARG_UNPARSED_ARGUMENTS}")
++    endif()
+ 
+-        if (NOT ARG_DIRECTORY)
+-            message(FATAL_ERROR "Must give a test directory")
+-        endif()
+-        if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DIRECTORY}")
+-            message(FATAL_ERROR "Directory ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DIRECTORY} does not exist")
+-        endif()
++    if (NOT ARG_DIRECTORY)
++        message(FATAL_ERROR "Must give a test directory")
++    endif()
++    if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DIRECTORY}")
++        message(FATAL_ERROR "Directory ${CMAKE_CURRENT_SOURCE_DIR}/${ARG_DIRECTORY} does not exist")
++    endif()
++
++    # make a group target for the test directory, which doesn't have its own CMakeLists.txt
++    set(test_group_tgt "${ARG_MODULE_NAME}_tests")
++    if (NOT TARGET ${test_group_tgt})
++        add_custom_target(${test_group_tgt})
++    endif()
+ 
++    if (CODA_BUILD_TESTS)
+         if (ARG_SOURCES)
+             foreach(src ${ARG_SOURCES})
+                 list(APPEND local_tests "${ARG_DIRECTORY}/${src}")
+@@ -338,12 +344,6 @@ function(coda_add_tests)
+         # Filter out ignored files
+         filter_files(local_tests "${local_tests}" "${ARG_FILTER_LIST}")
+ 
+-        # make a group target to build all tests for the current module
+-        set(test_group_tgt "${ARG_MODULE_NAME}_tests")
+-        if (NOT TARGET ${test_group_tgt})
+-            add_custom_target(${test_group_tgt})
+-        endif()
+-
+         list(APPEND ARG_DEPS ${ARG_MODULE_NAME}-${TARGET_LANGUAGE} TestCase)
+ 
+         # get all interface libraries and include directories from the dependencies
+@@ -388,6 +388,10 @@ function(coda_add_tests)
+                         RUNTIME DESTINATION "${ARG_DIRECTORY}/${ARG_MODULE_NAME}/${test_subdir}")
+             endif()
+         endforeach()
++    else()
++        # so that we do not build Coda test targets if they are not wanted,
++        # (since otherwise they get globbed in :/) be explicit about NOT including them
++        set_property(TARGET ${test_group_tgt} PROPERTY EXCLUDE_FROM_ALL ON)
+     endif()
+ endfunction()
+ 
 diff --git a/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h b/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h
 index 2992e5b8..c5980df8 100644
 --- a/externals/coda-oss/modules/c++/gsl/include/gsl/Gsl_narrow.h
@@ -238,31 +218,6 @@ index 9f578f36..abece532 100644
  
      void setEnabled(bool flag)
      {
-diff --git a/externals/coda-oss/modules/c++/io/include/io/RotatingFileOutputStream.h b/externals/coda-oss/modules/c++/io/include/io/RotatingFileOutputStream.h
-index c1c30dce..703833f2 100644
---- a/externals/coda-oss/modules/c++/io/include/io/RotatingFileOutputStream.h
-+++ b/externals/coda-oss/modules/c++/io/include/io/RotatingFileOutputStream.h
-@@ -1,7 +1,7 @@
- /* =========================================================================
-- * This file is part of io-c++ 
-+ * This file is part of io-c++
-  * =========================================================================
-- * 
-+ *
-  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
-  *
-  * io-c++ is free software; you can redistribute it and/or modify
-@@ -14,8 +14,8 @@
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  * GNU Lesser General Public License for more details.
-  *
-- * You should have received a copy of the GNU Lesser General Public 
-- * License along with this program; If not, 
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this program; If not,
-  * see <http://www.gnu.org/licenses/>.
-  *
-  */
 diff --git a/externals/coda-oss/modules/c++/io/include/io/StringStream.h b/externals/coda-oss/modules/c++/io/include/io/StringStream.h
 index d8a03ddb..dea51f33 100644
 --- a/externals/coda-oss/modules/c++/io/include/io/StringStream.h
@@ -352,31 +307,6 @@ index d8a03ddb..dea51f33 100644
          // Could be problem if streams are broken alternately could
          // return gcount in else case above
          return gsl::narrow<sys::SSize_T>(len);
-diff --git a/externals/coda-oss/modules/c++/io/source/RotatingFileOutputStream.cpp b/externals/coda-oss/modules/c++/io/source/RotatingFileOutputStream.cpp
-index 777c60c0..def0d554 100644
---- a/externals/coda-oss/modules/c++/io/source/RotatingFileOutputStream.cpp
-+++ b/externals/coda-oss/modules/c++/io/source/RotatingFileOutputStream.cpp
-@@ -1,7 +1,7 @@
- /* =========================================================================
-- * This file is part of io-c++ 
-+ * This file is part of io-c++
-  * =========================================================================
-- * 
-+ *
-  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
-  *
-  * io-c++ is free software; you can redistribute it and/or modify
-@@ -14,8 +14,8 @@
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  * GNU Lesser General Public License for more details.
-  *
-- * You should have received a copy of the GNU Lesser General Public 
-- * License along with this program; If not, 
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this program; If not,
-  * see <http://www.gnu.org/licenses/>.
-  *
-  */
 diff --git a/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h b/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h
 index 479696d6..8721ef64 100644
 --- a/externals/coda-oss/modules/c++/logging/include/logging/MemoryHandler.h
@@ -478,18 +408,6 @@ index d60862db..f7cefaae 100644
  #if CODA_OSS_autoptr_is_std // std::auto_ptr removed in C++17
      CPUAffinityThreadInitializerLinux(
              mem::auto_ptr<const sys::ScopedCPUMaskUnix> cpu);
-diff --git a/externals/coda-oss/modules/c++/mt/source/CPUAffinityInitializerLinux.cpp b/externals/coda-oss/modules/c++/mt/source/CPUAffinityInitializerLinux.cpp
-index fec4ad25..a185215e 100644
---- a/externals/coda-oss/modules/c++/mt/source/CPUAffinityInitializerLinux.cpp
-+++ b/externals/coda-oss/modules/c++/mt/source/CPUAffinityInitializerLinux.cpp
-@@ -24,6 +24,7 @@
- #if !defined(__APPLE_CC__)
- #if defined(__linux) || defined(__linux__)
- 
-+#include <algorithm>
- #include <sstream>
- 
- #include <sys/OS.h>
 diff --git a/externals/coda-oss/modules/c++/std/include/std/type_traits b/externals/coda-oss/modules/c++/std/include/std/type_traits
 index 519877b6..7e14c8ce 100644
 --- a/externals/coda-oss/modules/c++/std/include/std/type_traits
@@ -518,94 +436,8 @@ index 90d0c87d..52066aaa 100644
  
      std::stringstream buf(s);
      buf.precision(str::getPrecision(value));
-diff --git a/externals/coda-oss/modules/c++/sys/include/import/sys.h b/externals/coda-oss/modules/c++/sys/include/import/sys.h
-index e81f7e18..e20ee30a 100644
---- a/externals/coda-oss/modules/c++/sys/include/import/sys.h
-+++ b/externals/coda-oss/modules/c++/sys/include/import/sys.h
-@@ -1,7 +1,7 @@
- /* =========================================================================
-- * This file is part of sys-c++ 
-+ * This file is part of sys-c++
-  * =========================================================================
-- * 
-+ *
-  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
-  *
-  * sys-c++ is free software; you can redistribute it and/or modify
-@@ -14,8 +14,8 @@
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  * GNU Lesser General Public License for more details.
-  *
-- * You should have received a copy of the GNU Lesser General Public 
-- * License along with this program; If not, 
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this program; If not,
-  * see <http://www.gnu.org/licenses/>.
-  *
-  */
-@@ -56,7 +56,7 @@
- 
- The sys library servers the purpose of creating a common, system-indepenent
- interface layer for cross-platform applications.  It currently supports
--UNIX and Windows, and provides interfaces for sockets, threads, 
-+UNIX and Windows, and provides interfaces for sockets, threads,
- synchronization, conditions, time and operating system-specific function calls.
- 
- */
-diff --git a/externals/coda-oss/modules/c++/sys/include/sys/ConditionVar.h b/externals/coda-oss/modules/c++/sys/include/sys/ConditionVar.h
-index 73619f97..1cf1b4c0 100644
---- a/externals/coda-oss/modules/c++/sys/include/sys/ConditionVar.h
-+++ b/externals/coda-oss/modules/c++/sys/include/sys/ConditionVar.h
-@@ -1,7 +1,7 @@
- /* =========================================================================
-- * This file is part of sys-c++ 
-+ * This file is part of sys-c++
-  * =========================================================================
-- * 
-+ *
-  * (C) Copyright 2004 - 2014, MDA Information Systems LLC
-  *
-  * sys-c++ is free software; you can redistribute it and/or modify
-@@ -14,13 +14,12 @@
-  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  * GNU Lesser General Public License for more details.
-  *
-- * You should have received a copy of the GNU Lesser General Public 
-- * License along with this program; If not, 
-+ * You should have received a copy of the GNU Lesser General Public
-+ * License along with this program; If not,
-  * see <http://www.gnu.org/licenses/>.
-  *
-  */
- 
--
- #ifndef __SYS_CONDITION_VAR_H__
- #define __SYS_CONDITION_VAR_H__
- 
-@@ -53,7 +52,7 @@ typedef ConditionVarIrix ConditionVar;
- #        include "sys/ConditionVarPosix.h"
- namespace sys
- {
--typedef ConditionVarPosix ConditionVar;
-+    typedef ConditionVarPosix ConditionVar;
- }
- #    endif // Which thread package?
- 
-diff --git a/externals/coda-oss/modules/c++/sys/include/sys/ConditionVarPosix.h b/externals/coda-oss/modules/c++/sys/include/sys/ConditionVarPosix.h
-index 8110d560..20e22c38 100644
---- a/externals/coda-oss/modules/c++/sys/include/sys/ConditionVarPosix.h
-+++ b/externals/coda-oss/modules/c++/sys/include/sys/ConditionVarPosix.h
-@@ -26,7 +26,7 @@
- 
- #include <sys/Conf.h>
- 
--#if CODA_OSS_POSIX_SOURCE
-+#if (defined(CODA_OSS_POSIX_SOURCE) || defined(CODA_OSS_POSIX2001_SOURCE))
- 
- #include "sys/MutexPosix.h"
- #include "sys/ConditionVarInterface.h"
 diff --git a/externals/coda-oss/modules/c++/sys/include/sys/Conf.h b/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
-index 5537b1b3..a08f09e7 100644
+index 5537b1b3..844457d0 100644
 --- a/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
 +++ b/externals/coda-oss/modules/c++/sys/include/sys/Conf.h
 @@ -28,11 +28,25 @@
@@ -638,7 +470,7 @@ index 5537b1b3..a08f09e7 100644
  
  #include <config/Version.h>
  #include <config/Exports.h>
-@@ -340,9 +354,9 @@ namespace sys
+@@ -340,9 +354,8 @@ namespace sys
          // "The functions memalign(), ... have been available in all Linux libc libraries."
          p = memalign(alignment, size);
  #else
@@ -646,50 +478,9 @@ index 5537b1b3..a08f09e7 100644
 +        // OSX always allocates on 16 byte boundaries
          p = malloc(size);
 -        #error "Don't know how to implement alignedAlloc()."
-+       // #error "Don't know how to implement alignedAlloc()."
  #endif
          if (!p)
              throw except::Exception(Ctxt(
-diff --git a/externals/coda-oss/modules/c++/sys/include/sys/MutexPosix.h b/externals/coda-oss/modules/c++/sys/include/sys/MutexPosix.h
-index e954c331..5136611d 100644
---- a/externals/coda-oss/modules/c++/sys/include/sys/MutexPosix.h
-+++ b/externals/coda-oss/modules/c++/sys/include/sys/MutexPosix.h
-@@ -26,7 +26,7 @@
- 
- #include <sys/Conf.h>
- 
--#if CODA_OSS_POSIX_SOURCE
-+#if (defined(CODA_OSS_POSIX_SOURCE) || defined(CODA_OSS_POSIX2001_SOURCE))
- 
- #include "sys/MutexInterface.h"
- #include <pthread.h>
-diff --git a/externals/coda-oss/modules/c++/sys/include/sys/SemaphorePosix.h b/externals/coda-oss/modules/c++/sys/include/sys/SemaphorePosix.h
-index fc1731d8..fbf6452e 100644
---- a/externals/coda-oss/modules/c++/sys/include/sys/SemaphorePosix.h
-+++ b/externals/coda-oss/modules/c++/sys/include/sys/SemaphorePosix.h
-@@ -26,8 +26,7 @@
- 
- #include <sys/Conf.h>
- 
--#if CODA_OSS_POSIX_SOURCE &&!defined(__APPLE_CC__)
--
-+#if (defined(CODA_OSS_POSIX_SOURCE) || defined(CODA_OSS_POSIX2001_SOURCE)) && !defined(__APPLE_CC__)
- #include "sys/SemaphoreInterface.h"
- 
- #if defined(__APPLE_CC_H__)
-diff --git a/externals/coda-oss/modules/c++/sys/include/sys/ThreadPosix.h b/externals/coda-oss/modules/c++/sys/include/sys/ThreadPosix.h
-index 596a246f..ef564c94 100644
---- a/externals/coda-oss/modules/c++/sys/include/sys/ThreadPosix.h
-+++ b/externals/coda-oss/modules/c++/sys/include/sys/ThreadPosix.h
-@@ -26,7 +26,7 @@
- 
- #include <sys/Conf.h>
- 
--#if CODA_OSS_POSIX_SOURCE
-+#if (defined(CODA_OSS_POSIX_SOURCE) || defined(CODA_OSS_POSIX2001_SOURCE))
- 
- #include <sched.h>
- #include <pthread.h>
 diff --git a/externals/coda-oss/modules/c++/sys/source/DateTime.cpp b/externals/coda-oss/modules/c++/sys/source/DateTime.cpp
 index 2b701af9..5404d1a3 100644
 --- a/externals/coda-oss/modules/c++/sys/source/DateTime.cpp
@@ -712,25 +503,6 @@ index 2b701af9..5404d1a3 100644
          }
      }
  
-diff --git a/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp b/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
-index 95f96889..c450e82b 100644
---- a/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
-+++ b/externals/coda-oss/modules/c++/sys/source/sys_filesystem.cpp
-@@ -37,10 +37,10 @@ static inline std::string make_what(const char* curfile, const int lineNum, cons
-     what << "ERROR: " << curfile << ", Line " << lineNum << ": " << msg;
-     return what.str();
- }
--static inline std::string make_what(const char* curfile, const int lineNum, const std::ostringstream& msg)
--{
--    return make_what(curfile, lineNum, msg.str());
--}
-+// static inline std::string make_what(const char* curfile, const int lineNum, const std::ostringstream& msg)
-+// {
-+//     return make_what(curfile, lineNum, msg.str());
-+// }
- // A macro for conveniently throwing errors.
- // Need "throw" to be visible, not hidden inside of a function, so that code-analysis tools can see it.
- #define CODA_OSS_sys_filesystem_THROW_ERR(MSG) throw std::runtime_error(make_what(__FILE__, __LINE__, MSG)) // TODO: std::filesystem_error
 diff --git a/externals/coda-oss/modules/c++/tiff/source/IFDEntry.cpp b/externals/coda-oss/modules/c++/tiff/source/IFDEntry.cpp
 index 07697da8..b96d7f7b 100644
 --- a/externals/coda-oss/modules/c++/tiff/source/IFDEntry.cpp
@@ -806,6 +578,21 @@ index beca1fa5..5a0007a0 100644
  
      static const void* getWindows1252Encoding();
  
+diff --git a/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt b/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt
+index cab4e56a..7661c68e 100644
+--- a/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt
++++ b/externals/coda-oss/modules/drivers/gsl/GSL-4.0.0/tests/CMakeLists.txt
+@@ -1,7 +1,9 @@
+ cmake_minimum_required(VERSION 3.0.2)
+ 
+ project(GSLTests CXX)
+-enable_testing()  # again, for support standalone testing
++if (GSL_TEST)
++  enable_testing()  # again, for support standalone testing
++endif()
+ 
+ include(FindPkgConfig)
+ include(ExternalProject)
 diff --git a/externals/coda-oss/modules/python/config/source/generated/coda_config.py b/externals/coda-oss/modules/python/config/source/generated/coda_config.py
 index 66260e39..df09b261 100644
 --- a/externals/coda-oss/modules/python/config/source/generated/coda_config.py
@@ -15078,6 +14865,22 @@ index 7be272a1..24642750 100644
 -# This file is compatible with both classic and new-style classes.
  
  
+diff --git a/externals/coda-oss/test_package/CMakeLists.txt b/externals/coda-oss/test_package/CMakeLists.txt
+index 4d239e67..0d5b0fd0 100644
+--- a/externals/coda-oss/test_package/CMakeLists.txt
++++ b/externals/coda-oss/test_package/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.14)
++cmake_minimum_required(VERSION 3.6)
+ project(coda-oss-test_package)
+ set(CMAKE_CXX_STANDARD 11)
+ 
+@@ -11,3 +11,4 @@ find_package(coda-oss)
+ 
+ add_executable(test test.cpp)
+ target_link_libraries(test types-c++ str-c++)
++set_target_properties(test PROPERTIES EXCLUDE_FROM_ALL True)
+\ No newline at end of file
 diff --git a/modules/python/nitf/source/generated/nitropy.py b/modules/python/nitf/source/generated/nitropy.py
 index 4af29e4a..5451c2b5 100644
 --- a/modules/python/nitf/source/generated/nitropy.py
