@@ -2,7 +2,7 @@
 #include <optional>
 
 #include "taintdag/encoding.hpp"
-#include "test_helpers.hpp"
+#include "utils.h"
 
 using namespace taintdag;
 

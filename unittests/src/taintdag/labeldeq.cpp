@@ -2,7 +2,7 @@
 #include <list>
 
 #include "taintdag/labeldeq.hpp"
-#include "test_helpers.hpp"
+#include "utils.h"
 
 using namespace taintdag;
 

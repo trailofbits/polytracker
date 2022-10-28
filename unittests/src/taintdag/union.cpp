@@ -7,7 +7,7 @@
 
 
 #include "taintdag/union.hpp"
-#include "test_helpers.hpp"
+#include "utils.h"
 
 using namespace taintdag;
 
@@ -71,15 +71,9 @@ bool taint_included(label_set super, label_t sub_label, label_set sub) {
 // Ensures that the effect of the union is the same as enumerating all labels and making an 
 // explicit union of those.
 TEST_CASE("Union Represents Same") {
-  // To get variation in test runs
-  srand(time(nullptr));
-  auto seed = rand();
-  INFO("Seed value: " << seed);
-  srand(seed);
-
-
+  // To get variation in tests
+  INFO("Seed value: " << test::init_rand_seed());
   unsigned nlabels = 0, nvalues = 0;
-
   for (auto iter=0;iter<test_iterations;iter++) {
     // Produce two random taint values
     auto [l, ll] = rand_taint();
@@ -128,32 +122,3 @@ TEST_CASE("Union Represents Same") {
 
   INFO("#labels " << nlabels << " #values " << nvalues);
 }
-
-#if 0
-TEST_CASE("Union to range") {
-  label_t l1{1}, l2{2}, l3{3}, l4{4}, l5{5}, l6{6};
-  SourceTaint t1{0, 1}, t2{0, 2}, t3{0, 3}, t4{0,4};
-  UnionTaint t5{l2, l4}, t6{l1, l3};
-
-  SECTION("(1 3) union 2 -> range 1 3") {
-    auto ret = union_::compute(l6, t6, l2, t2);
-    auto rt = std::get<RangeTaint>(std::get<Taint>(ret));
-    REQUIRE(rt.first == l1);
-    REQUIRE(rt.last == l3);
-  }
-  
-  SECTION("(1 3) union 5 where 5 is (2 4) -> range 1 4") {
-    auto ret = union_::compute(l6, t6, l5, t5);
-    auto rt = std::get<RangeTaint>(std::get<Taint>(ret));
-    REQUIRE(rt.first == l1);
-    REQUIRE(rt.last == l4);
-  }
-
-  SECTION("(2 4) union 6 where 6 is (1 3) -> range 1 4") {
-    auto ret = union_::compute(l5, t5, l6, t6);
-    auto rt = std::get<RangeTaint>(std::get<Taint>(ret));
-    REQUIRE(rt.first == l1);
-    REQUIRE(rt.last == l4);
-  }
-}
-#endif
