@@ -3,10 +3,9 @@ set(TAINTDAG_UNITTEST tests-taintdag)
 add_executable(
   ${TAINTDAG_UNITTEST}
   main.cpp
+  tdag.cpp
   taintdag.cpp
-  output.cpp
   encoding.cpp
-  fdmapping.cpp
   fnmapping.cpp
   union.cpp
   labeldeq.cpp)
