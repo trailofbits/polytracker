@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
 #include <list>
 
-#include "taintdag/labeldeq.h"
-#include "test_helpers.hpp"
+#include "taintdag/labeldeq.hpp"
+#include "utils.h"
 
 using namespace taintdag;
 
