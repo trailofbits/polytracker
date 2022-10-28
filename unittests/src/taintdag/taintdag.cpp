@@ -1,82 +1,69 @@
-#include <array>
-#include <filesystem>
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
 #include <catch2/catch.hpp>
 
-#include "taintdag/fdmapping.hpp"
-#include "taintdag/taintdag.hpp"
-#include "test_helpers.hpp"
+#include <sys/stat.h>
 
-using namespace taintdag;
+#include <array>
+#include <cstdio>
+#include <filesystem>
+#include <tuple>
 
+#include "taintdag/outputfile.hpp"
+#include "taintdag/labels.hpp"
+#include "taintdag/taint.hpp"
 
-struct mem {
-  char *begin {nullptr};
-  char *end{nullptr};
-  size_t size;
-
-  mem(size_t num_slots = max_label) :size{num_slots*sizeof(storage_t)} {
-    auto m = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (m == MAP_FAILED) {
-      std::cerr << "Failed to map memory" << std::endl;
-      exit(-1);
-    }
-    begin = reinterpret_cast<char*>(m);
-    end = begin + size;
-  }
-
-  ~mem() {
-    if (begin)
-      munmap(begin, size);
-  }
-};
+#include "utils.h"
 
 namespace {
-  source_offset_t rand_source_offset() {
-    return test::rand_limit<source_offset_t>(max_source_offset);
-  }
 
-  source_index_t rand_source_index() {
-    return test::rand_limit<source_index_t>(max_source_index);
-  }
+namespace td = taintdag;
 
-
-  struct RandomCount {
-    label_t limit;
-  };
-
-  struct Count {
-    label_t n;
-  };
-
-  // Construct random source labels
-  // The tuple contains:
-  // number of labels requested
-  // source offset
-  // source index
-  // Returned taint_range_t
-  std::tuple<label_t, source_offset_t, source_index_t, taint_range_t> rand_source_labels(TaintDAG &td, std::variant<Count, RandomCount> n) {
-      auto nlabels= std::holds_alternative<Count>(n) ? std::get<Count>(n).n : test::rand_limit(std::get<RandomCount>(n).limit-1)+1;
-      auto ofs = rand_source_offset();
-      auto srcidx = rand_source_index();
-      auto range = td.create_source_labels(srcidx, ofs, nlabels);
-      return {nlabels, ofs, srcidx, range};
-  }
+td::source_offset_t rand_source_offset() {
+  return td::test::rand_limit<td::source_offset_t>(td::max_source_offset);
 }
 
+td::source_index_t rand_source_index() {
+  return td::test::rand_limit<td::source_index_t>(td::max_source_index);
+}
+
+struct RandomCount {
+  td::label_t limit;
+};
+
+struct Count {
+  td::label_t n;
+};
+
+using LabelFile = td::OutputFile<td::Labels>;
+
+std::tuple<td::label_t, td::taint_range_t>
+rand_source_labels(td::Labels &labels, std::variant<Count, RandomCount> n) {
+  auto nlabels =
+      std::holds_alternative<Count>(n)
+          ? std::get<Count>(n).n
+          : td::test::rand_limit(std::get<RandomCount>(n).limit - 1) + 1;
+  auto ofs = rand_source_offset();
+  auto srcidx = rand_source_index();
+  auto range = labels.create_source_labels(srcidx, ofs, nlabels);
+  return {nlabels, range};
+}
+
+} // namespace
+
 TEST_CASE("Serialize deserialize for different events") {
-  srand(time(nullptr));
-  auto seed = rand();
-  INFO("Using seed: " << seed);
-  srand(seed);
-
-  mem m; 
-  TaintDAG td{m.begin, m.end};
-
-
+  INFO("Using seed: " << td::test::init_rand_seed());
+  LabelFile label_file{std::tmpnam(nullptr)};
+  auto &labels{label_file.section<td::Labels>()};
   SECTION("Source ranges are of correct size and sound") {
-    for (size_t i=0;i<16;i++) {
-      auto [n, _1, _2, range] = rand_source_labels(td, RandomCount{0xffff});
-
+    for (size_t i = 0; i < 16; i++) {
+      auto [n, range] = rand_source_labels(labels, RandomCount{0xffff});
       // Labels are monotonically increasing
       REQUIRE(range.second > range.first);
       REQUIRE(n == (range.second - range.first));
@@ -84,172 +71,134 @@ TEST_CASE("Serialize deserialize for different events") {
   }
 
   SECTION("Taints doesn't overlap") {
-    std::vector<taint_range_t> ranges;
-    for (size_t i=0;i<16;i++) {
-      auto [n, ofs, srcidx, tr_] = rand_source_labels(td, RandomCount{0xffff});
-      taint_range_t tr = tr_; // For some reason the lambda capture doesn't work with tr_???
-
-      REQUIRE(std::all_of(ranges.begin(), ranges.end(), [tr](auto &r) {
-        // We know from above that tr.last >= tr.first
-        return tr.second <= r.first || tr.first >= r.second;
+    std::vector<td::taint_range_t> ranges;
+    for (size_t i = 0; i < 16; i++) {
+      auto rsl{rand_source_labels(labels, RandomCount{0xffff})};
+      auto range{std::get<td::taint_range_t>(rsl)};
+      REQUIRE(std::all_of(ranges.begin(), ranges.end(), [range](auto &r) {
+        return range.second <= r.first || range.first >= r.second;
       }));
-
-      ranges.push_back(tr);
+      ranges.push_back(range);
     }
   }
-  SECTION("Taint affects control flow") {
-    auto [_1, _2, _3, tr] = rand_source_labels(td, Count{3});
 
+  SECTION("Taint affects control flow") {
+    auto rsl{rand_source_labels(labels, Count{3})};
+    auto range{std::get<td::taint_range_t>(rsl)};
     SECTION("Default does not affect control flow") {
-      for (auto lbl = tr.first;lbl<tr.second;lbl++) {
-        auto st = std::get<SourceTaint>(td.read_label(lbl));
+      for (auto lbl = range.first; lbl < range.second; lbl++) {
+        auto st{std::get<td::SourceTaint>(labels.read_label(lbl))};
         REQUIRE(!st.affects_control_flow);
       }
     }
 
     SECTION("Source taint") {
-      td.affects_control_flow(tr.first);
-
-      auto st = std::get<SourceTaint>(td.read_label(tr.first));
+      labels.affects_control_flow(range.first);
+      auto st{std::get<td::SourceTaint>(labels.read_label(range.first))};
       REQUIRE(st.affects_control_flow);
     }
 
     SECTION("Union affects source labels as well") {
-      auto ul = td.union_taint(tr.first, tr.second-1);
-      td.affects_control_flow(ul);
+      auto ul = labels.union_taint(range.first, range.second - 1);
+      labels.affects_control_flow(ul);
 
-      auto u = std::get<UnionTaint>(td.read_label(ul));
+      auto u = std::get<td::UnionTaint>(labels.read_label(ul));
       REQUIRE(u.affects_control_flow);
 
-      auto s1 = std::get<SourceTaint>(td.read_label(u.lower));
+      auto s1 = std::get<td::SourceTaint>(labels.read_label(u.lower));
       REQUIRE(s1.affects_control_flow);
 
-      auto s2 = std::get<SourceTaint>(td.read_label(u.higher));
+      auto s2 = std::get<td::SourceTaint>(labels.read_label(u.higher));
       REQUIRE(s2.affects_control_flow);
     }
 
     SECTION("Range affects soruce labels") {
-      auto rl = td.union_taint(tr.first, tr.first +1);
-      auto rl2 = td.union_taint(rl, tr.first+2);
-      td.affects_control_flow(rl2);
+      auto rl = labels.union_taint(range.first, range.first + 1);
+      auto rl2 = labels.union_taint(rl, range.first + 2);
+      labels.affects_control_flow(rl2);
 
-      auto r = std::get<RangeTaint>(td.read_label(rl2));
-      for (auto lbl = r.first;lbl<=r.last;lbl++) {
-        REQUIRE(std::get<SourceTaint>(td.read_label(lbl)).affects_control_flow);
+      auto r = std::get<td::RangeTaint>(labels.read_label(rl2));
+      for (auto lbl = r.first; lbl <= r.last; lbl++) {
+        REQUIRE(std::get<td::SourceTaint>(labels.read_label(lbl))
+                    .affects_control_flow);
       }
     }
-
   }
 
   // Covered by the test cases in union.cpp, but this tests the full
   // union_taint method, not just the union-logic.
   SECTION("Union taints") {
-    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{3}));
-
-
+    auto rsl{rand_source_labels(labels, Count{3})};
+    auto range{std::get<td::taint_range_t>(rsl)};
     SECTION("Taint union of equal taints -> input taint") {
-      auto ret = td.union_taint(tr.first, tr.first);
-      REQUIRE(ret == tr.first);
+      auto ret = labels.union_taint(range.first, range.first);
+      REQUIRE(ret == range.first);
     }
 
     SECTION("Taint union of non-equal taints -> new taint") {
-      auto ret = td.union_taint(tr.first, tr.first+1);
-      REQUIRE(ret >= tr.second);
+      auto ret = labels.union_taint(range.first, range.first + 1);
+      REQUIRE(ret >= range.second);
     }
 
     SECTION("Taint union (x,y), y -> (x,y)") {
-      auto t2 = tr.first + 1;
-      auto t12 = td.union_taint(tr.first, t2);
-      auto ret = td.union_taint(t12, t2);
+      auto t2 = range.first + 1;
+      auto t12 = labels.union_taint(range.first, t2);
+      auto ret = labels.union_taint(t12, t2);
       REQUIRE(ret == t12);
     }
 
     SECTION("Taint union (x,y), x -> (x,y)") {
-      auto t2 = tr.first + 1;
-      auto t12 = td.union_taint(tr.first, t2);
-      auto ret = td.union_taint(t12, tr.first);
+      auto t2 = range.first + 1;
+      auto t12 = labels.union_taint(range.first, t2);
+      auto ret = labels.union_taint(t12, range.first);
       REQUIRE(ret == t12);
     }
 
     SECTION("Taint union y, (x,y) -> (x,y)") {
-      auto t2 = tr.first + 1;
-      auto t12 = td.union_taint(tr.first, t2);
-      auto ret = td.union_taint(t2, t12);
+      auto t2 = range.first + 1;
+      auto t12 = labels.union_taint(range.first, t2);
+      auto ret = labels.union_taint(t2, t12);
       REQUIRE(ret == t12);
     }
 
     SECTION("Taint union x, (x,y) -> (x,y)") {
-      auto t2 = tr.first + 1;
-      auto t12 = td.union_taint(tr.first, t2);
-      auto ret = td.union_taint(tr.first, t12);
+      auto t2 = range.first + 1;
+      auto t12 = labels.union_taint(range.first, t2);
+      auto ret = labels.union_taint(range.first, t12);
       REQUIRE(ret == t12);
     }
   }
 
-
-  SECTION("Taint iteration") {
-    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{3}));
-    auto t1 = tr.first;
-    auto t2 = tr.first + 1;
-    auto t3 = tr.first + 2;
-
-    SECTION("Iterator have correct value_type") {
-      REQUIRE(std::is_same_v<label_t, TaintDAG::taint_iterator::value_type>);
-      REQUIRE(std::is_same_v<std::iterator_traits<taintdag::TaintDAG::taint_iterator>::value_type,
-        taintdag::TaintDAG::taint_iterator::value_type>);
-    }
-
-    SECTION("Source taint iteration is empty iteration") {
-      auto [it,end] = td.iter_taints(t1);
-      REQUIRE(it == end);
-    }
-
-    SECTION("Depth first iteration") {
-      auto t12 = td.union_taint(t1, t2);
-      auto t23 = td.union_taint(t2, t3);
-      auto t1223 = td.union_taint(t12, t23);
-
-      auto [it, end] = td.iter_taints(t1223);
-      // Depth First Search
-      auto order = std::array<label_t, 6>{t12, t1, t2, t23, t2, t3};
-      for (auto oit = order.begin();it!=end;++it, ++oit) {
-        REQUIRE(*it == *oit);
-      }
-    }
-  }
-
   SECTION("Capacity testing") {
-    rand_source_labels(td, Count{181202});
-
-    for (size_t i=181202;i<850458;i++) {
-      td.union_taint(i-3, i-4);
+    rand_source_labels(labels, Count{181202});
+    for (size_t i = 181202; i < 850458; i++) {
+      labels.union_taint(i - 3, i - 4);
     }
-    REQUIRE(td.label_count() == 850459);
+    REQUIRE(labels.count() == 850459);
   }
-
 
   SECTION("No recursive taint") {
-    rand_source_labels(td, RandomCount{32});
+    rand_source_labels(labels, RandomCount{32});
 
-    for (auto iter =0;iter<10000;iter++) {
-      auto max_label = td.label_count() -1;
-      auto l1 = test::lbl_inrange(1, max_label);
-      auto l2 = test::lbl_inrange(1, max_label);
+    for (auto iter = 0; iter < 10000; iter++) {
+      auto max_label = labels.count() - 1;
+      auto l1 = td::test::lbl_inrange(1, max_label);
+      auto l2 = td::test::lbl_inrange(1, max_label);
 
-      auto newlbl = td.union_taint(l1, l2);
+      auto newlbl = labels.union_taint(l1, l2);
       CAPTURE(l1);
       CAPTURE(l2);
       CAPTURE(newlbl);
 
-      auto t = td.read_label(newlbl);
-      if (auto *ut = std::get_if<UnionTaint>(&t)) {
+      auto t = labels.read_label(newlbl);
+      if (auto *ut = std::get_if<td::UnionTaint>(&t)) {
         REQUIRE(newlbl != ut->lower);
         REQUIRE(newlbl != ut->higher);
 
-        REQUIRE(ut->lower +1 < ut->higher);
+        REQUIRE(ut->lower + 1 < ut->higher);
       }
 
-      if (auto *rt = std::get_if<RangeTaint>(&t)) {
+      if (auto *rt = std::get_if<td::RangeTaint>(&t)) {
         CAPTURE(*rt);
         REQUIRE((rt->first > newlbl || rt->last < newlbl));
         REQUIRE(rt->first < rt->last);
@@ -257,41 +206,41 @@ TEST_CASE("Serialize deserialize for different events") {
     }
 
     SECTION("Affects control flow backwards") {
-      auto max_label = td.label_count() -1;
-      for (auto lbl = max_label;lbl>0;lbl--) {
-        td.affects_control_flow(lbl);
+      auto max_label = labels.count() - 1;
+      for (auto lbl = max_label; lbl > 0; lbl--) {
+        labels.affects_control_flow(lbl);
       }
     }
 
     SECTION("Affects control flow random") {
-      auto max_label = td.label_count() -1;
-      for (auto iter = max_label;iter>0;iter--) {
-        auto label = test::lbl_inrange(1, max_label);
-        td.affects_control_flow(label);
+      auto max_label = labels.count() - 1;
+      for (auto iter = max_label; iter > 0; iter--) {
+        auto label = td::test::lbl_inrange(1, max_label);
+        labels.affects_control_flow(label);
       }
     }
   }
 
-  SECTION("Union of exact same labels twice in a row returns the previous label") {
-    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
-    auto u1 = td.union_taint(tr.first, tr.second-1);
-    auto u2 = td.union_taint(tr.first, tr.second-1);
+  SECTION("Union of same labels twice in a row returns the previous label") {
+    auto tr = std::get<td::taint_range_t>(rand_source_labels(labels, Count{5}));
+    auto u1 = labels.union_taint(tr.first, tr.second - 1);
+    auto u2 = labels.union_taint(tr.first, tr.second - 1);
     REQUIRE(u1 == u2);
   }
 
-  SECTION("Range of exact same labels twice in a row returns the previous label") {
-    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
-    auto u1 = td.union_taint(tr.first, tr.first+1);
-    auto u2 = td.union_taint(tr.first, tr.first+1);
+  SECTION("Range of same labels twice in a row returns the previous label") {
+    auto tr = std::get<td::taint_range_t>(rand_source_labels(labels, Count{5}));
+    auto u1 = labels.union_taint(tr.first, tr.first + 1);
+    auto u2 = labels.union_taint(tr.first, tr.first + 1);
     REQUIRE(u1 == u2);
   }
 
   SECTION("Create duplicate label, but not same as last") {
-    auto tr = std::get<taint_range_t>(rand_source_labels(td, Count{5}));
-    auto u01 = td.union_taint(tr.first, tr.first+1);
-    td.union_taint(tr.first, tr.first+2);
-    td.union_taint(tr.first+2, tr.first+3);
-    auto u01_2 = td.union_taint(tr.first, tr.first+1);
+    auto tr = std::get<td::taint_range_t>(rand_source_labels(labels, Count{5}));
+    auto u01 = labels.union_taint(tr.first, tr.first + 1);
+    labels.union_taint(tr.first, tr.first + 2);     // u02
+    labels.union_taint(tr.first + 2, tr.first + 3); // u23
+    auto u01_2 = labels.union_taint(tr.first, tr.first + 1);
     REQUIRE(u01 == u01_2);
   }
 }
