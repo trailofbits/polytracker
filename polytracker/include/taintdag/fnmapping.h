@@ -14,15 +14,9 @@
 #include <string_view>
 #include <unordered_map>
 
-// TODO(hbrodin): Currently using this as a workaround to be able to compile this file as part of
-// FunctionTracingPass.
-#if __cpp_concepts
-#if __cpp_lib_concepts
 #include "taintdag/outputfile.hpp"
 #include "taintdag/section.hpp"
 #include "taintdag/string_table.hpp"
-#endif
-#endif
 
 namespace taintdag {
 
@@ -57,18 +51,12 @@ private:
   std::unordered_map<std::string_view, index_t> mappings;
 };
 
-// TODO (hbrodin): Unsure what goes in the FunctionEntry atm.
 struct FunctionEntry {};
 
-// TODO(hbrodin): Currently using this as a workaround to be able to compile this file as part of
-// FunctionTracingPass.
-#if __cpp_concepts
-#if __cpp_lib_concepts
 struct Functions : public FixedSizeAlloc<FunctionEntry> {
   template <typename OF>
   Functions(SectionArg<OF> of)
-      : FixedSizeAlloc{of.range},
-        st_{of.output_file.template section<StringTable>()} {
+      : FixedSizeAlloc{of.range}, st_{of.template section<StringTable>()} {
     // TODO(hbrodin): Drop the assert, replace with error_exit.
     // assert(of.range.size() <=
     //        std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
@@ -77,6 +65,4 @@ struct Functions : public FixedSizeAlloc<FunctionEntry> {
 
   StringTable &st_;
 };
-#endif
-#endif
 } // namespace taintdag
