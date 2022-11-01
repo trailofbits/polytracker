@@ -1,6 +1,3 @@
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g")
-
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_CXX_LINK_FLAGS} -Wl,-znodelete")
 if(APPLE)
   # User teor2345 reports that this is required to make things work on MacOS X.
   set(CMAKE_MODULE_LINK_FLAGS
