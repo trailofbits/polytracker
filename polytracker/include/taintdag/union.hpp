@@ -1,5 +1,12 @@
-#ifndef POLYTRACKER_TAINTDAG_UNION_H
-#define POLYTRACKER_TAINTDAG_UNION_H
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include "taintdag/taint.hpp"
 
@@ -215,4 +222,3 @@ inline ReturnValue compute(label_t left, Taint const &l, label_t right,
   return std::visit(Visitor{left, right}, l, r);
 }
 } // namespace taintdag::union_
-#endif

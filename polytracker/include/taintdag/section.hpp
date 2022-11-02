@@ -1,5 +1,12 @@
-#ifndef TDAG_SECTION_HPP
-#define TDAG_SECTION_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <mutex>
 #include <optional>
@@ -179,4 +186,3 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
 };
 
 } // namespace taintdag
-#endif

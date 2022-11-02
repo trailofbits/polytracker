@@ -13,11 +13,11 @@
 #include <filesystem>
 #include <span>
 
+#include "taintdag/fnmapping.h"
 #include "taintdag/labels.hpp"
 #include "taintdag/sink.hpp"
 #include "taintdag/string_table.hpp"
 #include "taintdag/taint_source.hpp"
-#include "taintdag/fnmapping.h"
 
 namespace taintdag {
 

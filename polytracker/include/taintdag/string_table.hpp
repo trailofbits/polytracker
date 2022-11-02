@@ -1,5 +1,12 @@
-#ifndef TDAG_STRING_TABLE_HPP
-#define TDAG_STRING_TABLE_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <concepts>
 #include <iterator>
@@ -123,5 +130,3 @@ private:
 using StringTable = StringTableBase<>;
 
 } // namespace taintdag
-
-#endif
