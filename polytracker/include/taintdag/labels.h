@@ -8,12 +8,12 @@
 
 #pragma once
 
-#include "taintdag/encoding.h"
-#include "taintdag/labeldeq.h"
-#include "taintdag/section.h"
-#include "taintdag/taint.h"
-#include "taintdag/union.h"
-#include "taintdag/util.h"
+#include "taintdag/encoding.hpp"
+#include "taintdag/labeldeq.hpp"
+#include "taintdag/section.hpp"
+#include "taintdag/taint.hpp"
+#include "taintdag/union.hpp"
+#include "taintdag/util.hpp"
 
 namespace taintdag {
 

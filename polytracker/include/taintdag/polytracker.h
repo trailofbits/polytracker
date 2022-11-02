@@ -11,14 +11,11 @@
 #include <filesystem>
 #include <span>
 
-#include "taintdag/bitmap_section.h"
 #include "taintdag/fnmapping.h"
-#include "taintdag/labels.h"
-#include "taintdag/outputfile.h"
-#include "taintdag/sink.h"
-#include "taintdag/string_table.h"
-#include "taintdag/taint.h"
-#include "taintdag/taint_source.h"
+#include "taintdag/labels.hpp"
+#include "taintdag/sink.hpp"
+#include "taintdag/string_table.hpp"
+#include "taintdag/taint_source.hpp"
 
 namespace taintdag {
 

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "taintdag/taint.h"
+#include "taintdag/taint.hpp"
 
 namespace taintdag {
 
