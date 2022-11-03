@@ -7,6 +7,7 @@ include(Catch)
 
 add_executable(
   tests
+  bitmap_section.cpp
   main.cpp
   encoding.cpp
   fnmapping.cpp
