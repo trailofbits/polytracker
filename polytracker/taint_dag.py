@@ -106,6 +106,44 @@ class TDSinkSection:
         for offset in range(0, len(self.section), sizeof(TDSink)):
             yield TDSink.from_buffer_copy(self.section[offset:])
 
+class TDBitmapSection:
+    """Represents a bitmap section encoded by BitmapSectionBase.
+    
+    The only configuration currently supported is to have the BucketType template
+    parameter of BitmapSectionBase as uint64_t. It also requires the endianess to
+    not change as the implementation does not handle endianess in any specific way.
+    """
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        assert len(self.section) % 8 == 0 # Multiple of uint64_t
+
+    def enumerate_set_bits(self):
+        """Enumerates all bits that are set
+
+        The index of each bit that is set will be yielded.
+        """
+        index = 0
+        for offset in range(0, len(self.section), sizeof(c_uint64)):
+            bucket = c_uint64.from_buffer_copy(self.section[offset:]).value
+            if bucket == 0:
+                index += 64 # No bits set, just advance the bit index
+            else:
+                # At least one bit is set, iterate over all bits and yield set bits
+                for i in range(0, 64):
+                    if (bucket >> i) & 1:
+                        yield index
+                    index += 1
+
+class TDSourceIndexSection(TDBitmapSection):
+    """Represents the source index section.
+    
+    It is a bitmap of all labels that are source taints.
+    """
+    def __init__(self, mem, hdr):
+        super().__init__(mem, hdr)
+
+
+
 
 class TDHeader(Structure):
     _fields_ = [
@@ -219,7 +257,6 @@ class TDFile:
         self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
-        print(self.filemeta)
         section_offset = sizeof(TDFileMeta)
         self.sections = []
         for i in range(0, self.filemeta.section_count):
@@ -232,20 +269,12 @@ class TDFile:
                 self.sections.append(TDStringSection(self.buffer, hdr))
             elif hdr.tag == 4:
                 self.sections.append(TDSinkSection(self.buffer, hdr))
+            elif hdr.tag == 5:
+                self.sections.append(TDSourceIndexSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
 
             section_offset += sizeof(TDSectionMeta)
-
-        print(self.sections)
-
-        self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
-
-        assert self.header.fd_mapping_offset > 0
-        assert self.header.tdag_mapping_offset > 0
-        assert self.header.tdag_mapping_size > 0
-        assert self.header.sink_mapping_offset > 0
-        assert self.header.fn_mapping_offset > 0
 
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
@@ -268,6 +297,9 @@ class TDFile:
         count = self.header.fn_mapping_count
         for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
             yield name, cast(TDFnHeader, hdr)
+
+    def input_labels(self) -> Iterator[int]:
+        return self._get_section(TDSourceIndexSection).enumerate_set_bits()
 
     @property
     def label_count(self):
@@ -347,6 +379,7 @@ class TDProgramTrace(ProgramTrace):
     def __init__(self, file: BinaryIO) -> None:
         self.tdfile: TDFile = TDFile(file)
         self.tforest: TDTaintForest = TDTaintForest(self)
+        self._inputs = None
 
     def __contains__(self, uid: int):
         return super().__contains__(uid)
@@ -362,6 +395,9 @@ class TDProgramTrace(ProgramTrace):
 
     def access_sequence(self) -> Iterator[TaintAccess]:
         return super().access_sequence()
+
+
+
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
@@ -512,9 +548,10 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            source = Input(fdhdr.fd, str(path), end - begin)
+            #begin = fdhdr.prealloc_label_begin
+            #end = fdhdr.prealloc_label_end
+            #source = Input(fdhdr.fd, str(path), end - begin)
+            source = Input(fdhdr.fd, str(path), 0)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):
