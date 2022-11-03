@@ -152,17 +152,16 @@ void PolyTracker::affects_control_flow(label_t lbl) {
   output_file_.section<Labels>().affects_control_flow(lbl);
 }
 
-FnMapping::index_t PolyTracker::function_entry(std::string_view name) {
-  // auto maybe_index{output_file_.section<Sources>().add_mapping(name)};
-  // if (!maybe_index) {
-  //   error_exit("Failed to add function mapping for: ", name);
-  // }
+Functions::index_t PolyTracker::function_entry(std::string_view name) {
+  auto maybe_index{output_file_.section<Functions>().add_mapping(name)};
+  if (!maybe_index) {
+    error_exit("Failed to add function mapping for: ", name);
+  }
   // fnt_.log_fn_event(FnTrace::event_t::kind_t::entry, *maybe_index);
-  // return *maybe_index;
-  return 0;
+  return *maybe_index;
 }
 
-void PolyTracker::function_exit(FnMapping::index_t index) {
+void PolyTracker::function_exit(Functions::index_t index) {
   // fnt_.log_fn_event(FnTrace::event_t::kind_t::exit, index);
 }
 

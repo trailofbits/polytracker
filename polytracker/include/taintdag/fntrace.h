@@ -18,7 +18,7 @@ namespace taintdag {
 class FnTrace {
 public:
   using offset_t = uint32_t;
-  using fn_index_t = FnMapping::index_t;
+  using fn_index_t = Functions::index_t;
 
   struct event_t {
     enum class kind_t : uint8_t { entry, exit };

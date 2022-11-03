@@ -41,8 +41,6 @@ struct Count {
   td::label_t n;
 };
 
-using LabelFile = td::OutputFile<td::Labels>;
-
 std::tuple<td::label_t, td::taint_range_t>
 rand_source_labels(td::Labels &labels, std::variant<Count, RandomCount> n) {
   auto nlabels =
@@ -59,7 +57,7 @@ rand_source_labels(td::Labels &labels, std::variant<Count, RandomCount> n) {
 
 TEST_CASE("Serialize deserialize for different events") {
   INFO("Using seed: " << td::test::init_rand_seed());
-  LabelFile label_file{std::tmpnam(nullptr)};
+  td::OutputFile<td::Labels> label_file{std::tmpnam(nullptr)};
   auto &labels{label_file.section<td::Labels>()};
   SECTION("Source ranges are of correct size and sound") {
     for (size_t i = 0; i < 16; i++) {
