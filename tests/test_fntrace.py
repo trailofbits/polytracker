@@ -6,6 +6,7 @@ from typing import Dict
 from polytracker import taint_dag, ProgramTrace
 
 
+@pytest.mark.xfail(reason="Pending integration from another PR")
 @pytest.mark.program_trace("test_fntrace.cpp")
 def test_fn_headers(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
@@ -14,6 +15,7 @@ def test_fn_headers(program_trace: ProgramTrace):
     assert names == set(["main", "_Z9factoriali"])
 
 
+@pytest.mark.xfail(reason="Pending integration from another PR")
 @pytest.mark.program_trace("test_fntrace.cpp")
 def test_fntrace(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)

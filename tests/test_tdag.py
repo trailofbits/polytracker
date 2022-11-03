@@ -8,7 +8,7 @@ def test_tdfile(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
-    assert tdfile.label_count == 35
+    assert tdfile.label_count == 14 # 8 source labels, 5 unions/ranges + zero-label (unused)
 
     t1 = cast(taint_dag.TDSourceNode, tdfile.decode_node(1))
     assert isinstance(t1, taint_dag.TDSourceNode)
@@ -18,10 +18,10 @@ def test_tdfile(program_trace: ProgramTrace):
     assert isinstance(t2, taint_dag.TDSourceNode)
     assert t2.affects_control_flow is True
 
-    t33 = cast(taint_dag.TDRangeNode, tdfile.decode_node(33))
-    assert isinstance(t33, taint_dag.TDRangeNode)
-    assert t33.first == 1
-    assert t33.last == 4
+    t12 = cast(taint_dag.TDRangeNode, tdfile.decode_node(12))
+    assert isinstance(t12, taint_dag.TDRangeNode)
+    assert t12.first == 1
+    assert t12.last == 4
 
     assert len(tdfile.fd_headers) == 2
     assert len(list(tdfile.sinks)) == 6
@@ -50,10 +50,10 @@ def test_td_taint_forest(program_trace: ProgramTrace):
     assert n2.source is not None
     assert n2.affected_control_flow is True
 
-    n33 = tdforest.get_node(33)
-    assert n33.parent_labels == (-2, 4)
-    assert n33.source is None
-    assert n33.affected_control_flow is False
+    n12 = tdforest.get_node(12)
+    assert n12.parent_labels == (-2, 4)
+    assert n12.source is None
+    assert n12.affected_control_flow is False
     # Synthetic nodes
     assert tdforest.get_node(-1).parent_labels == (1, 2)
     assert tdforest.get_node(-2).parent_labels == (-1, 3)
