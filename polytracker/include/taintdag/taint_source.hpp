@@ -52,10 +52,11 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
   }
 
   std::optional<index_t> add_source(std::string_view name, int fd) {
-    // Allocate space for string,
+    // Write source name into the string table section
     auto idx = st_.add_string(name);
-    if (!idx)
+    if (!idx) {
       return {};
+    }
 
     return map(construct(*idx, fd), [this](auto &ctx) { return index(ctx.t); });
   }

@@ -13,29 +13,31 @@
 #include <array>
 
 TEST_CASE("Test fnmapping operations") {
+  namespace td = taintdag;
   SECTION("Add unique functions, functions are successfully inserted") {
-    std::array<char, 128> storage;
-    taintdag::FnMapping fnm(&*storage.begin(), &*storage.end());
-    REQUIRE(fnm.add_mapping("foo"));
-    REQUIRE(fnm.add_mapping("bar"));
-    REQUIRE(fnm.add_mapping("baz"));
+    td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
+    auto &functions{of.section<td::Functions>()};
+    REQUIRE(functions.add_mapping("foo"));
+    REQUIRE(functions.add_mapping("bar"));
+    REQUIRE(functions.add_mapping("baz"));
   }
 
   SECTION("Add unique functions, functions have successive indices") {
-    std::array<char, 128> storage;
-    taintdag::FnMapping fnm(&*storage.begin(), &*storage.end());
-    REQUIRE(fnm.add_mapping("foo").value_or(3) == 0);
-    REQUIRE(fnm.add_mapping("bar").value_or(3) == 1);
-    REQUIRE(fnm.add_mapping("baz").value_or(3) == 2);
+    td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
+    auto &functions{of.section<td::Functions>()};
+    REQUIRE(functions.add_mapping("foo").value_or(3) == 0);
+    REQUIRE(functions.add_mapping("bar").value_or(3) == 1);
+    REQUIRE(functions.add_mapping("baz").value_or(3) == 2);
   }
 
-  SECTION("Add duplicate functions, duplicate functions have the same index") {
-    std::array<char, 128> storage;
-    taintdag::FnMapping fnm(&*storage.begin(), &*storage.end());
-    auto foo_1{fnm.add_mapping("foo").value_or(3)};
-    fnm.add_mapping("bar");
-    fnm.add_mapping("baz");
-    auto foo_2{fnm.add_mapping("foo").value_or(4)};
+  SECTION("Add duplicate functions, duplicate functions have the same index")
+  {
+    td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
+    auto &functions{of.section<td::Functions>()};
+    auto foo_1{functions.add_mapping("foo").value_or(3)};
+    functions.add_mapping("bar");
+    functions.add_mapping("baz");
+    auto foo_2{functions.add_mapping("foo").value_or(4)};
     REQUIRE(foo_1 == foo_2);
   }
 }

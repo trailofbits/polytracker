@@ -23,7 +23,7 @@ namespace polytracker {
 
 void FunctionTracingPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
-  auto fn_index_t{ir.getIntNTy(sizeof(taintdag::FnMapping::index_t) * 8)};
+  auto fn_index_t{ir.getIntNTy(sizeof(taintdag::Functions::index_t) * 8)};
   func_entry_log_fn =
       mod.getOrInsertFunction("__polytracker_log_func_entry", fn_index_t,
                               ir.getInt8PtrTy(), ir.getInt16Ty());

@@ -17,7 +17,7 @@ namespace taintdag {
 namespace {
 
 using offset_t = FnTrace::offset_t;
-using fn_index_t = FnMapping::index_t;
+using fn_index_t = Functions::index_t;
 
 } // namespace
 

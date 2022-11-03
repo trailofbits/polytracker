@@ -24,7 +24,8 @@ namespace taintdag {
 // Main interface towards polytracker
 class PolyTracker {
 
-  using NewOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink>;
+  using NewOutputFile =
+      OutputFile<Sources, Labels, Functions, StringTable, TaintSink>;
 
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
@@ -59,9 +60,9 @@ public:
   void taint_sink(int fd, sink_offset_t offset, label_t label, size_t length);
 
   // Log function entry
-  FnMapping::index_t function_entry(std::string_view name);
+  Functions::index_t function_entry(std::string_view name);
   // Log function exit
-  void function_exit(FnMapping::index_t index);
+  void function_exit(Functions::index_t index);
 
 private:
   taint_range_t create_source_taint(source_index_t src,
