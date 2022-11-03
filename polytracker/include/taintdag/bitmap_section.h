@@ -13,6 +13,7 @@
 #include <span>
 
 #include "taintdag/error.hpp"
+#include "taintdag/outputfile.hpp"
 #include "taintdag/taint.hpp"
 #include "taintdag/util.hpp"
 
@@ -70,6 +71,13 @@ public:
     // Construct the atomic values (shouldn't initialize to any specific value).
     new (&*mem_.begin()) atomic_t[bucket_count];
   }
+
+  // Constructor used when constructing as part of an OutputFile.
+  // Will just forward the mapped memory range to the BitmapSectionBase(span_t
+  // mapped_range) constructor.
+  template <typename OutFile>
+  BitmapSectionBase(SectionArg<OutFile> section_arg)
+      : BitmapSectionBase(section_arg.range) {}
 
   // Part of the Section-concept. Returns how many bytes are actually used in
   // the available memory (sequentially, starting from offset 0).
