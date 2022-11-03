@@ -8,24 +8,22 @@
 
 #pragma once
 
-#include "taintdag/outputfile.hpp"
-
 #include <filesystem>
 #include <span>
 
+#include "taintdag/bitmap_section.h"
+#include "taintdag/fnmapping.h"
 #include "taintdag/labels.hpp"
+#include "taintdag/outputfile.hpp"
 #include "taintdag/sink.hpp"
 #include "taintdag/string_table.hpp"
+#include "taintdag/taint.hpp"
 #include "taintdag/taint_source.hpp"
-#include "taintdag/fnmapping.h"
 
 namespace taintdag {
 
 // Main interface towards polytracker
 class PolyTracker {
-
-  using NewOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink>;
-
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
 
@@ -67,7 +65,18 @@ private:
   taint_range_t create_source_taint(source_index_t src,
                                     std::span<uint8_t const> dst,
                                     size_t offset = 0);
-  NewOutputFile output_file_;
+
+  // Type used as index for source labels. Each label that is a source label
+  // will have a corresponding bit set in this section (at the same bit index as
+  // the label).
+  using SourceLabelIndexSection = BitmapSectionBase<5, BitCount{max_label} + 1>;
+
+  // ConcreteOutputFile is a specific configuration of the generic OutputFile
+  // template. It determines the current layout of TDAG file in terms of which
+  // sections and in which order they appear.
+  using ConcreteOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink,
+                                        SourceLabelIndexSection>;
+  ConcreteOutputFile output_file_;
 };
 
 } // namespace taintdag
