@@ -14,18 +14,9 @@
 #include "taintdag/labels.hpp"
 
 #include "taintdag/error.hpp"
+
+#include "error_exit_helper.h"
 namespace taintdag {
-
-struct ErrorExit {};
-
-void throwing_error_function(int) { throw ErrorExit{}; }
-
-struct ErrorExitReplace {
-  std::function<void(int)> old;
-  ErrorExitReplace()
-      : old{std::exchange(error_function, throwing_error_function)} {}
-  ~ErrorExitReplace() { error_function = old; }
-};
 
 TEST_CASE("Test TDAG", "Integration") {
   OutputFile<Sources, Labels, StringTable> tdg("filename.bin");
