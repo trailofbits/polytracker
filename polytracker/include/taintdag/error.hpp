@@ -25,4 +25,3 @@ template <typename... Msgs> void error_exit(Msgs &&...msgs) {
   error_function(-1);
 }
 } // namespace taintdag
-
