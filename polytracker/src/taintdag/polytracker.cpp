@@ -46,6 +46,10 @@ taint_range_t PolyTracker::create_source_taint(source_index_t src,
   auto rng = output_file_.section<Labels>().create_source_labels(src, offset,
                                                                  dst.size());
 
+  // Add the source labels to the source label index
+  output_file_.section<SourceLabelIndexSection>().set_range(
+      BitIndex{rng.first}, BitCount{dst.size()});
+
   // Mark memory with corresponding labels
   // NOTE(hbrodin): The const_cast is unfortunate. Memory pointed to by &c will
   // not be modified, but a corresponding shadow memory region will be.
