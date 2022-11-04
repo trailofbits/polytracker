@@ -420,11 +420,17 @@ class TDProgramTrace(ProgramTrace):
 
     @property
     def inputs(self) -> Iterator[Input]:
-        for path, fdhdr in self.tdfile.fd_headers:
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            if isinstance(self.tdfile.decode_node(begin), TDSourceNode):
-                yield Input(fdhdr.fd, str(path), end - begin)
+        # TODO (hbrodin): Current implementation needs to do a lot of work
+        # to determine if a file header is an input or not. Consider
+        # consider implementation alternatives.
+        seen: Set[int] = set()
+        for source_label in self.tdfile.input_labels():
+            source_node = self.tdfile.decode_node(source_label)
+            if not source_node.idx in seen:
+                path, fd_header = self.tdfile.fd_headers[source_node.idx]
+                yield Input(fd_header.fd, str(path), 0)
+                seen.add(source_node.idx)
+
 
     @property
     def output_taints(self) -> Iterator[TDTaintOutput]:
