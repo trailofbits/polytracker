@@ -4,47 +4,23 @@ LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
 RUN apt-get update && \
-	apt-get install -y \
-	libc++-11-dev \
-		git \
-		golang-1.16 \
-		libcurl4-openssl-dev \
-		libssl-dev \
-		swig && \
-	git clone https://github.com/mdaus/nitro.git
+	apt-get install -y libcurl4-openssl-dev libssl-dev
 
-# Patch Nitro so we can use LLVM (Clang, Gclang)! Otherwise, assumes GNU or MSVC.
-# Also Nitro's build system coda-oss doesn't correctly exclude test files
-# by default - we don't want them, or GClang will include them in .llvm_bc.
+RUN git clone https://github.com/mdaus/nitro.git
 WORKDIR /polytracker/the_klondike/nitro
-COPY allow_clang_usage.patch .
-RUN git apply allow_clang_usage.patch
-
-# gllvm supports usage of go from 1.16 and we only have go 1.13 in the container??
-RUN rm /usr/bin/go && \
-	rm /usr/bin/gofmt && \
-	ln /usr/lib/go-1.16/bin/go /usr/bin/go && \
-	ln /usr/lib/go-1.16/bin/gofmt /usr/bin/gofmt
-ENV GOPATH=/root/go
-ENV PATH="$PATH:$GOPATH/bin"
-RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
-#	export WLLVM_OUTPUT_LEVEL=DEBUG
-
 RUN	mkdir build
 WORKDIR /polytracker/the_klondike/nitro/build
-# -pthread MAY be provided by polytracker??
-RUN polytracker build cmake \
-		-DCMAKE_C_COMPILER=gclang \
-		-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L" \
-		-DCMAKE_CXX_COMPILER=gclang++ \
-		-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L" \
-		-DCODA_BUILD_TESTS=OFF \
-		-DCMAKE_POSITION_INDEPENDENT_CODE=OFF \
-		.. && \
-	polytracker build cmake --build .
 
-# RUN polytracker instrument-targets \
-# 	--taint \
-# 	--ftrace \
-# 	show_nitf++
-#RUN mv show_nitf++.instrumented nitro_track
+RUN polytracker build cmake .. \
+	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+	-DCODA_BUILD_TESTS=OFF
+
+RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++
+
+RUN polytracker instrument-targets \
+	--taint \
+	--ftrace \
+	show_nitf++
+
+RUN mv show_nitf++.instrumented nitro_track
