@@ -8,12 +8,17 @@ RUN apt-get update && \
 
 RUN git clone https://github.com/mdaus/nitro.git
 
+WORKDIR /polytracker/the_klondike/nitro
+COPY allow_clang_usage.patch .
+RUN git apply allow_clang_usage.patch
+
 RUN	mkdir build
 WORKDIR /polytracker/the_klondike/nitro/build
 
 RUN polytracker build cmake .. \
 	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
-	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable"
+	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+	-DCODA_BUILD_TESTS=OFF
 
 RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++
 
