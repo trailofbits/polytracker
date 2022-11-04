@@ -3,6 +3,9 @@ from polytracker import taint_dag, ProgramTrace, InputOutputMapping
 from typing import cast
 from pathlib import Path
 
+# TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
+input_path = Path("/polytracker/tests/test_data/test_data.txt")
+output_path = Path("/polytracker/tests/test_data/test_data.txt.out")
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_tdfile(program_trace: ProgramTrace):
@@ -71,9 +74,6 @@ def test_input_output_mapping(program_trace: ProgramTrace):
     # There should be 6 inputs that make it to the output
     assert len(m) == 6
 
-    # TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
-    input_path = Path("/polytracker/tests/test_data/test_data.txt")
-    output_path = Path("/polytracker/tests/test_data/test_data.txt.out")
 
     r2_outputs = {(output_path, 0), (output_path, 1), (output_path, 2), (output_path, 3)}
     eq_outputs = {(output_path, 4)}
@@ -107,7 +107,18 @@ def test_cavity_detection(program_trace: ProgramTrace):
     iomapping = InputOutputMapping(tdfile)
     cav = iomapping.file_cavities()
 
-    # TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
-    input_path = Path("/polytracker/tests/test_data/test_data.txt")
     assert input_path in cav.keys()
     assert cav[input_path] == [(5, 6), (8, 29)]
+
+
+@pytest.mark.program_trace("test_tdag.cpp")
+def test_inputs(program_trace: ProgramTrace):
+    assert isinstance(program_trace, taint_dag.TDProgramTrace)
+
+    inputs = list(program_trace.inputs)
+    assert len(inputs) == 1
+    assert inputs[0].path == str(input_path)
+    # TODO (hbrodin): Should probably not be exposed. Also, the fd is not necessarily unique
+    # per run, which is in the documentation for uid.
+    assert inputs[0].uid == 4 # stdin, stdout, stderr, tdag-file, input_path
+    assert inputs[0].size == 0 # TODO (hbrodin): Not set, should probably be removed
