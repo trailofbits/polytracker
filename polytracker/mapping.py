@@ -73,7 +73,7 @@ class InputOutputMapping:
                     ranges.append((start, i))
                     start = None
         if start is not None:
-            ranges.append((start, len(m) - 1))
+            ranges.append((start, len(m)))
         return ranges
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
@@ -182,9 +182,9 @@ class FileCavities(Command):
 
             for path, cs in cavities.items():
                 with open(path, "rb") as f:
+                    contents = f.read()
                     for begin, end in cs:
                         print_cavity(path, begin, end)
-                        contents = f.read()
                         before = ascii(contents[max(begin - 10, 0) : begin])
                         after = ascii(contents[end : end + 10])
                         inside = ascii(contents[begin:end])
