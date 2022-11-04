@@ -436,12 +436,10 @@ class TDProgramTrace(ProgramTrace):
     def output_taints(self) -> Iterator[TDTaintOutput]:
         for sink in self.tdfile.sinks:
             path, fdhdr = self.tdfile.fd_headers[sink.fdidx]
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
             offset = sink.offset
             label = sink.label
             yield TDTaintOutput(
-                Input(fdhdr.fd, path, end - begin),
+                Input(fdhdr.fd, str(path), 0),
                 offset,
                 label,
             )
