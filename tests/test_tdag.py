@@ -1,5 +1,5 @@
 import pytest
-from polytracker import taint_dag, ProgramTrace, InputOutputMapping
+from polytracker import taint_dag, ProgramTrace, InputOutputMapping, Input
 from typing import cast
 from pathlib import Path
 
@@ -122,3 +122,32 @@ def test_inputs(program_trace: ProgramTrace):
     # per run, which is in the documentation for uid.
     assert inputs[0].uid == 4 # stdin, stdout, stderr, tdag-file, input_path
     assert inputs[0].size == 0 # TODO (hbrodin): Not set, should probably be removed
+
+@pytest.mark.program_trace("test_tdag.cpp")
+def test_output_taints(program_trace: ProgramTrace):
+    assert isinstance(program_trace, taint_dag.TDProgramTrace)
+
+    outputs = list(program_trace.output_taints)
+    assert len(outputs) == 6
+    # The output file
+    of = Input(5, str(output_path), 0)
+
+    # First four ouputs have the same label and source, just increase offset
+    for i in range(0, 4):
+        assert outputs[i].source.uid == of.uid
+        assert outputs[i].source.path == of.path
+        assert outputs[i].offset == i
+        assert outputs[i].label == 12 
+
+    # Result of eq
+    assert outputs[4].source.uid == of.uid
+    assert outputs[4].source.path == of.path
+    assert outputs[4].offset == 4
+    assert outputs[4].label == 13 
+
+    # Result of data[4]
+    assert outputs[5].source.uid == of.uid
+    assert outputs[5].source.path == of.path
+    assert outputs[5].offset == 5
+    assert outputs[5].label == 5 
+    
