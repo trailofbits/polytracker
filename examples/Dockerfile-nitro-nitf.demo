@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
 RUN apt-get update && \
-	apt-get install -y git
+	apt-get install -y libcurl4-openssl-dev libssl-dev
 
 RUN git clone https://github.com/mdaus/nitro.git
 
