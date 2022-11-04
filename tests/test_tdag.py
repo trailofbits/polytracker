@@ -151,3 +151,19 @@ def test_output_taints(program_trace: ProgramTrace):
     assert outputs[5].offset == 5
     assert outputs[5].label == 5 
     
+@pytest.mark.program_trace("test_tdag.cpp")
+def test_inputs_affecting_control_flow(program_trace: ProgramTrace):
+    assert isinstance(program_trace, taint_dag.TDProgramTrace)
+
+    taints = program_trace.inputs_affecting_control_flow()
+    # Offsets 0,1,6,7 affect control flow
+    assert len(taints) == 4
+    regions = list(taints.regions())
+    assert len(regions) == 2
+    assert regions[0].source.path == str(input_path)
+    assert regions[0].offset == 0
+    assert regions[0].length == 2
+    assert regions[1].source.path == str(input_path)
+    assert regions[1].offset == 6
+    assert regions[1].length == 2
+
