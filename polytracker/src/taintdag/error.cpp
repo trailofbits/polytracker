@@ -1,4 +1,4 @@
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 
 #include <cstdlib>
 

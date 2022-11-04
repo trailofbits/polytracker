@@ -1,12 +1,19 @@
-#ifndef TDAG_LABELS_HPP
-#define TDAG_LABELS_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
 
-#include "taintdag/encoding.hpp"
-#include "taintdag/labeldeq.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/taint.hpp"
-#include "taintdag/union.hpp"
-#include "taintdag/util.hpp"
+#pragma once
+
+#include "taintdag/encoding.h"
+#include "taintdag/labeldeq.h"
+#include "taintdag/section.h"
+#include "taintdag/taint.h"
+#include "taintdag/union.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 
@@ -180,5 +187,3 @@ private:
   }
 };
 } // namespace taintdag
-
-#endif

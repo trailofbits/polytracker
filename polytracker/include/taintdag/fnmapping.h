@@ -18,9 +18,9 @@
 // this file as part of FunctionTracingPass.
 #if __cpp_concepts
 #if __cpp_lib_concepts
-#include "taintdag/outputfile.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/string_table.hpp"
+#include "taintdag/outputfile.h"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
 #endif
 #endif
 

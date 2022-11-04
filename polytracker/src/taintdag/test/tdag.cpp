@@ -6,14 +6,14 @@
 #include <optional>
 #include <span>
 
-#include "taintdag/outputfile.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/storage.hpp"
-#include "taintdag/string_table.hpp"
-#include "taintdag/taint_source.hpp"
-#include "taintdag/labels.hpp"
+#include "taintdag/outputfile.h"
+#include "taintdag/section.h"
+#include "taintdag/storage.h"
+#include "taintdag/string_table.h"
+#include "taintdag/taint_source.h"
+#include "taintdag/labels.h"
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 
 #include "error_exit_helper.h"
 namespace taintdag {

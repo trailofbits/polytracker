@@ -7,12 +7,12 @@
  */
 
 #include "taintdag/polytracker.h"
-#include "taintdag/util.hpp"
+#include "taintdag/util.h"
 #include <sanitizer/dfsan_interface.h>
 
 #include <sys/stat.h>
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
 

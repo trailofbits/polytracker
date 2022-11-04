@@ -2,7 +2,7 @@
 #define POLYTRACKER_TAINTDAG_TEST_HELPERS_HPP
 
 #include <cstdlib>
-#include "taintdag/taint.hpp"
+#include "taintdag/taint.h"
 
 namespace taintdag::test {
 

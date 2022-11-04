@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "taintdag/taint.hpp"
+#include "taintdag/taint.h"
 
 namespace taintdag {
 std::ostream &operator<<(std::ostream &os, SourceTaint const &s) {

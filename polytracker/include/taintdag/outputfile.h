@@ -1,13 +1,20 @@
-#ifndef TDAG_OUTPUTFILE_HPP
-#define TDAG_OUTPUTFILE_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <concepts>
 #include <filesystem>
 #include <span>
 #include <tuple>
 
-#include "taintdag/storage.hpp"
-#include "taintdag/util.hpp"
+#include "taintdag/storage.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 
@@ -164,5 +171,3 @@ private :
 };
 
 } // namespace taintdag
-
-#endif

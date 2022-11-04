@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 namespace taintdag {
 
 struct ErrorExit {};
