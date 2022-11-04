@@ -7,11 +7,7 @@ RUN apt-get update && \
 	apt-get install -y libcurl4-openssl-dev libssl-dev
 
 RUN git clone https://github.com/mdaus/nitro.git
-
 WORKDIR /polytracker/the_klondike/nitro
-COPY allow_clang_usage.patch .
-RUN git apply allow_clang_usage.patch
-
 RUN	mkdir build
 WORKDIR /polytracker/the_klondike/nitro/build
 
@@ -26,4 +22,5 @@ RUN polytracker instrument-targets \
 	--taint \
 	--ftrace \
 	show_nitf++
+
 RUN mv show_nitf++.instrumented nitro_track
