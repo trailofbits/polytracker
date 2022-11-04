@@ -76,10 +76,6 @@ class InputOutputMapping:
             ranges.append((start, len(m)))
         return ranges
 
-    def _cavity_file_size_hint(self, file: Path) -> int:
-        """Returns the size of the file, or zero if it doesn't exist"""
-        st = file.stat()
-        return st.st_size if st else 0
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
         seen: Set[LabelType] = set()
@@ -101,9 +97,8 @@ class InputOutputMapping:
                 # Attempt to get the size of the file, to prevent reallocation of the markers array.
                 # Use whatever size is greater (size hint will be zero for failures) to allocate the
                 # array.
-                source_path = self.tdfile.fd_headers[source_index][0]
-                size_hint = self._cavity_file_size_hint(source_path)
-                size = max(source_offset + 1, size_hint)
+                fdheader = self.tdfile.fd_headers[source_index][1]
+                size = source_offset + 1 if fdheader.invalid_size() else fdheader.size
                 markers[source_index] = bytearray(size)
 
             marker = markers[source_index]
