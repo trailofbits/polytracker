@@ -471,15 +471,12 @@ class TDProgramTrace(ProgramTrace):
 
     def inputs_affecting_control_flow(self) -> Taints:
         result: Set[ByteOffset] = set()
-        for _, fdhdr in self.tdfile.fd_headers:
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            for label in range(begin, end):
-                node = self.taint_forest.get_node(label)
-                if not node.is_canonical():
-                    break
-                if node.affected_control_flow:
-                    result.add(self.file_offset(node))
+
+        for source_label in self.tdfile.input_labels():
+            source_node = self.tdfile.decode_node(source_label)
+            if source_node.affects_control_flow:
+                tf_node = self.taint_forest.get_node(source_label)
+                result.add(self.file_offset(tf_node))
 
         return Taints(result)
 
