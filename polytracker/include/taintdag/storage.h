@@ -1,5 +1,12 @@
-#ifndef TDAG_STORAGE_HPP
-#define TDAG_STORAGE_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <cstddef>
 #include <filesystem>
@@ -8,7 +15,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 
 namespace taintdag {
 // Wrapping a file handle to a file of fixed size.
@@ -78,4 +85,3 @@ struct MMapFile {
 };
 
 } // namespace taintdag
-#endif

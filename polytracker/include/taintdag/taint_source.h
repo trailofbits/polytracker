@@ -1,12 +1,19 @@
-#ifndef TDAG_TAINT_SOURCE_HPP
-#define TDAG_TAINT_SOURCE_HPP
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <limits>
 #include <optional>
 
-#include "taintdag/section.hpp"
-#include "taintdag/string_table.hpp"
-#include "taintdag/taint.hpp"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
+#include "taintdag/taint.h"
 
 namespace taintdag {
 
@@ -80,4 +87,3 @@ private:
 };
 
 } // namespace taintdag
-#endif

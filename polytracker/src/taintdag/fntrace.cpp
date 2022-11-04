@@ -10,7 +10,7 @@
 
 #include <cstring>
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 
 namespace taintdag {
 

@@ -12,10 +12,10 @@
 #include <climits>
 #include <span>
 
-#include "taintdag/error.hpp"
-#include "taintdag/outputfile.hpp"
-#include "taintdag/taint.hpp"
-#include "taintdag/util.hpp"
+#include "taintdag/error.h"
+#include "taintdag/outputfile.h"
+#include "taintdag/taint.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 

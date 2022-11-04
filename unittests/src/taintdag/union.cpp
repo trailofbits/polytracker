@@ -6,7 +6,7 @@
 #include <variant>
 
 
-#include "taintdag/union.hpp"
+#include "taintdag/union.h"
 #include "test_helpers.hpp"
 
 using namespace taintdag;
