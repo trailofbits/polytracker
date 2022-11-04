@@ -549,9 +549,6 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
-            #begin = fdhdr.prealloc_label_begin
-            #end = fdhdr.prealloc_label_end
-            #source = Input(fdhdr.fd, str(path), end - begin)
             source = Input(fdhdr.fd, str(path), 0)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
