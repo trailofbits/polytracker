@@ -14,6 +14,7 @@
 #include "taintdag/section.h"
 #include "taintdag/string_table.h"
 #include "taintdag/taint.h"
+#include "taintdag/error.h"
 
 namespace taintdag {
 
@@ -46,9 +47,9 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
   Sources(SectionArg<OF> of)
       : FixedSizeAlloc{of.range},
         st_{of.output_file.template section<StringTable>()} {
-    // TODO(hbrodin): Drop the assert, replace with error_exit.
-    assert(of.range.size() <=
-           std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
+    if (of.range.size() > 
+           std::numeric_limits<index_t>::max() * sizeof(SourceEntry))
+           error_exit("Got larger allocation than can be addressed by the index_t type.");
   }
 
   std::optional<index_t> add_source(std::string_view name, int fd) {
