@@ -1,6 +1,7 @@
 import pytest
-from polytracker import taint_dag, ProgramTrace
+from polytracker import taint_dag, ProgramTrace, InputOutputMapping
 from typing import cast
+from pathlib import Path
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
@@ -57,3 +58,56 @@ def test_td_taint_forest(program_trace: ProgramTrace):
     # Synthetic nodes
     assert tdforest.get_node(-1).parent_labels == (1, 2)
     assert tdforest.get_node(-2).parent_labels == (-1, 3)
+
+@pytest.mark.program_trace("test_tdag.cpp")
+def test_input_output_mapping(program_trace: ProgramTrace):
+    assert isinstance(program_trace, taint_dag.TDProgramTrace)
+
+    tdfile = program_trace.tdfile
+
+    iomapping = InputOutputMapping(tdfile)
+    m = iomapping.mapping()
+
+    # There should be 6 inputs that make it to the output
+    assert len(m) == 6
+
+    # TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
+    input_path = Path("/polytracker/tests/test_data/test_data.txt")
+    output_path = Path("/polytracker/tests/test_data/test_data.txt.out")
+
+    r2_outputs = {(output_path, 0), (output_path, 1), (output_path, 2), (output_path, 3)}
+    eq_outputs = {(output_path, 4)}
+
+    # Offset zero in input is present in output (via r2 and eq)
+    assert (input_path, 0) in m.keys()
+    assert m[(input_path, 0)] == r2_outputs.union(eq_outputs) 
+
+    # Offsets 1,2,3 in input is present in output (via r2)
+    assert (input_path, 1) in m.keys()
+    assert m[(input_path, 1)] == r2_outputs
+    assert (input_path, 2) in m.keys()
+    assert m[(input_path, 2)] == r2_outputs
+    assert (input_path, 3) in m.keys()
+    assert m[(input_path, 3)] == r2_outputs
+
+    # data[4] (from test_tdag.cpp) written to output
+    assert (input_path, 4) in m.keys()
+    assert m[(input_path, 4)] == {(output_path, 5)}
+
+    # data[7] is in eq, written to output 4
+    assert (input_path, 7) in m.keys()
+    assert m[(input_path, 7)] == {(output_path, 4)}
+
+@pytest.mark.program_trace("test_tdag.cpp")
+def test_cavity_detection(program_trace: ProgramTrace):
+    assert isinstance(program_trace, taint_dag.TDProgramTrace)
+
+    tdfile = program_trace.tdfile
+
+    iomapping = InputOutputMapping(tdfile)
+    cav = iomapping.file_cavities()
+
+    # TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
+    input_path = Path("/polytracker/tests/test_data/test_data.txt")
+    assert input_path in cav.keys()
+    assert cav[input_path] == [(5, 6), (8, 29)]
