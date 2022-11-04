@@ -121,7 +121,7 @@ def test_inputs(program_trace: ProgramTrace):
     # TODO (hbrodin): Should probably not be exposed. Also, the fd is not necessarily unique
     # per run, which is in the documentation for uid.
     assert inputs[0].uid == 4 # stdin, stdout, stderr, tdag-file, input_path
-    assert inputs[0].size == 0 # TODO (hbrodin): Not set, should probably be removed
+    assert inputs[0].size == 29
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_output_taints(program_trace: ProgramTrace):
@@ -167,3 +167,4 @@ def test_inputs_affecting_control_flow(program_trace: ProgramTrace):
     assert regions[1].offset == 6
     assert regions[1].length == 2
 
+# TODO (hbrodin): Add a test case when the input file size cannot be determined, e.g. stdin

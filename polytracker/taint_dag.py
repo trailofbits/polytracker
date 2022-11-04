@@ -173,7 +173,14 @@ class TDFDHeader(Structure):
     _fields_ = [
         ("name_offset", c_uint32),
         ("fd", c_int32),
+        ("size", c_uint64),
     ]
+
+    def invalid_size(self):
+        return self.size == 0xffffffffffffffff 
+
+    def invalid_fd(self):
+        return self.fd == -1
 
 
 class TDFnHeader(Structure):
@@ -449,7 +456,7 @@ class TDProgramTrace(ProgramTrace):
             source_node = self.tdfile.decode_node(source_label)
             if not source_node.idx in seen:
                 path, fd_header = self.tdfile.fd_headers[source_node.idx]
-                yield Input(fd_header.fd, str(path), 0)
+                yield Input(fd_header.fd, str(path), fd_header.size)
                 seen.add(source_node.idx)
 
 
@@ -460,7 +467,7 @@ class TDProgramTrace(ProgramTrace):
             offset = sink.offset
             label = sink.label
             yield TDTaintOutput(
-                Input(fdhdr.fd, str(path), 0),
+                Input(fdhdr.fd, str(path), fdhdr.size),
                 offset,
                 label,
             )
@@ -549,7 +556,7 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
-            source = Input(fdhdr.fd, str(path), 0)
+            source = Input(fdhdr.fd, str(path), fdhdr.size)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):

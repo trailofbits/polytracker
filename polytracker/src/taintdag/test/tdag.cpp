@@ -274,7 +274,7 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
     int fd = 3;
     REQUIRE(!src.mapping_idx(fd));
 
-    auto s1 = src.add_source("test", fd);
+    auto s1 = src.add_source("test", fd, 122);
     REQUIRE(s1);
     auto m = src.mapping_idx(fd);
     REQUIRE(m);
@@ -283,15 +283,17 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
     auto m1 = src.get(*m);
     REQUIRE(m1.fd == fd);
     REQUIRE(m1.name(st) == "test");
+    REQUIRE(m1.size == 122);
 
     int fd2 = 99;
-    auto s2 = src.add_source("test2", fd2);
+    auto s2 = src.add_source("test2", fd2, SourceEntry::InvalidSize);
     REQUIRE(s2);
     auto idx2 = src.mapping_idx(fd2);
     REQUIRE(idx2);
     auto m2 = src.get(*idx2);
     REQUIRE(m2.fd == fd2);
     REQUIRE(m2.name(st) == "test2");
+    REQUIRE(m2.size == SourceEntry::InvalidSize);
   }
 
   SECTION("Latest wins in case of multiple mappings for same fd") {
