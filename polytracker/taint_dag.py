@@ -80,7 +80,7 @@ class TDStringSection:
 
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) > offset + n
+        assert len(self.section) >= offset + sizeof(c_uint16) + n
         return str(
             self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
