@@ -11,10 +11,10 @@
 #include <limits>
 #include <optional>
 
+#include "taintdag/error.h"
 #include "taintdag/section.h"
 #include "taintdag/string_table.h"
 #include "taintdag/taint.h"
-#include "taintdag/error.h"
 
 namespace taintdag {
 
@@ -23,7 +23,7 @@ namespace taintdag {
 struct SourceEntry {
   // Representing a size that cannot be determined (e.g. for a socket).
   static constexpr uint64_t InvalidSize = ~uint64_t(0);
-  
+
   // Use this when there is no fd representing this source (e.g. argv)
   static constexpr int InvalidFD = -1;
 
@@ -33,7 +33,8 @@ struct SourceEntry {
   // File descriptor currently representing this source.
   int fd;
 
-  // Size of source entry (e.g. file size), use SourceEntry::InvalidSize if not available.
+  // Size of source entry (e.g. file size), use SourceEntry::InvalidSize if not
+  // available.
   uint64_t size;
 
   // Helper to return the name string representing this taint source. The string
@@ -62,18 +63,22 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
   Sources(SectionArg<OF> of)
       : FixedSizeAlloc{of.range},
         st_{of.output_file.template section<StringTable>()} {
-    if (of.range.size() > 
-           std::numeric_limits<index_t>::max() * sizeof(SourceEntry))
-           error_exit("Got larger allocation than can be addressed by the index_t type.");
+    if (of.range.size() >
+        std::numeric_limits<index_t>::max() * sizeof(SourceEntry))
+      error_exit(
+          "Got larger allocation than can be addressed by the index_t type.");
   }
 
-  std::optional<index_t> add_source(std::string_view name, int fd = SourceEntry::InvalidFD, uint64_t size = SourceEntry::InvalidSize) {
+  std::optional<index_t> add_source(std::string_view name,
+                                    int fd = SourceEntry::InvalidFD,
+                                    uint64_t size = SourceEntry::InvalidSize) {
     // Allocate space for string,
     auto idx = st_.add_string(name);
     if (!idx)
       return {};
 
-    return map(construct(*idx, fd, size), [this](auto &ctx) { return index(ctx.t); });
+    return map(construct(*idx, fd, size),
+               [this](auto &ctx) { return index(ctx.t); });
   }
 
   std::optional<index_t> mapping_idx(int fd) const {
