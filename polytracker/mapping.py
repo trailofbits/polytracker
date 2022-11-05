@@ -76,7 +76,6 @@ class InputOutputMapping:
             ranges.append((start, len(m)))
         return ranges
 
-
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
         seen: Set[LabelType] = set()
         markers: Dict[int, bytearray] = {}
@@ -90,6 +89,7 @@ class InputOutputMapping:
         # be in the marker array already.
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
+            assert isinstance(source_node, TDSourceNode)
             source_index = source_node.idx
             source_offset = source_node.offset
 
@@ -103,7 +103,7 @@ class InputOutputMapping:
 
             marker = markers[source_index]
             if source_offset >= len(marker):
-                marker = marker.ljust(source_offset + 1, b'\0')
+                marker = marker.ljust(source_offset + 1, b"\0")
                 markers[source_index] = marker
 
             if source_node.affects_control_flow:
@@ -133,9 +133,11 @@ class InputOutputMapping:
                         elif isinstance(n, TDRangeNode):
                             seen.update(range(n.first, n.last + 1))
 
-
         # Convert the source index to the source path and marker bit arrays to ranges
-        return {self.tdfile.fd_headers[k][0]:self.marker_to_ranges(v) for (k,v) in markers.items()}
+        return {
+            self.tdfile.fd_headers[k][0]: self.marker_to_ranges(v)
+            for (k, v) in markers.items()
+        }
 
 
 class MapInputsToOutputs(Command):

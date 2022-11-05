@@ -1,5 +1,6 @@
 import pytest
-from polytracker import taint_dag, ProgramTrace, InputOutputMapping, Input
+from mapping import InputOutputMapping
+from polytracker import taint_dag, ProgramTrace, Input
 from typing import cast
 from pathlib import Path
 
@@ -7,12 +8,15 @@ from pathlib import Path
 input_path = Path("/polytracker/tests/test_data/test_data.txt")
 output_path = Path("/polytracker/tests/test_data/test_data.txt.out")
 
+
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_tdfile(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
-    assert tdfile.label_count == 14 # 8 source labels, 5 unions/ranges + zero-label (unused)
+    assert (
+        tdfile.label_count == 14
+    )  # 8 source labels, 5 unions/ranges + zero-label (unused)
 
     t1 = cast(taint_dag.TDSourceNode, tdfile.decode_node(1))
     assert isinstance(t1, taint_dag.TDSourceNode)
@@ -62,6 +66,7 @@ def test_td_taint_forest(program_trace: ProgramTrace):
     assert tdforest.get_node(-1).parent_labels == (1, 2)
     assert tdforest.get_node(-2).parent_labels == (-1, 3)
 
+
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_input_output_mapping(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
@@ -74,13 +79,17 @@ def test_input_output_mapping(program_trace: ProgramTrace):
     # There should be 6 inputs that make it to the output
     assert len(m) == 6
 
-
-    r2_outputs = {(output_path, 0), (output_path, 1), (output_path, 2), (output_path, 3)}
+    r2_outputs = {
+        (output_path, 0),
+        (output_path, 1),
+        (output_path, 2),
+        (output_path, 3),
+    }
     eq_outputs = {(output_path, 4)}
 
     # Offset zero in input is present in output (via r2 and eq)
     assert (input_path, 0) in m.keys()
-    assert m[(input_path, 0)] == r2_outputs.union(eq_outputs) 
+    assert m[(input_path, 0)] == r2_outputs.union(eq_outputs)
 
     # Offsets 1,2,3 in input is present in output (via r2)
     assert (input_path, 1) in m.keys()
@@ -97,6 +106,7 @@ def test_input_output_mapping(program_trace: ProgramTrace):
     # data[7] is in eq, written to output 4
     assert (input_path, 7) in m.keys()
     assert m[(input_path, 7)] == {(output_path, 4)}
+
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_cavity_detection(program_trace: ProgramTrace):
@@ -120,8 +130,9 @@ def test_inputs(program_trace: ProgramTrace):
     assert inputs[0].path == str(input_path)
     # TODO (hbrodin): Should probably not be exposed. Also, the fd is not necessarily unique
     # per run, which is in the documentation for uid.
-    assert inputs[0].uid == 4 # stdin, stdout, stderr, tdag-file, input_path
+    assert inputs[0].uid == 4  # stdin, stdout, stderr, tdag-file, input_path
     assert inputs[0].size == 29
+
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_output_taints(program_trace: ProgramTrace):
@@ -137,20 +148,21 @@ def test_output_taints(program_trace: ProgramTrace):
         assert outputs[i].source.uid == of.uid
         assert outputs[i].source.path == of.path
         assert outputs[i].offset == i
-        assert outputs[i].label == 12 
+        assert outputs[i].label == 12
 
     # Result of eq
     assert outputs[4].source.uid == of.uid
     assert outputs[4].source.path == of.path
     assert outputs[4].offset == 4
-    assert outputs[4].label == 13 
+    assert outputs[4].label == 13
 
     # Result of data[4]
     assert outputs[5].source.uid == of.uid
     assert outputs[5].source.path == of.path
     assert outputs[5].offset == 5
-    assert outputs[5].label == 5 
-    
+    assert outputs[5].label == 5
+
+
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_inputs_affecting_control_flow(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
@@ -166,5 +178,6 @@ def test_inputs_affecting_control_flow(program_trace: ProgramTrace):
     assert regions[1].source.path == str(input_path)
     assert regions[1].offset == 6
     assert regions[1].length == 2
+
 
 # TODO (hbrodin): Add a test case when the input file size cannot be determined, e.g. stdin
