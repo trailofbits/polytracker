@@ -2,8 +2,6 @@ from inspect import getmembers, isclass
 from pkgutil import iter_modules
 from importlib import import_module
 
-# from .database import DBProgramTrace as PolyTrackerTrace
-from .taint_dag import TDProgramTrace as PolyTrackerTrace
 from .polytracker import *
 
 # All of the classes in SUBMODULES_TO_SUBSUME should really be in the top-level `polytracker` module.

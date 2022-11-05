@@ -27,8 +27,8 @@ jobs:
           pip install .[dev]
       - name: C++ lint
         run: |
-          python third_party/run-clang-format/run-clang-format.py \
-          polytracker/include/polytracker/*.h polytracker/include/taintdag/*.{h,hpp} \
+          python3 third_party/run-clang-format/run-clang-format.py \
+          polytracker/include/polytracker/*.h polytracker/include/taintdag/*.h \
           polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
           polytracker/src/taint_sources/*.cpp polytracker/src/taintdag/*.cpp
       - name: Python lint/typecheck 
