@@ -4,6 +4,7 @@ from pkgutil import iter_modules
 from importlib import import_module
 
 from .polytracker import *
+from .taint_dag import TDProgramTrace as PolyTrackerTrace  # noqa:F401
 
 # All of the classes in SUBMODULES_TO_SUBSUME should really be in the top-level `polytracker` module.
 # They are separated into submodules solely for making the Python file sizes more manageable.

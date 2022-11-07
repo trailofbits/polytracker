@@ -1,12 +1,13 @@
-# from os import getenv
+from os import getenv
 import pytest
 
-# from shutil import copyfile
-# from subprocess import CalledProcessError
-# from tempfile import NamedTemporaryFile
+from shutil import copyfile
+from subprocess import CalledProcessError
+from tempfile import NamedTemporaryFile
 
 # TODO (hbrodin): Pending integration from other PR
-# from polytracker import PolyTrackerTrace, ProgramTrace
+from polytracker import PolyTrackerTrace
+from polytracker.tracing import ProgramTrace
 
 from .data import *
 
@@ -84,62 +85,61 @@ def polyclang_compile_target(target_name: str) -> int:
     return ret
 
 
-# TODO (hbrodin): Pending integration from other PR
 # Returns the Polyprocess object
-# def validate_execute_target(
-#     target_name: str,
-#     config_path: Optional[Union[str, Path]],
-#     input_bytes: Optional[bytes] = None,
-#     return_exceptions: bool = False,
-#     taint_all: bool = False,
-# ) -> Union[ProgramTrace, CalledProcessError]:
-#     target_bin_path = _get_instrumented_bin_path(target_name)
-#     if CAN_RUN_NATIVELY:
-#         assert target_bin_path.exists()
-#     db_path = TEST_RESULTS_DIR / f"{target_name}.db"
-#     if db_path.exists():
-#         db_path.unlink()
-#     if input_bytes is None:
-#         input_path = to_native_path(TEST_DATA_PATH)
-#         tmp_input_file = None
-#     else:
-#         tmp_input_file = NamedTemporaryFile(dir=str(TEST_DATA_DIR), delete=False)
-#         tmp_input_file.write(input_bytes)
-#         input_path = to_native_path(tmp_input_file.name)
-#         tmp_input_file.close()
-#     env = {
-#         "POLYPATH": input_path,
-#         "POLYDB": to_native_path(db_path),
-#         "POLYTRACE": "1",
-#         "POLYFUNC": "1",
-#         "POLYTRACKER_STDOUT_SINK": getenv("POLYTRACKER_STDOUT_SINK", "0"),
-#         "POLYTRACKER_STDERR_SINK": getenv("POLYTRACKER_STDERR_SINK", "0"),
-#         "POLYTRACKER_TAINT_ARGV": getenv("POLYTRACKER_TAINT_ARGV", "0"),
-#     }
-#     if taint_all:
-#         del env["POLYPATH"]
-#     tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
-#     if config_path is not None:
-#         copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
-#     try:
-#         ret_val = run_natively(env=env, *[to_native_path(target_bin_path), input_path])
-#     finally:
-#         if tmp_config.exists():
-#             tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
-#         if tmp_input_file is not None:
-#             path = Path(tmp_input_file.name)
-#             if path.exists():
-#                 path.unlink()
-#     if ret_val != 0:
-#         error = CalledProcessError(
-#             ret_val, f"`{target_bin_path} {' '.join(input_path)}`"
-#         )
-#         if return_exceptions:
-#             return error
-#         else:
-#             raise error
-#     # Assert that the appropriate files were created
-#     return PolyTrackerTrace.load(db_path)
+def validate_execute_target(
+    target_name: str,
+    config_path: Optional[Union[str, Path]],
+    input_bytes: Optional[bytes] = None,
+    return_exceptions: bool = False,
+    taint_all: bool = False,
+) -> Union[ProgramTrace, CalledProcessError]:
+    target_bin_path = _get_instrumented_bin_path(target_name)
+    if CAN_RUN_NATIVELY:
+        assert target_bin_path.exists()
+    db_path = TEST_RESULTS_DIR / f"{target_name}.db"
+    if db_path.exists():
+        db_path.unlink()
+    if input_bytes is None:
+        input_path = to_native_path(TEST_DATA_PATH)
+        tmp_input_file = None
+    else:
+        tmp_input_file = NamedTemporaryFile(dir=str(TEST_DATA_DIR), delete=False)
+        tmp_input_file.write(input_bytes)
+        input_path = to_native_path(tmp_input_file.name)
+        tmp_input_file.close()
+    env = {
+        "POLYPATH": input_path,
+        "POLYDB": to_native_path(db_path),
+        "POLYTRACE": "1",
+        "POLYFUNC": "1",
+        "POLYTRACKER_STDOUT_SINK": getenv("POLYTRACKER_STDOUT_SINK", "0"),
+        "POLYTRACKER_STDERR_SINK": getenv("POLYTRACKER_STDERR_SINK", "0"),
+        "POLYTRACKER_TAINT_ARGV": getenv("POLYTRACKER_TAINT_ARGV", "0"),
+    }
+    if taint_all:
+        del env["POLYPATH"]
+    tmp_config = Path(__file__).parent.parent / ".polytracker_config.json"
+    if config_path is not None:
+        copyfile(str(CONFIG_DIR / "new_range.json"), str(tmp_config))
+    try:
+        ret_val = run_natively(env=env, *[to_native_path(target_bin_path), input_path])
+    finally:
+        if tmp_config.exists():
+            tmp_config.unlink()  # we can't use `missing_ok=True` here because that's only available in Python 3.9
+        if tmp_input_file is not None:
+            path = Path(tmp_input_file.name)
+            if path.exists():
+                path.unlink()
+    if ret_val != 0:
+        error = CalledProcessError(
+            ret_val, f"`{target_bin_path} {' '.join(input_path)}`"
+        )
+        if return_exceptions:
+            return error
+        else:
+            raise error
+    # Assert that the appropriate files were created
+    return PolyTrackerTrace.load(db_path)
 
 
 @pytest.fixture
