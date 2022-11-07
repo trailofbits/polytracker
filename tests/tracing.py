@@ -1,8 +1,9 @@
-from os import getenv
+# from os import getenv
 import pytest
-from shutil import copyfile
-from subprocess import CalledProcessError
-from tempfile import NamedTemporaryFile
+
+# from shutil import copyfile
+# from subprocess import CalledProcessError
+# from tempfile import NamedTemporaryFile
 
 # TODO (hbrodin): Pending integration from other PR
 # from polytracker import PolyTrackerTrace, ProgramTrace

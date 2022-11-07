@@ -7,14 +7,12 @@ is in :mod:`polytracker.database`. For example, :class:`polytracker.database.DBP
 """
 
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser, Namespace, REMAINDER
+from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from enum import IntFlag
 import itertools
 from os.path import commonpath
 from pathlib import Path
-import subprocess
-from tempfile import TemporaryDirectory
 from typing import (
     Dict,
     Iterable,
@@ -25,14 +23,12 @@ from typing import (
     Tuple,
     Union,
 )
-import weakref
 
 from cxxfilt import demangle
 
 from .graphs import DiGraph
 from .inputs import Input, InputProperties
-from .plugins import Command, Subcommand
-from .repl import PolyTrackerREPL
+from .plugins import Command
 from .taint_forest import TaintForest, TaintForestNode
 
 

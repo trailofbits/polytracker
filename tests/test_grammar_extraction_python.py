@@ -16,6 +16,13 @@ from polytracker import (
 from polytracker.grammars import Grammar, parse_tree_to_grammar
 from polytracker.inputs import Input
 from polytracker.parsing import NonGeneralizedParseTree, trace_to_non_generalized_tree
+from tracing import (
+    BasicBlockEntry,
+    FunctionEntry,
+    FunctionReturn,
+    ProgramTrace,
+    TraceEvent,
+)
 
 
 class Counter:

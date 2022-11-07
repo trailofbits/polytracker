@@ -8,7 +8,7 @@ from intervaltree import Interval, IntervalTree
 from tqdm import tqdm
 
 from .plugins import Command
-from .tracing import Function, Input, TaintDiff, TaintedRegion
+from .tracing import Function, Input, ProgramTrace, TaintDiff, TaintedRegion
 from .visualizations import file_diff, Image, temporal_animation
 
 

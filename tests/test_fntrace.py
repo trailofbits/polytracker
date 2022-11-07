@@ -1,11 +1,11 @@
-import pytest
+# import pytest
 
-from collections import defaultdict
-from typing import Dict
+# from collections import defaultdict
+# from typing import Dict
 
-from polytracker import taint_dag, ProgramTrace
+# from polytracker import taint_dag, ProgramTrace
 
-# TODO (hbrodin): Pending integration from other PR
+# TODO (hbrodin): Pending integration from
 
 # @pytest.mark.xfail(reason="Pending integration from another PR")
 # @pytest.mark.program_trace("test_fntrace.cpp")
