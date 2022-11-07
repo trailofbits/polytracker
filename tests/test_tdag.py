@@ -1,12 +1,13 @@
 import pytest
 from polytracker import taint_dag, ProgramTrace, Input
 from polytracker.mapping import InputOutputMapping
+from .data import to_native_path
 from typing import cast
 from pathlib import Path
 
 # TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
-input_path = Path("/polytracker/tests/test_data/test_data.txt")
-output_path = Path("/polytracker/tests/test_data/test_data.txt.out")
+input_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt"))
+output_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt.out"))
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
