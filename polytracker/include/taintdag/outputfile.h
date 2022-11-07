@@ -23,19 +23,19 @@ template <typename T>
 concept Section = requires(T a) {
   // How much memory should be reserved for this seciton in the OutputFile.
   { T::allocation_size }
-  -> std::convertible_to<std::size_t>;
+  ->std::convertible_to<std::size_t>;
 
   // Alignment requirements on the section
   { T::align_of }
-  -> std::convertible_to<std::size_t>;
+  ->std::convertible_to<std::size_t>;
 
   // A type tag for this section
   { T::tag }
-  -> std::convertible_to<std::uint8_t>;
+  ->std::convertible_to<std::uint8_t>;
 
   // The actual amount of memory currently used
   { a.size() }
-  -> std::convertible_to<std::size_t>;
+  ->std::convertible_to<std::size_t>;
 };
 
 // Need a single arg to create instances of the Section type in place
@@ -140,7 +140,7 @@ public:
     return std::get<T>(sections_);
   }
 
-private :
+private:
   // Splits the larger pool of mmap:ed memory into smaller sections
   // and returns a span for each section type T
   template <typename T> std::span<uint8_t> do_allocation() {
