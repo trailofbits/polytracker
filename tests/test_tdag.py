@@ -68,10 +68,8 @@ def test_td_taint_forest(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_input_output_mapping(program_trace_with_path: Tuple[ProgramTrace, Path]):
-    program_trace = program_trace_with_path[0]
-    input_path = program_trace_with_path[1]
-    output_path = input_to_output_path(input_path)
+def test_input_output_mapping(input_file: Path, program_trace: ProgramTrace):
+    output_path = input_to_output_path(input_file)
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
@@ -91,30 +89,28 @@ def test_input_output_mapping(program_trace_with_path: Tuple[ProgramTrace, Path]
     eq_outputs = {(output_path, 4)}
 
     # Offset zero in input is present in output (via r2 and eq)
-    assert (input_path, 0) in m.keys()
-    assert m[(input_path, 0)] == r2_outputs.union(eq_outputs)
+    assert (input_file, 0) in m.keys()
+    assert m[(input_file, 0)] == r2_outputs.union(eq_outputs)
 
     # Offsets 1,2,3 in input is present in output (via r2)
-    assert (input_path, 1) in m.keys()
-    assert m[(input_path, 1)] == r2_outputs
-    assert (input_path, 2) in m.keys()
-    assert m[(input_path, 2)] == r2_outputs
-    assert (input_path, 3) in m.keys()
-    assert m[(input_path, 3)] == r2_outputs
+    assert (input_file, 1) in m.keys()
+    assert m[(input_file, 1)] == r2_outputs
+    assert (input_file, 2) in m.keys()
+    assert m[(input_file, 2)] == r2_outputs
+    assert (input_file, 3) in m.keys()
+    assert m[(input_file, 3)] == r2_outputs
 
     # data[4] (from test_tdag.cpp) written to output
-    assert (input_path, 4) in m.keys()
-    assert m[(input_path, 4)] == {(output_path, 5)}
+    assert (input_file, 4) in m.keys()
+    assert m[(input_file, 4)] == {(output_path, 5)}
 
     # data[7] is in eq, written to output 4
-    assert (input_path, 7) in m.keys()
-    assert m[(input_path, 7)] == {(output_path, 4)}
+    assert (input_file, 7) in m.keys()
+    assert m[(input_file, 7)] == {(output_path, 4)}
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_cavity_detection(program_trace_with_path: Tuple[ProgramTrace, Path]):
-    program_trace = program_trace_with_path[0]
-    input_path = program_trace_with_path[1]
+def test_cavity_detection(input_file: Path, program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
@@ -122,19 +118,17 @@ def test_cavity_detection(program_trace_with_path: Tuple[ProgramTrace, Path]):
     iomapping = InputOutputMapping(tdfile)
     cav = iomapping.file_cavities()
 
-    assert input_path in cav.keys()
-    assert cav[input_path] == [(5, 6), (8, 29)]
+    assert input_file in cav.keys()
+    assert cav[input_file] == [(5, 6), (8, 29)]
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_inputs(program_trace_with_path: Tuple[ProgramTrace, Path]):
-    program_trace = program_trace_with_path[0]
-    input_path = program_trace_with_path[1]
+def test_inputs(input_file: Path, program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     inputs = list(program_trace.inputs)
     assert len(inputs) == 1
-    assert inputs[0].path == str(input_path)
+    assert inputs[0].path == str(input_file)
     # TODO (hbrodin): Should probably not be exposed. Also, the fd is not necessarily unique
     # per run, which is in the documentation for uid.
     assert inputs[0].uid == 4  # stdin, stdout, stderr, tdag-file, input_path
@@ -142,10 +136,8 @@ def test_inputs(program_trace_with_path: Tuple[ProgramTrace, Path]):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_output_taints(program_trace_with_path: Tuple[ProgramTrace, Path]):
-    program_trace = program_trace_with_path[0]
-    input_path = program_trace_with_path[1]
-    output_path = input_to_output_path(input_path)
+def test_output_taints(input_file: Path, program_trace: ProgramTrace):
+    output_path = input_to_output_path(input_file)
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     outputs = list(program_trace.output_taints)
@@ -174,11 +166,7 @@ def test_output_taints(program_trace_with_path: Tuple[ProgramTrace, Path]):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_inputs_affecting_control_flow(
-    program_trace_with_path: Tuple[ProgramTrace, Path]
-):
-    program_trace = program_trace_with_path[0]
-    input_path = program_trace_with_path[1]
+def test_inputs_affecting_control_flow(input_file: Path, program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     taints = program_trace.inputs_affecting_control_flow()
@@ -186,10 +174,10 @@ def test_inputs_affecting_control_flow(
     assert len(taints) == 4
     regions = list(taints.regions())
     assert len(regions) == 2
-    assert regions[0].source.path == str(input_path)
+    assert regions[0].source.path == str(input_file)
     assert regions[0].offset == 0
     assert regions[0].length == 2
-    assert regions[1].source.path == str(input_path)
+    assert regions[1].source.path == str(input_file)
     assert regions[1].offset == 6
     assert regions[1].length == 2
 
