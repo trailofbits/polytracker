@@ -7,6 +7,7 @@ add_executable(
   taintdag.cpp
   encoding.cpp
   fnmapping.cpp
+  fntrace.cpp
   union.cpp
   labeldeq.cpp)
 
