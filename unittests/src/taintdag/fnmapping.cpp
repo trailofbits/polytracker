@@ -10,8 +10,6 @@
 
 #include <catch2/catch.hpp>
 
-#include <array>
-
 TEST_CASE("Test fnmapping operations") {
   namespace td = taintdag;
   SECTION("Add unique functions, functions are successfully inserted") {
@@ -30,8 +28,7 @@ TEST_CASE("Test fnmapping operations") {
     REQUIRE(functions.add_mapping("baz").value_or(3) == 2);
   }
 
-  SECTION("Add duplicate functions, duplicate functions have the same index")
-  {
+  SECTION("Add duplicate functions, duplicate functions have the same index") {
     td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
     auto &functions{of.section<td::Functions>()};
     auto foo_1{functions.add_mapping("foo").value_or(3)};
