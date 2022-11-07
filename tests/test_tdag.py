@@ -1,13 +1,12 @@
 import pytest
 from polytracker import taint_dag, ProgramTrace, Input
 from polytracker.mapping import InputOutputMapping
-from .data import to_native_path
-from typing import cast
+from typing import cast, Tuple
 from pathlib import Path
 
-# TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
-input_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt"))
-output_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt.out"))
+
+def input_to_output_path(input: Path) -> Path:
+    return Path(str(input) + ".out")
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
@@ -69,7 +68,10 @@ def test_td_taint_forest(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_input_output_mapping(program_trace: ProgramTrace):
+def test_input_output_mapping(program_trace_with_path: Tuple[ProgramTrace, Path]):
+    program_trace = program_trace_with_path[0]
+    input_path = program_trace_with_path[1]
+    output_path = input_to_output_path(input_path)
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
@@ -110,7 +112,9 @@ def test_input_output_mapping(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_cavity_detection(program_trace: ProgramTrace):
+def test_cavity_detection(program_trace_with_path: Tuple[ProgramTrace, Path]):
+    program_trace = program_trace_with_path[0]
+    input_path = program_trace_with_path[1]
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
@@ -123,7 +127,9 @@ def test_cavity_detection(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_inputs(program_trace: ProgramTrace):
+def test_inputs(program_trace_with_path: Tuple[ProgramTrace, Path]):
+    program_trace = program_trace_with_path[0]
+    input_path = program_trace_with_path[1]
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     inputs = list(program_trace.inputs)
@@ -136,7 +142,10 @@ def test_inputs(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_output_taints(program_trace: ProgramTrace):
+def test_output_taints(program_trace_with_path: Tuple[ProgramTrace, Path]):
+    program_trace = program_trace_with_path[0]
+    input_path = program_trace_with_path[1]
+    output_path = input_to_output_path(input_path)
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     outputs = list(program_trace.output_taints)
@@ -165,7 +174,11 @@ def test_output_taints(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_tdag.cpp")
-def test_inputs_affecting_control_flow(program_trace: ProgramTrace):
+def test_inputs_affecting_control_flow(
+    program_trace_with_path: Tuple[ProgramTrace, Path]
+):
+    program_trace = program_trace_with_path[0]
+    input_path = program_trace_with_path[1]
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     taints = program_trace.inputs_affecting_control_flow()
