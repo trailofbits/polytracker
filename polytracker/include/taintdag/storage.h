@@ -15,7 +15,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 
 namespace taintdag {
 // Wrapping a file handle to a file of fixed size.
@@ -40,7 +40,8 @@ struct FixedSizeFile {
   ~FixedSizeFile() {
     // Not moveable or copyable and constructor terminates if fd != -1
     if (fd == -1) {
-      error_exit("Attempting to close already closed file. Unexpected behavior.");
+      error_exit(
+          "Attempting to close already closed file. Unexpected behavior.");
     }
     close(fd);
 

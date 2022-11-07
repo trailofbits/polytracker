@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2022-present, Trail of Bits, Inc.
  * All rights reserved.
@@ -11,7 +10,7 @@
 
 #include <deque>
 
-#include "taintdag/taint.hpp"
+#include "taintdag/taint.h"
 
 namespace taintdag::utils {
 

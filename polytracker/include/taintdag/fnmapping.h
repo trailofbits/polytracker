@@ -12,9 +12,9 @@
 #include <optional>
 #include <string_view>
 
-#include "taintdag/outputfile.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/string_table.hpp"
+#include "taintdag/outputfile.h"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
 
 namespace taintdag {
 

@@ -44,4 +44,3 @@ auto map(std::optional<T> o, F &&f)
   else
     return {};
 }
-

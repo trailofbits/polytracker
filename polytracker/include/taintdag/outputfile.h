@@ -13,23 +13,28 @@
 #include <span>
 #include <tuple>
 
-#include "taintdag/storage.hpp"
-#include "taintdag/util.hpp"
+#include "taintdag/storage.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 
 // Records requirements on a Section in the OutputFile
-template <typename T>
-concept Section = requires(T a) {
+template <typename T> concept Section = requires(T a) {
   // How much memory should be reserved for this seciton in the OutputFile.
-  { T::allocation_size } -> std::convertible_to<std::size_t>;
+  { T::allocation_size }
+  ->std::convertible_to<std::size_t>;
+
   // Alignment requirements on the section
-  { T::align_of } -> std::convertible_to<std::size_t>;
+  { T::align_of }
+  ->std::convertible_to<std::size_t>;
+
   // A type tag for this section
-  { T::tag } -> std::convertible_to<std::uint8_t>;
+  { T::tag }
+  ->std::convertible_to<std::uint8_t>;
 
   // The actual amount of memory currently used
-  { a.size() } -> std::convertible_to<std::size_t>;
+  { a.size() }
+  ->std::convertible_to<std::size_t>;
 };
 
 // Need a single arg to create instances of the Section type in place
@@ -84,6 +89,11 @@ public:
     uint16_t section_count{sizeof...(Sections)};
   };
 
+  // The FileHeader is constructed at offset zero of the mapped memory (file).
+  // It contains the metadata required to parse a TDAG file. Initially each
+  // section is assumed to be allocation_size in size. On destruction of
+  // the OutputFile instance the size field of each section is updated to
+  // reflect the actual, used size.
   struct FileHeader {
     FileMeta meta;
     SectionMeta sections[sizeof...(Sections)] = {
@@ -94,15 +104,18 @@ public:
   };
 
   OutputFile(std::filesystem::path const &filename)
-      : mm_{std::move(filename), required_allocation_size()},
-        hdr_{new (mm_.begin) FileHeader}, alloc_ptr_{mm_.begin +
-                                                     sizeof(FileHeader)},
+      : mapped_memory_{std::move(filename), required_allocation_size()},
+        file_header_{new (mapped_memory_.begin) FileHeader},
+        alloc_ptr_{mapped_memory_.begin + sizeof(FileHeader)},
         sections_{(SectionArg<OutputFile>{
             .output_file = *this, .range = do_allocation<Sections>()})...} {
     // Assumes that the mmap:ed memory is page aligned and FileHeader
     // has less alignment requirements.
-    if (reinterpret_cast<uintptr_t>(mm_.begin) % alignof(FileHeader) != 0) {
-      error_exit("Mapped memory does not meet alignment requirement of FileHeader");
+    if (reinterpret_cast<uintptr_t>(mapped_memory_.begin) %
+            alignof(FileHeader) !=
+        0) {
+      error_exit(
+          "Mapped memory does not meet alignment requirement of FileHeader");
     }
   }
 
@@ -110,7 +123,8 @@ public:
     // Update the memory actually used by each section
     // TODO(hbrodin): Consider other implementation strategies.
     size_t _[] = {
-        hdr_->sections[util::TypeIndex<Sections,
+        file_header_
+            ->sections[util::TypeIndex<Sections,
                                        std::tuple<Sections...>>::index]
             .size = std::get<Sections>(sections_).size()...};
 
@@ -125,17 +139,15 @@ public:
     return std::get<T>(sections_);
   }
 
-private :
-    // Splits the larger pool of mmap:ed memory into smaller sections
-    // and returns a span for each section type T
-    template <typename T>
-    std::span<uint8_t>
-    do_allocation() {
+private:
+  // Splits the larger pool of mmap:ed memory into smaller sections
+  // and returns a span for each section type T
+  template <typename T> std::span<uint8_t> do_allocation() {
     constexpr auto idx = util::TypeIndex<T, std::tuple<Sections...>>::index;
     constexpr auto align = T::align_of;
     auto begin = alloc_ptr_ + (reinterpret_cast<uintptr_t>(alloc_ptr_) % align);
     auto end = alloc_ptr_ = begin + T::allocation_size;
-    hdr_->sections[idx].offset = begin - mm_.begin;
+    file_header_->sections[idx].offset = begin - mapped_memory_.begin;
     return {begin, end};
   }
 
@@ -155,11 +167,10 @@ private :
     return header_size + sections_accumulated + alignment_accumulated;
   }
 
-  MMapFile mm_;
-  FileHeader *hdr_;
+  MMapFile mapped_memory_;
+  FileHeader *file_header_;
   uint8_t *alloc_ptr_;
   std::tuple<Sections...> sections_;
 };
 
 } // namespace taintdag
-

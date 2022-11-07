@@ -7,12 +7,12 @@
  */
 
 #include "taintdag/polytracker.h"
-#include "taintdag/util.hpp"
+#include "taintdag/util.h"
 #include <sanitizer/dfsan_interface.h>
 
 #include <sys/stat.h>
 
-#include "taintdag/error.hpp"
+#include "taintdag/error.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
 
@@ -28,10 +28,20 @@ label_t PolyTracker::union_labels(label_t l1, label_t l2) {
 }
 
 void PolyTracker::open_file(int fd, fs::path const &path) {
+  // Try to determine the file size. If unknown, just mark it as unknown.
+  uint64_t size = [fd]() -> uint64_t {
+    struct stat st;
+    if (fstat(fd, &st) == 0) {
+      return st.st_size;
+    } else {
+      return SourceEntry::InvalidSize;
+    }
+  }();
+
   // TODO (hbrodin): If we decide to separate sources and sinks, extend this
   // method to accept a direction parameter e.g. in, inout, out and make an
   // additional call to add a sink.
-  output_file_.section<Sources>().add_source(path.string(), fd);
+  output_file_.section<Sources>().add_source(path.string(), fd, size);
 }
 
 void PolyTracker::close_file(int fd) {
@@ -45,6 +55,10 @@ taint_range_t PolyTracker::create_source_taint(source_index_t src,
   // Allocate the source taint labels
   auto rng = output_file_.section<Labels>().create_source_labels(src, offset,
                                                                  dst.size());
+
+  // Add the source labels to the source label index
+  output_file_.section<SourceLabelIndexSection>().set_range(
+      BitIndex{rng.first}, BitCount{dst.size()});
 
   // Mark memory with corresponding labels
   // NOTE(hbrodin): The const_cast is unfortunate. Memory pointed to by &c will
@@ -91,7 +105,7 @@ PolyTracker::create_taint_source(std::string_view name,
                                  std::span<uint8_t> dst) {
 
   return map(
-      output_file_.section<Sources>().add_source(name, -1),
+      output_file_.section<Sources>().add_source(name),
       [dst, this](auto src) { return this->create_source_taint(src, dst, 0); });
 }
 

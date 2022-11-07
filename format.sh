@@ -7,7 +7,7 @@ set -e
 # In CI this runs against the third_party clang_format checker 
 # Note that we are using clang-format 10 locally and in CI 
 clang-format -i polytracker/src/**/*.cpp
-clang-format -i polytracker/include/**/*.{h,hpp}
+clang-format -i polytracker/include/**/*.h
 
 # Black to auto format code, mypy for type checking
 # Temporarily disabled because a bug in black is causing it not to reach a

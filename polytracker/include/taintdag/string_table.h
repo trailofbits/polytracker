@@ -12,9 +12,9 @@
 #include <iterator>
 #include <limits>
 
-#include "taintdag/error.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/util.hpp"
+#include "taintdag/error.h"
+#include "taintdag/section.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 

@@ -16,13 +16,14 @@ from pathlib import Path
 from mmap import mmap, PROT_READ
 from ctypes import (
     Structure,
-    c_char, c_int64,
+    c_char,
+    c_int64,
     c_uint64,
     c_int32,
     c_uint32,
     c_uint8,
     c_uint16,
-    c_uint16, sizeof,
+    sizeof,
 )
 
 from .plugins import Command
@@ -42,6 +43,12 @@ from .tracing import (
 
 
 class TDFileMeta(Structure):
+    """TDAG File metadata.
+
+    File header describing the overall layout of the TDAG file.
+    Corresponds to OutputFile::FileMeta in outputfile.h
+    """
+
     _fields_ = [
         ("tdag", c_char * 4),
         ("magic", c_uint16),
@@ -53,6 +60,12 @@ class TDFileMeta(Structure):
 
 
 class TDSectionMeta(Structure):
+    """TDAG Section metadata.
+
+    Section header describing a particular section in the TDAG file.
+    Corresponds to OutputFile::SectionMeta in outputfile.h
+    """
+
     _fields_ = [
         ("tag", c_uint32),
         ("align", c_uint32),
@@ -65,6 +78,12 @@ class TDSectionMeta(Structure):
 
 
 class TDSourceSection:
+    """TDAG Taint Sources section.
+
+    Interprets the Taint Sources section in a TDAG file.
+    Corresponds to Sources in sources.h.
+    """
+
     def __init__(self, mem, hdr):
         self.mem = mem[hdr.offset : hdr.offset + hdr.size]
 
@@ -74,13 +93,19 @@ class TDSourceSection:
 
 
 class TDStringSection:
+    """TDAG String Table section
+
+    Interprets the String Table section in a TDAG file.
+    Corresponds to StringTableBase in string_table.h.
+    """
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
         self.align = hdr.align
 
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) > offset + n
+        assert len(self.section) >= offset + sizeof(c_uint16) + n
         return str(
             self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
@@ -88,6 +113,12 @@ class TDStringSection:
 
 
 class TDLabelSection:
+    """TDAG Labels section
+
+    Interprets the stored taint nodes section in a TDAG file.
+    Corresponds to Labels in labels.h.
+    """
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
@@ -99,6 +130,12 @@ class TDLabelSection:
 
 
 class TDSinkSection:
+    """TDAG Sinks section
+
+    Interprets the sink entries section in a TDAG file.
+    Corresponds to TaintSinkBase in sink.h.
+    """
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
@@ -107,35 +144,60 @@ class TDSinkSection:
             yield TDSink.from_buffer_copy(self.section[offset:])
 
 
-class TDHeader(Structure):
-    _fields_ = [
-        ("fd_mapping_offset", c_uint64),
-        ("fd_mapping_count", c_uint64),
-        ("tdag_mapping_offset", c_uint64),
-        ("tdag_mapping_size", c_uint64),
-        ("sink_mapping_offset", c_uint64),
-        ("sink_mapping_size", c_uint64),
-        ("fn_mapping_offset", c_uint64),
-        ("fn_mapping_count", c_uint64),
-        ("fn_trace_offset", c_uint64),
-        ("fn_trace_count", c_uint64),
-    ]
+class TDBitmapSection:
+    """Represents a bitmap section encoded by BitmapSectionBase.
 
-    def __repr__(self) -> str:
-        return (
-            f"FileHdr:\n\tfdmapping_ofs: {self.fd_mapping_offset}\n\tfdmapping_count: {self.fd_mapping_count}\n\t"
-            f"tdag_mapping_offset: {self.tdag_mapping_offset}\n\ttdag_mapping_size: {self.tdag_mapping_size}\n\t"
-            f"sink_mapping_offset: {self.sink_mapping_offset}\n\tsink_mapping_size: {self.sink_mapping_size}\n\t"
-            f"fnmapping_offset: {self.fn_mapping_offset}\n\tfnmapping_count: {self.fn_mapping_count}\n\t"
-            f"fntrace_offset: {self.fn_trace_offset}\n\tfntrace_count: {self.fn_trace_count}\n\t"
-        )
+    The only configuration currently supported is to have the BucketType template
+    parameter of BitmapSectionBase as uint64_t. It also requires the endianess to
+    not change as the implementation does not handle endianess in any specific way.
+    """
+
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        assert len(self.section) % 8 == 0  # Multiple of uint64_t
+
+    def enumerate_set_bits(self):
+        """Enumerates all bits that are set
+
+        The index of each bit that is set will be yielded.
+        """
+        index = 0
+        for offset in range(0, len(self.section), sizeof(c_uint64)):
+            bucket = c_uint64.from_buffer_copy(self.section[offset:]).value
+            if bucket == 0:
+                index += 64  # No bits set, just advance the bit index
+            else:
+                # At least one bit is set, iterate over all bits and yield set bits
+                for i in range(0, 64):
+                    if (bucket >> i) & 1:
+                        yield index
+                    index += 1
+
+
+class TDSourceIndexSection(TDBitmapSection):
+    """Represents the source index section.
+
+    It is a bitmap of all labels that are source taints.
+    """
+
+    def __init__(self, mem, hdr):
+        super().__init__(mem, hdr)
 
 
 class TDFDHeader(Structure):
+    """Python representation of the SourceEntry from taint_source.h"""
+
     _fields_ = [
         ("name_offset", c_uint32),
         ("fd", c_int32),
+        ("size", c_uint64),
     ]
+
+    def invalid_size(self):
+        return self.size == 0xFFFFFFFFFFFFFFFF
+
+    def invalid_fd(self):
+        return self.fd == -1
 
 
 class TDFnHeader(Structure):
@@ -186,6 +248,8 @@ class TDUnionNode(TDNode):
 
 
 class TDSink(Structure):
+    """Python representation of the SinkLogEntry from sink.h"""
+
     # _pack_ = 1
     _fields_ = [("offset", c_int64), ("label", c_uint32), ("fdidx", c_uint8)]
 
@@ -219,9 +283,16 @@ class TDFile:
         self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
-        print(self.filemeta)
         section_offset = sizeof(TDFileMeta)
-        self.sections = []
+        self.sections: List[
+            Union[
+                TDLabelSection,
+                TDSourceSection,
+                TDStringSection,
+                TDSinkSection,
+                TDSourceIndexSection,
+            ]
+        ] = []
         for i in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
@@ -232,20 +303,12 @@ class TDFile:
                 self.sections.append(TDStringSection(self.buffer, hdr))
             elif hdr.tag == 4:
                 self.sections.append(TDSinkSection(self.buffer, hdr))
+            elif hdr.tag == 5:
+                self.sections.append(TDSourceIndexSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
 
             section_offset += sizeof(TDSectionMeta)
-
-        print(self.sections)
-
-        self.header = TDHeader.from_buffer_copy(self.buffer)  # type: ignore
-
-        assert self.header.fd_mapping_offset > 0
-        assert self.header.tdag_mapping_offset > 0
-        assert self.header.tdag_mapping_size > 0
-        assert self.header.sink_mapping_offset > 0
-        assert self.header.fn_mapping_offset > 0
 
         self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
@@ -263,11 +326,16 @@ class TDFile:
             lambda x: (Path(strings.read_string(x.name_offset)), x), sources.enumerate()
         )
 
-    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
-        offset = self.header.fn_mapping_offset
-        count = self.header.fn_mapping_count
-        for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
-            yield name, cast(TDFnHeader, hdr)
+    # TODO (hbrodin): Pending integration from other PR
+    # def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+    #     offset = self.header.fn_mapping_offset
+    #     count = self.header.fn_mapping_count
+    #     for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
+    #         yield name, cast(TDFnHeader, hdr)
+
+    def input_labels(self) -> Iterator[int]:
+        """Enumerates all taint labels that are input labels (source taint)"""
+        return self._get_section(TDSourceIndexSection).enumerate_set_bits()
 
     @property
     def label_count(self):
@@ -312,27 +380,16 @@ class TDFile:
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
-    @property
-    def events(self) -> Iterator[TDEvent]:
+    # TODO (hbrodin): Pending integration from other PR
+    # @property
+    # def events(self) -> Iterator[TDEvent]:
 
-        offset = self.header.fn_trace_offset
-        end = offset + self.header.fn_trace_count * sizeof(TDEvent)
+    #     offset = self.header.fn_trace_offset
+    #     end = offset + self.header.fn_trace_count * sizeof(TDEvent)
 
-        while offset < end:
-            yield self.read_event(offset)
-            offset += sizeof(TDEvent)
-
-    def read_event(self, offset: int) -> TDEvent:
-        return TDEvent.from_buffer_copy(self.buffer, offset)
-
-    @property
-    def events(self) -> Iterator[TDEvent]:
-        offset = self.header.fn_trace_offset
-        end = offset + self.header.fn_trace_count * sizeof(TDEvent)
-
-        while offset < end:
-            yield self.read_event(offset)
-            offset += sizeof(TDEvent)
+    #     while offset < end:
+    #         yield self.read_event(offset)
+    #         offset += sizeof(TDEvent)
 
 
 class TDTaintOutput(TaintOutput):
@@ -347,6 +404,7 @@ class TDProgramTrace(ProgramTrace):
     def __init__(self, file: BinaryIO) -> None:
         self.tdfile: TDFile = TDFile(file)
         self.tforest: TDTaintForest = TDTaintForest(self)
+        self._inputs = None
 
     def __contains__(self, uid: int):
         return super().__contains__(uid)
@@ -405,22 +463,26 @@ class TDProgramTrace(ProgramTrace):
 
     @property
     def inputs(self) -> Iterator[Input]:
-        for path, fdhdr in self.tdfile.fd_headers:
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            if isinstance(self.tdfile.decode_node(begin), TDSourceNode):
-                yield Input(fdhdr.fd, str(path), end - begin)
+        # TODO (hbrodin): Current implementation needs to do a lot of work
+        # to determine if a file header is an input or not. Consider
+        # implementation alternatives.
+        seen: Set[int] = set()
+        for source_label in self.tdfile.input_labels():
+            source_node = self.tdfile.decode_node(source_label)
+            assert isinstance(source_node, TDSourceNode)
+            if source_node.idx not in seen:
+                path, fd_header = self.tdfile.fd_headers[source_node.idx]
+                yield Input(fd_header.fd, str(path), fd_header.size)
+                seen.add(source_node.idx)
 
     @property
     def output_taints(self) -> Iterator[TDTaintOutput]:
         for sink in self.tdfile.sinks:
             path, fdhdr = self.tdfile.fd_headers[sink.fdidx]
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
             offset = sink.offset
             label = sink.label
             yield TDTaintOutput(
-                Input(fdhdr.fd, path, end - begin),
+                Input(fdhdr.fd, str(path), fdhdr.size),
                 offset,
                 label,
             )
@@ -431,15 +493,12 @@ class TDProgramTrace(ProgramTrace):
 
     def inputs_affecting_control_flow(self) -> Taints:
         result: Set[ByteOffset] = set()
-        for _, fdhdr in self.tdfile.fd_headers:
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            for label in range(begin, end):
-                node = self.taint_forest.get_node(label)
-                if not node.is_canonical():
-                    break
-                if node.affected_control_flow:
-                    result.add(self.file_offset(node))
+
+        for source_label in self.tdfile.input_labels():
+            source_node = self.tdfile.decode_node(source_label)
+            if source_node.affects_control_flow:
+                tf_node = self.taint_forest.get_node(source_label)
+                result.add(self.file_offset(tf_node))
 
         return Taints(result)
 
@@ -512,9 +571,7 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
-            begin = fdhdr.prealloc_label_begin
-            end = fdhdr.prealloc_label_end
-            source = Input(fdhdr.fd, str(path), end - begin)
+            source = Input(fdhdr.fd, str(path), fdhdr.size)
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):

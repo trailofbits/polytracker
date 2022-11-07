@@ -11,17 +11,34 @@
 #include <limits>
 #include <optional>
 
-#include "taintdag/section.hpp"
-#include "taintdag/string_table.hpp"
-#include "taintdag/taint.hpp"
+#include "taintdag/error.h"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
+#include "taintdag/taint.h"
 
 namespace taintdag {
 
+// Holds information about a single taint source. In the current impl
+// it is reused to represent sinks as well.
 struct SourceEntry {
+  // Representing a size that cannot be determined (e.g. for a socket).
+  static constexpr uint64_t InvalidSize = ~uint64_t(0);
+
+  // Use this when there is no fd representing this source (e.g. argv)
+  static constexpr int InvalidFD = -1;
+
   // Relative to StringTable memory start
   StringTable::offset_t string_offset;
+
+  // File descriptor currently representing this source.
   int fd;
 
+  // Size of source entry (e.g. file size), use SourceEntry::InvalidSize if not
+  // available.
+  uint64_t size;
+
+  // Helper to return the name string representing this taint source. The string
+  // is stored in a separate StringTable that needs to be passed as argument.
   std::string_view name(StringTable const &st) const {
     return st.from_offset(string_offset);
   }
@@ -46,19 +63,23 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
   Sources(SectionArg<OF> of)
       : FixedSizeAlloc{of.range},
         st_{of.output_file.template section<StringTable>()} {
-    // TODO(hbrodin): Drop the assert, replace with error_exit.
-    assert(of.range.size() <=
-           std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
+    if (of.range.size() >
+        std::numeric_limits<index_t>::max() * sizeof(SourceEntry))
+      error_exit(
+          "Got larger allocation than can be addressed by the index_t type.");
   }
 
-  std::optional<index_t> add_source(std::string_view name, int fd) {
-    // Write source name into the string table section
+  std::optional<index_t> add_source(std::string_view name,
+                                    int fd = SourceEntry::InvalidFD,
+                                    uint64_t size = SourceEntry::InvalidSize) {
+    // Allocate space for string,
     auto idx = st_.add_string(name);
     if (!idx) {
       return {};
     }
 
-    return map(construct(*idx, fd), [this](auto &ctx) { return index(ctx.t); });
+    return map(construct(*idx, fd, size),
+               [this](auto &ctx) { return index(ctx.t); });
   }
 
   std::optional<index_t> mapping_idx(int fd) const {
