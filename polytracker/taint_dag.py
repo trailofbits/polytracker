@@ -284,7 +284,15 @@ class TDFile:
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
-        self.sections = []
+        self.sections: List[
+            Union[
+                TDLabelSection,
+                TDSourceSection,
+                TDStringSection,
+                TDSinkSection,
+                TDSourceIndexSection,
+            ]
+        ] = []
         for i in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
@@ -318,11 +326,12 @@ class TDFile:
             lambda x: (Path(strings.read_string(x.name_offset)), x), sources.enumerate()
         )
 
-    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
-        offset = self.header.fn_mapping_offset
-        count = self.header.fn_mapping_count
-        for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
-            yield name, cast(TDFnHeader, hdr)
+    # TODO (hbrodin): Pending integration from other PR
+    # def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+    #     offset = self.header.fn_mapping_offset
+    #     count = self.header.fn_mapping_count
+    #     for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
+    #         yield name, cast(TDFnHeader, hdr)
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
@@ -371,15 +380,16 @@ class TDFile:
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
-    @property
-    def events(self) -> Iterator[TDEvent]:
+    # TODO (hbrodin): Pending integration from other PR
+    # @property
+    # def events(self) -> Iterator[TDEvent]:
 
-        offset = self.header.fn_trace_offset
-        end = offset + self.header.fn_trace_count * sizeof(TDEvent)
+    #     offset = self.header.fn_trace_offset
+    #     end = offset + self.header.fn_trace_count * sizeof(TDEvent)
 
-        while offset < end:
-            yield self.read_event(offset)
-            offset += sizeof(TDEvent)
+    #     while offset < end:
+    #         yield self.read_event(offset)
+    #         offset += sizeof(TDEvent)
 
 
 class TDTaintOutput(TaintOutput):
@@ -459,6 +469,7 @@ class TDProgramTrace(ProgramTrace):
         seen: Set[int] = set()
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
+            assert isinstance(source_node, TDSourceNode)
             if source_node.idx not in seen:
                 path, fd_header = self.tdfile.fd_headers[source_node.idx]
                 yield Input(fd_header.fd, str(path), fd_header.size)

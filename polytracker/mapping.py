@@ -89,6 +89,7 @@ class InputOutputMapping:
         # be in the marker array already.
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
+            assert isinstance(source_node, TDSourceNode)
             source_index = source_node.idx
             source_offset = source_node.offset
 
