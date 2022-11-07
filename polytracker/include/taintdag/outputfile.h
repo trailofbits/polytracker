@@ -19,8 +19,7 @@
 namespace taintdag {
 
 // Records requirements on a Section in the OutputFile
-template <typename T>
-concept Section = requires(T a) {
+template <typename T> concept Section = requires(T a) {
   // How much memory should be reserved for this seciton in the OutputFile.
   { T::allocation_size }
   ->std::convertible_to<std::size_t>;
