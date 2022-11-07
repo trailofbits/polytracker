@@ -4,7 +4,6 @@ import logging
 import pkg_resources
 
 from .tracing import *
-from typing import Union
 
 log = logging.getLogger("PolyTracker")
 
