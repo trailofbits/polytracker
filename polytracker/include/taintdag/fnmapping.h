@@ -18,7 +18,7 @@
 
 namespace taintdag {
 
-struct FunctionEntry {
+struct Function {
 public:
   using offset_t = uint32_t;
   using length_t = uint32_t;
@@ -26,23 +26,18 @@ public:
   length_t name_len;
 };
 
-class Functions : public FixedSizeAlloc<FunctionEntry> {
+class Functions : public FixedSizeAlloc<Function> {
 public:
   using index_t = uint16_t;
 
   static constexpr uint8_t tag{5};
   static constexpr size_t allocation_size{std::numeric_limits<index_t>::max() *
-                                          sizeof(FunctionEntry)};
+                                          sizeof(Function)};
 
   template <typename OF>
   Functions(SectionArg<OF> of)
       : FixedSizeAlloc{of.range},
-        string_table{of.output_file.template section<StringTable>()} {
-    // TODO(hbrodin): Drop the assert, replace with error_exit.
-    // assert(of.range.size() <=
-    //        std::numeric_limits<index_t>::max() * sizeof(SourceEntry));
-    util::dump_range("Functions", of.range);
-  }
+        string_table{of.output_file.template section<StringTable>()} {}
 
   std::optional<index_t> add_mapping(std::string_view name);
 

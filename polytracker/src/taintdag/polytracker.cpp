@@ -139,16 +139,19 @@ void PolyTracker::affects_control_flow(label_t lbl) {
 }
 
 Functions::index_t PolyTracker::function_entry(std::string_view name) {
-  auto maybe_index{output_file_.section<Functions>().add_mapping(name)};
+  auto &functions{output_file_.section<Functions>()};
+  auto maybe_index{functions.add_mapping(name)};
   if (!maybe_index) {
     error_exit("Failed to add function mapping for: ", name);
   }
-  // fnt_.log_fn_event(FnTrace::event_t::kind_t::entry, *maybe_index);
+  auto &events{output_file_.section<Events>()};
+  events.log_fn_event(Event::kind_t::entry, *maybe_index);
   return *maybe_index;
 }
 
 void PolyTracker::function_exit(Functions::index_t index) {
-  // fnt_.log_fn_event(FnTrace::event_t::kind_t::exit, index);
+  auto &events{output_file_.section<Events>()};
+  events.log_fn_event(Event::kind_t::exit, index);
 }
 
 } // namespace taintdag

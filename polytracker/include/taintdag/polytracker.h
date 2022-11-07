@@ -14,6 +14,7 @@
 #include <span>
 
 #include "taintdag/fnmapping.h"
+#include "taintdag/fntrace.h"
 #include "taintdag/labels.hpp"
 #include "taintdag/sink.hpp"
 #include "taintdag/string_table.hpp"
@@ -25,7 +26,7 @@ namespace taintdag {
 class PolyTracker {
 
   using NewOutputFile =
-      OutputFile<Sources, Labels, Functions, StringTable, TaintSink>;
+      OutputFile<Sources, Labels, StringTable, TaintSink, Functions, Events>;
 
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
