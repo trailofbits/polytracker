@@ -27,12 +27,14 @@ std::optional<index_t> Functions::add_mapping(std::string_view name) {
   if (!maybe_name_offset) {
     return {};
   }
-  // Get `FunctionEntry` construct context
-  auto maybe_ctx{construct(*maybe_name_offset, uint16_t(name.size()))};
+  // Write a `Function` via `construct`
+  auto name_offset{*maybe_name_offset};
+  auto name_len{Function::length_t(name.size())};
+  auto maybe_ctx{construct(name_offset, name_len)};
   if (!maybe_ctx) {
     return {};
   }
-  // Return index of `FunctionEntry` in memory
+  // Return index of `Function` in `Functions`
   return index(maybe_ctx->t);
 }
 

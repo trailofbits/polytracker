@@ -11,34 +11,24 @@
 #include "taintdag/fnmapping.h"
 
 #include <cstdint>
-#include <mutex>
 
 namespace taintdag {
 
-class FnTrace {
+struct Event {
 public:
-  using offset_t = uint32_t;
-  using fn_index_t = Functions::index_t;
+  enum class kind_t : uint8_t { entry, exit };
+  kind_t kind;
+  Functions::index_t function;
+};
 
-  struct event_t {
-    enum class kind_t : uint8_t { entry, exit };
-    kind_t kind;
-    fn_index_t function;
-  };
+class Events : public FixedSizeAlloc<Event> {
+public:
+  static constexpr uint8_t tag{6};
+  static constexpr size_t allocation_size{std::numeric_limits<uint32_t>::max() *
+                                          sizeof(Event)};
 
-  FnTrace(char *begin, char *end);
-  void log_fn_event(event_t::kind_t kind, fn_index_t idx);
-  size_t get_event_count();
-
-private:
-  // Trace markers
-  char *trace_begin{nullptr};
-  char *trace_end{nullptr};
-  char *events_end{nullptr};
-  // Trace mutex
-  std::mutex memory_m;
-  // Helpers
-  std::optional<offset_t> write_event(event_t event);
+  template <typename OF> Events(SectionArg<OF> of) : FixedSizeAlloc{of.range} {}
+  void log_fn_event(Event::kind_t kind, Functions::index_t idx);
 };
 
 } // namespace taintdag
