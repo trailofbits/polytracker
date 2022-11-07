@@ -1,4 +1,5 @@
 from inspect import getmembers, isclass
+from pathlib import Path
 from pkgutil import iter_modules
 from importlib import import_module
 

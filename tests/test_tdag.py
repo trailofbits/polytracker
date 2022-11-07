@@ -1,5 +1,6 @@
 import pytest
-from polytracker import taint_dag, ProgramTrace, InputOutputMapping, Input
+from mapping import InputOutputMapping
+from polytracker import taint_dag, ProgramTrace, Input
 from typing import cast
 from pathlib import Path
 
