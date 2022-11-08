@@ -54,24 +54,39 @@ def input_file(tmp_path):
 
 
 @pytest.fixture
-def program_trace(input_file, monkeypatch, request):
-    # Run everything in a per-test temporary directory
-    monkeypatch.chdir(input_file.parent)
-    # Build a clean test binary to get a blight journal
+def target_source(request):
+    """Locates the target source file to instrument"""
     marker = request.node.get_closest_marker("program_trace")
     tstdir = Path(request.fspath).parent
-    target = tstdir / Path(marker.args[0])
-    binary = Path(f"{target.stem}.bin").resolve()
-    build(target, binary)
-    # Build an instrumented test binary
-    trace_file = Path(f"{target.stem}.db").resolve()
-    trace_file.unlink(missing_ok=True)
+    return tstdir / Path(marker.args[0])
+
+
+@pytest.fixture
+def instrumented_binary(tmp_path, monkeypatch, target_source):
+    """Instruments the target source and returns the instrumented binary path"""
+    monkeypatch.chdir(tmp_path)
+    binary = Path(f"{target_source.stem}.bin").resolve()
+    build(target_source, binary)
     instrument(binary.name)
-    # Run the instrumented binary to get a trace file
+    return Path(f"{binary.stem}.instrumented").resolve()
+
+
+@pytest.fixture
+def trace_file(target_source):
+    """Produces a path to the polytracker DB given a target_source"""
+    dbpath = Path(f"{target_source.stem}.db").resolve()
+    dbpath.unlink(missing_ok=True)
+    return dbpath
+
+
+@pytest.fixture
+def program_trace(input_file, trace_file, instrumented_binary, monkeypatch, request):
+    # Run everything in a per-test temporary directory
+    monkeypatch.chdir(input_file.parent)
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
         # instrumented binary
-        Path(f"{binary.stem}.instrumented").resolve(),
+        instrumented_binary,
         # input data
         str(input_file),
     ]
