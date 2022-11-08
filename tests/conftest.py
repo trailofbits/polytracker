@@ -80,7 +80,7 @@ def trace_file(target_source):
 
 
 @pytest.fixture
-def program_trace(input_file, trace_file, instrumented_binary, monkeypatch, request):
+def program_trace(input_file, trace_file, instrumented_binary, monkeypatch):
     # Run everything in a per-test temporary directory
     monkeypatch.chdir(input_file.parent)
     monkeypatch.setenv("POLYDB", str(trace_file))
