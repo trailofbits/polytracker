@@ -14,6 +14,8 @@ clang-format -i polytracker/include/**/*.h
 # reformatting fixed point (every subsequent call causes reformatting)
 black polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
 flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
-flake8 polytracker tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+flake8 polytracker tests --ignore=F405,F403,W503,E203 --count --exit-zero --max-complexity=30 --max-line-length=127 --statistics
 
-mypy --ignore-missing-imports polytracker tests
+mypy --python-version 3.7 --ignore-missing-imports polytracker tests
+mypy --python-version 3.8 --ignore-missing-imports polytracker tests
+mypy --python-version 3.9 --ignore-missing-imports polytracker tests

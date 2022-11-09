@@ -173,7 +173,6 @@ class DBBasicBlock(Base, BasicBlock):  # type: ignore
     _children: Optional[Set[BasicBlock]] = None
     _predecessors: Optional[Set[BasicBlock]] = None
 
-    @property
     def entries(self) -> Iterator[BasicBlockEntry]:
         return stream_results(
             Session.object_session(self)
@@ -323,6 +322,7 @@ class DBTraceEvent(Base, TraceEvent):  # type: ignore
     def uid(self) -> int:  # type: ignore
         return self.event_id
 
+    @property
     def touched_taint(self) -> bool:
         return bool(self.accessed_labels)
 

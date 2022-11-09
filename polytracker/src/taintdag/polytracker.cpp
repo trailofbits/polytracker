@@ -79,8 +79,8 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        size_t length) {
   return map(
       output_file_.section<Sources>().mapping_idx(fd),
-      [dst = std::span(reinterpret_cast<uint8_t const *>(mem), length),
-       this](auto src) { return this->create_source_taint(src, dst, 0); });
+      [dst = std::span(reinterpret_cast<uint8_t const *>(mem), length), offset,
+       this](auto src) { return this->create_source_taint(src, dst, offset); });
 }
 
 // Introduce source taint when reading from taint source fd.
