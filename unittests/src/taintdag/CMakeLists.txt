@@ -8,6 +8,7 @@ add_executable(
   fnmapping.cpp
   union.cpp
   labeldeq.cpp
+  stream_offset.cpp
   tdag.cpp)
 
 target_include_directories(

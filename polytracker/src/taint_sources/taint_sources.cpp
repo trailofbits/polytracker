@@ -144,6 +144,7 @@ EXT_C_FUNC ssize_t __dfsw_read(int fd, void *buff, size_t size,
                                dfsan_label fd_label, dfsan_label buff_label,
                                dfsan_label size_label, dfsan_label *ret_label) {
   long read_start = lseek(fd, 0, SEEK_CUR);
+  printf("Read start: %ld\n", read_start);
   ssize_t ret_val = read(fd, buff, size);
 
   if (ret_val > 0)
@@ -237,9 +238,50 @@ EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
   return c;
 }
 
+EXT_C_FUNC int __dfsw_getc(FILE *fd, dfsan_label fd_label,
+                           dfsan_label *ret_label) {
+  long offset = ftell(fd);
+  int c = getc(fd);
+  *ret_label = 0;
+  if (c != EOF) {
+    auto tr =
+        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
+  }
+  return c;
+}
+
+EXT_C_FUNC int __dfsw_getc_unlocked(FILE *fd, dfsan_label fd_label,
+                                    dfsan_label *ret_label) {
+  long offset = ftell(fd);
+  int c = getc_unlocked(fd);
+  *ret_label = 0;
+  if (c != EOF) {
+    auto tr =
+        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
+  }
+  return c;
+}
+
 EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
   long offset = ftell(stdin);
   int c = getchar();
+  *ret_label = 0;
+  if (c != EOF) {
+    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset,
+                                                  sizeof(char));
+    if (tr)
+      *ret_label = tr.value().first;
+  }
+  return c;
+}
+
+EXT_C_FUNC int __dfsw_getchar_unlocked(dfsan_label *ret_label) {
+  long offset = ftell(stdin);
+  int c = getchar_unlocked();
   *ret_label = 0;
   if (c != EOF) {
     auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset,

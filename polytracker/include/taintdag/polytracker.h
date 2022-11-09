@@ -16,6 +16,7 @@
 #include "taintdag/labels.h"
 #include "taintdag/outputfile.h"
 #include "taintdag/sink.h"
+#include "taintdag/stream_offset.h"
 #include "taintdag/string_table.h"
 #include "taintdag/taint.h"
 #include "taintdag/taint_source.h"
@@ -77,6 +78,11 @@ private:
   using ConcreteOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink,
                                         SourceLabelIndexSection>;
   ConcreteOutputFile output_file_;
+
+  // Tracking source offsets for streams (where offsets can be determined by
+  // ftell) per source index.
+  static constexpr size_t offset_capacity = size_t{max_source_index} + 1;
+  StreamOffset<offset_capacity> stream_offsets_;
 };
 
 } // namespace taintdag

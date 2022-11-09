@@ -31,7 +31,7 @@ void PolyTracker::open_file(int fd, fs::path const &path) {
   // Try to determine the file size. If unknown, just mark it as unknown.
   uint64_t size = [fd]() -> uint64_t {
     struct stat st;
-    if (fstat(fd, &st) == 0) {
+    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) {
       return st.st_size;
     } else {
       return SourceEntry::InvalidSize;
@@ -74,26 +74,43 @@ taint_range_t PolyTracker::create_source_taint(source_index_t src,
 //
 // If fd is not tracked as a taint source, no labels will be assigned to the
 // corresponding mem.
+// NOTE: If offset < 0, the assumption is made that offsets aren't known and
+// per source tracking should be used. This typically happens for stdin, sockets
+// and other streams.
 std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        source_offset_t offset,
                                                        size_t length) {
-  return map(
-      output_file_.section<Sources>().mapping_idx(fd),
-      [dst = std::span(reinterpret_cast<uint8_t const *>(mem), length), offset,
-       this](auto src) { return this->create_source_taint(src, dst, offset); });
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
+      source_index) {
+    if (offset < 0) {
+      offset = stream_offsets_.read(*source_index, length);
+    }
+    return create_source_taint(*source_index,
+                               {reinterpret_cast<uint8_t const *>(mem), length},
+                               offset);
+  }
+  return {};
 }
 
 // Introduce source taint when reading from taint source fd.
 //
-// If fd is not tracked as a taint source, no labels will be assigned to the
-// corresponding mem.
+// If fd is not tracked as a taint source, no action will be taken.
+// NOTE: If offset < 0, the assumption is made that offsets aren't known and
+// per source tracking should be used. This typically happens for  stdin.
 std::optional<taint_range_t>
 PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
-  return map(output_file_.section<Sources>().mapping_idx(fd),
-             [&, this](auto src) {
-               return this->output_file_.section<Labels>().create_source_labels(
-                   src, offset, length);
-             });
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
+      source_index) {
+    if (offset < 0) {
+      offset = stream_offsets_.read(*source_index, length);
+    }
+    auto range = output_file_.section<Labels>().create_source_labels(
+        *source_index, offset, length);
+    output_file_.section<SourceLabelIndexSection>().set_range(
+        BitIndex{range.first}, BitCount{length});
+    return range;
+  }
+  return {};
 }
 
 // Introduce source taint to a named memory location
