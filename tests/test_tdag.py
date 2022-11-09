@@ -14,9 +14,8 @@ def test_tdfile(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
 
     tdfile = program_trace.tdfile
-    assert (
-        tdfile.label_count == 14
-    )  # 8 source labels, 5 unions/ranges + zero-label (unused)
+    # 8 source labels, 5 unions/ranges + zero-label (unused)
+    assert tdfile.label_count == 14
 
     t1 = cast(taint_dag.TDSourceNode, tdfile.decode_node(1))
     assert isinstance(t1, taint_dag.TDSourceNode)

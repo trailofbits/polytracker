@@ -49,7 +49,6 @@ def input_file(tmp_path):
     # Create a file with input data
     input = tmp_path / "test_data.txt"
     input.write_text("{abcdefgh9jklmnopqrstuvwxyz}\n")
-    print(f"Returning {input}")
     return input
 
 
