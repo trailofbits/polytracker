@@ -17,7 +17,7 @@ namespace taintdag {
 
 extern std::function<void(int)> error_function;
 
-template <typename... Msgs> void error_exit(Msgs &&... msgs) {
+template <typename... Msgs> void error_exit(Msgs &&...msgs) {
   std::stringstream ss;
   (ss << ... << msgs);
   spdlog::error(ss.str());
