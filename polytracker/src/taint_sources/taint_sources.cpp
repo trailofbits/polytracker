@@ -144,12 +144,12 @@ EXT_C_FUNC ssize_t __dfsw_read(int fd, void *buff, size_t size,
                                dfsan_label fd_label, dfsan_label buff_label,
                                dfsan_label size_label, dfsan_label *ret_label) {
   long read_start = lseek(fd, 0, SEEK_CUR);
-  printf("Read start: %ld\n", read_start);
   ssize_t ret_val = read(fd, buff, size);
 
   if (ret_val > 0)
     get_polytracker_tdag().source_taint(fd, buff, read_start, ret_val);
 
+  *ret_label = 0;
   return ret_val;
 }
 
