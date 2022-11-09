@@ -184,6 +184,24 @@ class TDSourceIndexSection(TDBitmapSection):
         super().__init__(mem, hdr)
 
 
+class TDFunctionsSection:
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+
+    def __iter__(self):
+        for offset in range(0, len(self.section), sizeof(TDFnHeader)):
+            yield TDFnHeader.from_buffer_copy(self.section, offset)
+
+
+class TDEventsSection:
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+
+    def __iter__(self):
+        for offset in range(0, len(self.section), sizeof(TDEvent)):
+            yield TDEvent.from_buffer_copy(self.section, offset)
+
+
 class TDFDHeader(Structure):
     """Python representation of the SourceEntry from taint_source.h"""
 
@@ -291,6 +309,8 @@ class TDFile:
                 TDStringSection,
                 TDSinkSection,
                 TDSourceIndexSection,
+                TDFunctionsSection,
+                TDEventsSection,
             ]
         ] = []
         for i in range(0, self.filemeta.section_count):
@@ -305,6 +325,10 @@ class TDFile:
                 self.sections.append(TDSinkSection(self.buffer, hdr))
             elif hdr.tag == 5:
                 self.sections.append(TDSourceIndexSection(self.buffer, hdr))
+            elif hdr.tag == 6:
+                self.sections.append(TDFunctionsSection(self.buffer, hdr))
+            elif hdr.tag == 7:
+                self.sections.append(TDEventsSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
 
@@ -314,6 +338,7 @@ class TDFile:
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
+        self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
 
     def _get_section(self, wanted_type):
         return next(filter(lambda x: isinstance(x, wanted_type), self.sections))
@@ -326,12 +351,13 @@ class TDFile:
             lambda x: (Path(strings.read_string(x.name_offset)), x), sources.enumerate()
         )
 
-    # TODO (hbrodin): Pending integration from other PR
-    # def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
-    #     offset = self.header.fn_mapping_offset
-    #     count = self.header.fn_mapping_count
-    #     for name, hdr in self._read_mapping_header(offset, count, TDFnHeader):
-    #         yield name, cast(TDFnHeader, hdr)
+    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+        functions = self._get_section(TDFunctionsSection)
+        strings = self._get_section(TDStringSection)
+
+        for header in functions:
+            name = strings.read_string(header.name_offset)
+            yield (name, header)
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
@@ -380,17 +406,9 @@ class TDFile:
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
-    # TODO (hbrodin): Pending integration from other PR
-    # @property
-    # def events(self) -> Iterator[TDEvent]:
-
-    #     offset = self.header.fn_trace_offset
-    #     end = offset + self.header.fn_trace_count * sizeof(TDEvent)
-
-    #     while offset < end:
-    #         yield self.read_event(offset)
-    #         offset += sizeof(TDEvent)
-
+    @property
+    def events(self) -> Iterator[TDEvent]:
+        yield from self._get_section(TDEventsSection)
 
 class TDTaintOutput(TaintOutput):
     def __init__(self, source: Input, output_offset: int, label: int):
