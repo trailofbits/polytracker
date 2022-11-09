@@ -4,7 +4,7 @@ This module maps input byte offsets to output byte offsets
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Iterator
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 from tqdm import tqdm
 
 from .plugins import Command
@@ -22,7 +22,7 @@ class InputOutputMapping:
         self.tdfile: TDFile = f
 
     def dfs_walk(
-        self, label: LabelType, seen: Set[LabelType] = None
+        self, label: LabelType, seen: Optional[Set[LabelType]] = None
     ) -> Iterator[Tuple[LabelType, TDNode]]:
         if seen is None:
             seen = set()

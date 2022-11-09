@@ -876,7 +876,7 @@ class FunctionReturn(ControlFlowEvent):
     @property
     def basic_block(self) -> BasicBlock:
         """The basic block that called `return`. For the return site of the function, use `self.returning_to`"""
-        return super().basic_block
+        raise NotImplementedError()
 
     @property
     def returning_to(self) -> Optional[BasicBlockEntry]:
