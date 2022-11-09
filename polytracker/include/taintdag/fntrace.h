@@ -23,7 +23,7 @@ public:
 
 class Events : public FixedSizeAlloc<Event> {
 public:
-  static constexpr uint8_t tag{6};
+  static constexpr uint8_t tag{7};
   static constexpr size_t allocation_size{std::numeric_limits<uint32_t>::max() *
                                           sizeof(Event)};
 

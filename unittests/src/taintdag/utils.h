@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "taintdag/taint.hpp"
+#include "taintdag/taint.h"
 #include <cstdlib>
 #include <random>
 

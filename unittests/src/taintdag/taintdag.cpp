@@ -15,9 +15,9 @@
 #include <filesystem>
 #include <tuple>
 
-#include "taintdag/outputfile.hpp"
-#include "taintdag/labels.hpp"
-#include "taintdag/taint.hpp"
+#include "taintdag/outputfile.h"
+#include "taintdag/labels.h"
+#include "taintdag/taint.h"
 
 #include "utils.h"
 
