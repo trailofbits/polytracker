@@ -22,7 +22,7 @@ get(typename std::aligned_storage<sizeof(T), alignof(T)>::type &src) {
 template <typename T, typename... Args>
 __attribute__((always_inline)) void
 construct(typename std::aligned_storage<sizeof(T), alignof(T)>::type &dst,
-          Args &&...args) {
+          Args &&... args) {
   ::new (&dst) T(std::forward<Args>(args)...);
 }
 

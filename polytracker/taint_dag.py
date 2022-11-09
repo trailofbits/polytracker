@@ -410,7 +410,6 @@ class TDFile:
     def events(self) -> Iterator[TDEvent]:
         yield from self._get_section(TDEventsSection)
 
-
 class TDTaintOutput(TaintOutput):
     def __init__(self, source: Input, output_offset: int, label: int):
         super().__init__(source, output_offset, label)
