@@ -30,7 +30,7 @@ class Functions : public FixedSizeAlloc<Function> {
 public:
   using index_t = uint16_t;
 
-  static constexpr uint8_t tag{5};
+  static constexpr uint8_t tag{6};
   static constexpr size_t allocation_size{std::numeric_limits<index_t>::max() *
                                           sizeof(Function)};
 
