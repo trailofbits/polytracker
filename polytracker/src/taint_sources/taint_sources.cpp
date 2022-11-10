@@ -2,9 +2,11 @@
 #include "polytracker/early_construct.h"
 #include "polytracker/polytracker.h"
 
+#include "taintdag/error.h"
 #include "taintdag/polytracker.h"
 
 #include <algorithm>
+#include <arpa/inet.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <iostream>
@@ -19,6 +21,7 @@
 #include <string.h>
 #include <string>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <thread>
 #include <time.h>
@@ -398,4 +401,107 @@ EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
 
 EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
   exit(ret_code);
+}
+
+// Socket functions
+
+// TODO (hbrodin): Should this be moved somewhere in the PolyTracker class?
+static std::optional<std::string> connect_name(int socket) {
+  sockaddr_in local_addr, remote_addr;
+  socklen_t local_len{sizeof(local_addr)}, remote_len{sizeof(remote_addr)};
+  char local_str[64], remote_str[64];
+
+  if (int ret = getsockname(socket, reinterpret_cast<sockaddr *>(&local_addr),
+                            &local_len);
+      ret != 0) {
+    taintdag::error_exit("Failed to get sockname for socket ", socket);
+  }
+
+  // The only supported address family for now is AF_INET
+  if (local_addr.sin_family != AF_INET)
+    return {};
+
+  if (int ret = getpeername(socket, reinterpret_cast<sockaddr *>(&remote_addr),
+                            &remote_len);
+      ret != 0) {
+    taintdag::error_exit("Failed to get peername for socket ", socket);
+  }
+
+  if (!inet_ntop(AF_INET, &(local_addr.sin_addr), local_str,
+                 sizeof(local_str))) {
+    taintdag::error_exit("inet_ntop failed for remote addr");
+  }
+
+  if (!inet_ntop(AF_INET, &(remote_addr.sin_addr), remote_str,
+                 sizeof(remote_str))) {
+    taintdag::error_exit("inet_ntop failed for remote addr");
+  }
+
+  std::stringstream strm;
+  strm << "socket:" << local_str << ":" << ntohs(local_addr.sin_port) << "-"
+       << remote_str << ":" << ntohs(remote_addr.sin_port);
+
+  return strm.str();
+}
+
+EXT_C_FUNC int __dfsw_accept(int socket, struct sockaddr *address,
+                             socklen_t *address_len, dfsan_label socket_label,
+                             dfsan_label address_label,
+                             dfsan_label address_len_label,
+                             dfsan_label *ret_label) {
+  int client_socket = ::accept(socket, address, address_len);
+  if (client_socket >= 0) {
+    if (auto name = connect_name(client_socket); name) {
+      get_polytracker_tdag().open_file(client_socket, *name);
+    }
+  }
+
+  *ret_label = 0;
+  return client_socket;
+}
+
+EXT_C_FUNC int __dfsw_connect(int socket, const struct sockaddr *address,
+                              socklen_t address_len, dfsan_label socket_label,
+                              dfsan_label address_label,
+                              dfsan_label address_len_label,
+                              dfsan_label *ret_label) {
+  int status = ::connect(socket, address, address_len);
+  if (status == 0) {
+    if (auto name = connect_name(socket); name) {
+      get_polytracker_tdag().open_file(socket, *name);
+    }
+  }
+
+  *ret_label = 0;
+  return status;
+}
+
+EXT_C_FUNC ssize_t __dfsw_recv(int socket, void *buff, size_t length, int flags,
+                               dfsan_label socket_label, dfsan_label buff_label,
+                               dfsan_label length_label,
+                               dfsan_label flags_label,
+                               dfsan_label *ret_label) {
+  ssize_t ret_val = recv(socket, buff, length, flags);
+
+  if (ret_val > 0)
+    get_polytracker_tdag().source_taint(socket, buff, -1, ret_val);
+
+  *ret_label = 0;
+  return ret_val;
+}
+
+EXT_C_FUNC ssize_t __dfsw_recvfrom(
+    int socket, void *buffer, size_t length, int flags,
+    struct sockaddr *address, socklen_t *address_len, dfsan_label socket_label,
+    dfsan_label buffer_label, dfsan_label length_label, dfsan_label flags_label,
+    dfsan_label address_label, dfsan_label address_len_label,
+    dfsan_label *ret_label) {
+  ssize_t ret_val =
+      recvfrom(socket, buffer, length, flags, address, address_len);
+
+  if (ret_val > 0)
+    get_polytracker_tdag().source_taint(socket, buffer, -1, ret_val);
+
+  *ret_label = 0;
+  return ret_val;
 }
