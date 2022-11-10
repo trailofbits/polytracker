@@ -8,9 +8,6 @@
 
 #include "taintdag/fnmapping.h"
 
-#include <algorithm>
-#include <cstring>
-#include <limits>
 #include <string_view>
 
 namespace taintdag {
@@ -22,6 +19,10 @@ using index_t = Functions::index_t;
 } // namespace
 
 std::optional<index_t> Functions::add_mapping(std::string_view name) {
+  // See if we already have a mapping of `name`
+  if (auto it{mappings.find(name)}; it != mappings.end()) {
+    return it->second;
+  }
   // Write `name` into the string table section
   auto maybe_name_offset{string_table.add_string(name)};
   if (!maybe_name_offset) {
@@ -34,7 +35,7 @@ std::optional<index_t> Functions::add_mapping(std::string_view name) {
     return {};
   }
   // Return index of `Function` in `Functions`
-  return index(maybe_ctx->t);
+  return mappings[name] = index(maybe_ctx->t);
 }
 
 } // namespace taintdag

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
 
 #include "taintdag/outputfile.hpp"
 #include "taintdag/section.hpp"
@@ -41,6 +42,7 @@ public:
 
 private:
   StringTable &string_table;
+  std::unordered_map<std::string_view, index_t> mappings;
 };
 
 } // namespace taintdag
