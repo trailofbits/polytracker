@@ -20,10 +20,8 @@ namespace taintdag {
 
 struct Function {
 public:
-  using offset_t = uint32_t;
-  using length_t = uint32_t;
+  using offset_t = StringTable::offset_t;
   offset_t name_offset;
-  length_t name_len;
 };
 
 class Functions : public FixedSizeAlloc<Function> {
