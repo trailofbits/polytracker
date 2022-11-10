@@ -28,7 +28,7 @@ public:
                                           sizeof(Event)};
 
   template <typename OF> Events(SectionArg<OF> of) : FixedSizeAlloc{of.range} {}
-  
+
   void log_fn_event(Event::kind_t kind, Functions::index_t idx);
 };
 
