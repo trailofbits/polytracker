@@ -63,8 +63,7 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
   Sources(SectionArg<OF> of)
       : FixedSizeAlloc{of.range},
         st_{of.output_file.template section<StringTable>()} {
-    if (of.range.size() >
-        std::numeric_limits<index_t>::max() * sizeof(SourceEntry))
+    if (of.range.size() > allocation_size)
       error_exit(
           "Got larger allocation than can be addressed by the index_t type.");
   }
