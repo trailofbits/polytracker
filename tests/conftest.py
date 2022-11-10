@@ -22,7 +22,7 @@ def run_polytracker(cmd: List[str]) -> None:
 
 
 def build(target: Path, binary: Path) -> None:
-    assert target.exists
+    assert target.exists()
 
     cmd = ["build"]
     if target.suffix == ".cpp":
