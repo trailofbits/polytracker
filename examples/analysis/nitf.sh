@@ -36,7 +36,7 @@ function analyse {
         done
 
         # now time against the polytracker version
-        # don't produce output since polytracker writes a bunch of stuff that differs from the nitf parser
+        # don't write a file, since polytracker writes a bunch of stuff that differs from the nitf parser. use polytracker.tdag.
         time_it ${POLYTRACKER_NITRO_LOCATION}/nitro_track $nitf 2>/dev/null
 
         # keep the tdag so we don't overwrite it with the next nitro

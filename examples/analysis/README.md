@@ -33,6 +33,8 @@ Ideally, all your non-Polytracker nitro builds will be in the working directory,
 $ ./nitf.sh nitro-gcc nitro-cc nitro-clang
 ```
 
+It may be also interesting to include the uninstrumented version of Nitro which Polytracker also produces in the standard build directory spot in the comparison (`/polytracker/the_klondike/nitro/build/modules/c++/nitf/show_nitf++`), just to see what the Blight version of Clang does to Nitro by default.
+
 ### Output
 Parser output will follow `output/${nitf_file_name}/${nitro-compiler}_output.txt`. Timing / memory / IO output will be to stdout unless you choose to redirect it elsewhere.
 
