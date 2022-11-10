@@ -18,6 +18,14 @@ TEST_CASE("Test fntrace operations") {
     td::Functions::index_t fnidx{0};
     events.log_fn_event(td::Event::kind_t::entry, fnidx);
     events.log_fn_event(td::Event::kind_t::exit, fnidx);
-    SECTION("Events are successfully written") { REQUIRE(events.count() == 2); }
+    SECTION("Events are successfully written") {
+      REQUIRE(events.count() == 2);
+      td::Event entry{*events.begin()};
+      REQUIRE(entry.kind == td::Event::kind_t::entry);
+      REQUIRE(entry.function == fnidx);
+      td::Event exit{*(events.begin() + 1)};
+      REQUIRE(exit.kind == td::Event::kind_t::exit);
+      REQUIRE(exit.function == fnidx);
+    }
   }
 }
