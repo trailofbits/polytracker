@@ -218,10 +218,7 @@ class TDFDHeader(Structure):
 
 
 class TDFnHeader(Structure):
-    _fields_ = [
-        ("name_offset", c_uint32),
-        ("name_len", c_uint32),
-    ]
+    _fields_ = [("name_offset", c_uint32)]
 
 
 class TDNode:
