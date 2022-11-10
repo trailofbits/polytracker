@@ -331,9 +331,9 @@ for example, any mapped columns or relationships.</p>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">children</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Set" title="(in Python v3.11)"><span class="pre">Set</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.BasicBlock" title="polytracker.tracing.BasicBlock"><span class="pre">BasicBlock</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.database.DBBasicBlock.children" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py property">
+<dl class="py method">
 <dt class="sig sig-object py" id="polytracker.database.DBBasicBlock.entries">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">entries</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry" title="polytracker.tracing.BasicBlockEntry"><span class="pre">BasicBlockEntry</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.database.DBBasicBlock.entries" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">entries</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.BasicBlockEntry" title="polytracker.tracing.BasicBlockEntry"><span class="pre">BasicBlockEntry</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.database.DBBasicBlock.entries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Yields all trace events associated with entering this basic block.</p>
 </dd></dl>
 
@@ -570,9 +570,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBBasicBlockEntry.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBBasicBlockEntry.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBBasicBlockEntry.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBBasicBlockEntry.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -717,9 +717,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBCallIndirect.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallIndirect.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBCallIndirect.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -869,9 +869,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBCallUninst.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBCallUninst.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBCallUninst.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -1120,9 +1120,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEntry.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEntry.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBFunctionEntry.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBFunctionEntry.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -1267,9 +1267,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionEvent.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBFunctionEvent.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBFunctionEvent.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -1553,9 +1553,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBFunctionReturn.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBFunctionReturn.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBFunctionReturn.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBFunctionReturn.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
@@ -2301,9 +2301,9 @@ for example, any mapped columns or relationships.</p>
 <span class="sig-name descname"><span class="pre">thread_id</span></span><a class="headerlink" href="#polytracker.database.DBTraceEvent.thread_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
+<dl class="py property">
 <dt class="sig sig-object py" id="polytracker.database.DBTraceEvent.touched_taint">
-<span class="sig-name descname"><span class="pre">touched_taint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span></span><a class="headerlink" href="#polytracker.database.DBTraceEvent.touched_taint" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">touched_taint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></em><a class="headerlink" href="#polytracker.database.DBTraceEvent.touched_taint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Whether or not this event touched taint.</p>
 </dd></dl>
 
