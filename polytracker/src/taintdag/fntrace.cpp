@@ -14,16 +14,9 @@
 
 namespace taintdag {
 
-namespace {
-
-using fn_index_t = Functions::index_t;
-
-} // namespace
-
 void Events::log_fn_event(Event::kind_t kind, Functions::index_t idx) {
   // Write an `Event` via `construct`
-  auto maybe_ctx{construct(kind, idx)};
-  if (!maybe_ctx) {
+  if (!construct(kind, idx)) {
     error_exit("Failed to log event with id: ", count());
   }
 }

@@ -29,8 +29,7 @@ std::optional<index_t> Functions::add_mapping(std::string_view name) {
   }
   // Write a `Function` via `construct`
   auto name_offset{*maybe_name_offset};
-  auto name_len{Function::length_t(name.size())};
-  auto maybe_ctx{construct(name_offset, name_len)};
+  auto maybe_ctx{construct(name_offset)};
   if (!maybe_ctx) {
     return {};
   }
