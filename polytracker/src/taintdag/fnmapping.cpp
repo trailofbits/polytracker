@@ -19,6 +19,8 @@ using index_t = Functions::index_t;
 } // namespace
 
 std::optional<index_t> Functions::add_mapping(std::string_view name) {
+  // Lock `mappings`
+  std::unique_lock mappings_lock(mappings_mutex);
   // See if we already have a mapping of `name`
   if (auto it{mappings.find(name)}; it != mappings.end()) {
     return it->second;
