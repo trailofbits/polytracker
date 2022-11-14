@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -42,6 +43,7 @@ public:
 
 private:
   StringTable &string_table;
+  std::mutex mappings_mutex;
   std::unordered_map<std::string_view, index_t> mappings;
 };
 
