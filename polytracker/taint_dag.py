@@ -273,7 +273,7 @@ class TDTaintOutput(TaintOutput):
         super().__init__(source, output_offset, label)
 
     def taints(self) -> Taints:
-        return super().taints()
+        raise NotImplementedError()
 
 
 class TDProgramTrace(ProgramTrace):
@@ -285,20 +285,20 @@ class TDProgramTrace(ProgramTrace):
         return super().__contains__(uid)
 
     def __getitem__(self, uid: int) -> TraceEvent:
-        return super().__getitem__(uid)
+        raise NotImplementedError()
 
     def __iter__(self) -> Iterator[TraceEvent]:
-        return super().__iter__()
+        raise NotImplementedError()
 
     def __len__(self) -> int:
-        return super().__len__()
+        raise NotImplementedError()
 
     def access_sequence(self) -> Iterator[TaintAccess]:
-        return super().access_sequence()
+        raise NotImplementedError()
 
     @property
     def basic_blocks(self) -> Iterable[BasicBlock]:
-        return super().basic_blocks
+        raise NotImplementedError()
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
         assert node.source is not None
@@ -308,23 +308,23 @@ class TDProgramTrace(ProgramTrace):
 
     @property
     def functions(self) -> Iterable[Function]:
-        return super().functions
+        raise NotImplementedError()
 
     def get_event(self, uid: int) -> TraceEvent:
-        return super().get_event(uid)
+        raise NotImplementedError()
 
     def get_function(self, name: str) -> Function:
-        return super().get_function(name)
+        raise NotImplementedError()
 
     def has_event(self, uid: int) -> bool:
-        return super().has_event(uid)
+        raise NotImplementedError()
 
     def has_function(self, name: str) -> bool:
-        return super().has_function(name)
+        raise NotImplementedError()
 
     @property
     def num_accesses(self) -> int:
-        return super().num_accesses
+        raise NotImplementedError()
 
     @property
     def outputs(self) -> Optional[Iterable[Input]]:
@@ -430,7 +430,7 @@ class TDTaintForest(TaintForest):
         self.synth_label_cnt: int = -1
 
     def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
-        return super().__getitem__(label)
+        raise NotImplementedError()
 
     def __len__(self) -> int:
         return len(self.node_cache)
