@@ -1,10 +1,6 @@
-# Analysis Scripts
+# Nitf output scripts
 
 ## last updated Nov 22, kelly.kaoudis@trailofbits.com
-
-Small scripts and other assorted tooling which might be copied into containers or run in the native working environment to automate learning about how Polytracker works.
-
-The point of these is reproduceability and knowledge sharing.
 
 ## Inputs
 The Galois tool FAW comes [packaged with some nitf files](https://github.com/GaloisInc/FAW/tree/master/test_files/nitf) we'll use as test nitf inputs for parsers called directly or indirectly by scripts in this dir.
