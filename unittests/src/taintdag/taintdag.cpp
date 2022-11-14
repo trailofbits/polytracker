@@ -64,7 +64,7 @@ TEST_CASE("Serialize deserialize for different events") {
       auto [n, range] = rand_source_labels(labels, RandomCount{0xffff});
       // Labels are monotonically increasing
       REQUIRE(range.second > range.first);
-      REQUIRE(n == (range.second - range.first));
+      REQUIRE(n - 1 == (range.second - range.first));
     }
   }
 
@@ -81,7 +81,7 @@ TEST_CASE("Serialize deserialize for different events") {
   }
 
   SECTION("Taint affects control flow") {
-    auto rsl{rand_source_labels(labels, Count{3})};
+    auto rsl{rand_source_labels(labels, Count{4})};
     auto range{std::get<td::taint_range_t>(rsl)};
     SECTION("Default does not affect control flow") {
       for (auto lbl = range.first; lbl < range.second; lbl++) {
