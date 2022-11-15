@@ -41,6 +41,7 @@ from .tracing import (
     Taints,
 )
 
+
 class TDFileMeta(Structure):
     """TDAG File metadata.
 
@@ -49,14 +50,14 @@ class TDFileMeta(Structure):
     """
 
     _fields_ = [
-        ("tdag", c_char*4),
+        ("tdag", c_char * 4),
         ("magic", c_uint16),
         ("section_count", c_uint16),
     ]
 
     def __repr__(self) -> str:
         return f"TDFileMeta:\n\ttdag: {self.tdag}\n\tmagic: {self.magic}\n\tsection count: {self.section_count}\n"
-        
+
 
 class TDSectionMeta(Structure):
     """TDAG Section metadata.
@@ -73,7 +74,7 @@ class TDSectionMeta(Structure):
     ]
 
     def __repr__(self) -> str:
-        return f"TDSectionMeta:\n\ttag: {self.tag}\n\talign: {self.align}\n\toffset: {self.offset}\n\tsize: {self.size}\n" 
+        return f"TDSectionMeta:\n\ttag: {self.tag}\n\talign: {self.align}\n\toffset: {self.offset}\n\tsize: {self.size}\n"
 
 
 class TDSourceSection:
@@ -84,14 +85,13 @@ class TDSourceSection:
     """
 
     def __init__(self, mem, hdr):
-        self.mem = mem[hdr.offset:hdr.offset+hdr.size]
+        self.mem = mem[hdr.offset : hdr.offset + hdr.size]
 
     def enumerate(self):
-        for offset in range(0,len(self.mem), sizeof(TDFDHeader)):
+        for offset in range(0, len(self.mem), sizeof(TDFDHeader)):
             yield TDFDHeader.from_buffer_copy(self.mem[offset:])
 
 
-    
 class TDStringSection:
     """TDAG String Table section
 
@@ -100,9 +100,9 @@ class TDStringSection:
     """
 
     def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
         self.align = hdr.align
-    
+
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
         assert len(self.section) >= offset + sizeof(c_uint16) + n
@@ -120,13 +120,14 @@ class TDLabelSection:
     """
 
     def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def read_raw(self, label):
-        return c_uint64.from_buffer_copy(self.section[label * sizeof(c_uint64):]).value
+        return c_uint64.from_buffer_copy(self.section[label * sizeof(c_uint64) :]).value
 
     def count(self):
         return len(self.section) // sizeof(c_uint64)
+
 
 class TDSinkSection:
     """TDAG Sinks section
@@ -136,7 +137,7 @@ class TDSinkSection:
     """
 
     def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset:hdr.offset+hdr.size]
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def enumerate(self):
         for offset in range(0, len(self.section), sizeof(TDSink)):
@@ -327,7 +328,7 @@ class TDFile:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
-                
+
             section_offset += sizeof(TDSectionMeta)
 
         self.raw_nodes: Dict[int, int] = {}
