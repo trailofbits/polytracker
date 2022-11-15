@@ -11,7 +11,7 @@
 #include <spdlog/spdlog.h>
 
 #include <functional>
-#include <iostream>
+#include <sstream>
 
 namespace taintdag {
 
