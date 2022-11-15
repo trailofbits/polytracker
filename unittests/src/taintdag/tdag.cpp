@@ -1,11 +1,5 @@
 #include <catch2/catch.hpp>
 
-#include <algorithm>
-#include <cassert>
-#include <iostream>
-#include <optional>
-#include <span>
-
 #include "taintdag/outputfile.h"
 #include "taintdag/section.h"
 #include "taintdag/storage.h"
@@ -13,9 +7,8 @@
 #include "taintdag/taint_source.h"
 #include "taintdag/labels.h"
 
-#include "taintdag/error.h"
+#include "utils.h"
 
-#include "error_exit_helper.h"
 namespace taintdag {
 
 TEST_CASE("Test TDAG", "Integration") {
@@ -58,7 +51,7 @@ TEST_CASE("Type properties MMapFile", "[MMapFile]") {
 TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
 
   // To be able to capture error_exits
-  ErrorExitReplace errthrow;
+  test::ErrorExitReplace errthrow;
 
   // Exposing the members of SectionBase
   struct TestSectionBase : public SectionBase {
@@ -125,19 +118,20 @@ TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
 
   // If offset is requirested for out of bounds memory, just abort. Something
   // is seriously wrong.
-  REQUIRE_THROWS_AS(sb.offset(SectionBase::span_t::iterator{}), ErrorExit);
-  REQUIRE_THROWS_AS(sb.offset(last.end()), ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(SectionBase::span_t::iterator{}),
+                    test::ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(last.end()), test::ErrorExit);
 
-  REQUIRE_THROWS_AS(sb.offset(nullptr), ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(nullptr), test::ErrorExit);
   REQUIRE_THROWS_AS(
       sb.offset(reinterpret_cast<uint8_t const *>(&backing + sizeof(backing))),
-      ErrorExit);
+      test::ErrorExit);
 }
 
 TEST_CASE("FixedSizeAlloc operations are consistent", "[FixedSizeAlloc]") {
 
   // To be able to capture error_exits
-  ErrorExitReplace errthrow;
+  test::ErrorExitReplace errthrow;
 
   struct Dummy {
     int32_t i;
@@ -207,24 +201,24 @@ TEST_CASE("FixedSizeAlloc operations are consistent", "[FixedSizeAlloc]") {
 
   SECTION("Require aligned construction") {
     SectionBase::span_t b1{&backing[1], sizeof(backing) - 7};
-    REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b1}, test::ErrorExit);
 
     SectionBase::span_t b2{&backing[2], sizeof(backing) - 6};
-    REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b2}, test::ErrorExit);
 
     SectionBase::span_t b3{&backing[3], sizeof(backing) - 5};
-    REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b3}, test::ErrorExit);
   }
 
   SECTION("Require size to be a multiple of align_of") {
     SectionBase::span_t b1{&backing[0], sizeof(backing) - 1};
-    REQUIRE_THROWS_AS(Section{b1}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b1}, test::ErrorExit);
 
     SectionBase::span_t b2{&backing[0], sizeof(backing) - 2};
-    REQUIRE_THROWS_AS(Section{b2}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b2}, test::ErrorExit);
 
     SectionBase::span_t b3{&backing[0], sizeof(backing) - 3};
-    REQUIRE_THROWS_AS(Section{b3}, ErrorExit);
+    REQUIRE_THROWS_AS(Section{b3}, test::ErrorExit);
   }
 
   SECTION("Iteration") {
@@ -312,7 +306,7 @@ TEST_CASE("Taint sources basic usage", "[Sources]") {
 
 TEST_CASE("StringTable add/iterate", "[StringTable]") {
   // To be able to capture error_exits
-  ErrorExitReplace errthrow;
+  test::ErrorExitReplace errthrow;
 
   alignas(StringTable::length_t) uint8_t backing[64];
 
@@ -382,7 +376,7 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
         static_cast<size_t>(std::numeric_limits<StringTable::length_t>::max()) +
         1;
     char const *strp = reinterpret_cast<char const *>(&backing[0]);
-    REQUIRE_THROWS_AS(st.add_string({strp, len}), ErrorExit);
+    REQUIRE_THROWS_AS(st.add_string({strp, len}), test::ErrorExit);
 
     // Allocation is larger than can be represented by the offset type.
     auto alloc_size =
@@ -391,7 +385,7 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
     auto span = StringTable::span_t{&backing[0], alloc_size};
     REQUIRE_THROWS_AS(
         (StringTable{SectionArg<int>{.output_file = dummy, .range = span}}),
-        ErrorExit);
+        test::ErrorExit);
   }
 }
 } // namespace taintdag

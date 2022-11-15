@@ -9,7 +9,8 @@ add_executable(
   fnmapping.cpp
   fntrace.cpp
   union.cpp
-  labeldeq.cpp)
+  labeldeq.cpp
+  bitmap_section.cpp)
 
 target_include_directories(
   ${TAINTDAG_UNITTEST} PUBLIC ${CMAKE_SOURCE_DIR}/polytracker/include
