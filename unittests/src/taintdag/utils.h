@@ -8,7 +8,9 @@
 
 #pragma once
 
+#include "taintdag/error.h"
 #include "taintdag/taint.h"
+
 #include <cstdlib>
 #include <random>
 
@@ -90,5 +92,16 @@ inline int init_rand_seed() {
   srand(seed);
   return seed;
 }
+
+struct ErrorExit {};
+
+inline void throwing_error_function(int) { throw ErrorExit{}; }
+
+struct ErrorExitReplace {
+  std::function<void(int)> old;
+  ErrorExitReplace()
+      : old{std::exchange(error_function, throwing_error_function)} {}
+  ~ErrorExitReplace() { error_function = old; }
+};
 
 } // namespace taintdag::test
