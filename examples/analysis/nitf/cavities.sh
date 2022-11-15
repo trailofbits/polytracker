@@ -6,26 +6,30 @@
 ########
 # expected arguments:
 # $1: path of the instrumented nitf parser executable
-# $2: output folder
+# $2: expected name of output folder (we'll handle creating it)
 ########
 # last updated Nov 22, kelly.kaoudis@trailofbits.com
 
-if [ ! -d FAW ]; then
-    echo "getting Galois FAW test nitf files..."
-    mkdir FAW && cd FAW
-    git init && git remote add origin https://github.com/GaloisInc/FAW.git
-    git config core.sparseCheckout true
-    echo "/test_files/nitf" >> .git/info/sparse-checkout
-    git pull origin master
-fi
+source ./base.sh
 
-for nitf_location in FAW/test_files/nitf/*; do
-    ./$1 $nitf_location
-    nitf=`basename ${nitf_location}`
-    tdag="$2/${nitf}.tdag"
-    echo "saving taint output to $tdag"
-    mv polytracker.tdag $tdag
-    cavity_output="$2/${nitf}_cavities.txt"
-    polytracker cavities -b $tdag > $cavity_output
-    echo "cavities output in $cavity_output"
-done
+function analyse {
+    for nitf_location in FAW/test_files/nitf/*; do
+        ./$1 $nitf_location
+        nitf=`basename ${nitf_location}`
+        if [ -f polytracker.tdag ]; then
+            tdag="$2/${nitf}.tdag"
+            echo "saving taint output to $tdag"
+            mv polytracker.tdag $tdag
+            cavity_output="$2/${nitf}_cavities.txt"
+            polytracker cavities -b $tdag > $cavity_output
+            echo "cavities output in $cavity_output"
+        else
+            echo "no tdag was available to check for cavities?"
+            exit 1
+        fi
+    done
+}
+
+pull_test_files
+set_up_output_location $2
+analyse $@

@@ -10,6 +10,14 @@ TIMEFORMAT='%3R sec %3U usermode cpu-seconds %3S system cpu-seconds'
 # source the polytracker version of nitro
 POLYTRACKER_NITRO_LOCATION=/polytracker/the_klondike/nitro/build
 
+source ./base.sh
+
+dpkg-query -s time > /dev/null 2>&1
+if [ $? -eq 1 ]; then
+    echo "installing GNU 'time' package..."
+    apt-get install time
+fi
+
 function time_it {
     /usr/bin/time -o /dev/tty -v $1 $2 >/dev/null 2>&1
     echo "bash time: "
@@ -17,7 +25,6 @@ function time_it {
 }
 
 function analyse {
-    mkdir output
     for nitf in FAW/test_files/nitf/*; do
         echo "-------"
         directory=`basename ${nitf}`
@@ -61,29 +68,6 @@ function analyse {
     echo "done! see individual output files in output/"
 }
 
-
-if [ ! -d FAW ]; then
-    echo "getting Galois FAW test nitf files..."
-    mkdir FAW && cd FAW
-    git init && git remote add origin https://github.com/GaloisInc/FAW.git
-    git config core.sparseCheckout true
-    echo "/test_files/nitf" >> .git/info/sparse-checkout
-    git pull origin master
-fi
-
-dpkg-query -s time > /dev/null 2>&1
-if [ $? -eq 1 ]; then
-    echo "installing GNU 'time' package..."
-    apt-get install time
-fi
-
-if [ ! -d output ]; then
-    analyse $@
-else
-    read -p "Hey! output/ already exists. Delete it entirely and start over? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
-    if [ -n $confirm ]; then
-        echo "okay, *removing* ALL previous output..."
-        rm -rf output
-        analyse $@
-    fi
-fi
+pull_test_files
+set_up_output_location "output"
+analyse $@
