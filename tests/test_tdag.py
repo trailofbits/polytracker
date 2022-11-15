@@ -4,11 +4,6 @@ from polytracker.mapping import InputOutputMapping
 from typing import cast
 from pathlib import Path
 
-# TODO (hbrodin): There has to be a better way of knowing the paths than hard coding.
-input_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt"))
-output_path = Path(to_native_path("/polytracker/tests/test_data/test_data.txt.out"))
-
-
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_tdfile(program_trace: ProgramTrace):
     assert isinstance(program_trace, taint_dag.TDProgramTrace)
@@ -130,9 +125,12 @@ def test_inputs(input_file: Path, program_trace: ProgramTrace):
     assert inputs[0].path == str(input_file)
     # TODO (hbrodin): Should probably not be exposed. Also, the fd is not necessarily unique
     # per run, which is in the documentation for uid.
-    assert inputs[0].uid == 4  # stdin, stdout, stderr, tdag-file, input_path
+    # stdin, stdout, stderr, tdag-file, input_path
+    assert inputs[0].uid == 4
     assert inputs[0].size == 29
 
+def input_to_output_path(input: Path) -> Path:
+    return input.parent / (input.name + ".out")
 
 @pytest.mark.program_trace("test_tdag.cpp")
 def test_output_taints(input_file: Path, program_trace: ProgramTrace):
