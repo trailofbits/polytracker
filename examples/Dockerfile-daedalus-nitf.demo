@@ -24,6 +24,7 @@ RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
 # RUN git checkout b5824574c398d5197247fe6ed534510771f6be8f
 WORKDIR /polytracker/the_klondike/daedalus/formats/nitf
 
+# enable tracking taints written to stdout - how DaeDaLus outputs results
 ENV POLYTRACKER_STDOUT_SINK=1
 RUN cabal run ../../:daedalus -- compile-c++ nitf_main.ddl --out-dir=cpp_parser
 
