@@ -14,9 +14,9 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "taintdag/outputfile.hpp"
-#include "taintdag/section.hpp"
-#include "taintdag/string_table.hpp"
+#include "taintdag/outputfile.h"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
 
 namespace taintdag {
 
