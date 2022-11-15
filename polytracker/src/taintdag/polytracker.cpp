@@ -16,8 +16,6 @@
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
 
-namespace fs = std::filesystem;
-
 namespace taintdag {
 
 PolyTracker::PolyTracker(std::filesystem::path const &outputfile)
@@ -27,7 +25,7 @@ label_t PolyTracker::union_labels(label_t l1, label_t l2) {
   return output_file_.section<Labels>().union_taint(l1, l2);
 }
 
-void PolyTracker::open_file(int fd, fs::path const &path) {
+void PolyTracker::open_file(int fd, std::filesystem::path const &path) {
   // Try to determine the file size. If unknown, just mark it as unknown.
   uint64_t size = [fd]() -> uint64_t {
     struct stat st;
