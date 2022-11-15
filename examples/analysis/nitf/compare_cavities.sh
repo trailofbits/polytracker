@@ -18,6 +18,5 @@ for cavity_output_1 in $1/*; do
         cavity_file=`basename ${cavity_output_1}`
         cavity_output_2=$2/${cavity_file}
         echo "comparing ${cavity_output_1} and ${cavity_output_2}"
-        cmp "${cavity_output_1}" "${cavity_output_2}"
-        #diff --color $cavity_output_1 $cavity_output_2
+        diff -y $cavity_output_1 $cavity_output_2
 done

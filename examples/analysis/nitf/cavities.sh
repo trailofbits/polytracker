@@ -21,7 +21,7 @@ function analyse {
             echo "saving taint output to $tdag"
             mv polytracker.tdag $tdag
             cavity_output="$2/${nitf}_cavities.txt"
-            polytracker cavities -b $tdag > $cavity_output
+            polytracker cavities $tdag > $cavity_output
             echo "cavities output in $cavity_output"
         else
             echo "no tdag was available to check for cavities?"
