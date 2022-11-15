@@ -13,11 +13,6 @@ def pytest_configure(config):
         "program_trace: mark the C/C++ source file to be automatically compiled, instrumented, and run for the test",
     )
 
-    config.addinivalue_line(
-        "markers",
-        "input_file: provides a input file with known inputs at a random path",
-    )
-
 
 def run_polytracker(cmd: List[str]) -> None:
     tmp = sys.argv
