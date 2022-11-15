@@ -68,7 +68,9 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
           "Got larger allocation than can be addressed by the index_t type.");
   }
 
-  std::optional<index_t> add_source(std::string_view name, int fd) {
+  std::optional<index_t> add_source(std::string_view name,
+                                    int fd = SourceEntry::InvalidFD,
+                                    uint64_t size = SourceEntry::InvalidSize) {
     // Write source name into the string table section
     auto idx = st_.add_string(name);
     if (!idx) {
