@@ -181,7 +181,7 @@ def _instrument_bitcode(
         pass_pipeline.append("pt-ftrace")
 
     if add_taint_tracking:
-        pass_pipeline += ["dfsan", "pt-rm-fn-attr"]
+        pass_pipeline += ["pt-dfsan", "pt-rm-fn-attr"]
 
     cmd.append(f"-passes={','.join(pass_pipeline)}")
 
@@ -193,9 +193,9 @@ def _instrument_bitcode(
         for item in ignore_lists:
             cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
         # abi lists for `dfsan`
-        cmd.append(f"-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
+        cmd.append(f"-pt-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
         for item in ignore_lists:
-            cmd.append(f"-dfsan-abilist={ABI_PATH}/{item}")
+            cmd.append(f"-pt-dfsan-abilist={ABI_PATH}/{item}")
 
     if add_function_tracing:
         # ignore lists for `pt-ftrace`
