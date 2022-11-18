@@ -10,16 +10,17 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cstdlib>
+#include <functional>
 #include <sstream>
 
 namespace taintdag {
+
+extern std::function<void(int)> error_function;
 
 template <typename... Msgs> void error_exit(Msgs &&... msgs) {
   std::stringstream ss;
   (ss << ... << msgs);
   spdlog::error(ss.str());
-  std::exit(EXIT_FAILURE);
+  error_function(-1);
 }
-
 } // namespace taintdag

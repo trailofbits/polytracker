@@ -22,7 +22,7 @@ def run_polytracker(cmd: List[str]) -> None:
 
 
 def build(target: Path, binary: Path) -> None:
-    assert target.exists
+    assert target.exists()
 
     cmd = ["build"]
     if target.suffix == ".cpp":
@@ -40,9 +40,17 @@ def instrument(target: str) -> None:
 
 
 @pytest.fixture
-def program_trace(tmp_path, monkeypatch, request):
+def input_file(tmp_path):
+    # Create a file with input data
+    input = tmp_path / "test_data.txt"
+    input.write_text("{abcdefgh9jklmnopqrstuvwxyz}\n")
+    return input
+
+
+@pytest.fixture
+def program_trace(input_file, monkeypatch, request):
     # Run everything in a per-test temporary directory
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.chdir(input_file.parent)
     # Build a clean test binary to get a blight journal
     marker = request.node.get_closest_marker("program_trace")
     tstdir = Path(request.fspath).parent
@@ -53,16 +61,13 @@ def program_trace(tmp_path, monkeypatch, request):
     trace_file = Path(f"{target.stem}.db").resolve()
     trace_file.unlink(missing_ok=True)
     instrument(binary.name)
-    # Create a file with input data
-    input = tmp_path / "test_data.txt"
-    input.write_text("{abcdefgh9jklmnopqrstuvwxyz}\n")
     # Run the instrumented binary to get a trace file
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
         # instrumented binary
         Path(f"{binary.stem}.instrumented").resolve(),
         # input data
-        str(input),
+        str(input_file),
     ]
     subprocess.check_call(cmd)
     # Read the trace file

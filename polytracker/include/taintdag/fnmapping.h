@@ -14,36 +14,36 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "taintdag/outputfile.h"
+#include "taintdag/section.h"
+#include "taintdag/string_table.h"
+
 namespace taintdag {
 
-class FnMapping {
+struct Function {
 public:
-  using offset_t = uint32_t;
-  using length_t = uint32_t;
+  using offset_t = StringTable::offset_t;
+  offset_t name_offset;
+};
 
-  struct header_t {
-    offset_t name_offset;
-    length_t name_len;
-  };
-
+class Functions : public FixedSizeAlloc<Function> {
+public:
   using index_t = uint16_t;
 
-  FnMapping(char *begin, char *end);
+  static constexpr uint8_t tag{6};
+  static constexpr size_t allocation_size{std::numeric_limits<index_t>::max() *
+                                          sizeof(Function)};
+
+  template <typename OF>
+  Functions(SectionArg<OF> of)
+      : FixedSizeAlloc{of.range},
+        string_table{of.output_file.template section<StringTable>()} {}
+
   std::optional<index_t> add_mapping(std::string_view name);
-  size_t get_mapping_count();
 
 private:
-  // Map markers
-  char *map_begin{nullptr};
-  char *map_end{nullptr};
-  char *headers_end{nullptr};
-  char *names_begin{nullptr};
-  // Map mutex
-  std::mutex memory_m;
-  // Helpers
-  std::optional<offset_t> write_name(std::string_view name);
-  std::optional<offset_t> write_header(header_t header);
-  // Cache
+  StringTable &string_table;
+  std::mutex mappings_mutex;
   std::unordered_map<std::string_view, index_t> mappings;
 };
 

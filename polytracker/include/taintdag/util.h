@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
+
+#include <cstdio>
+#include <functional>
+#include <optional>
+#include <span>
+#include <string>
+
+namespace util {
+template <typename T, typename Tuple> struct TypeIndex;
+
+// Determines the index of a type T in a Tuple
+template <typename T, typename... Types>
+struct TypeIndex<T, std::tuple<Types...>> {
+  static constexpr std::size_t index = []() {
+    constexpr std::array<bool, sizeof...(Types)> eq{
+        {(std::is_same_v<Types, T>)...}};
+    const auto it = std::find(eq.begin(), eq.end(), true);
+    if (it == eq.end())
+      std::runtime_error("Type is not in type sequnce");
+    return std::distance(eq.begin(), it);
+  }();
+};
+
+inline void dump_range(std::string name, std::span<uint8_t> range) {
+  auto begin = reinterpret_cast<uintptr_t>(&*range.begin());
+  auto end = reinterpret_cast<uintptr_t>(&*range.end());
+  printf("Name: %s begin: %lx end: %lx\n", name.data(), begin, end);
+}
+} // namespace util

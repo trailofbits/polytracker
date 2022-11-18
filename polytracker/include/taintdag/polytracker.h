@@ -8,25 +8,24 @@
 
 #pragma once
 
-#include "taintdag/output.hpp"
-
 #include <filesystem>
 #include <span>
 
-#include "taintdag/fdmapping.hpp"
+#include "taintdag/bitmap_section.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
-#include "taintdag/taint.hpp"
-#include "taintdag/taint_sink_log.hpp"
-#include "taintdag/taintdag.hpp"
+#include "taintdag/labels.h"
+#include "taintdag/sink.h"
+#include "taintdag/string_table.h"
+#include "taintdag/taint_source.h"
 
 namespace taintdag {
 
 // Main interface towards polytracker
 class PolyTracker {
+
 public:
   PolyTracker(std::filesystem::path const &outputfile = "polytracker.tdag");
-  ~PolyTracker();
 
   label_t union_labels(label_t l1, label_t l2);
 
@@ -58,20 +57,27 @@ public:
   void taint_sink(int fd, sink_offset_t offset, label_t label, size_t length);
 
   // Log function entry
-  FnMapping::index_t function_entry(std::string_view name);
+  Functions::index_t function_entry(std::string_view name);
   // Log function exit
-  void function_exit(FnMapping::index_t index);
+  void function_exit(Functions::index_t index);
 
 private:
-  std::optional<taint_range_t>
-  create_source_taint(int fd, source_offset_t offset, size_t length);
+  taint_range_t create_source_taint(source_index_t src,
+                                    std::span<uint8_t const> dst,
+                                    size_t offset = 0);
 
-  OutputFile of_;
-  FDMapping fdm_;
-  FnMapping fnm_;
-  FnTrace fnt_;
-  TaintDAG tdag_;
-  TaintSinkLog sinklog_;
+  // Type used as index for source labels. Each label that is a source label
+  // will have a corresponding bit set in this section (at the same bit index as
+  // the label).
+  using SourceLabelIndexSection = BitmapSectionBase<5, BitCount{max_label} + 1>;
+
+  // ConcreteOutputFile is a specific configuration of the generic OutputFile
+  // template. It determines the current layout of TDAG file in terms of which
+  // sections and in which order they appear.
+  using ConcreteOutputFile =
+      OutputFile<Sources, Labels, StringTable, TaintSink,
+                 SourceLabelIndexSection, Functions, Events>;
+  ConcreteOutputFile output_file_;
 };
 
 } // namespace taintdag

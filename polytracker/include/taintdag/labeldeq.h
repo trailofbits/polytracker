@@ -1,10 +1,16 @@
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
 
-#ifndef POLYTRACKER_TAINTDAG_LABELDEQ_H
-#define POLYTRACKER_TAINTDAG_LABELDEQ_H
+#pragma once
 
 #include <deque>
 
-#include "taintdag/taint.hpp"
+#include "taintdag/taint.h"
 
 namespace taintdag::utils {
 
@@ -122,5 +128,3 @@ private:
   au storage_;
 };
 } // namespace taintdag::utils
-
-#endif
