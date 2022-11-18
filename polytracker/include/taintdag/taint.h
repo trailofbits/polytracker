@@ -1,5 +1,12 @@
-#ifndef POLYTRACKER_TAINTDAG_TAINT_H
-#define POLYTRACKER_TAINTDAG_TAINT_H
+/*
+ * Copyright (c) 2022-present, Trail of Bits, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed in accordance with the terms specified in
+ * the LICENSE file found in the root directory of this source tree.
+ */
+
+#pragma once
 
 #include <cassert>
 #include <cstdint>
@@ -145,4 +152,3 @@ std::ostream &operator<<(std::ostream &os, RangeTaint const &r);
 std::ostream &operator<<(std::ostream &os, Taint const &t);
 
 } // namespace taintdag
-#endif

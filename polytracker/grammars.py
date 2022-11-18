@@ -23,7 +23,7 @@ import graphviz
 import networkx as nx
 from tqdm import tqdm, trange
 
-from . import PolyTrackerTrace
+# from . import PolyTrackerTrace
 from .graphs import DiGraph
 from .parsing import (
     highlight_offset,
@@ -1418,24 +1418,24 @@ class ExtractGrammarCommand(Command):
 
     def run(self, args: Namespace):
         self.traces = []
-        try:
-            for trace_db_path in args.TRACES:
-                trace = PolyTrackerTrace.load(trace_db_path)
-                # to_dot(trace.cfg).save("cfg.dot")
-                # print(f"num nodes {trace.cfg.number_of_nodes()}")
-                # if not trace.is_cfg_connected():
-                #     roots = list(trace.cfg_roots())
-                #     if len(roots) == 0:
-                #         log.error(f"Basic block trace of {trace_db_path} has no roots!\n\n")
-                #     else:
-                #         root_names = "".join(f"\t{r!s}\n" for r in roots)
-                #         log.error(
-                #             f"Basic block trace of {trace_db_path} has multiple roots:\n{root_names}"
-                #         )
-                #     exit(1)
-                self.traces.append(trace)
-        except ValueError as e:
-            log.error(f"{e!s}\n\n")
-            exit(1)
+        # try:
+        #     for trace_db_path in args.TRACES:
+        #         trace = PolyTrackerTrace.load(trace_db_path)
+        #         # to_dot(trace.cfg).save("cfg.dot")
+        #         # print(f"num nodes {trace.cfg.number_of_nodes()}")
+        #         # if not trace.is_cfg_connected():
+        #         #     roots = list(trace.cfg_roots())
+        #         #     if len(roots) == 0:
+        #         #         log.error(f"Basic block trace of {trace_db_path} has no roots!\n\n")
+        #         #     else:
+        #         #         root_names = "".join(f"\t{r!s}\n" for r in roots)
+        #         #         log.error(
+        #         #             f"Basic block trace of {trace_db_path} has multiple roots:\n{root_names}"
+        #         #         )
+        #         #     exit(1)
+        #         self.traces.append(trace)
+        # except ValueError as e:
+        #     log.error(f"{e!s}\n\n")
+        #     exit(1)
         self.grammar = extract(self.traces, args.simplify)
         print(str(self.grammar))

@@ -14,7 +14,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       gdb                                             \
       libncurses5-dev                                 \
       apt-transport-https                             \
-      ca-certificates
+      ca-certificates                                 \
+      libstdc++-10-dev
+
 RUN update-ca-certificates
 
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 10
