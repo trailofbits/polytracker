@@ -1,0 +1,34 @@
+FROM trailofbits/polytracker:latest
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL org.opencontainers.image.authors="joe.sweeney@trailofbits.com"
+
+RUN apt-get update && \
+    apt-get install -y \
+        cmake \
+        curl \
+        file \
+        libgmp-dev \
+        libssl-dev \
+        libnuma-dev
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org > ghcup
+ENV PATH=$PATH:/root/.ghcup/bin
+RUN chmod +x ghcup && \
+    ./ghcup install ghc 8.10.7 && \
+    ./ghcup install cabal 3.6 && \
+    cabal update
+
+WORKDIR /polytracker/the_klondike
+RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
+
+# RUN git checkout b5824574c398d5197247fe6ed534510771f6be8f
+WORKDIR /polytracker/the_klondike/daedalus/formats/nitf
+
+# enable tracking taints written to stdout - how DaeDaLus outputs results
+ENV POLYTRACKER_STDOUT_SINK=1
+RUN cabal run ../../:daedalus -- compile-c++ nitf_main.ddl --out-dir=cpp_parser
+
+WORKDIR /polytracker/the_klondike/daedalus/formats/nitf/cpp_parser
+RUN polytracker build make parser && \
+    polytracker instrument-targets --taint --ftrace parser --ignore-lists gmp ssl libz && \
+    mv parser.instrumented parser-track
