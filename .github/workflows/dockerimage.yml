@@ -13,7 +13,7 @@ jobs:
         with:
           submodules: true
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install clang-format
@@ -31,7 +31,7 @@ jobs:
           polytracker/include/polytracker/*.h polytracker/include/taintdag/*.h \
           polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
           polytracker/src/taint_sources/*.cpp polytracker/src/taintdag/*.cpp
-      - name: Python lint/typecheck 
+      - name: Python lint/typecheck
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
