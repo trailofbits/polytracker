@@ -59,7 +59,7 @@ struct StringTableBase : public SectionBase {
     }
 
     auto len = allocated_len(sv.size());
-    if (auto write_context = write(len); write_context) {
+    if (auto write_context = write(len)) {
       // prefix with length
       *reinterpret_cast<length_t *>(&*(write_context->mem.begin())) = sv.size();
 

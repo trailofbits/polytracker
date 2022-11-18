@@ -137,7 +137,7 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
   // N.b. count()/size() competes for the same lock.
   template <typename... Args>
   std::optional<ConstructCtx> construct(Args &&... args) {
-    if (auto write_context = SectionBase::write(entry_size()); write_context) {
+    if (auto write_context = SectionBase::write(entry_size())) {
       return ConstructCtx{.ctx = std::move(*write_context),
                           .t = *new (&*(write_context->mem.begin()))
                                    T{std::forward<Args>(args)...}};
@@ -155,8 +155,7 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
     // TODO(hbrodin): Check n > 0
     auto mem_size = entry_size() * n;
     if (std::optional<SectionBase::WriteCtx> write_context =
-            SectionBase::write(mem_size);
-        write_context) {
+            SectionBase::write(mem_size)) {
       for (auto it = write_context->mem.begin(); it != write_context->mem.end();
            it += entry_size()) {
         generator(&*it);

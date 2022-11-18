@@ -73,8 +73,7 @@ taint_range_t PolyTracker::create_source_taint(source_index_t src,
 std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        source_offset_t offset,
                                                        size_t length) {
-  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
-      source_index) {
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
     return this->create_source_taint(
         *source_index, {reinterpret_cast<uint8_t const *>(mem), length},
         offset);
@@ -89,8 +88,7 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
 // corresponding mem.
 std::optional<taint_range_t>
 PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
-  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
-      source_index) {
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
     return this->output_file_.section<Labels>().create_source_labels(
         *source_index, offset, length);
   }
@@ -106,8 +104,7 @@ std::optional<taint_range_t>
 PolyTracker::create_taint_source(std::string_view name,
                                  std::span<uint8_t> dst) {
 
-  if (auto source_index = output_file_.section<Sources>().add_source(name);
-      source_index) {
+  if (auto source_index = output_file_.section<Sources>().add_source(name)) {
     return this->create_source_taint(*source_index, dst, 0);
   }
   // Failed to add a new source
@@ -129,7 +126,7 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
   // could consider variable length encoding of values. Not sure how much of a
   // gain it would be.
 
-  if (auto idx = output_file_.section<Sources>().mapping_idx(fd); idx) {
+  if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
     std::span<uint8_t const> src{reinterpret_cast<uint8_t const *>(mem),
                                  length};
     for (auto &c : src) {
@@ -146,7 +143,7 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
   if (label == 0)
     return;
 
-  if (auto idx = output_file_.section<Sources>().mapping_idx(fd); idx) {
+  if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
     for (size_t i = 0; i < length; ++i) {
       output_file_.section<TaintSink>().log_single(offset + i, label, *idx);
     }
