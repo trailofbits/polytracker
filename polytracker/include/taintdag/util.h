@@ -11,6 +11,8 @@
 #include <cstdio>
 #include <functional>
 #include <optional>
+#include <span>
+#include <string>
 
 namespace util {
 template <typename T, typename Tuple> struct TypeIndex;
@@ -34,13 +36,3 @@ inline void dump_range(std::string name, std::span<uint8_t> range) {
   printf("Name: %s begin: %lx end: %lx\n", name.data(), begin, end);
 }
 } // namespace util
-
-// TODO(hbrodin): Quick and dirty impl of map. Could be considerably improved.
-template <typename T, typename F>
-auto map(std::optional<T> o, F &&f)
-    -> std::optional<std::invoke_result_t<F, T &>> {
-  if (o)
-    return std::invoke(std::forward<F>(f), *o);
-  else
-    return {};
-}

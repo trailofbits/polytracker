@@ -72,13 +72,15 @@ struct Sources : public FixedSizeAlloc<SourceEntry> {
                                     int fd = SourceEntry::InvalidFD,
                                     uint64_t size = SourceEntry::InvalidSize) {
     // Write source name into the string table section
-    auto idx = st_.add_string(name);
-    if (!idx) {
-      return {};
+    if (auto idx = st_.add_string(name); idx) {
+      // Source name was successfully written, now add the source to this
+      // section.
+      if (auto ctx = construct(*idx, fd, size); ctx) {
+        return index(ctx->t);
+      }
     }
-
-    return map(construct(*idx, fd, size),
-               [this](auto &ctx) { return index(ctx.t); });
+    // Failed to either write string or source.
+    return {};
   }
 
   std::optional<index_t> mapping_idx(int fd) const {

@@ -137,11 +137,13 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
   // N.b. count()/size() competes for the same lock.
   template <typename... Args>
   std::optional<ConstructCtx> construct(Args &&... args) {
-    return map(SectionBase::write(entry_size()), [&](auto &ctx) {
-      return ConstructCtx{.ctx = std::move(ctx),
-                          .t = *new (&*ctx.mem.begin())
+    if (auto write_context = SectionBase::write(entry_size()); write_context) {
+      return ConstructCtx{.ctx = std::move(*write_context),
+                          .t = *new (&*(write_context->mem.begin()))
                                    T{std::forward<Args>(args)...}};
-    });
+    }
+    // Failed to allocate memory
+    return {};
   }
 
   // Constructs n instances as a sequence of T.
@@ -152,14 +154,20 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
       F &&generator) /* TODO(hbrodin): require(generator(uint8_t *)*/ {
     // TODO(hbrodin): Check n > 0
     auto mem_size = entry_size() * n;
-    return map(SectionBase::write(mem_size),
-               [&](auto &ctx) -> std::span<T const> {
-                 for (auto it = ctx.mem.begin(); it != ctx.mem.end();
-                      it += entry_size()) {
-                   generator(&*it);
-                 }
-                 return {reinterpret_cast<T const *>(&*ctx.mem.begin()), n};
-               });
+    if (std::optional<SectionBase::WriteCtx> write_context =
+            SectionBase::write(mem_size);
+        write_context) {
+      for (auto it = write_context->mem.begin(); it != write_context->mem.end();
+           it += entry_size()) {
+        generator(&*it);
+      }
+      std::span<T const> span{
+          reinterpret_cast<T const *>(&*(write_context->mem.begin())), n};
+      return span;
+    }
+
+    // Failed to allocate memory
+    return {};
   }
 
   // Returns the index of an allocated entry.

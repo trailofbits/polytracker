@@ -73,10 +73,14 @@ taint_range_t PolyTracker::create_source_taint(source_index_t src,
 std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        source_offset_t offset,
                                                        size_t length) {
-  return map(
-      output_file_.section<Sources>().mapping_idx(fd),
-      [dst = std::span(reinterpret_cast<uint8_t const *>(mem), length), offset,
-       this](auto src) { return this->create_source_taint(src, dst, offset); });
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
+      source_index) {
+    return this->create_source_taint(
+        *source_index, {reinterpret_cast<uint8_t const *>(mem), length},
+        offset);
+  }
+  // Not tracked as taint source
+  return {};
 }
 
 // Introduce source taint when reading from taint source fd.
@@ -85,11 +89,13 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
 // corresponding mem.
 std::optional<taint_range_t>
 PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
-  return map(output_file_.section<Sources>().mapping_idx(fd),
-             [&, this](auto src) {
-               return this->output_file_.section<Labels>().create_source_labels(
-                   src, offset, length);
-             });
+  if (auto source_index = output_file_.section<Sources>().mapping_idx(fd);
+      source_index) {
+    return this->output_file_.section<Labels>().create_source_labels(
+        *source_index, offset, length);
+  }
+  // Not tracked as taint source
+  return {};
 }
 
 // Introduce source taint to a named memory location
@@ -100,9 +106,12 @@ std::optional<taint_range_t>
 PolyTracker::create_taint_source(std::string_view name,
                                  std::span<uint8_t> dst) {
 
-  return map(
-      output_file_.section<Sources>().add_source(name),
-      [dst, this](auto src) { return this->create_source_taint(src, dst, 0); });
+  if (auto source_index = output_file_.section<Sources>().add_source(name);
+      source_index) {
+    return this->create_source_taint(*source_index, dst, 0);
+  }
+  // Failed to add a new source
+  return {};
 }
 
 void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,

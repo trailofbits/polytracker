@@ -47,6 +47,10 @@ struct StringTableBase : public SectionBase {
     }
   }
 
+  // Appends the string `sv` to the string table.
+  // Returns the offset of the string entry. Note that this is not the
+  // string, but the offset to the size of it. Recover the string
+  // by using `from_offset`.
   std::optional<offset_t> add_string(std::string_view sv) {
     if (sv.size() > max_string_len) {
       error_exit("Tried to store a string of size ", sv.size(), " max is ",
@@ -55,13 +59,17 @@ struct StringTableBase : public SectionBase {
     }
 
     auto len = allocated_len(sv.size());
-    return map(write(len), [&sv, this](auto &wctx) {
-      *reinterpret_cast<length_t *>(&*wctx.mem.begin()) =
-          sv.size(); // prefix with length
+    if (auto write_context = write(len); write_context) {
+      // prefix with length
+      *reinterpret_cast<length_t *>(&*(write_context->mem.begin())) = sv.size();
+
+      // copy string
       std::copy(sv.begin(), sv.end(),
-                wctx.mem.begin() + sizeof(length_t)); // copy string
-      return this->offset(wctx.mem.begin());
-    });
+                write_context->mem.begin() + sizeof(length_t));
+      return offset(write_context->mem.begin());
+    }
+    // Failed to allocate space for string
+    return {};
   }
 
   // Returns a string from it's offset. Offset is typically returned from
