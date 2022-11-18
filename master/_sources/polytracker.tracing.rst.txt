@@ -51,15 +51,6 @@ ByteOffset
    :inherited-members:
    :show-inheritance:
 
-CFGTraceCommand
-***************
-
-.. autoclass:: CFGTraceCommand
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 CallIndirect
 ************
 
@@ -136,15 +127,6 @@ ProgramTrace
 ************
 
 .. autoclass:: ProgramTrace
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-RunTraceCommand
-***************
-
-.. autoclass:: RunTraceCommand
    :members:
    :undoc-members:
    :inherited-members:

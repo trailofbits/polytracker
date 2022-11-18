@@ -10,3 +10,8 @@ version
 *******
 
 .. autofunction:: version
+
+version
+*******
+
+.. autofunction:: version

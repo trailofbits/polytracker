@@ -6,10 +6,28 @@ polytracker.taint_dag
 taint_dag classes
 -----------------
 
+TDBitmapSection
+***************
+
+.. autoclass:: TDBitmapSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDEvent
 *******
 
 .. autoclass:: TDEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDEventsSection
+***************
+
+.. autoclass:: TDEventsSection
    :members:
    :undoc-members:
    :inherited-members:
@@ -33,6 +51,15 @@ TDFile
    :inherited-members:
    :show-inheritance:
 
+TDFileMeta
+**********
+
+.. autoclass:: TDFileMeta
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDFnHeader
 **********
 
@@ -42,10 +69,10 @@ TDFnHeader
    :inherited-members:
    :show-inheritance:
 
-TDHeader
-********
+TDFunctionsSection
+******************
 
-.. autoclass:: TDHeader
+.. autoclass:: TDFunctionsSection
    :members:
    :undoc-members:
    :inherited-members:
@@ -55,6 +82,15 @@ TDInfo
 ******
 
 .. autoclass:: TDInfo
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDLabelSection
+**************
+
+.. autoclass:: TDLabelSection
    :members:
    :undoc-members:
    :inherited-members:
@@ -87,6 +123,15 @@ TDRangeNode
    :inherited-members:
    :show-inheritance:
 
+TDSectionMeta
+*************
+
+.. autoclass:: TDSectionMeta
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDSink
 ******
 
@@ -96,10 +141,46 @@ TDSink
    :inherited-members:
    :show-inheritance:
 
+TDSinkSection
+*************
+
+.. autoclass:: TDSinkSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDSourceIndexSection
+********************
+
+.. autoclass:: TDSourceIndexSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDSourceNode
 ************
 
 .. autoclass:: TDSourceNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDSourceSection
+***************
+
+.. autoclass:: TDSourceSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDStringSection
+***************
+
+.. autoclass:: TDStringSection
    :members:
    :undoc-members:
    :inherited-members:

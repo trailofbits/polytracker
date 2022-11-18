@@ -105,17 +105,26 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.repl.html">polytracker.repl</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.taint_dag</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#taint-dag-classes">taint_dag classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#tdbitmapsection">TDBitmapSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdevent">TDEvent</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdeventssection">TDEventsSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfdheader">TDFDHeader</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfile">TDFile</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdfilemeta">TDFileMeta</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfnheader">TDFnHeader</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#tdheader">TDHeader</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdfunctionssection">TDFunctionsSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdinfo">TDInfo</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdlabelsection">TDLabelSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdnode">TDNode</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdprogramtrace">TDProgramTrace</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdrangenode">TDRangeNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdsectionmeta">TDSectionMeta</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdsink">TDSink</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdsinksection">TDSinkSection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdsourceindexsection">TDSourceIndexSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdsourcenode">TDSourceNode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdsourcesection">TDSourceSection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdstringsection">TDStringSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintforest">TDTaintForest</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintforestnode">TDTaintForestNode</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintoutput">TDTaintOutput</a></li>
@@ -199,6 +208,31 @@
 <span id="polytracker-taint-dag"></span><h1>polytracker.taint_dag<a class="headerlink" href="#module-polytracker.taint_dag" title="Permalink to this heading">¶</a></h1>
 <section id="taint-dag-classes">
 <h2>taint_dag classes<a class="headerlink" href="#taint-dag-classes" title="Permalink to this heading">¶</a></h2>
+<section id="tdbitmapsection">
+<h3>TDBitmapSection<a class="headerlink" href="#tdbitmapsection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDBitmapSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDBitmapSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDBitmapSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Represents a bitmap section encoded by BitmapSectionBase.</p>
+<p>The only configuration currently supported is to have the BucketType template
+parameter of BitmapSectionBase as uint64_t. It also requires the endianess to
+not change as the implementation does not handle endianess in any specific way.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDBitmapSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDBitmapSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDBitmapSection.enumerate_set_bits">
+<span class="sig-name descname"><span class="pre">enumerate_set_bits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDBitmapSection.enumerate_set_bits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enumerates all bits that are set</p>
+<p>The index of each bit that is set will be yielded.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="tdevent">
 <h3>TDEvent<a class="headerlink" href="#tdevent" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
@@ -242,12 +276,27 @@
 </dd></dl>
 
 </section>
+<section id="tdeventssection">
+<h3>TDEventsSection<a class="headerlink" href="#tdeventssection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEventsSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDEventsSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEventsSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEventsSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEventsSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="tdfdheader">
 <h3>TDFDHeader<a class="headerlink" href="#tdfdheader" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDFDHeader</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<p>Python representation of the SourceEntry from taint_source.h</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.__init__" title="Permalink to this definition">¶</a></dt>
@@ -259,11 +308,15 @@
 <dd><p>Structure/Union member</p>
 </dd></dl>
 
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.name_len">
-<span class="sig-name descname"><span class="pre">name_len</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.name_len" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.invalid_fd">
+<span class="sig-name descname"><span class="pre">invalid_fd</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.invalid_fd" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.invalid_size">
+<span class="sig-name descname"><span class="pre">invalid_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.invalid_size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.name_offset">
@@ -272,14 +325,8 @@
 </dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.prealloc_label_begin">
-<span class="sig-name descname"><span class="pre">prealloc_label_begin</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.prealloc_label_begin" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.prealloc_label_end">
-<span class="sig-name descname"><span class="pre">prealloc_label_end</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.prealloc_label_end" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFDHeader.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFDHeader.size" title="Permalink to this definition">¶</a></dt>
 <dd><p>Structure/Union member</p>
 </dd></dl>
 
@@ -306,6 +353,12 @@
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.events">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">events</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.taint_dag.TDEvent" title="polytracker.taint_dag.TDEvent"><span class="pre">TDEvent</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.taint_dag.TDFile.events" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.input_labels">
+<span class="sig-name descname"><span class="pre">input_labels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.input_labels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enumerates all taint labels that are input labels (source taint)</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.label_count">
@@ -337,15 +390,45 @@
 <span class="sig-name descname"><span class="pre">read_node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.read_node" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.read_sink">
-<span class="sig-name descname"><span class="pre">read_sink</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#polytracker.taint_dag.TDSink" title="polytracker.taint_dag.TDSink"><span class="pre">TDSink</span></a></span></span><a class="headerlink" href="#polytracker.taint_dag.TDFile.read_sink" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFile.sinks">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sinks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.taint_dag.TDSink" title="polytracker.taint_dag.TDSink"><span class="pre">TDSink</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.taint_dag.TDFile.sinks" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdfilemeta">
+<h3>TDFileMeta<a class="headerlink" href="#tdfilemeta" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFileMeta">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDFileMeta</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFileMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<p>TDAG File metadata.</p>
+<p>File header describing the overall layout of the TDAG file.
+Corresponds to OutputFile::FileMeta in outputfile.h</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFileMeta.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFileMeta.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFileMeta.magic">
+<span class="sig-name descname"><span class="pre">magic</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFileMeta.magic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFileMeta.section_count">
+<span class="sig-name descname"><span class="pre">section_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFileMeta.section_count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFileMeta.tdag">
+<span class="sig-name descname"><span class="pre">tdag</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFileMeta.tdag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -362,12 +445,6 @@
 <dd></dd></dl>
 
 <dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader.name_len">
-<span class="sig-name descname"><span class="pre">name_len</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader.name_len" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDFnHeader.name_offset">
 <span class="sig-name descname"><span class="pre">name_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDFnHeader.name_offset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Structure/Union member</p>
@@ -376,76 +453,16 @@
 </dd></dl>
 
 </section>
-<section id="tdheader">
-<h3>TDHeader<a class="headerlink" href="#tdheader" title="Permalink to this heading">¶</a></h3>
+<section id="tdfunctionssection">
+<h3>TDFunctionsSection<a class="headerlink" href="#tdfunctionssection" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDHeader</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFunctionsSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDFunctionsSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFunctionsSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="py method">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.__init__" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDFunctionsSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDFunctionsSection.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fd_mapping_count">
-<span class="sig-name descname"><span class="pre">fd_mapping_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fd_mapping_count" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fd_mapping_offset">
-<span class="sig-name descname"><span class="pre">fd_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fd_mapping_offset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_mapping_count">
-<span class="sig-name descname"><span class="pre">fn_mapping_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_mapping_count" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_mapping_offset">
-<span class="sig-name descname"><span class="pre">fn_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_mapping_offset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_trace_count">
-<span class="sig-name descname"><span class="pre">fn_trace_count</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_trace_count" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.fn_trace_offset">
-<span class="sig-name descname"><span class="pre">fn_trace_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.fn_trace_offset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.sink_mapping_offset">
-<span class="sig-name descname"><span class="pre">sink_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.sink_mapping_offset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.sink_mapping_size">
-<span class="sig-name descname"><span class="pre">sink_mapping_size</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.sink_mapping_size" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.tdag_mapping_offset">
-<span class="sig-name descname"><span class="pre">tdag_mapping_offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.tdag_mapping_offset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.taint_dag.TDHeader.tdag_mapping_size">
-<span class="sig-name descname"><span class="pre">tdag_mapping_size</span></span><a class="headerlink" href="#polytracker.taint_dag.TDHeader.tdag_mapping_size" title="Permalink to this definition">¶</a></dt>
-<dd><p>Structure/Union member</p>
-</dd></dl>
 
 </dd></dl>
 
@@ -528,6 +545,33 @@
 <span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.11)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.taint_dag.TDInfo.subparser" title="Permalink to this definition">¶</a></dt>
 <dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 </dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdlabelsection">
+<h3>TDLabelSection<a class="headerlink" href="#tdlabelsection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLabelSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDLabelSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLabelSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>TDAG Labels section</p>
+<p>Interprets the stored taint nodes section in a TDAG file.
+Corresponds to Labels in labels.h.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLabelSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLabelSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLabelSection.count">
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLabelSection.count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLabelSection.read_raw">
+<span class="sig-name descname"><span class="pre">read_raw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLabelSection.read_raw" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
@@ -742,12 +786,54 @@ implementations.</p>
 </dd></dl>
 
 </section>
+<section id="tdsectionmeta">
+<h3>TDSectionMeta<a class="headerlink" href="#tdsectionmeta" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDSectionMeta</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<p>TDAG Section metadata.</p>
+<p>Section header describing a particular section in the TDAG file.
+Corresponds to OutputFile::SectionMeta in outputfile.h</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta.align">
+<span class="sig-name descname"><span class="pre">align</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta.align" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta.offset">
+<span class="sig-name descname"><span class="pre">offset</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta.offset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta.size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSectionMeta.tag">
+<span class="sig-name descname"><span class="pre">tag</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSectionMeta.tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="tdsink">
 <h3>TDSink<a class="headerlink" href="#tdsink" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDSink">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDSink</span></span><a class="headerlink" href="#polytracker.taint_dag.TDSink" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Structure</span></code></p>
+<p>Python representation of the SinkLogEntry from sink.h</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDSink.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSink.__init__" title="Permalink to this definition">¶</a></dt>
@@ -774,6 +860,51 @@ implementations.</p>
 </dd></dl>
 
 </section>
+<section id="tdsinksection">
+<h3>TDSinkSection<a class="headerlink" href="#tdsinksection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSinkSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDSinkSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSinkSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>TDAG Sinks section</p>
+<p>Interprets the sink entries section in a TDAG file.
+Corresponds to TaintSinkBase in sink.h.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSinkSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSinkSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSinkSection.enumerate">
+<span class="sig-name descname"><span class="pre">enumerate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSinkSection.enumerate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdsourceindexsection">
+<h3>TDSourceIndexSection<a class="headerlink" href="#tdsourceindexsection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceIndexSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDSourceIndexSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceIndexSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#polytracker.taint_dag.TDBitmapSection" title="polytracker.taint_dag.TDBitmapSection"><code class="xref py py-class docutils literal notranslate"><span class="pre">TDBitmapSection</span></code></a></p>
+<p>Represents the source index section.</p>
+<p>It is a bitmap of all labels that are source taints.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceIndexSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceIndexSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceIndexSection.enumerate_set_bits">
+<span class="sig-name descname"><span class="pre">enumerate_set_bits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceIndexSection.enumerate_set_bits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enumerates all bits that are set</p>
+<p>The index of each bit that is set will be yielded.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="tdsourcenode">
 <h3>TDSourceNode<a class="headerlink" href="#tdsourcenode" title="Permalink to this heading">¶</a></h3>
 <dl class="py class">
@@ -783,6 +914,50 @@ implementations.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceNode.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">affects_control_flow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceNode.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdsourcesection">
+<h3>TDSourceSection<a class="headerlink" href="#tdsourcesection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDSourceSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>TDAG Taint Sources section.</p>
+<p>Interprets the Taint Sources section in a TDAG file.
+Corresponds to Sources in sources.h.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDSourceSection.enumerate">
+<span class="sig-name descname"><span class="pre">enumerate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDSourceSection.enumerate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdstringsection">
+<h3>TDStringSection<a class="headerlink" href="#tdstringsection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDStringSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDStringSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDStringSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>TDAG String Table section</p>
+<p>Interprets the String Table section in a TDAG file.
+Corresponds to StringTableBase in string_table.h.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDStringSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDStringSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDStringSection.read_string">
+<span class="sig-name descname"><span class="pre">read_string</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offset</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDStringSection.read_string" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>
