@@ -7,14 +7,12 @@ is in :mod:`polytracker.database`. For example, :class:`polytracker.database.DBP
 """
 
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser, Namespace, REMAINDER
+from argparse import ArgumentParser, Namespace
 from collections import defaultdict
 from enum import IntFlag
 import itertools
 from os.path import commonpath
 from pathlib import Path
-import subprocess
-from tempfile import TemporaryDirectory
 from typing import (
     Dict,
     Iterable,
@@ -25,14 +23,12 @@ from typing import (
     Tuple,
     Union,
 )
-import weakref
 
 from cxxfilt import demangle
 
 from .graphs import DiGraph
 from .inputs import Input, InputProperties
-from .plugins import Command, Subcommand
-from .repl import PolyTrackerREPL
+from .plugins import Command
 from .taint_forest import TaintForest, TaintForestNode
 
 
@@ -1320,141 +1316,143 @@ def common_parent_directory(*paths: Union[Path, str]) -> Path:
     return Path(commonpath(p))
 
 
-class RunTraceCommand(Subcommand[TraceCommand]):
-    name = "run"
-    help = "run an instrumented binary"
-    parent_type = TraceCommand
+# TODO (hbrodin): Pending integration from different PR
+# class RunTraceCommand(Subcommand[TraceCommand]):
+#     name = "run"
+#     help = "run an instrumented binary"
+#     parent_type = TraceCommand
 
-    def __init_arguments__(self, parser):
-        parser.add_argument(
-            "--no-bb-trace",
-            action="store_true",
-            help="do not trace at the basic block level",
-        )
-        parser.add_argument(
-            "--output-db",
-            "-o",
-            type=str,
-            default="polytracker.db",
-            help="path to the output database (default is polytracker.db)",
-        )
-        parser.add_argument(
-            "INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run"
-        )
-        parser.add_argument("INPUT_FILE", type=str, help="the file to track")
-        parser.add_argument("args", nargs=REMAINDER)
+#     def __init_arguments__(self, parser):
+#         parser.add_argument(
+#             "--no-bb-trace",
+#             action="store_true",
+#             help="do not trace at the basic block level",
+#         )
+#         parser.add_argument(
+#             "--output-db",
+#             "-o",
+#             type=str,
+#             default="polytracker.db",
+#             help="path to the output database (default is polytracker.db)",
+#         )
+#         parser.add_argument(
+#             "INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run"
+#         )
+#         parser.add_argument("INPUT_FILE", type=str, help="the file to track")
+#         parser.add_argument("args", nargs=REMAINDER)
 
-    @staticmethod
-    @PolyTrackerREPL.register("run_trace")
-    def run_trace(
-        instrumented_binary_path: Union[str, Path],
-        input_file_path: Union[str, Path],
-        no_bb_trace: bool = False,
-        output_db_path: Optional[Union[str, Path]] = None,
-        args=(),
-        return_trace: bool = True,
-    ) -> Union[ProgramTrace, int]:
-        """
-        Runs an instrumented binary and returns the resulting trace
+#     @staticmethod
+#     @PolyTrackerREPL.register("run_trace")
+#     def run_trace(
+#         instrumented_binary_path: Union[str, Path],
+#         input_file_path: Union[str, Path],
+#         no_bb_trace: bool = False,
+#         output_db_path: Optional[Union[str, Path]] = None,
+#         args=(),
+#         return_trace: bool = True,
+#     ) -> Union[ProgramTrace, int]:
+#         """
+#         Runs an instrumented binary and returns the resulting trace
 
-        Args:
-            instrumented_binary_path: path to the instrumented binary
-            input_file_path: input file to track
-            no_bb_trace: if True, only functions will be traced and not basic blocks
-            output_db_path: path to save the output database
-            args: additional arguments to pass the binary
-            return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
+#         Args:
+#             instrumented_binary_path: path to the instrumented binary
+#             input_file_path: input file to track
+#             no_bb_trace: if True, only functions will be traced and not basic blocks
+#             output_db_path: path to save the output database
+#             args: additional arguments to pass the binary
+#             return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
 
-        Returns:
-            The program trace or the instrumented binary's exit code
+#         Returns:
+#             The program trace or the instrumented binary's exit code
 
-        """
-        can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
+#         """
+#         can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
 
-        if output_db_path is None:
-            # use a temporary file
-            tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
-            output_db_path = Path(tmpdir.name) / "polytracker.db"  # type: ignore
-        else:
-            if not isinstance(output_db_path, Path):
-                output_db_path = Path(output_db_path)
-            tmpdir = None
+#         if output_db_path is None:
+#             # use a temporary file
+#             tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
+#             output_db_path = Path(tmpdir.name) / "polytracker.db"  # type: ignore
+#         else:
+#             if not isinstance(output_db_path, Path):
+#                 output_db_path = Path(output_db_path)
+#             tmpdir = None
 
-        if not isinstance(instrumented_binary_path, Path):
-            instrumented_binary_path = Path(instrumented_binary_path)
+#         if not isinstance(instrumented_binary_path, Path):
+#             instrumented_binary_path = Path(instrumented_binary_path)
 
-        if not isinstance(input_file_path, Path):
-            input_file_path = Path(input_file_path)
+#         if not isinstance(input_file_path, Path):
+#             input_file_path = Path(input_file_path)
 
-        if output_db_path.exists():
-            PolyTrackerREPL.warning(
-                f'<style fg="gray">{output_db_path}</style> already exists'
-            )
+#         if output_db_path.exists():
+#             PolyTrackerREPL.warning(
+#                 f'<style fg="gray">{output_db_path}</style> already exists'
+#             )
 
-        if can_run_natively:
-            kwargs = {}
-            instrumented_binary_path = str(instrumented_binary_path)
-        else:
-            cwd = common_parent_directory(
-                input_file_path, output_db_path, instrumented_binary_path
-            )
-            kwargs = {"cwd": str(cwd)}
+#         if can_run_natively:
+#             kwargs = {}
+#             instrumented_binary_path = str(instrumented_binary_path)
+#         else:
+#             cwd = common_parent_directory(
+#                 input_file_path, output_db_path, instrumented_binary_path
+#             )
+#             kwargs = {"cwd": str(cwd)}
 
-            input_file_path = input_file_path.absolute().relative_to(cwd)
-            output_db_path = output_db_path.absolute().relative_to(cwd)
-            instrumented_binary_path = str(
-                instrumented_binary_path.absolute().relative_to(cwd)
-            )
-            if not instrumented_binary_path.startswith("."):
-                instrumented_binary_path = f"./{instrumented_binary_path}"
+#             input_file_path = input_file_path.absolute().relative_to(cwd)
+#             output_db_path = output_db_path.absolute().relative_to(cwd)
+#             instrumented_binary_path = str(
+#                 instrumented_binary_path.absolute().relative_to(cwd)
+#             )
+#             if not instrumented_binary_path.startswith("."):
+#                 instrumented_binary_path = f"./{instrumented_binary_path}"
 
-        cmd_args = [instrumented_binary_path] + list(args) + [str(input_file_path)]
-        env = {
-            "POLYPATH": str(input_file_path),
-            "POLYTRACE": ["1", "0"][no_bb_trace],
-            "POLYDB": str(output_db_path),
-        }
-        if can_run_natively:
-            retval = subprocess.call(cmd_args, env=env)  # type: ignore
-        else:
-            run_command = PolyTrackerREPL.commands["docker_run"]
-            retval = run_command(args=cmd_args, interactive=True, env=env, **kwargs)
-        if return_trace:
-            from . import PolyTrackerTrace
+#         cmd_args = [instrumented_binary_path] + list(args) + [str(input_file_path)]
+#         env = {
+#             "POLYPATH": str(input_file_path),
+#             "POLYTRACE": ["1", "0"][no_bb_trace],
+#             "POLYDB": str(output_db_path),
+#         }
+#         if can_run_natively:
+#             retval = subprocess.call(cmd_args, env=env)  # type: ignore
+#         else:
+#             run_command = PolyTrackerREPL.commands["docker_run"]
+#             retval = run_command(args=cmd_args, interactive=True, env=env, **kwargs)
+#         if return_trace:
+#             from . import PolyTrackerTrace
 
-            trace = PolyTrackerTrace.load(output_db_path)
-            if tmpdir is not None:
-                weakref.finalize(trace, tmpdir.cleanup)
-            return trace
-        else:
-            if tmpdir is not None:
-                tmpdir.cleanup()
-            return retval
+#             trace = PolyTrackerTrace.load(output_db_path)
+#             if tmpdir is not None:
+#                 weakref.finalize(trace, tmpdir.cleanup)
+#             return trace
+#         else:
+#             if tmpdir is not None:
+#                 tmpdir.cleanup()
+#             return retval
 
-    def run(self, args: Namespace):
-        retval = RunTraceCommand.run_trace(
-            instrumented_binary_path=args.INSTRUMENTED_BINARY,
-            input_file_path=args.INPUT_FILE,
-            no_bb_trace=args.no_bb_trace,
-            output_db_path=args.output_db,
-            args=args.args,
-            return_trace=False,
-        )
-        if retval == 0:
-            print(f"Trace saved to {args.output_db}")
-        return retval
+#     def run(self, args: Namespace):
+#         retval = RunTraceCommand.run_trace(
+#             instrumented_binary_path=args.INSTRUMENTED_BINARY,
+#             input_file_path=args.INPUT_FILE,
+#             no_bb_trace=args.no_bb_trace,
+#             output_db_path=args.output_db,
+#             args=args.args,
+#             return_trace=False,
+#         )
+#         if retval == 0:
+#             print(f"Trace saved to {args.output_db}")
+#         return retval
 
 
-class CFGTraceCommand(Subcommand[TraceCommand]):
-    name = "cfg"
-    help = "export a trace as an annotated cfg"
-    parent_type = TraceCommand
+# TODO (hbrodin): Pending integration from other PR
+# class CFGTraceCommand(Subcommand[TraceCommand]):
+#     name = "cfg"
+#     help = "export a trace as an annotated cfg"
+#     parent_type = TraceCommand
 
-    def __init_arguments__(self, parser):
-        parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
+#     def __init_arguments__(self, parser):
+#         parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
 
-    def run(self, args: Namespace):
-        from . import PolyTrackerTrace
+#     def run(self, args: Namespace):
+#         from . import PolyTrackerTrace
 
-        db = PolyTrackerTrace.load(args.TRACE_DB)
-        db.function_cfg.to_dot().save("trace.dot")
+#         db = PolyTrackerTrace.load(args.TRACE_DB)
+#         db.function_cfg.to_dot().save("trace.dot")

@@ -73,49 +73,71 @@ class InputOutputMapping:
                     ranges.append((start, i))
                     start = None
         if start is not None:
-            ranges.append((start, len(m) - 1))
+            ranges.append((start, len(m)))
         return ranges
 
     def file_cavities(self) -> Dict[Path, List[CavityType]]:
-        result: Dict[Path, List[CavityType]] = defaultdict(list)
         seen: Set[LabelType] = set()
+        markers: Dict[int, bytearray] = {}
 
-        for p, h in self.tdfile.fd_headers:
-            begin = h.prealloc_label_begin
-            end = h.prealloc_label_end
-            length = end - begin
+        # Create the initial marker arrays, one per source file. Each offset in the
+        # marker array corresponds to a single source file offset. Iterate over all
+        # source taint labels, mark any that affects control flow. If they affect
+        # control flow they are not a cavity. This will allow optimizations when
+        # iterating over sinks as any taint node that affects control flow will
+        # already have all of its source taints affecting control flow, and thus
+        # be in the marker array already.
+        for source_label in self.tdfile.input_labels():
+            source_node = self.tdfile.decode_node(source_label)
+            assert isinstance(source_node, TDSourceNode)
+            source_index = source_node.idx
+            source_offset = source_node.offset
 
-            if length < 1:
+            if source_index not in markers:
+                # Attempt to get the size of the file, to prevent reallocation of the markers array.
+                # Use whatever size is greater (size hint will be zero for failures) to allocate the
+                # array.
+                fdheader = self.tdfile.fd_headers[source_index][1]
+                size = source_offset + 1 if fdheader.invalid_size() else fdheader.size
+                markers[source_index] = bytearray(size)
+
+            marker = markers[source_index]
+            if source_offset >= len(marker):
+                marker = marker.ljust(source_offset + 1, b"\0")
+                markers[source_index] = marker
+
+            if source_node.affects_control_flow:
+                marker[source_offset] = 1
+
+        # Now, iterate all taint labels written to outputs (sinks). Walk them backwards to reach
+        # source nodes and mark any source offset contributing to outputs. If a node affects
+        # control flow, it can be disregarded as that would already have spilled into the source
+        # node (see above).
+        for s in tqdm(list(self.tdfile.sinks)):
+            sn = self.tdfile.decode_node(s.label)
+            if sn.affects_control_flow:
                 continue
 
-            marker = bytearray(length)
-            # Initially, mark all source taint that affects control flow
-            for i, label in enumerate(range(begin, end)):
-                if self.tdfile.decode_node(label).affects_control_flow:
-                    marker[i] = 1
-            # Now, iterate all source labels in the taint sink. As an optimization, if
-            # the taint affects_control_flow, move on. It already spilled into the source
-            # taint and was marked above
-            for s in tqdm(list(self.tdfile.sinks)):
-                sn = self.tdfile.decode_node(s.label)
-                if sn.affects_control_flow:
-                    continue
-                if isinstance(sn, TDSourceNode):
-                    marker[sn.offset] = 1
-                else:
-                    for lbl, n in self.dfs_walk(s.label, seen):
-                        if isinstance(n, TDSourceNode):
-                            marker[lbl - begin] = 1
-                        elif n.affects_control_flow:
-                            if isinstance(n, TDUnionNode):
-                                seen.add(n.left)
-                                seen.add(n.right)
-                            elif isinstance(n, TDRangeNode):
-                                seen.update(range(n.first, n.last + 1))
+            # If it is a source node add it (unless it affects control flow as it was already
+            # set by the initial sweep).
+            if isinstance(sn, TDSourceNode) and not sn.affects_control_flow:
+                markers[sn.idx][sn.offset] = 1
+            else:
+                for lbl, n in self.dfs_walk(s.label, seen):
+                    if isinstance(n, TDSourceNode):
+                        markers[n.idx][n.offset] = 1
+                    elif n.affects_control_flow:
+                        if isinstance(n, TDUnionNode):
+                            seen.add(n.left)
+                            seen.add(n.right)
+                        elif isinstance(n, TDRangeNode):
+                            seen.update(range(n.first, n.last + 1))
 
-            result[Path(p)] = self.marker_to_ranges(marker)
-
-        return result
+        # Convert the source index to the source path and marker bit arrays to ranges
+        return {
+            self.tdfile.fd_headers[k][0]: self.marker_to_ranges(v)
+            for (k, v) in markers.items()
+        }
 
 
 class MapInputsToOutputs(Command):
@@ -182,9 +204,9 @@ class FileCavities(Command):
 
             for path, cs in cavities.items():
                 with open(path, "rb") as f:
+                    contents = f.read()
                     for begin, end in cs:
                         print_cavity(path, begin, end)
-                        contents = f.read()
                         before = ascii(contents[max(begin - 10, 0) : begin])
                         after = ascii(contents[end : end + 10])
                         inside = ascii(contents[begin:end])
