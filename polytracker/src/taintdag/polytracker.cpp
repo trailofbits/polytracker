@@ -6,11 +6,12 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
+#include <filesystem>
+#include <system_error>
+
 #include "taintdag/polytracker.h"
 #include "taintdag/util.h"
 #include <sanitizer/dfsan_interface.h>
-
-#include <sys/stat.h>
 
 #include "taintdag/error.h"
 #include "taintdag/fnmapping.h"
@@ -27,14 +28,11 @@ label_t PolyTracker::union_labels(label_t l1, label_t l2) {
 
 void PolyTracker::open_file(int fd, std::filesystem::path const &path) {
   // Try to determine the file size. If unknown, just mark it as unknown.
-  uint64_t size = [fd]() -> uint64_t {
-    struct stat st;
-    if (fstat(fd, &st) == 0) {
-      return st.st_size;
-    } else {
-      return SourceEntry::InvalidSize;
-    }
-  }();
+  std::error_code ec;
+  uint64_t size = std::filesystem::file_size(path, ec);
+  if (ec) {
+    size = SourceEntry::InvalidSize;
+  }
 
   // TODO (hbrodin): If we decide to separate sources and sinks, extend this
   // method to accept a direction parameter e.g. in, inout, out and make an
