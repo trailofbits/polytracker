@@ -1,8 +1,8 @@
 #include <catch2/catch.hpp>
 #include <optional>
 
-#include "taintdag/encoding.hpp"
-#include "test_helpers.hpp"
+#include "taintdag/encoding.h"
+#include "utils.h"
 
 using namespace taintdag;
 

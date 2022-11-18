@@ -1,5 +1,5 @@
-#include "taintdag/encoding.hpp"
-#include "taintdag/error.hpp"
+#include "taintdag/encoding.h"
+#include "taintdag/error.h"
 
 namespace taintdag {
 

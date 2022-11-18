@@ -176,7 +176,8 @@ class Tool(ABC):
 
 
 class MuTool(Tool):
-    BIN_DIR = Path("/polytracker/the_klondike/mupdf/build/release")
+    PROJ_DIR = Path("/polytracker/the_klondike/mupdf")
+    BIN_DIR = PROJ_DIR / "build" / "release"
 
     def __init__(self, timeout=TIMEOUT):
         super().__init__(timeout)
@@ -197,7 +198,7 @@ class MuTool(Tool):
         self, container_input_path: Path, container_output_path: Path
     ) -> str:
         return self._cmd(
-            MuTool.BIN_DIR / "mutool_track", container_input_path, container_output_path
+            MuTool.PROJ_DIR / "mutool_track", container_input_path, container_output_path
         )
 
     def command_non_instrumented(
