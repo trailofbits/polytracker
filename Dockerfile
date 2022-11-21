@@ -11,6 +11,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
       libjpeg-dev                                     \
       graphviz                                        \
       vim                                             \
+      file                                            \
       gdb                                             \
       libncurses5-dev                                 \
       apt-transport-https                             \
