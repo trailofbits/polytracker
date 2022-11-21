@@ -4,6 +4,7 @@
 #include "taintdag/polytracker.h"
 #include <iostream>
 #include <sanitizer/dfsan_interface.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -65,4 +66,21 @@ EXT_C_FUNC int __dfsw_putc(int ch, FILE *stream, dfsan_label ch_label,
 EXT_C_FUNC int __dfsw_fputc(int ch, FILE *stream, dfsan_label ch_label,
                             dfsan_label stream_label, dfsan_label *ret_label) {
   return __dfsw_putc(ch, stream, ch_label, stream_label, ret_label);
+}
+
+// Socket functions
+EXT_C_FUNC ssize_t __dfsw_send(int socket, void *buffer, size_t length,
+                               int flags, dfsan_label socket_label,
+                               dfsan_label buffer_label,
+                               dfsan_label length_label,
+                               dfsan_label flags_label,
+                               dfsan_label *ret_label) {
+  auto current_offset = lseek(socket, 0, SEEK_CUR);
+  auto send_count = send(socket, buffer, length, flags);
+  if (send_count > 0) {
+    get_polytracker_tdag().taint_sink(socket, current_offset, buffer,
+                                      send_count);
+  }
+  *ret_label = 0;
+  return send_count;
 }

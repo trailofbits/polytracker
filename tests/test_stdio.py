@@ -24,3 +24,8 @@ def test_stdio(set_env_vars, program_trace: ProgramTrace):
     assert len(sinks) == 2
     assert paths[sinks[0].fdidx] == stdout
     assert paths[sinks[1].fdidx] == stderr
+
+    # Lots of output is written before this write
+    # NOTE(hbrodin): This is a bit fragile as it depends on how much debug output is written
+    assert sinks[0].offset > 0
+    assert sinks[1].offset > 0

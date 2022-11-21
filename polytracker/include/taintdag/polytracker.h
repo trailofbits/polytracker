@@ -83,9 +83,10 @@ private:
   ConcreteOutputFile output_file_;
 
   // Tracking source offsets for streams (where offsets can be determined by
-  // ftell) per source index.
+  // ftell) per source/sink index.
   static constexpr size_t offset_capacity = size_t{max_source_index} + 1;
-  StreamOffset<offset_capacity> stream_offsets_;
+  StreamOffset<offset_capacity> stream_read_offsets_;
+  StreamOffset<offset_capacity> stream_write_offsets_;
 };
 
 } // namespace taintdag

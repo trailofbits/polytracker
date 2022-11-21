@@ -9,25 +9,30 @@ namespace taintdag {
 TEST_CASE("StreamOffset", "StreamOffset") {
 
   StreamOffset<4> ofs;
-  REQUIRE(ofs.read(0, 0) == 0);
-  REQUIRE(ofs.read(0, 0) == 0);
+  REQUIRE(ofs.increase(0, 0) == 0);
+  REQUIRE(ofs.increase(0, 0) == 0);
 
   SECTION("Reading 3 bytes twice") {
-    REQUIRE(ofs.read(0, 3) == 0);
-    REQUIRE(ofs.read(0, 3) == 3);
+    REQUIRE(ofs.increase(0, 3) == 0);
+    REQUIRE(ofs.increase(0, 3) == 3);
   }
 
   SECTION("Reads doesn't interfer") {
-    ofs.read(0, 99);
-    ofs.read(1, 2);
+    ofs.increase(0, 99);
+    ofs.increase(1, 2);
 
-    REQUIRE(ofs.read(0, 1) == 99);
-    REQUIRE(ofs.read(1, 1) == 2);
+    REQUIRE(ofs.increase(0, 1) == 99);
+    REQUIRE(ofs.increase(1, 1) == 2);
   }
 
   SECTION("SourceIndex out of bounds aborts") {
+<<<<<<< HEAD
     test::ErrorExitReplace errthrow;
     REQUIRE_THROWS_AS(ofs.read(4, 1), test::ErrorExit);
+=======
+    ErrorExitReplace errthrow;
+    REQUIRE_THROWS_AS(ofs.increase(4, 1), ErrorExit);
+>>>>>>> fbd0d04 (Adds sockets as taint sinks)
   }
 }
 
