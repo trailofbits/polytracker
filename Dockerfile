@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:16daa680dcff0dc86ebf6ae81f5382859695cb35
+FROM trailofbits/polytracker-llvm:9bbd58ee30bef78b3e04867522b9cf56eeec3428
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
@@ -19,7 +19,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
 
 RUN update-ca-certificates
 
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
+# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
 RUN python3 -m pip install pip && python3 -m pip install pytest
 
 WORKDIR /blight
