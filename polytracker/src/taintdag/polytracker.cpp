@@ -78,7 +78,7 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        size_t length) {
   if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
     if (offset < 0) {
-      offset = stream_offsets_.read(*source_index, length);
+      offset = stream_read_offsets_.increase(*source_index, length);
     }
     return create_source_taint(*source_index,
                                {reinterpret_cast<uint8_t const *>(mem), length},
@@ -96,7 +96,7 @@ std::optional<taint_range_t>
 PolyTracker::source_taint(int fd, source_offset_t offset, size_t length) {
   if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
     if (offset < 0) {
-      offset = stream_offsets_.read(*source_index, length);
+      offset = stream_read_offsets_.increase(*source_index, length);
     }
     auto range = output_file_.section<Labels>().create_source_labels(
         *source_index, offset, length);
@@ -140,6 +140,9 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
   if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
     std::span<uint8_t const> src{reinterpret_cast<uint8_t const *>(mem),
                                  length};
+    if (offset < 0) {
+      offset = stream_write_offsets_.increase(*idx, length);
+    }
     for (auto &c : src) {
       auto lbl = dfsan_read_label(&c, sizeof(char));
       if (lbl > 0)
@@ -151,10 +154,14 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
 
 void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
                              size_t length) {
-  if (label == 0)
-    return;
 
   if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
+    if (offset < 0) {
+      offset = stream_write_offsets_.increase(*idx, length);
+    }
+
+    if (label == 0)
+      return;
     for (size_t i = 0; i < length; ++i) {
       output_file_.section<TaintSink>().log_single(offset + i, label, *idx);
     }

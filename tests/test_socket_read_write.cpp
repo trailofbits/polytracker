@@ -8,29 +8,32 @@
 #include <unistd.h>
 
 
-int read_source_data(int conn, std::string_view expected_data) {
+int read_write_connection_data(int conn) {
 
-  int ret;
-  char buffer[7]{0};
+  ssize_t ret;
+  char buffer[6];
 
-  // Receive source taint via read
-  ret = read(conn, buffer, 2);
+  // Receive source taint via read, recv and recvfrom
+ ret = read(conn, buffer, 2);
   assert(ret == 2);
 
-  // Receive source taint via recv
   ret = recv(conn, &buffer[2], 2, 0);
   assert(ret == 2);
 
-  // Receive source taint via recvfrom
   ret = recvfrom(conn, &buffer[4], 2, 0, nullptr, nullptr);
   assert(ret == 2);
-  // Ensure we received the correct data
-  assert(expected_data == buffer);
+
+  // Split the echo reply across write and send
+  ret = write(conn, &buffer[0], 3);
+  assert(ret == 3);
+
+  ret = send(conn, &buffer[3], 3, 0);
+  assert(ret == 3);
 
   return 0;
 }
 
-int client(uint16_t port, std::string_view expected_data) {
+int client(uint16_t port) {
   int ret;
   auto s = socket(PF_INET, SOCK_STREAM, 0);
   assert(s >= 0);
@@ -42,7 +45,7 @@ int client(uint16_t port, std::string_view expected_data) {
   ret = connect(s, reinterpret_cast<sockaddr const *>(&server_address), sizeof(server_address));
   assert(ret == 0);
 
-  ret = read_source_data(s, expected_data);
+  ret = read_write_connection_data(s);
   assert(ret == 0);
 
   ret = shutdown(s, SHUT_RDWR);
@@ -53,7 +56,7 @@ int client(uint16_t port, std::string_view expected_data) {
 }
 
 
-int server(uint16_t port, std::string_view expected_data) {
+int server(uint16_t port) {
   int ret;
   auto s = socket(PF_INET, SOCK_STREAM, 0);
   assert(s >= 0);
@@ -63,7 +66,7 @@ int server(uint16_t port, std::string_view expected_data) {
   assert(ret == 0);
 
   const int disable = 0;
-  struct linger linger {.l_linger = 0, .l_onoff = 0};
+  struct linger linger {.l_onoff = 0, .l_linger = 0};
   ret = setsockopt(s, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger));
   assert(ret == 0);
 
@@ -80,7 +83,7 @@ int server(uint16_t port, std::string_view expected_data) {
   int client_socket = accept(s, nullptr, nullptr); // Don't care about client address
   assert(client_socket >= 0);
 
-  ret = read_source_data(client_socket, expected_data);
+  ret = read_write_connection_data(client_socket);
   assert(ret == 0);
 
   // Close the client connection
@@ -105,12 +108,10 @@ int main(int argc, char* argv[]) {
   auto port = std::stoul(argv[2]);
   assert(port <= std::numeric_limits<uint16_t>::max());
 
-  std::string_view expected_data = argv[3];
-
   if (mode == "client") {
-    return client(static_cast<uint16_t>(port), expected_data);
+    return client(static_cast<uint16_t>(port));
   } else if (mode == "server") {
-    return server(static_cast<uint16_t>(port), expected_data);
+    return server(static_cast<uint16_t>(port));
   } else {
     return -1;
   }
