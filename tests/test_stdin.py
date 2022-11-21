@@ -21,12 +21,6 @@ def test_stdin_read(instrumented_binary: Path, trace_file: Path, method: str):
     )
     program_trace = polytracker.PolyTrackerTrace.load(trace_file)
 
-    print(program_trace)
-    for inp in program_trace.inputs:
-        print(inp)
-    for lbl in program_trace.tdfile.input_labels():
-        print(f"lbl {lbl} decoded {program_trace.tdfile.decode_node(lbl)}")
-
     # Ensure /dev/stdin is in the list of inputs
     assert "/dev/stdin" in [x.path for x in program_trace.inputs]
 

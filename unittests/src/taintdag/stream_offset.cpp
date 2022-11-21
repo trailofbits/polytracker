@@ -2,7 +2,7 @@
 
 #include "taintdag/stream_offset.h"
 
-#include "error_exit_helper.h"
+#include "utils.h"
 
 namespace taintdag {
 
