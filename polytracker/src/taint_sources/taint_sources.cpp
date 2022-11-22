@@ -249,8 +249,9 @@ EXT_C_FUNC int __dfsw_getc(FILE *fd, dfsan_label fd_label,
   if (c != EOF) {
     auto tr =
         get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr)
+    if (tr) {
       *ret_label = tr.value().first;
+    }
   }
   return c;
 }
@@ -404,8 +405,7 @@ EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
 }
 
 // Socket functions
-
-// TODO (hbrodin): Should this be moved somewhere in the PolyTracker class?
+namespace {
 static std::optional<std::string> connect_name(int socket) {
   sockaddr_in local_addr, remote_addr;
   socklen_t local_len{sizeof(local_addr)}, remote_len{sizeof(remote_addr)};
@@ -443,13 +443,14 @@ static std::optional<std::string> connect_name(int socket) {
 
   return strm.str();
 }
+} // namespace
 
 EXT_C_FUNC int __dfsw_accept(int socket, struct sockaddr *address,
                              socklen_t *address_len, dfsan_label socket_label,
                              dfsan_label address_label,
                              dfsan_label address_len_label,
                              dfsan_label *ret_label) {
-  int client_socket = ::accept(socket, address, address_len);
+  int client_socket = accept(socket, address, address_len);
   if (client_socket >= 0) {
     if (auto name = connect_name(client_socket); name) {
       get_polytracker_tdag().open_file(client_socket, *name);
@@ -465,7 +466,7 @@ EXT_C_FUNC int __dfsw_connect(int socket, const struct sockaddr *address,
                               dfsan_label address_label,
                               dfsan_label address_len_label,
                               dfsan_label *ret_label) {
-  int status = ::connect(socket, address, address_len);
+  int status = connect(socket, address, address_len);
   if (status == 0) {
     if (auto name = connect_name(socket); name) {
       get_polytracker_tdag().open_file(socket, *name);
