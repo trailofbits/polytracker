@@ -22,7 +22,7 @@ namespace taintdag {
 // it is reused to represent sinks as well.
 struct SourceEntry {
   // Representing a size that cannot be determined (e.g. for a socket).
-  static constexpr uint64_t InvalidSize = ~uint64_t(0);
+  static constexpr uint64_t InvalidSize = std::numeric_limits<uint64_t>::max();
 
   // Use this when there is no fd representing this source (e.g. argv)
   static constexpr int InvalidFD = -1;
