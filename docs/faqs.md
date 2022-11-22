@@ -42,6 +42,6 @@ You should still be able to run the binary just as its developers natively inten
 
 The other cool thing about Polytracker is its post-instrumentation analysis capabilities. You'll want to use the REPL or write/repurpose a small script like [EXAMPLE TBD]() to get useful information out of the taint DAG each run of the instrumented software produces.
 
-## dfsan and Polytracker
+## dfsan and PolyTracker
 
 [dfsan](https://clang.llvm.org/docs/DataFlowSanitizerDesign.html) has undergone a fairly significant redesign recently. Use the [older dfsan documentation](https://releases.llvm.org/11.0.1/tools/clang/docs/DataFlowSanitizer.html) and [design](https://releases.llvm.org/11.0.1/tools/clang/docs/DataFlowSanitizerDesign.html) if you would like to understand what dfsan within Polytracker does.
