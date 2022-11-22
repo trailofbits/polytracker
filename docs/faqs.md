@@ -4,7 +4,7 @@ This is a collection of documented assumptions, topics that don't have enough wr
 
 ## Can I just run one command and have an instrumented parser?
 
-Kind of. The architecture of Polytracker is somewhat modeled after Git, where each command is comprised of subcommands, and each higher-level command should be run in a particular order. For some examples, check out the `examples` directory of Dockerfiles.
+Kind of. The architecture of PolyTracker is somewhat modeled after Git, where each command is comprised of subcommands, and each higher-level command should be run in a particular order. For some examples, check out the `examples` directory of Dockerfiles.
 
 ## What should I do before trying to instrument my software?
 
