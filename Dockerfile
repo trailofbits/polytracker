@@ -1,22 +1,22 @@
 FROM trailofbits/polytracker-llvm:bbdb72d136af011db9710a4d44a79e6d5059cc1a
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get -y update  && \
-      apt-get install -y \
-            ninja-build                                     \
-            python3-pip                                     \
-            python3.8-dev                                   \
-            libgraphviz-dev                                 \
-            libjpeg-dev                                     \
-            graphviz                                        \
-            vim                                             \
-            file                                            \
-            gdb                                             \
-            libncurses5-dev                                 \
-            apt-transport-https                             \
-            ca-certificates                                 \
-            libstdc++-10-dev
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      ninja-build                                     \
+      python3-pip                                     \
+      python3.8-dev                                   \
+      python-is-python3                               \
+      libgraphviz-dev                                 \
+      libjpeg-dev                                     \
+      graphviz                                        \
+      vim                                             \
+      gdb                                             \
+      libncurses5-dev                                 \
+      apt-transport-https                             \
+      ca-certificates                                 \
+      libstdc++-10-dev
 
 RUN update-ca-certificates
 

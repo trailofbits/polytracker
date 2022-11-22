@@ -15,6 +15,16 @@ set_target_properties(
 
 add_subdirectory(passes)
 
+set(COMPILER_RT_SANITIZERS_TO_BUILD dfsan CACHE STRING "")
+set(COMPILER_RT_BUILD_BUILTINS OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_CRT OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_PROFILE OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_MEMPROF OFF CACHE BOOL "")
+
+add_subdirectory(compiler-rt)
+
 set(POLYTRACKER_DIR polytracker)
 set(POLYTRACKER_SOURCES ${POLYTRACKER_DIR}/main.cpp
                         ${POLYTRACKER_DIR}/polytracker.cpp)
