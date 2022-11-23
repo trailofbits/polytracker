@@ -1,0 +1,26 @@
+FROM trailofbits/polytracker:latest
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get update && \
+	apt-get install -y libcurl4-openssl-dev libssl-dev
+
+RUN git clone https://github.com/mdaus/nitro.git
+WORKDIR /polytracker/the_klondike/nitro
+RUN	mkdir build
+WORKDIR /polytracker/the_klondike/nitro/build
+
+RUN polytracker build cmake .. \
+	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+	-DCODA_BUILD_TESTS=OFF
+
+RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++
+
+RUN polytracker instrument-targets \
+	--taint \
+	--ftrace \
+	show_nitf++
+
+RUN mv show_nitf++.instrumented nitro_track
