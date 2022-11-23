@@ -1,7 +1,7 @@
 __docformat__ = "google"
 
 import logging
-import pkg_resources
+from importlib.metadata import version as metadata_version
 
 from .tracing import *
 
@@ -11,7 +11,7 @@ VersionElement = Union[int, str]
 
 
 def version() -> str:
-    return pkg_resources.require("polytracker")[0].version
+    return metadata_version("polytracker")
 
 
 # class TaintForestCommand(Command):
