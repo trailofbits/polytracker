@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:9bbd58ee30bef78b3e04867522b9cf56eeec3428
+FROM trailofbits/polytracker-llvm:bbdb72d136af011db9710a4d44a79e6d5059cc1a
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 ENV DEBIAN_FRONTEND=noninteractive
