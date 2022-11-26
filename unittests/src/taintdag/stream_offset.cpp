@@ -26,13 +26,8 @@ TEST_CASE("StreamOffset", "StreamOffset") {
   }
 
   SECTION("SourceIndex out of bounds aborts") {
-<<<<<<< HEAD
-    test::ErrorExitReplace errthrow;
-    REQUIRE_THROWS_AS(ofs.read(4, 1), test::ErrorExit);
-=======
     ErrorExitReplace errthrow;
     REQUIRE_THROWS_AS(ofs.increase(4, 1), ErrorExit);
->>>>>>> fbd0d04 (Adds sockets as taint sinks)
   }
 }
 
