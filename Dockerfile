@@ -1,4 +1,4 @@
-FROM trailofbits/polytracker-llvm:16daa680dcff0dc86ebf6ae81f5382859695cb35
+FROM trailofbits/polytracker-llvm:bbdb72d136af011db9710a4d44a79e6d5059cc1a
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,6 +11,7 @@ RUN apt-get -y update  && \
             libjpeg-dev                                     \
             graphviz                                        \
             vim                                             \
+            file                                            \
             gdb                                             \
             libncurses5-dev                                 \
             apt-transport-https                             \
