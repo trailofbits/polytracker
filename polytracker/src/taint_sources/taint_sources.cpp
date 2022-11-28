@@ -99,9 +99,8 @@ static int impl_getc_style_functions(dfsan_label &ret_label, FILE *file,
   int c = getchar_function(getchar_arg...);
   ret_label = 0;
   if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(file), offset, sizeof(char));
-    if (tr) {
+    if (auto tr = get_polytracker_tdag().source_taint(fileno(file), offset,
+                                                      sizeof(char))) {
       ret_label = tr.value().first;
     }
   }
