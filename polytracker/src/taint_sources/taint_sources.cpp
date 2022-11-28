@@ -110,18 +110,14 @@ static int impl_getc_style_functions(dfsan_label &ret_label, FILE *file,
 
 // Implements taint source functions for read-style functions with known offset.
 // `ret_label` is the label of the return value (will be set to zero)
-// `offset` is the known offset the read happens on
+// `offset` is the known offset the read starts from
+// `retval` return value of read-like function
 // `fd` the file descriptor reading from
 // `buffer` the buffer that will be tainted
-// `read_function` is the actual read function (e.g. `read`, `pread`, `recv`)
-// `read_function_args` are the arguments being passed to `read_function`
-template <typename F, typename... Args>
 static ssize_t impl_offset_read_functions(dfsan_label &ret_label, Offset offset,
-                                          int fd, void *buffer,
-                                          F &&read_function,
-                                          Args... read_function_args) {
-  ssize_t ret_val = read_function(read_function_args...);
-  auto length = Length::from_returned_size(ret_val);
+                                          ssize_t retval, int fd,
+                                          void *buffer) {
+  auto length = Length::from_returned_size(retval);
   taint_source_buffer(fd, buffer, offset, length, ret_label);
   return ret_val;
 }
@@ -130,15 +126,15 @@ static ssize_t impl_offset_read_functions(dfsan_label &ret_label, Offset offset,
 // `ret_label` is the label of the return value (will be set to zero)
 // `fd` the file descriptor reading from
 // `buffer` the buffer that will be tainted
-// `read_function` is the actual read function (e.g. `read`, `pread`, `recv`)
+// `read_function` is the actual read function (e.g. `read` or `recv`)
 // `read_function_args` are the arguments being passed to `read_function`
 template <typename F, typename... Args>
 static ssize_t impl_read_recv_functions(dfsan_label &ret_label, int fd,
                                         void *buffer, F &&read_function,
                                         Args... read_function_args) {
-  return impl_offset_read_functions(ret_label, Offset::from_fd(fd), fd, buffer,
-                                    std::forward<F>(read_function),
-                                    std::forward<Args>(read_function_args)...);
+  auto offset = Offset::from_fd(fd);
+  auto ret = read_function(read_function_args...);
+  return impl_offset_read_functions(ret_label, offset, ret, fd, buffer);
 }
 
 // Implementation for the `fread`-style functions
@@ -233,8 +229,8 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
                                 dfsan_label count_label,
                                 dfsan_label offset_label,
                                 dfsan_label *ret_label) {
-  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset), fd,
-                                    buf, pread, fd, buf, count, offset);
+  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset),
+                                    pread(fd, buf, count, offset), fd, buf);
 }
 
 EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
@@ -242,8 +238,8 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
                                   dfsan_label count_label,
                                   dfsan_label offset_label,
                                   dfsan_label *ret_label) {
-  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset), fd,
-                                    buf, pread, fd, buf, count, offset);
+  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset),
+                                    pread(fd, buf, count, offset), fd, buf);
 }
 
 EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
