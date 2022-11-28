@@ -46,10 +46,11 @@ Length Length::from_returned_size_count(size_t size, size_t nitems) {
 }
 
 Length Length::from_returned_string(char const *str) {
-  if (!str) {
+  if (str) {
+    return Length{std::string_view{str}.length()};
+  } else {
     return Length{};
   }
-  return Length{strlen(str)};
 }
 
 Length::Length(size_t length) : value_{length} {}
@@ -70,8 +71,9 @@ Offset Offset::from_off_t(off_t offset_value) {
   if (offset_value < 0) {
     return Offset{};
   } else if (offset_value > max_source_offset) {
-    // If this path is reached an offset that is larger than can be recorded in
-    // the TDAG structure is encounteed. There is not much to do but bail out.
+    // If this path is reached an offset that is larger than can be recorded
+    // in the TDAG structure is encounteed. There is not much to do but bail
+    // out.
     error_exit("Offset ", offset_value,
                " is larger than maximum offset that can be handled:",
                max_source_offset);
