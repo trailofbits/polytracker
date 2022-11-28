@@ -20,6 +20,7 @@
 #include "taintdag/string_table.h"
 #include "taintdag/taint.h"
 #include "taintdag/taint_source.h"
+#include "taintdag/util.h"
 
 namespace taintdag {
 
@@ -36,11 +37,11 @@ public:
 
   // Create taint labels representing a read of length starting at offset from
   // fd If no return value, the fd is not tracked.
-  std::optional<taint_range_t>
-  source_taint(int fd, void const *dst, source_offset_t offset, size_t length);
+  std::optional<taint_range_t> source_taint(int fd, void const *dst,
+                                            util::Offset offset, size_t length);
 
   // Just return the taint_range e.g. for return values
-  std::optional<taint_range_t> source_taint(int fd, source_offset_t offset,
+  std::optional<taint_range_t> source_taint(int fd, util::Offset offset,
                                             size_t length);
 
   // Create a new taint source (not a file) and assigns taint labels
