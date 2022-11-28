@@ -4,6 +4,7 @@
 
 #include "taintdag/error.h"
 #include "taintdag/polytracker.h"
+#include "taintdag/util.h"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -35,6 +36,9 @@
 #endif
 
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
+
+using util::Length;
+using util::Offset;
 
 // To create some label functions
 // Following the libc custom functions from custom.cc
@@ -68,12 +72,82 @@ static FILE *impl_fopen(const char *filename, const char *mode,
   return fd;
 }
 
-static ssize_t impl_pread(int fd, void *buf, size_t count, off_t offset,
-                          dfsan_label *ret_label) {
-  ssize_t ret = pread(fd, buf, count, offset);
-  if (ret > 0)
-    get_polytracker_tdag().source_taint(fd, buf, offset, ret);
-  *ret_label = 0;
+// Wrapper method for tainting a buffer, from source `fd` at `offset` having
+// `length`. If length is invalid nothing happpens.
+static void taint_source_buffer(int fd, void *buff, Offset offset,
+                                Length length, dfsan_label &ret_label) {
+  if (length.valid()) {
+    get_polytracker_tdag().source_taint(fd, buff, offset, *length.value());
+  }
+
+  ret_label = 0;
+}
+
+// Implementation for the `getc`-style function (`getchar`, `getc`, `fgetc`,...)
+// `ret_label` is the label for the return value. It will be assigned the source
+// label (if any), unless EOF is reached. `file` is the file stream to read from
+// `getchar_function` is the current function to implement
+// `getchar_arg` is the optional arg to pass to the getchar_function.
+template <typename F, typename... Args>
+static int impl_getc_style_functions(dfsan_label &ret_label, FILE *file,
+                                     F &&getchar_function,
+                                     Args... getchar_arg) {
+  static_assert(sizeof...(getchar_arg) <= 1,
+                "Expected zero or one argument to the getchar_function");
+
+  auto offset = Offset::from_file(file);
+  int c = getchar_function(getchar_arg...);
+  ret_label = 0;
+  if (c != EOF) {
+    if (auto tr = get_polytracker_tdag().source_taint(fileno(file), offset,
+                                                      sizeof(char))) {
+      ret_label = tr.value().first;
+    }
+  }
+  return c;
+}
+
+// Implements taint source functions for read-style functions with known offset.
+// `ret_label` is the label of the return value (will be set to zero)
+// `offset` is the known offset the read starts from
+// `retval` return value of read-like function
+// `fd` the file descriptor reading from
+// `buffer` the buffer that will be tainted
+static ssize_t impl_offset_read_functions(dfsan_label &ret_label, Offset offset,
+                                          ssize_t retval, int fd,
+                                          void *buffer) {
+  auto length = Length::from_returned_size(retval);
+  taint_source_buffer(fd, buffer, offset, length, ret_label);
+  return retval;
+}
+
+// Implements taint source functions for read/recv-style functions
+// `ret_label` is the label of the return value (will be set to zero)
+// `fd` the file descriptor reading from
+// `buffer` the buffer that will be tainted
+// `read_function` is the actual read function (e.g. `read` or `recv`)
+// `read_function_args` are the arguments being passed to `read_function`
+template <typename F, typename... Args>
+static ssize_t impl_read_recv_functions(dfsan_label &ret_label, int fd,
+                                        void *buffer, F &&read_function,
+                                        Args... read_function_args) {
+  auto offset = Offset::from_fd(fd);
+  auto ret = read_function(read_function_args...);
+  return impl_offset_read_functions(ret_label, offset, ret, fd, buffer);
+}
+
+// Implementation for the `fread`-style functions
+// `ret_label` is the label for the return value. It will be assigned the source
+// label (if any), unless EOF is reached. `file` is the file stream to read from
+// `getchar_function` is the current function to implement
+// `getchar_arg` is the optional arg to pass to the getchar_function.
+template <typename F>
+static size_t impl_fread(F &&fread_function, FILE *fd, void *buff, size_t size,
+                         size_t count, dfsan_label &ret_label) {
+  auto offset = Offset::from_file(fd);
+  size_t ret = fread_function(buff, size, count, fd);
+  auto length = Length::from_returned_size_count(size, ret);
+  taint_source_buffer(fileno(fd), buff, offset, length, ret_label);
   return ret;
 }
 
@@ -146,14 +220,7 @@ EXT_C_FUNC int __dfsw_fclose(FILE *fd, dfsan_label fd_label,
 EXT_C_FUNC ssize_t __dfsw_read(int fd, void *buff, size_t size,
                                dfsan_label fd_label, dfsan_label buff_label,
                                dfsan_label size_label, dfsan_label *ret_label) {
-  long read_start = lseek(fd, 0, SEEK_CUR);
-  ssize_t ret_val = read(fd, buff, size);
-
-  if (ret_val > 0)
-    get_polytracker_tdag().source_taint(fd, buff, read_start, ret_val);
-
-  *ret_label = 0;
-  return ret_val;
+  return impl_read_recv_functions(*ret_label, fd, buff, read, fd, buff, size);
 }
 
 EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
@@ -161,7 +228,8 @@ EXT_C_FUNC ssize_t __dfsw_pread(int fd, void *buf, size_t count, off_t offset,
                                 dfsan_label count_label,
                                 dfsan_label offset_label,
                                 dfsan_label *ret_label) {
-  return impl_pread(fd, buf, count, offset, ret_label);
+  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset),
+                                    pread(fd, buf, count, offset), fd, buf);
 }
 
 EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
@@ -169,20 +237,15 @@ EXT_C_FUNC ssize_t __dfsw_pread64(int fd, void *buf, size_t count, off_t offset,
                                   dfsan_label count_label,
                                   dfsan_label offset_label,
                                   dfsan_label *ret_label) {
-  return impl_pread(fd, buf, count, offset, ret_label);
+  return impl_offset_read_functions(*ret_label, Offset::from_off_t(offset),
+                                    pread(fd, buf, count, offset), fd, buf);
 }
 
 EXT_C_FUNC size_t __dfsw_fread(void *buff, size_t size, size_t count, FILE *fd,
                                dfsan_label buf_label, dfsan_label size_label,
                                dfsan_label count_label, dfsan_label fd_label,
                                dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  size_t ret = fread(buff, size, count, fd);
-
-  if (ret > 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret * size);
-  *ret_label = 0;
-  return ret;
+  return impl_fread(fread, fd, buff, size, count, *ret_label);
 }
 
 EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
@@ -191,130 +254,61 @@ EXT_C_FUNC size_t __dfsw_fread_unlocked(void *buff, size_t size, size_t count,
                                         dfsan_label count_label,
                                         dfsan_label fd_label,
                                         dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  size_t ret = fread_unlocked(buff, size, count, fd);
-  if (ret > 0)
-    get_polytracker_tdag().source_taint(fileno(fd), buff, offset, ret * size);
-  *ret_label = 0;
-  return ret;
+  return impl_fread(fread_unlocked, fd, buff, size, count, *ret_label);
 }
+
 EXT_C_FUNC int __dfsw_fgetc(FILE *fd, dfsan_label fd_label,
                             dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  int c = fgetc(fd);
-  *ret_label = 0;
-
-  if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, fd, fgetc, fd);
 }
 
 EXT_C_FUNC int __dfsw_fgetc_unlocked(FILE *fd, dfsan_label fd_label,
                                      dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  int c = fgetc_unlocked(fd);
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, fd, fgetc_unlocked, fd);
 }
 
 EXT_C_FUNC int __dfsw__IO_getc(FILE *fd, dfsan_label fd_label,
                                dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  int c = getc(fd);
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, fd, getc, fd);
 }
 
 EXT_C_FUNC int __dfsw_getc(FILE *fd, dfsan_label fd_label,
                            dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  int c = getc(fd);
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr) {
-      *ret_label = tr.value().first;
-    }
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, fd, getc, fd);
 }
 
 EXT_C_FUNC int __dfsw_getc_unlocked(FILE *fd, dfsan_label fd_label,
                                     dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  int c = getc_unlocked(fd);
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr =
-        get_polytracker_tdag().source_taint(fileno(fd), offset, sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, fd, getc_unlocked, fd);
 }
 
 EXT_C_FUNC int __dfsw_getchar(dfsan_label *ret_label) {
-  long offset = ftell(stdin);
-  int c = getchar();
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset,
-                                                  sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, stdin, getchar);
 }
 
 EXT_C_FUNC int __dfsw_getchar_unlocked(dfsan_label *ret_label) {
-  long offset = ftell(stdin);
-  int c = getchar_unlocked();
-  *ret_label = 0;
-  if (c != EOF) {
-    auto tr = get_polytracker_tdag().source_taint(fileno(stdin), offset,
-                                                  sizeof(char));
-    if (tr)
-      *ret_label = tr.value().first;
-  }
-  return c;
+  return impl_getc_style_functions(*ret_label, stdin, getchar_unlocked);
 }
 
 EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
                               dfsan_label str_label, dfsan_label count_label,
                               dfsan_label fd_label, dfsan_label *ret_label) {
-  long offset = ftell(fd);
+  auto offset = Offset::from_file(fd);
   char *ret = fgets(str, count, fd);
-
-  if (ret) {
-    size_t len = strlen(ret);
-    get_polytracker_tdag().source_taint(fileno(fd), str, offset, len);
+  auto length = Length::from_returned_string(ret);
+  taint_source_buffer(fileno(fd), str, offset, length, *ret_label);
+  if (length.valid()) {
     *ret_label = str_label;
-  } else {
-    *ret_label = 0;
   }
   return ret;
 }
 
+// TODO (hbrodin): Should this be removed? The call to fgets doesn't seem right,
+// especially then length is sizeof char*, typically eight. In general it is
+// unbounded and the gets-function is deprecated.
 EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
                              dfsan_label *ret_label) {
-  long offset = ftell(stdin);
+  auto offset = Offset::from_file(stdin);
   char *ret = fgets(str, sizeof str, stdin);
 
   if (ret) {
@@ -334,14 +328,10 @@ EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
                                    dfsan_label delim_label,
                                    dfsan_label fd_label,
                                    dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  ssize_t ret = getdelim(lineptr, n, delim, fd);
-
-  if (ret != -1) {
-    get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
-  }
-
-  *ret_label = 0;
+  auto offset = Offset::from_file(fd);
+  auto ret = getdelim(lineptr, n, delim, fd);
+  auto length = Length::from_returned_size(ret);
+  taint_source_buffer(fileno(fd), *lineptr, offset, length, *ret_label);
   return ret;
 }
 
@@ -351,14 +341,10 @@ EXT_C_FUNC ssize_t __dfsw___getdelim(char **lineptr, size_t *n, int delim,
                                      dfsan_label delim_label,
                                      dfsan_label fd_label,
                                      dfsan_label *ret_label) {
-  long offset = ftell(fd);
-  ssize_t ret = __getdelim(lineptr, n, delim, fd);
-
-  if (ret != -1) {
-    get_polytracker_tdag().source_taint(fileno(fd), *lineptr, offset, ret);
-  }
-
-  *ret_label = 0;
+  auto offset = Offset::from_file(fd);
+  auto ret = __getdelim(lineptr, n, delim, fd);
+  auto length = Length::from_returned_size(ret);
+  taint_source_buffer(fileno(fd), *lineptr, offset, length, *ret_label);
   return ret;
 }
 
@@ -367,9 +353,10 @@ EXT_C_FUNC void *__dfsw_mmap(void *start, size_t length, int prot, int flags,
                              dfsan_label len_label, dfsan_label prot_label,
                              dfsan_label flags_label, dfsan_label fd_label,
                              dfsan_label offset_label, dfsan_label *ret_label) {
+  auto offs = Offset::from_off_t(offset);
   void *ret = mmap(start, length, prot, flags, fd, offset);
   if (ret != MAP_FAILED) {
-    get_polytracker_tdag().source_taint(fd, ret, offset, length);
+    get_polytracker_tdag().source_taint(fd, ret, offs, length);
   }
 
   *ret_label = 0;
@@ -482,13 +469,8 @@ EXT_C_FUNC ssize_t __dfsw_recv(int socket, void *buff, size_t length, int flags,
                                dfsan_label length_label,
                                dfsan_label flags_label,
                                dfsan_label *ret_label) {
-  ssize_t ret_val = recv(socket, buff, length, flags);
-
-  if (ret_val > 0)
-    get_polytracker_tdag().source_taint(socket, buff, -1, ret_val);
-
-  *ret_label = 0;
-  return ret_val;
+  return impl_read_recv_functions(*ret_label, socket, buff, recv, socket, buff,
+                                  length, flags);
 }
 
 EXT_C_FUNC ssize_t __dfsw_recvfrom(
@@ -497,12 +479,6 @@ EXT_C_FUNC ssize_t __dfsw_recvfrom(
     dfsan_label buffer_label, dfsan_label length_label, dfsan_label flags_label,
     dfsan_label address_label, dfsan_label address_len_label,
     dfsan_label *ret_label) {
-  ssize_t ret_val =
-      recvfrom(socket, buffer, length, flags, address, address_len);
-
-  if (ret_val > 0)
-    get_polytracker_tdag().source_taint(socket, buffer, -1, ret_val);
-
-  *ret_label = 0;
-  return ret_val;
+  return impl_read_recv_functions(*ret_label, socket, buffer, recvfrom, socket,
+                                  buffer, length, flags, address, address_len);
 }
