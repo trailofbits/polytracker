@@ -1,4 +1,3 @@
-// #include "polytracker/write_taints.h"
 #include <atomic>
 #include <fcntl.h>
 #include <fstream>
@@ -26,6 +25,7 @@ DECLARE_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_db_name);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stderr_sink);
 DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stdout_sink);
+DECLARE_EARLY_CONSTRUCT(std::string, polytracker_stdin_source);
 
 // Controls argv being a taint source
 bool polytracker_taint_argv = false;
@@ -69,13 +69,17 @@ void polytracker_parse_env() {
     get_polytracker_stderr_sink() = err;
   }
 
+  if (auto in = getenv("POLYTRACKER_STDIN_SOURCE")) {
+    get_polytracker_stdin_source() = in;
+  }
+
   if (auto argv = getenv("POLYTRACKER_TAINT_ARGV")) {
     polytracker_taint_argv = argv[0] == '1';
   }
 }
 
 /*
-This code parses the enviornment variables and sets the globals which work as
+This code parses the environment variables and sets the globals which work as
 polytrackers settings
 
 1. Parse config if exists
@@ -86,6 +90,7 @@ void polytracker_get_settings() {
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdin_source);
   polytracker_parse_env();
   set_defaults();
 }
@@ -114,6 +119,11 @@ void polytracker_print_settings() {
     printf("POLYTRACKER_STDERR_SINK: %s\n",
            get_polytracker_stderr_sink().c_str());
   }
+  // stdin source flag
+  if (!get_polytracker_stdin_source().empty()) {
+    printf("POLYTRACKER_STDIN_SOURCE: %s\n",
+           get_polytracker_stdin_source().c_str());
+  }
   if (polytracker_taint_argv) {
     printf("POLYTRACKER_TAINT_ARGV: 1\n");
   }
@@ -130,12 +140,20 @@ void sink_streams() {
   }
 }
 
+// Use stdin as a taint source, if indicated by env var
+void stdin_source() {
+  if (int f = fileno(stdin); f >= 0 && get_polytracker_stdin_source() == "1") {
+    get_polytracker_tdag().open_file(f, "/dev/stdin");
+  }
+}
+
 void taint_start(void) {
   polytracker_get_settings();
   polytracker_print_settings();
   DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
                      get_polytracker_db_name());
   sink_streams();
+  stdin_source();
   // Set up the atexit call
   atexit(polytracker_end);
 }
