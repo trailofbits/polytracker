@@ -119,7 +119,7 @@ static ssize_t impl_offset_read_functions(dfsan_label &ret_label, Offset offset,
                                           void *buffer) {
   auto length = Length::from_returned_size(retval);
   taint_source_buffer(fd, buffer, offset, length, ret_label);
-  return ret_val;
+  return retval;
 }
 
 // Implements taint source functions for read/recv-style functions
