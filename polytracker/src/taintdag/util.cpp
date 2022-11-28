@@ -26,7 +26,7 @@ Length Length::from_returned_size(ssize_t retval) {
 
 Length Length::from_returned_size_count(size_t size, size_t nitems) {
 
-  size_t byte_size;
+  size_t byte_size{0};
 
   // NOTE: using clang builtin. Assuming portability is not an issue as we rely
   // heavily on LLVM.
