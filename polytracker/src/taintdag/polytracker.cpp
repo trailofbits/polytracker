@@ -77,9 +77,9 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
                                                        util::Offset offset,
                                                        size_t length) {
   if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
-    auto offset_value = offset.valid()
-                            ? *offset.value()
-                            : stream_read_offsets_.increase(*source_index, length);
+    auto offset_value =
+        offset.valid() ? *offset.value()
+                       : stream_read_offsets_.increase(*source_index, length);
     return create_source_taint(*source_index,
                                {reinterpret_cast<uint8_t const *>(mem), length},
                                offset_value);
@@ -95,9 +95,9 @@ std::optional<taint_range_t> PolyTracker::source_taint(int fd, void const *mem,
 std::optional<taint_range_t>
 PolyTracker::source_taint(int fd, util::Offset offset, size_t length) {
   if (auto source_index = output_file_.section<Sources>().mapping_idx(fd)) {
-    auto offset_value = offset.valid()
-                            ? *offset.value()
-                            : stream_read_offsets_.increase(*source_index, length);
+    auto offset_value =
+        offset.valid() ? *offset.value()
+                       : stream_read_offsets_.increase(*source_index, length);
     auto range = output_file_.section<Labels>().create_source_labels(
         *source_index, offset_value, length);
     output_file_.section<SourceLabelIndexSection>().set_range(
