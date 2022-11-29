@@ -122,7 +122,7 @@ PolyTracker::create_taint_source(std::string_view name,
   return {};
 }
 
-void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
+void PolyTracker::taint_sink(int fd, util::Offset offset, void const *mem,
                              size_t length) {
 
   // TODO (hbrodin): Optimize this. Add a way of representing the entire write
@@ -140,30 +140,32 @@ void PolyTracker::taint_sink(int fd, sink_offset_t offset, void const *mem,
   if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
     std::span<uint8_t const> src{reinterpret_cast<uint8_t const *>(mem),
                                  length};
-    if (offset < 0) {
-      offset = stream_write_offsets_.increase(*idx, length);
-    }
+    auto offset_value = offset.valid()
+                            ? *offset.value()
+                            : stream_write_offsets_.increase(*idx, length);
     for (auto &c : src) {
       auto lbl = dfsan_read_label(&c, sizeof(char));
       if (lbl > 0)
-        output_file_.section<TaintSink>().log_single(offset, lbl, *idx);
-      ++offset;
+        output_file_.section<TaintSink>().log_single(offset_value, lbl, *idx);
+      ++offset_value;
     }
   }
 }
 
-void PolyTracker::taint_sink(int fd, sink_offset_t offset, label_t label,
+void PolyTracker::taint_sink(int fd, util::Offset offset, label_t label,
                              size_t length) {
 
   if (auto idx = output_file_.section<Sources>().mapping_idx(fd)) {
-    if (offset < 0) {
-      offset = stream_write_offsets_.increase(*idx, length);
-    }
+
+    auto offset_value = offset.valid()
+                            ? *offset.value()
+                            : stream_write_offsets_.increase(*idx, length);
 
     if (label == 0)
       return;
     for (size_t i = 0; i < length; ++i) {
-      output_file_.section<TaintSink>().log_single(offset + i, label, *idx);
+      output_file_.section<TaintSink>().log_single(offset_value + i, label,
+                                                   *idx);
     }
   }
 }
