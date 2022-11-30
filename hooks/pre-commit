@@ -11,7 +11,7 @@ echo Checking Python formatting...
 black --check polytracker tests --exclude '/(polytracker/src|polytracker/scripts)/'
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-  cat <<\EOF
+	cat <<\EOF
 black wants to reformat some files!
 Try running:
 
@@ -19,16 +19,16 @@ Try running:
 
 from the root of this repository to automatically reformat them.
 EOF
-  exit 1
+	exit 1
 fi
 
 echo Checking C/C++ formatting...
 python third_party/run-clang-format/run-clang-format.py \
-          polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
-          polytracker/src/taint_sources/*.cpp
+	polytracker/include/polytracker/*.h polytracker/src/passes/*.cpp polytracker/src/polytracker/*.cpp \
+	polytracker/src/taint_sources/*.cpp
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-  cat <<\EOF
+	cat <<\EOF
 clang-format wants to reformat some files!
 Try running:
 
@@ -37,11 +37,10 @@ Try running:
 
 from the root of this repository to automatically reformat them.
 EOF
-  exit 1
+	exit 1
 fi
 
-if git rev-parse --verify HEAD >/dev/null 2>&1
-then
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
 	against=HEAD
 else
 	# Initial commit: diff against an empty tree object
@@ -61,9 +60,8 @@ if [ "$allownonascii" != "true" ] &&
 	# Note that the use of brackets around a tr range is ok here, (it's
 	# even required, for portability to Solaris 10's /usr/bin/tr), since
 	# the square bracket bytes happen to fall in the designated range.
-	test $(git diff --cached --name-only --diff-filter=A -z $against |
-	  LC_ALL=C tr -d '[ -~]\0' | wc -c) != 0
-then
+	test "$(git diff --cached --name-only --diff-filter=A -z "$against" |
+		LC_ALL=C tr -d '[ -~]\0' | wc -c)" != 0; then
 	cat <<\EOF
 Error: Attempt to add a non-ASCII file name.
 
@@ -79,4 +77,4 @@ EOF
 fi
 
 # If there are whitespace errors, print the offending file names and fail.
-exec git diff-index --check --cached $against --
+exec git diff-index --check --cached "$against" --

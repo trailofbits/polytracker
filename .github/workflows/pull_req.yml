@@ -10,7 +10,7 @@ jobs:
       matrix:
         example: [mupdf,poppler,qpdf]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
       - name: Build the base image

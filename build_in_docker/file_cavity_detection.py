@@ -10,7 +10,7 @@ from os import mkdir, rename
 from pathlib import Path
 from shutil import rmtree
 from time import time
-from typing import Any, Dict, Generator, Iterable, List, Union
+from typing import Any, Dict, Generator, Iterable, List, Type, Union
 
 # 10 minute timeout for detecting cavities
 TIMEOUT = 60 * 10
@@ -93,7 +93,9 @@ class Tool(ABC):
         """Converts a filename to a container output path"""
         return self.container_output_dir / filename.name
 
-    def get_mount_arg(self, host_dir: Path, container_dir: Path) -> List[str]:
+    def get_mount_arg(
+        self, host_dir: Union[Path, str], container_dir: Union[Path, str]
+    ) -> List[str]:
         """Returns a docker mount command given args"""
         return [
             "--mount",
@@ -154,7 +156,7 @@ class Tool(ABC):
             exec_info["ret"] = ret.returncode
         finally:
             exec_info["end"] = time()
-            exec_info["time"] = exec_info["end"] - exec_info["start"]
+            exec_info["time"] = float(exec_info["end"]) - float(exec_info["start"])
 
         return exec_info
 
@@ -198,7 +200,9 @@ class MuTool(Tool):
         self, container_input_path: Path, container_output_path: Path
     ) -> str:
         return self._cmd(
-            MuTool.PROJ_DIR / "mutool_track", container_input_path, container_output_path
+            MuTool.PROJ_DIR / "mutool_track",
+            container_input_path,
+            container_output_path,
         )
 
     def command_non_instrumented(
@@ -368,7 +372,9 @@ def file_cavity_detection(
             result_cavity["timeout"] = True
         finally:
             result_cavity["end"] = time()
-            result_cavity["time"] = result_cavity["end"] - result_cavity["start"]
+            result_cavity["time"] = float(result_cavity["end"]) - float(
+                result_cavity["start"]
+            )
         meta["cavity_detect"] = result_cavity
 
         if "timeout" in result_cavity:
@@ -402,7 +408,7 @@ def process_paths(
         target_qlen = nworkers
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as tpe:
-        futures = []
+        futures: List[concurrent.futures.Future] = []
         run = True
         enqueue = True
         nfiles_processed = 0
@@ -449,7 +455,11 @@ def execute(
 
 
 # Maps tool selection argument to functions controlling processing
-TOOL_MAPPING = {"libjpeg": LibJPEG, "mutool": MuTool, "openjpeg": OpenJPEG}
+TOOL_MAPPING: Dict[str, Type[Tool]] = {
+    "libjpeg": LibJPEG,
+    "mutool": MuTool,
+    "openjpeg": OpenJPEG,
+}
 
 
 def main():
