@@ -161,8 +161,9 @@ void PolyTracker::taint_sink(int fd, util::Offset offset, label_t label,
                             ? *offset.value()
                             : stream_write_offsets_.increase(*idx, length);
 
-    if (label == 0)
+    if (label == 0) {
       return;
+    }
     for (size_t i = 0; i < length; ++i) {
       output_file_.section<TaintSink>().log_single(offset_value + i, label,
                                                    *idx);

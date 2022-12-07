@@ -19,22 +19,19 @@
 namespace taintdag {
 
 // Records requirements on a Section in the OutputFile
-template <typename T> concept Section = requires(T a) {
+template <typename T>
+concept Section = requires(T a) {
   // How much memory should be reserved for this seciton in the OutputFile.
-  { T::allocation_size }
-  ->std::convertible_to<std::size_t>;
+  { T::allocation_size } -> std::convertible_to<std::size_t>;
 
   // Alignment requirements on the section
-  { T::align_of }
-  ->std::convertible_to<std::size_t>;
+  { T::align_of } -> std::convertible_to<std::size_t>;
 
   // A type tag for this section
-  { T::tag }
-  ->std::convertible_to<std::uint8_t>;
+  { T::tag } -> std::convertible_to<std::uint8_t>;
 
   // The actual amount of memory currently used
-  { a.size() }
-  ->std::convertible_to<std::size_t>;
+  { a.size() } -> std::convertible_to<std::size_t>;
 };
 
 // Need a single arg to create instances of the Section type in place

@@ -136,7 +136,7 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
   // access to the section for the life time of the ConstructCtx.
   // N.b. count()/size() competes for the same lock.
   template <typename... Args>
-  std::optional<ConstructCtx> construct(Args &&... args) {
+  std::optional<ConstructCtx> construct(Args &&...args) {
     if (auto write_context = SectionBase::write(entry_size())) {
       return ConstructCtx{.ctx = std::move(*write_context),
                           .t = *new (&*(write_context->mem.begin()))
