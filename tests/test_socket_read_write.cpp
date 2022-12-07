@@ -14,7 +14,7 @@ int read_write_connection_data(int conn) {
   char buffer[6];
 
   // Receive source taint via read, recv and recvfrom
- ret = read(conn, buffer, 2);
+  ret = read(conn, buffer, 2);
   assert(ret == 2);
 
   ret = recv(conn, &buffer[2], 2, 0);
