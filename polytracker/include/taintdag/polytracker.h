@@ -55,9 +55,9 @@ public:
   void affects_control_flow(label_t taint_label);
 
   // Log tainted data flowed into the sink
-  void taint_sink(int fd, sink_offset_t offset, void const *mem, size_t length);
+  void taint_sink(int fd, util::Offset offset, void const *mem, size_t length);
   // Same as before, but use same label for all data
-  void taint_sink(int fd, sink_offset_t offset, label_t label, size_t length);
+  void taint_sink(int fd, util::Offset offset, label_t label, size_t length);
 
   // Log function entry
   Functions::index_t function_entry(std::string_view name);
@@ -83,9 +83,10 @@ private:
   ConcreteOutputFile output_file_;
 
   // Tracking source offsets for streams (where offsets can be determined by
-  // ftell) per source index.
+  // ftell) per source/sink index.
   static constexpr size_t offset_capacity = size_t{max_source_index} + 1;
-  StreamOffset<offset_capacity> stream_offsets_;
+  StreamOffset<offset_capacity> stream_read_offsets_;
+  StreamOffset<offset_capacity> stream_write_offsets_;
 };
 
 } // namespace taintdag
