@@ -262,6 +262,14 @@ class TDUnionNode(TDNode):
         return f"TDUnionNode: {super().__repr__()} ({self.left}, {self.right})"
 
 
+class TDUntaintedNode(TDNode):
+    def __init__(self):
+        super().__init__(False)
+
+    def __repr__(self) -> str:
+        return f"TDUntaintedNode: {super().__repr__()}"
+
+
 class TDSink(Structure):
     """Python representation of the SinkLogEntry from sink.h"""
 
@@ -376,6 +384,8 @@ class TDFile:
     def decode_node(self, label: int) -> TDNode:
         v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
+        if v == 0:
+            return TDUntaintedNode()
         st = (v >> self.source_taint_bit_shift) & 1
         affects_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
         if st:
@@ -393,7 +403,7 @@ class TDFile:
 
     @property
     def nodes(self) -> Iterator[TDNode]:
-        for label in range(0, self.label_count):
+        for label in range(1, self.label_count):
             yield self.decode_node(label)
 
     @property
