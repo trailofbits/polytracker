@@ -384,8 +384,6 @@ class TDFile:
     def decode_node(self, label: int) -> TDNode:
         v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
-        if v == 0:
-            return TDUntaintedNode()
         st = (v >> self.source_taint_bit_shift) & 1
         affects_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
         if st:
@@ -399,6 +397,8 @@ class TDFile:
             if v1 > v2:
                 return TDUnionNode(v1, v2, affects_cf)
             else:
+                if v == 0:
+                    return TDUntaintedNode()
                 return TDRangeNode(v1, v2, affects_cf)
 
     @property
