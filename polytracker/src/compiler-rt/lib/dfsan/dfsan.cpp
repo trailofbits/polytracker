@@ -196,7 +196,7 @@ static void dfsan_check_label(dfsan_label label) {
   }
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE atomic_dfsan_label* __polytracker_union_table(const dfsan_label &l1, const dfsan_label& l2);
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label __polytracker_union_table(const dfsan_label &l1, const dfsan_label& l2);
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE dfsan_label_info __polytracker_get_label_info(const dfsan_label &l1);
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __polytracker_log_union(const dfsan_label &l1, const dfsan_label &l2, const dfsan_label& union_label);
 
@@ -207,9 +207,9 @@ dfsan_label_info __polytracker_get_label_info(const dfsan_label &label) {
   return {0, 0, nullptr, nullptr};
 }
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE __attribute__((weak))
-atomic_dfsan_label* __polytracker_union_table(const dfsan_label &l1, const dfsan_label& l2) {
+dfsan_label __polytracker_union_table(const dfsan_label &l1, const dfsan_label& l2) {
   printf("ERROR In weak function symbol\n");
-  return nullptr;
+  return 0u;
 }
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE __attribute__((weak))
 void __polytracker_log_union(const dfsan_label &l1, const dfsan_label &l2, const dfsan_label& union_label) {}
@@ -220,56 +220,14 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
   DCHECK_NE(l1, l2);
 
+  // If either label is zero (untainted), use the other
   if (l1 == 0)
     return l2;
   if (l2 == 0)
     return l1;
 
-  // If no labels have been created, yet l1 and l2 are non-zero, we are using
-  // fast16labels mode.
-  if (atomic_load(&__dfsan_last_label, memory_order_relaxed) == 0)
-    return l1 | l2;
-
-  if (l1 > l2)
-    Swap(l1, l2);
-
-  atomic_dfsan_label *table_ent = __polytracker_union_table(l1, l2);
-  // Edgecase for atexit handling code with polytracker
-  if (table_ent == nullptr) {
-    printf("WARNING: Table entry is nullptr\n");
-    return 0;
-  }
-	// We need to deal with the case where two threads concurrently request
-  // a union of the same pair of labels.  If the table entry is uninitialized,
-  // (i.e. 0) use a compare-exchange to set the entry to kInitializingLabel
-  // (i.e. -1) to mark that we are initializing it.
-  dfsan_label label = 0;
-  if (atomic_compare_exchange_strong(table_ent, &label, kInitializingLabel,
-                                     memory_order_acquire)) {
-    // Check whether l2 subsumes l1.  We don't need to check whether l1
-    // subsumes l2 because we are guaranteed here that l1 < l2, and (at least
-    // in the cases we are interested in) a label may only subsume labels
-    // created earlier (i.e. with a lower numerical value).
-    dfsan_label_info label_info = __polytracker_get_label_info(l2);
-    if (label_info.l1 == l1 ||
-        label_info.l2 == l1) {
-      label = l2;
-    } else {
-      label = atomic_fetch_add(&__dfsan_last_label, 1, memory_order_relaxed) + 1;
-      dfsan_check_label(label);
-      __polytracker_log_union(l1, l2, label);
-      // __dfsan_label_info[label].l1 = l1;
-      // __dfsan_label_info[label].l2 = l2;
-    }
-    atomic_store(table_ent, label, memory_order_release);
-  } else if (label == kInitializingLabel) {
-    // Another thread is initializing the entry.  Wait until it is finished.
-    do {
-      internal_sched_yield();
-      label = atomic_load(table_ent, memory_order_acquire);
-    } while (label == kInitializingLabel);
-  }
-  return label;
+  // Use the polytracker way of creating new labels
+  return __polytracker_union_table(l1, l2);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
