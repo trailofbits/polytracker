@@ -1,56 +1,88 @@
-FROM trailofbits/polytracker-llvm:bbdb72d136af011db9710a4d44a79e6d5059cc1a
+FROM ubuntu:jammy as base
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update  \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-      ninja-build                                     \
-      python3-pip                                     \
-      python3.8-dev                                   \
-      python-is-python3                               \
-      libgraphviz-dev                                 \
-      libjpeg-dev                                     \
-      graphviz                                        \
-      vim                                             \
-      gdb                                             \
-      libncurses5-dev                                 \
-      apt-transport-https                             \
-      ca-certificates                                 \
-      libstdc++-10-dev
+ARG BUILD_TYPE="Release"
+ARG PARALLEL_LINK_JOBS=1
+ARG LLVM_TARGET_NAME=X86
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y update
+RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
+  ninja-build                                         \
+  python3-pip                                         \
+  python3.8-dev                                       \
+  python-is-python3                                   \
+  ca-certificates                                     \
+  libstdc++-10-dev                                    \
+  golang                                              \
+  clang-13                                            \
+  cmake                                               \
+  git                                                 \
+  file
+
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-13 10
+RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-13 10
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-13 10
+RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-13 10
+
+WORKDIR /
+RUN git clone --depth 1 --branch llvmorg-13.0.1 https://github.com/llvm/llvm-project.git
+RUN git clone --depth 1 --branch master https://github.com/trailofbits/blight.git
+
+RUN pip3 install pytest /blight
 
 RUN update-ca-certificates
 
-RUN apt-get install -y software-properties-common && \
-      # deadsnakes PPA allows us to install python3.10 on focal
-      add-apt-repository ppa:deadsnakes/ppa && \
-      apt-get -y update && \
-      apt-get install -y \
-            python3.10-dev \
-            # make update-alternatives work
-            python3.10-distutils \
-            curl && \
-      # need a pip compatible with 3.10
-      curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 && \
-      update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 10 && \
-      python3 -m pip install pytest
+RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
+ENV PATH="$PATH:/root/go/bin"
 
-WORKDIR /blight
-RUN git clone https://github.com/trailofbits/blight.git .
-RUN pip3 install .
+FROM base as libcxx
 
+ENV CC="gclang"
+ENV CXX="gclang++"
+
+ENV LIBCXX_BUILD_DIR=/llvm-project/llvm/build
+ENV LIBCXX_INSTALL_DIR=/cxx_lib
+
+RUN cmake -GNinja \
+  -B$LIBCXX_BUILD_DIR \
+  -S/llvm-project/runtimes \
+  -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  -DCMAKE_INSTALL_PREFIX=$LIBCXX_INSTALL_DIR \
+  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
+
+RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`nproc`+1))
+
+FROM libcxx as polytracker-python
+
+WORKDIR /workdir
 COPY . /polytracker
 
-RUN mkdir /polytracker/build
-WORKDIR /polytracker/build
-RUN cmake -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_VERBOSE_MAKEFILE=TRUE -DCXX_LIB_PATH=/cxx_libs ..
-RUN ninja install
+RUN pip3 install /polytracker
 
+FROM polytracker-python as polytracker-cxx
 
-WORKDIR /polytracker
-RUN pip3 install .
+ARG DFSAN_FILENAME_ARCH=x86_64
+
+ENV CC="clang"
+ENV CXX="clang++"
+RUN cmake -GNinja \
+  -B/polytracker/build \
+  -S/polytracker \
+  -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  -DCXX_LIB_PATH=$LIBCXX_INSTALL_DIR
+
+RUN cmake --build /polytracker/build --target install -j$((`nproc`+1))
 
 # Setting up build enviornment for targets
 ENV POLYTRACKER_CAN_RUN_NATIVELY=1
 ENV PATH=/polytracker/build/bin:$PATH
 ENV DFSAN_OPTIONS="strict_data_dependencies=0"
 ENV COMPILER_DIR=/polytracker/build/share/polytracker
+ENV CXX_LIB_PATH=/cxx_lib
+ENV WLLVM_BC_STORE=/cxx_clean_bitcode
+ENV WLLVM_ARTIFACT_STORE=/build_artifacts
+ENV DFSAN_LIB_PATH=/polytracker/build/lib/linux/libclang_rt.dfsan-${DFSAN_FILENAME_ARCH}.a
+
+RUN mkdir $WLLVM_BC_STORE
+RUN mkdir $WLLVM_ARTIFACT_STORE
