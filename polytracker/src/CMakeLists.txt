@@ -56,7 +56,7 @@ if(XRAY_ON)
        -fxray-instruction-threshold=1)
 endif()
 
-target_include_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_INCLUDE})
+target_include_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/include)
 target_compile_options(Polytracker PRIVATE ${POLYTRACKER_COMPILE_OPTS})
 target_link_options(Polytracker PRIVATE -stdlib=libc++)
 target_link_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_LIB})
