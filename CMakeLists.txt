@@ -11,8 +11,8 @@ if (NOT DEFINED CXX_LIB_PATH)
     message(FATAL_ERROR "Can't find Polytrackers libcxx, please set -DCXX_LIB_PATH")
 endif()
 
-set(POLYTRACKER_CXX_INCLUDE "${CXX_LIB_PATH}/poly_build/include/c++/v1")
-set(POLYTRACKER_CXX_LIB "${CXX_LIB_PATH}/poly_build/lib")
+set(POLYTRACKER_CXX_INCLUDE "${CXX_LIB_PATH}/include/c++/v1")
+set(POLYTRACKER_CXX_LIB "${CXX_LIB_PATH}/lib")
 
 set(POLYTRACKER_BIN_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/bin")
 set(POLYTRACKER_LIB_DIR "${CMAKE_INSTALL_PREFIX}/share/polytracker/lib")
