@@ -126,6 +126,7 @@ def _lower_bitcode(
         str(output_file),
         *args,
         "-pie",
+        f"-Wl,-rpath,{CXX_LIB_PATH}",
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group",
         *libs,
