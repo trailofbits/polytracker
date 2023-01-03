@@ -21,7 +21,7 @@ for module_to_subsume in SUBMODULES_TO_SUBSUME:
 # Automatically load all modules in the `polytracker` package,
 # so all PolyTracker plugins will auto-register themselves:
 package_dir = Path(__file__).resolve().parent
-for (_, module_name, _) in iter_modules([str(package_dir)]):  # type: ignore
+for _, module_name, _ in iter_modules([str(package_dir)]):  # type: ignore
     if module_name == "__main__":
         continue
 
