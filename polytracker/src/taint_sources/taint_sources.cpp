@@ -40,6 +40,9 @@ EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 using util::Length;
 using util::Offset;
 
+// To allow abort to somewhat gracefully finalize polytracker logging
+extern void polytracker_end();
+
 // To create some label functions
 // Following the libc custom functions from custom.cc
 namespace {
@@ -389,6 +392,21 @@ EXT_C_FUNC int __dfsw_pthread_cond_broadcast(pthread_cond_t *cond,
 
 EXT_C_FUNC void __dfsw_exit(int ret_code, dfsan_label ret_code_label) {
   exit(ret_code);
+}
+
+// Need this for some reason. Not sure why. Should already be in assert.h.
+extern "C" void __assert_fail(const char *, const char *, unsigned,
+                              const char *);
+// Capture calls to abort and explicitly invoke polytracker_end to do a best
+// effort at updating the tdag with correct sizes.
+EXT_C_FUNC void __dfsw___assert_fail(const char *msg, const char *file,
+                                     unsigned line, const char *pretty_func,
+                                     dfsan_label msg_label,
+                                     dfsan_label file_label,
+                                     dfsan_label line_label,
+                                     dfsan_label pretty_func_label) {
+  polytracker_end();
+  __assert_fail(msg, file, line, pretty_func);
 }
 
 // Socket functions

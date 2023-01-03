@@ -97,7 +97,7 @@ public:
         (SectionMeta{.tag = Sections::tag,
                      .align = Sections::align_of,
                      .offset = 0,
-                     .size = Sections::allocation_size})...};
+                     .size = 0})...};
   };
 
   OutputFile(std::filesystem::path const &filename)

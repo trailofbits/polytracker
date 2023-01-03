@@ -154,7 +154,8 @@ fun:llrintl=functional
 
 # Functions that produce an output that does not depend on the input (shadow is
 # zeroed automatically).
-fun:__assert_fail=discard
+fun:__assert_fail=uninstrumented
+fun:__assert_fail=custom
 fun:__ctype_b_loc=discard
 fun:__cxa_atexit=discard
 fun:__errno_location=discard
@@ -548,7 +549,6 @@ fun:__asinl_finite=uninstrumented
 fun:__asprintf=uninstrumented
 fun:__asprintf_chk=uninstrumented
 fun:__assert=uninstrumented
-fun:__assert_fail=uninstrumented
 fun:__assert_perror_fail=uninstrumented
 fun:__atan2_finite=uninstrumented
 fun:__atan2f_finite=uninstrumented
