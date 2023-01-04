@@ -5,9 +5,7 @@ on:
   push:
     paths:
     - "**.cpp"
-    - "**.cc"
     - "**.h"
-    - "**.hpp"
 
 jobs:
   lint-cxx:
