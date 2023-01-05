@@ -2,16 +2,19 @@
 
 set -e
 
-SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPTPATH="$(
+	cd "$(dirname "$0")" >/dev/null 2>&1
+	pwd -P
+)"
 
-if [[ "$(docker images -q trailofbits/polytrackerbuilder 2> /dev/null)" == "" ]]; then
-    docker build -t trailofbits/polytrackerbuilder -f "${SCRIPTPATH}/Dockerfile" "${SCRIPTPATH}"
+if [[ "$(docker images -q trailofbits/polytrackerbuilder 2>/dev/null)" == "" ]]; then
+	docker build -t trailofbits/polytrackerbuilder -f "${SCRIPTPATH}/Dockerfile" "${SCRIPTPATH}"
 fi
 
 mkdir -p "${SCRIPTPATH}/../build"
 
-if [ -t 1 ] ; then
-  docker run -ti --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
+if [ -t 1 ]; then
+	docker run -ti --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
 else
-  docker run --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
+	docker run --rm --mount type=bind,source="${SCRIPTPATH}/..",target=/polytracker trailofbits/polytrackerbuilder:latest /compile.sh
 fi

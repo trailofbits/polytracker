@@ -5,23 +5,40 @@ import shutil
 import subprocess
 from tempfile import TemporaryDirectory
 from file_cavity_detection import process_paths, Tool, TOOL_MAPPING
-from mutate_cavities import FileMutator, FileMutatorInfo, method_mapping, mutate_cavities
+from mutate_cavities import (
+    FileMutator,
+    FileMutatorInfo,
+    method_mapping,
+    mutate_cavities,
+)
 from hashlib import sha256
 from os.path import exists, getsize
 from pathlib import Path
 from sys import stdout
 from time import time
+from typing import Dict
+
 
 def get_checksum(f: Path) -> str:
     sh = sha256()
-    with open(f, 'rb') as fd:
+    with open(f, "rb") as fd:
         sh.update(fd.read())
     return sh.hexdigest()
+
 
 def result_file(input_file: Path, results_dir: Path, output_ext: str) -> Path:
     return results_dir / f"{input_file.stem}{output_ext}"
 
-def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Path, limit: int, skip: int, tool : Tool):
+
+def verify_cavities(
+    inputfile: Path,
+    cavitydb: Path,
+    method: str,
+    resultsdir: Path,
+    limit: int,
+    skip: int,
+    tool: Tool,
+):
     orig_output = result_file(inputfile, resultsdir, tool.output_extension())
 
     if not exists(orig_output):
@@ -51,7 +68,13 @@ def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Pa
         returnstr += f"WARNING: Error while generating output for mutated file {str(mutated_file)}. Trying to continue.\n"
 
     if not exists(mutfile):
-        returnstr += f"ERROR: Did not generate output file {str(mutfile)} from mutated file. Orig output file {str(orig_output)} exists.\n"
+        errorstr = (
+            "ERROR: Did not generate output file "
+            f"{str(mutfile)} from mutated file. "
+            f"Orig output file {str(orig_output)} exists.\n"
+        )
+
+        returnstr += errorstr
         return returnstr
 
     # 4. Verify mutated output file have equal checksum to orig output file
@@ -66,15 +89,18 @@ def verify_cavities(inputfile: Path, cavitydb: Path, method: str, resultsdir: Pa
 
 @contextmanager
 def store_stats(output: Path):
-    d = {}
-    yield d
-    with open(output, 'w') as f:
-        json.dump(d, f)
+    output_dict: Dict[str, str] = {}
+    yield output_dict
+    with open(output, "w") as output_file:
+        json.dump(output_dict, output_file)
+
 
 STATSJSON = "stats.json"
+
+
 def verify_in_container(inputfile: Path, tool: Tool):
     """Run file cavity verification in the container
-    
+
     Expects:
     1. the directory hosting this script to be mounted in the container.
     2. /data to be a directory hosting one the input file and the
@@ -102,8 +128,11 @@ def verify_in_container(inputfile: Path, tool: Tool):
         output_file = work / f"output{tool.output_extension()}"
 
         # 2
-        subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(inputfile, output_file)],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["/bin/bash", "-c", tool.command_non_instrumented(inputfile, output_file)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         if not output_file.exists():
             stats["error"] = "Original output file could not be generated"
             return
@@ -112,12 +141,11 @@ def verify_in_container(inputfile: Path, tool: Tool):
         output_file.unlink()
 
         # 3
-        fmi = FileMutatorInfo(inputfile, data/"cavities.csv")
+        fmi = FileMutatorInfo(inputfile, data / "cavities.csv")
 
         stats["filesize"] = fmi.file_size
         stats["cavity"] = {}
         stats["non-cavity"] = {}
-        c = stats["cavity"]
 
         def do_mutation(offsets, c):
             c["no_output"] = 0
@@ -129,11 +157,18 @@ def verify_in_container(inputfile: Path, tool: Tool):
             mutated_input = work / f"mutated{tool.input_extension()}"
             mutated_ouput = work / f"mutated{tool.output_extension()}"
             for offset in offsets:
-                with open(str(mutated_input), 'wb') as f:
+                with open(str(mutated_input), "wb") as f:
                     fm.write_mutated(offset, f)
                     c["count"] += 1
-                    subprocess.run(["/bin/bash", "-c", tool.command_non_instrumented(mutated_input, mutated_ouput)], 
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(
+                        [
+                            "/bin/bash",
+                            "-c",
+                            tool.command_non_instrumented(mutated_input, mutated_ouput),
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
                     if not mutated_ouput.exists():
                         c["no_output"] += 1
                     else:
@@ -147,23 +182,29 @@ def verify_in_container(inputfile: Path, tool: Tool):
                 t = time()
                 if t - lastprint > 30:
                     rate = c["count"] / (t - start)
-                    print(f'Verifed {c["count"]} mutated bytes. Currently verifying at {rate:.1f} mutated bytes/sec. {str(inputfile)}')
+                    print(
+                        f'Verifed {c["count"]} mutated bytes. Currently '
+                        f"verifying at {rate:.1f} mutated bytes/sec. "
+                        f"{str(inputfile)}"
+                    )
                     lastprint = t
-
 
         # 4 If there are any cavities, mutate them
         if any(map(lambda x: x >= 0, fmi.cavity_offsets)):
             do_mutation(fmi.cavity_offsets, stats["cavity"])
-        else: # Else just invoke with empty arg to get stats
+        else:  # Else just invoke with empty arg to get stats
             do_mutation([], stats["cavity"])
 
         # 5
         do_mutation(fmi.sample_non_cavity_bytes(0.01), stats["non-cavity"])
     # 6
 
-def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdir: Path):
+
+def start_in_container(
+    inputfile: Path, cavitydb: Path, toolname: str, resultsdir: Path
+):
     print(f"Start processing {inputfile}")
-    tool = TOOL_MAPPING[toolname]()
+    tool: Tool = TOOL_MAPPING[toolname]()
     script_dir = Path(__file__).absolute().parent
     with TemporaryDirectory() as datadir:
         shutil.copy(inputfile, datadir)
@@ -171,20 +212,33 @@ def start_in_container(inputfile: Path, cavitydb: Path, toolname: str, resultsdi
         cmd.extend(tool.get_mount_arg(script_dir, "/src"))
         cmd.extend(tool.get_mount_arg(datadir, "/data"))
         cmd.extend(tool.get_mount_arg(cavitydb.absolute(), "/data/cavities.csv"))
-        cmd.extend([tool.image_non_instrumented(), "/usr/bin/python3", "/src/verify_cavities.py",
-                    "--container", "--tool", toolname, "--results", "/data", f"/data/{inputfile.name}"])
+        cmd.extend(
+            [
+                tool.image_non_instrumented(),
+                "/usr/bin/python3",
+                "/src/verify_cavities.py",
+                "--container",
+                "--tool",
+                toolname,
+                "--results",
+                "/data",
+                f"/data/{inputfile.name}",
+            ]
+        )
         subprocess.run(cmd)
 
-        json_path = Path(datadir)/STATSJSON
-        json_dst = resultsdir/f"{inputfile.stem}-verification.json"
+        json_path = Path(datadir) / STATSJSON
+        json_dst = resultsdir / f"{inputfile.stem}-verification.json"
         json_path.rename(json_dst)
     print(f"Completed {inputfile}")
 
+
 TYPES = {
     "allcavities": "Mutate all cavities at once, ensure equal output.",
-    "singlebyte": "Mutate all cavity bytes, one byte at a time and verify equal output. " \
-                    "Mutate a subset of non-cavities and report on equal/non-equal output."
+    "singlebyte": "Mutate all cavity bytes, one byte at a time and verify equal output. "
+    "Mutate a subset of non-cavities and report on equal/non-equal output.",
 }
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -195,27 +249,51 @@ def main():
 
     parser.add_argument("--container", help=argparse.SUPPRESS, action="store_true")
 
-    parser.add_argument("--results", "-c", type=Path, required=True,
-                        help="Path to the results directory, including cavities db")
-
-    parser.add_argument("inputs", type=Path, nargs='+',
-                        help="Paths to inputs to mutate")
-
-    parser.add_argument("--method", "-m", type=str,
-                        choices=method_mapping.keys(), default="zero")
-
-    parser.add_argument("--limit", "-l", type=int, default=-1,
-                        help="Limit the number of mutations to this many. No limit if -1.")
-    parser.add_argument("--skip", "-s", type=int, default=0,
-                        help="Skip the first cavities, start mutating after skip cavities.")
+    parser.add_argument(
+        "--results",
+        "-c",
+        type=Path,
+        required=True,
+        help="Path to the results directory, including cavities db",
+    )
 
     parser.add_argument(
-        "--tool", "-t", type=str, choices=TOOL_MAPPING.keys(), help="Tool to run.", required=True
+        "inputs", type=Path, nargs="+", help="Paths to inputs to mutate"
+    )
+
+    parser.add_argument(
+        "--method", "-m", type=str, choices=method_mapping.keys(), default="zero"
+    )
+
+    parser.add_argument(
+        "--limit",
+        "-l",
+        type=int,
+        default=-1,
+        help="Limit the number of mutations to this many. No limit if -1.",
+    )
+    parser.add_argument(
+        "--skip",
+        "-s",
+        type=int,
+        default=0,
+        help="Skip the first cavities, start mutating after skip cavities.",
+    )
+
+    parser.add_argument(
+        "--tool",
+        "-t",
+        type=str,
+        choices=TOOL_MAPPING.keys(),
+        help="Tool to run.",
+        required=True,
     )
 
     type_help = "Type of verification to run: "
-    type_help += ' '.join([f'{k} - {v}' for (k,v) in TYPES.items()])
-    parser.add_argument("--type", help=type_help, choices=TYPES.keys(), default="singlebyte")
+    type_help += " ".join([f"{k} - {v}" for (k, v) in TYPES.items()])
+    parser.add_argument(
+        "--type", help=type_help, choices=TYPES.keys(), default="singlebyte"
+    )
 
     args = parser.parse_args()
 
@@ -226,13 +304,25 @@ def main():
     if args.container:
         verify_in_container(args.inputs[0], tool)
     elif args.type == "allcavities":
+
         def enq(file: Path):
-            return (verify_cavities, file, cavitydb, args.method, args.results, args.limit, args.skip, tool)
+            return (
+                verify_cavities,
+                file,
+                cavitydb,
+                args.method,
+                args.results,
+                args.limit,
+                args.skip,
+                tool,
+            )
 
         process_paths(enq, args.inputs, stdout)
     else:
+
         def enq_full(file: Path):
             return (start_in_container, file, cavitydb, args.tool, args.results)
+
         process_paths(enq_full, args.inputs, stdout)
 
 

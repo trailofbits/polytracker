@@ -1,0 +1,19 @@
+name: 🐚 Lint Shell
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+    - "**.sh"
+
+jobs:
+  lint-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run shellcheck and shformat
+        uses: luizm/action-sh-checker@master
+        with:
+          sh_checker_exclude: "third_party/"
+        env:
+          SHELLCHECK_OPTS: -e SC1091 # excludes go before this comment

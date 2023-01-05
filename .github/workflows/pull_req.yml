@@ -10,10 +10,10 @@ jobs:
       matrix:
         example: [mupdf,poppler,qpdf]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: true
-      - name: Build the base image
+      - name: Build the base Polytracker Docker image
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Build the example Docker image
         run: docker build --no-cache examples --file examples/Dockerfile-${{ matrix.example }}.demo --tag trailofbits/polytracker-demo-${{ matrix.example }}

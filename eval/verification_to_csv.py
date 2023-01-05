@@ -12,6 +12,8 @@ import csv
 import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple, Union
+from re import sub
+from sys import version_info
 
 # Defines which headers are exported along with the 'path' to get to them from the dictionary produced by
 # merge_dicts.
@@ -35,13 +37,25 @@ HEADERS = (
 def iter_verification_paths(results_dir: Path) -> Iterable[Tuple[Path, Path]]:
     """Generate tuples of filenames to process
 
-    The results dir containts both x-verification.json and x.meta.json. This function
+    The results dir contains both x-verification.json and x.meta.json. This function
     will generate tuples of paths from results_dir with (x-verification.json, x.meta.json)
     """
-    ver_fixed = "-verification.json"
+
+    ver_fixed_suffix = "-verification.json"
+
+    def make_path(vf_path: Path) -> Tuple[Path, Path]:
+        """Strip filename suffix, respecting Python version
+        (removesuffix function is only available since Python 3.9)."""
+        if version_info[0] == 3 and version_info[2] >= 9:
+            prefix = vf_path.name.removesuffix(ver_fixed_suffix)  # type: ignore
+        else:
+            prefix = sub(f"{ver_fixed_suffix}$", "", vf_path.name)
+
+        return (vf_path, vf_path.parent / f"{prefix}.meta.json")
+
     return map(
-        lambda vf: (vf, vf.parent / f"{vf.name.removesuffix(ver_fixed)}.meta.json"),
-        results_dir.glob(f"*{ver_fixed}"),
+        make_path,
+        results_dir.glob(f"*{ver_fixed_suffix}"),
     )
 
 

@@ -4,32 +4,36 @@ import sys
 
 def defined_function_list(object):
     functions = []
-    readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
-                                    stdout=subprocess.PIPE)
-    readelf = readelf_proc.communicate()[0].decode(errors='replace').split('\n')
+    readelf_proc = subprocess.Popen(
+        ["readelf", "-s", "-W", object], stdout=subprocess.PIPE
+    )
+    readelf = readelf_proc.communicate()[0].decode(errors="replace").split("\n")
     if readelf_proc.returncode != 0:
-        raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
+        raise subprocess.CalledProcessError(readelf_proc.returncode, "readelf")
     # NOTE For something like the ABI if you are stubbing it out you might want locally defined functions
     for line in readelf:
-        if (line[31:35] == 'FUNC' or line[31:36] == 'IFUNC') and \
-                line[39:44] != 'LOCAL' and \
-                line[55:58] != 'UND':
-            function_name = line[59:].split('@')[0]
+        if (
+            (line[31:35] == "FUNC" or line[31:36] == "IFUNC")
+            and line[39:44] != "LOCAL"
+            and line[55:58] != "UND"
+        ):
+            function_name = line[59:].split("@")[0]
             functions.append(function_name)
     return functions
 
 
 def undefined_function_list(object):
     functions = []
-    readelf_proc = subprocess.Popen(['readelf', '-s', '-W', object],
-                                    stdout=subprocess.PIPE)
-    readelf = readelf_proc.communicate()[0].decode(errors='replace').split('\n')
+    readelf_proc = subprocess.Popen(
+        ["readelf", "-s", "-W", object], stdout=subprocess.PIPE
+    )
+    readelf = readelf_proc.communicate()[0].decode(errors="replace").split("\n")
     if readelf_proc.returncode != 0:
-        raise subprocess.CalledProcessError(readelf_proc.returncode, 'readelf')
+        raise subprocess.CalledProcessError(readelf_proc.returncode, "readelf")
     # NOTE For something like the ABI if you are stubbing it out you might want locally defined functions
     for line in readelf:
-        if (line[31:35] == 'FUNC' or line[31:36] == 'IFUNC') and "UND" in line:
-            function_name = line[59:].split('@')[0]
+        if (line[31:35] == "FUNC" or line[31:36] == "IFUNC") and "UND" in line:
+            function_name = line[59:].split("@")[0]
             functions.append(function_name)
     return functions
 
@@ -62,8 +66,8 @@ print("#### ALL FUNCS NOT DEF IN LIBCXX THAT ARE NOT IN LIBCXXABI ####")
 for f in functions:
     f = f.replace("dfsw$", "")
     f = f.replace("dfs$", "")
-    print('fun:%s=uninstrumented' % f)
-    print('fun:%s=discard' % f)
+    print("fun:%s=uninstrumented" % f)
+    print("fun:%s=discard" % f)
 
 # Ignore the ABI
 functions = list(set(abi_funcs))
@@ -72,5 +76,5 @@ print("######## GENERATED ABI IGNORE #########")
 for f in functions:
     f = f.replace("dfsw$", "")
     f = f.replace("dfs$", "")
-    print('fun:%s=uninstrumented' % f)
-    print('fun:%s=discard' % f)
+    print("fun:%s=uninstrumented" % f)
+    print("fun:%s=discard" % f)

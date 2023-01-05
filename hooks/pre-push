@@ -55,23 +55,23 @@ echo Linting Python code...
 flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics 1>/dev/null 2>/dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-  cat <<\EOF
+	cat <<\EOF
 Failed Python lint:
 
     flake8 polytracker tests --count --select=E9,F63,F7,F82 --show-source --statistics
 EOF
-  exit 1
+	exit 1
 fi
 
 flake8 polytracker tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics 1>/dev/null 2>/dev/null
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
-  cat <<\EOF
+	cat <<\EOF
 Failed Python lint:
 
     polytracker tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 EOF
-  exit 1
+	exit 1
 fi
 
 echo Type-checking Python code...
