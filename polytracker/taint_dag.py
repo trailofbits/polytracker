@@ -684,7 +684,6 @@ class TDInfo(Command):
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
             tdfile = TDFile(f)
-            print(tdfile.header)
             print(f"Number of labels: {tdfile.label_count}")
 
             if args.print_fd_headers:

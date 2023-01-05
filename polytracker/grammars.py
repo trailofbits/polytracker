@@ -180,9 +180,9 @@ class Production:
             return
         for rule in self.rules:
 
-            def make_tree() -> Tuple[
-                ParseTree[ParseTreeValue], ParseTree[ParseTreeValue]
-            ]:
+            def make_tree() -> (
+                Tuple[ParseTree[ParseTreeValue], ParseTree[ParseTreeValue]]
+            ):
                 root: ParseTree[ParseTreeValue] = ImmutableParseTree(self)
                 rtree: ParseTree[ParseTreeValue] = ImmutableParseTree(rule)
                 root.children.append(rtree)  # type: ignore
