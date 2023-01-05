@@ -193,6 +193,17 @@
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.cfg.</span></span><span class="sig-name descname"><span class="pre">CFG</span></span><a class="headerlink" href="#polytracker.cfg.CFG" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="polytracker.graphs.html#polytracker.graphs.DiGraph" title="polytracker.graphs.DiGraph"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiGraph</span></code></a>[<a class="reference internal" href="#polytracker.cfg.FunctionInfo" title="polytracker.cfg.FunctionInfo"><code class="xref py py-class docutils literal notranslate"><span class="pre">FunctionInfo</span></code></a>]</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="polytracker.cfg.CFG.__class_getitem__">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__class_getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.CFG.__class_getitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parameterizes a generic class.</p>
+<p>At least, parameterizing a generic class is the <em>main</em> thing this method
+does. For example, for some generic class <cite>Foo</cite>, this is called when we
+do <cite>Foo[int]</cite> - there, with <cite>cls=Foo</cite> and <cite>params=int</cite>.</p>
+<p>However, note that this method is also called when defining generic
+classes in the first place with <cite>class Foo(Generic[T]): …</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="polytracker.cfg.CFG.__contains__">
 <span class="sig-name descname"><span class="pre">__contains__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.cfg.CFG.__contains__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns True if n is a node, False otherwise. Use: ‘n in G’.</p>
