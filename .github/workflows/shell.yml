@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Shellcheck and shformat
+      - name: Run shellcheck and shformat
         uses: luizm/action-sh-checker@master
         with:
           sh_checker_exclude: "third_party/"

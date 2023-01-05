@@ -3,7 +3,7 @@ name: Docker Image Build
 on: push
 
 jobs:
-  dockerimage:
+  basic_ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
