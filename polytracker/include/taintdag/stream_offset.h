@@ -27,10 +27,11 @@ public:
   // code. Reads on the same source should be protected from running in
   // parallell (at least for the taint sources considered here, e.g. files).
   source_offset_t increase(source_index_t idx, size_t len) {
-    if (idx >= SourceCount)
+    if (idx >= SourceCount) {
       error_exit("Attempted increase offset of source index ",
                  static_cast<uint64_t>(idx), ", only ", SourceCount,
                  " sources available");
+    }
     return offset[idx].fetch_add(len);
   }
 
