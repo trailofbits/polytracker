@@ -26,8 +26,8 @@ TEST_CASE("StreamOffset", "StreamOffset") {
   }
 
   SECTION("SourceIndex out of bounds aborts") {
-    ErrorExitReplace errthrow;
-    REQUIRE_THROWS_AS(ofs.increase(4, 1), ErrorExit);
+    test::ErrorExitReplace errthrow;
+    REQUIRE_THROWS_AS(ofs.increase(4, 1), test::ErrorExit);
   }
 }
 
