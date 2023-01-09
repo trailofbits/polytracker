@@ -12,6 +12,7 @@
 #include <span>
 
 #include "taintdag/bitmap_section.h"
+#include "taintdag/control_flow_log.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
 #include "taintdag/labels.h"
@@ -54,6 +55,10 @@ public:
   // Update the label, it affects control flow
   void affects_control_flow(label_t taint_label);
 
+  // Control flow logging enable/disable
+  inline void enable_control_flow_logging() { log_control_flow_ = true; }
+  inline void disable_control_flow_logging() { log_control_flow_ = false; }
+
   // Log tainted data flowed into the sink
   void taint_sink(int fd, util::Offset offset, void const *mem, size_t length);
   // Same as before, but use same label for all data
@@ -79,7 +84,7 @@ private:
   // sections and in which order they appear.
   using ConcreteOutputFile =
       OutputFile<Sources, Labels, StringTable, TaintSink,
-                 SourceLabelIndexSection, Functions, Events>;
+                 SourceLabelIndexSection, Functions, Events, ControlFlowLog>;
   ConcreteOutputFile output_file_;
 
   // Tracking source offsets for streams (where offsets can be determined by
@@ -87,6 +92,7 @@ private:
   static constexpr size_t offset_capacity = size_t{max_source_index} + 1;
   StreamOffset<offset_capacity> stream_read_offsets_;
   StreamOffset<offset_capacity> stream_write_offsets_;
+  bool log_control_flow_{false};
 };
 
 } // namespace taintdag

@@ -152,6 +152,11 @@ void taint_start(void) {
   polytracker_print_settings();
   DO_EARLY_CONSTRUCT(taintdag::PolyTracker, polytracker_tdag,
                      get_polytracker_db_name());
+  if (auto logcf = getenv("POLYTRACKER_LOG_CONTROL_FLOW")) {
+    if (*logcf == '1') {
+      get_polytracker_tdag().enable_control_flow_logging();
+    }
+  }
   sink_streams();
   stdin_source();
   // Set up the atexit call
