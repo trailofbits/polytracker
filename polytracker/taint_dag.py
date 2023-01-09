@@ -129,6 +129,33 @@ class TDLabelSection:
         return len(self.section) // sizeof(c_uint64)
 
 
+class TDControlFlowLogSection:
+    """TDAG Control flow log section
+
+    Interprets the control flow log section in a TDAG file.
+    Enables enumeration/random access of items
+    """
+
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+    def __len__(self):
+        return len(self.section) // sizeof(c_uint32)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            # TODO(hbrodin): Implement
+            return None
+        else:
+            return c_uint32.from_buffer_copy(
+                self.section[key * sizeof(c_uint32) :]
+            ).value
+
+
 class TDSinkSection:
     """TDAG Sinks section
 
@@ -308,6 +335,7 @@ class TDFile:
                 TDSourceIndexSection,
                 TDFunctionsSection,
                 TDEventsSection,
+                TDControlFlowLogSection,
             ]
         ] = []
         for i in range(0, self.filemeta.section_count):
@@ -326,6 +354,8 @@ class TDFile:
                 self.sections.append(TDFunctionsSection(self.buffer, hdr))
             elif hdr.tag == 7:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
+            elif hdr.tag == 8:
+                self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
 
