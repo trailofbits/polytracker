@@ -88,7 +88,7 @@ public:
 
   // The FileHeader is constructed at offset zero of the mapped memory (file).
   // It contains the metadata required to parse a TDAG file. Initially each
-  // section is assumed to be allocation_size in size. On destruction of
+  // section is assumed to be 0 bytes in size. On destruction of
   // the OutputFile instance the size field of each section is updated to
   // reflect the actual, used size.
   struct FileHeader {
