@@ -48,18 +48,15 @@ set(TAINTDAG_SOURCES
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
 
-set(POLYTRACKER_COMPILE_OPTS -fno-exceptions -fno-rtti -Wall -Werror
-                             -stdlib=libc++ -fPIC)
+set(POLYTRACKER_COMPILE_OPTS -fno-exceptions -fno-rtti -Wall -Werror)
 
 if(XRAY_ON)
   list(APPEND POLYTRACKER_COMPILE_OPTS -fxray-instrument
        -fxray-instruction-threshold=1)
 endif()
 
-target_include_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_INCLUDE} ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/include)
+target_include_directories(Polytracker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/include)
 target_compile_options(Polytracker PRIVATE ${POLYTRACKER_COMPILE_OPTS})
-target_link_options(Polytracker PRIVATE -stdlib=libc++)
-target_link_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_LIB})
 target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only)
 
 install(TARGETS Polytracker DESTINATION ${POLYTRACKER_LIB_DIR})

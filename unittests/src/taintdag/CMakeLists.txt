@@ -13,15 +13,11 @@ add_executable(
   labeldeq.cpp
   stream_offset.cpp)
 
-target_include_directories(
-  ${TAINTDAG_UNITTEST} PUBLIC ${CMAKE_SOURCE_DIR}/polytracker/include
-                              ${POLYTRACKER_CXX_INCLUDE})
+target_include_directories(${TAINTDAG_UNITTEST}
+                           PUBLIC ${CMAKE_SOURCE_DIR}/polytracker/include)
 
-target_compile_options(${TAINTDAG_UNITTEST} PRIVATE -fno-rtti -Wall -Werror
-                                                    -stdlib=libc++)
+target_compile_options(${TAINTDAG_UNITTEST} PRIVATE -fno-rtti -Wall -Werror)
 
-target_link_options(${TAINTDAG_UNITTEST} PRIVATE -stdlib=libc++)
-target_link_directories(${TAINTDAG_UNITTEST} PRIVATE ${POLYTRACKER_CXX_LIB})
 target_link_libraries(${TAINTDAG_UNITTEST} Polytracker Catch2::Catch2
                       spdlog::spdlog_header_only)
 
