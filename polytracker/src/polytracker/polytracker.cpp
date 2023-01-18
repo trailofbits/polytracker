@@ -27,7 +27,7 @@ extern "C" dfsan_label __polytracker_union_table(const dfsan_label &l1,
 
 extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
   if (label > 0) {
-    get_polytracker_tdag().affects_control_flow(label);
+    // get_polytracker_tdag().affects_control_flow(label);
   }
 }
 
@@ -41,4 +41,13 @@ extern "C" void __taint_start() { taint_start(); }
 
 extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
   polytracker::taint_argv(argc, argv);
+}
+
+extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
+    uint64_t conditional, dfsan_label conditional_label, dfsan_label *ret_label) {
+  if (conditional_label > 0) {
+    get_polytracker_tdag().affects_control_flow(conditional_label);
+  }
+  *ret_label = conditional_label;
+  return conditional;
 }
