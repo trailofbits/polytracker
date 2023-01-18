@@ -76,7 +76,7 @@ void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
   if (inst.getType()->isVectorTy()) {
     dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
-  ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
+  // ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
 void TaintTrackingPass::insertTaintStartupCall(llvm::Module &mod) {
