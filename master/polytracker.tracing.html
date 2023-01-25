@@ -93,7 +93,6 @@
 <li class="toctree-l2"><a class="reference internal" href="polytracker.cache.html">polytracker.cache</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.cfg.html">polytracker.cfg</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.containerization.html">polytracker.containerization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="polytracker.database.html">polytracker.database</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.datalog.html">polytracker.datalog</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.diffing.html">polytracker.diffing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="polytracker.grammars.html">polytracker.grammars</a></li>
@@ -209,9 +208,6 @@
   <section id="module-polytracker.tracing">
 <span id="polytracker-tracing"></span><h1>polytracker.tracing<a class="headerlink" href="#module-polytracker.tracing" title="Permalink to this heading">¶</a></h1>
 <p>A module defining the abstract classes used for represenging a program trace.</p>
-<p>The implementation of these classes that actually loads the SQLite database emitted by the PolyTracker instrumentation
-is in <a class="reference internal" href="polytracker.database.html#module-polytracker.database" title="polytracker.database"><code class="xref py py-mod docutils literal notranslate"><span class="pre">polytracker.database</span></code></a>. For example, <a class="reference internal" href="polytracker.database.html#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBProgramTrace</span></code></a> is mapped to
-<code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.PolyTrackerTrace</span></code>.</p>
 <section id="tracing-classes">
 <h2>tracing classes<a class="headerlink" href="#tracing-classes" title="Permalink to this heading">¶</a></h2>
 <section id="basicblock">
@@ -1599,8 +1595,6 @@ not including any basic blocks inside called functions.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">ProgramTrace</span></span><a class="headerlink" href="#polytracker.tracing.ProgramTrace" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/abc.html#abc.ABC" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></a></p>
 <p>An abstract class for representing a program trace.</p>
-<p>For a concrete implementation that loads a database produced from a PolyTracker instrumented binary, see
-<a class="reference internal" href="polytracker.database.html#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBProgramTrace</span></code></a>.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.tracing.ProgramTrace.__contains__">
 <em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__contains__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.ProgramTrace.__contains__" title="Permalink to this definition">¶</a></dt>
@@ -1691,8 +1685,6 @@ not including any basic blocks inside called functions.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">iter</span><span class="p">(</span><span class="n">event</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">FunctionEntry</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>However, concrete implementations such as <a class="reference internal" href="polytracker.database.html#polytracker.database.DBProgramTrace" title="polytracker.database.DBProgramTrace"><code class="xref py py-class docutils literal notranslate"><span class="pre">polytracker.database.DBProgramTrace</span></code></a> might have more efficient
-implementations.</p>
 </dd></dl>
 
 <dl class="py property">
@@ -2212,7 +2204,7 @@ of sources is arbitrary.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>This class <em>should ideally</em> extend off of <code class="xref py py-class docutils literal notranslate"><span class="pre">collections.abc.ABC</span></code>. The reason why it <em>does not</em> is because
-it is extended through multiple inheritance in <a class="reference internal" href="polytracker.database.html#module-polytracker.database" title="polytracker.database"><code class="xref py py-mod docutils literal notranslate"><span class="pre">polytracker.database</span></code></a> along with a SQLAlchemy base class,
+it is extended through multiple inheritance in <code class="xref py py-mod docutils literal notranslate"><span class="pre">polytracker.database</span></code> along with a SQLAlchemy base class,
 and SQLAlchemy does not play well with <code class="docutils literal notranslate"><span class="pre">ABCMeta</span></code>.</p>
 </div>
 <dl class="py method">

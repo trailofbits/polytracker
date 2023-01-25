@@ -10,7 +10,6 @@ PolyTracker API
    polytracker.cache
    polytracker.cfg
    polytracker.containerization
-   polytracker.database
    polytracker.datalog
    polytracker.diffing
    polytracker.grammars
