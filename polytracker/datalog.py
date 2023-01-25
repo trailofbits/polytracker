@@ -236,6 +236,7 @@ class DatalogGrammar:
             + [x.val for x in self.clauses]
         )
 
+
 # TODO (msurovic): Re-enable once TDProgramTrace.access_sequence() is implemented
 
 # class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
