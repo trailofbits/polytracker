@@ -456,48 +456,49 @@ class TraceDiff:
             status.write("Traces do not differ")
         return status.getvalue()
 
+# TODO (msurovic): Re-enable once TDProgramTrace.access_sequence() is implemented
 
-class TraceDiffCommand(Command):
-    name = "diff"
-    help = "compute a diff of two program traces"
+# class TraceDiffCommand(Command):
+#     name = "diff"
+#     help = "compute a diff of two program traces"
 
-    def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument(
-            "trace1", type=str, help="the output database from the first trace"
-        )
-        parser.add_argument(
-            "trace2", type=str, help="the output database from the second trace"
-        )
-        parser.add_argument(
-            "--image",
-            type=str,
-            default=None,
-            help="path to optionally output a visualization of the" "diff",
-        )
+#     def __init_arguments__(self, parser: ArgumentParser):
+#         parser.add_argument(
+#             "trace1", type=str, help="the output database from the first trace"
+#         )
+#         parser.add_argument(
+#             "trace2", type=str, help="the output database from the second trace"
+#         )
+#         parser.add_argument(
+#             "--image",
+#             type=str,
+#             default=None,
+#             help="path to optionally output a visualization of the" "diff",
+#         )
 
-    def run(self, args: Namespace):
-        from . import PolyTrackerTrace
+#     def run(self, args: Namespace):
+#         from . import PolyTrackerTrace
 
-        trace1 = PolyTrackerTrace.load(args.trace1)
-        trace2 = PolyTrackerTrace.load(args.trace2)
-        diff = TraceDiff(trace1, trace2)
-        print(str(diff))
-        if args.image is not None:
-            diff.to_image().save(args.image)
+#         trace1 = PolyTrackerTrace.load(args.trace1)
+#         trace2 = PolyTrackerTrace.load(args.trace2)
+#         diff = TraceDiff(trace1, trace2)
+#         print(str(diff))
+#         if args.image is not None:
+#             diff.to_image().save(args.image)
 
 
-class TemporalVisualization(Command):
-    name = "temporal"
-    help = "generate an animation of the file accesses in a runtime trace"
+# class TemporalVisualization(Command):
+#     name = "temporal"
+#     help = "generate an animation of the file accesses in a runtime trace"
 
-    def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
-        parser.add_argument(
-            "OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation"
-        )
+#     def __init_arguments__(self, parser):
+#         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+#         parser.add_argument(
+#             "OUTPUT_GIF_PATH", type=str, help="the path to which to save the animation"
+#         )
 
-    def run(self, args):
-        from . import PolyTrackerTrace
+#     def run(self, args):
+#         from . import PolyTrackerTrace
 
-        trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
-        temporal_animation(args.OUTPUT_GIF_PATH, trace)
+#         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
+#         temporal_animation(args.OUTPUT_GIF_PATH, trace)

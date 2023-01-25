@@ -1279,17 +1279,18 @@ class ProgramTrace(ABC):
         except StopIteration:
             return True
 
+# TODO (msurovic): Pending integration from different PR
 
-class TraceCommand(Command):
-    name = "trace"
-    help = "commands related to tracing"
-    parser: ArgumentParser
+# class TraceCommand(Command):
+#     name = "trace"
+#     help = "commands related to tracing"
+#     parser: ArgumentParser
 
-    def __init_arguments__(self, parser: ArgumentParser):
-        self.parser = parser
+#     def __init_arguments__(self, parser: ArgumentParser):
+#         self.parser = parser
 
-    def run(self, args: Namespace):
-        self.parser.print_help()
+#     def run(self, args: Namespace):
+#         self.parser.print_help()
 
 
 def common_parent_directory(*paths: Union[Path, str]) -> Path:
@@ -1303,6 +1304,7 @@ def common_parent_directory(*paths: Union[Path, str]) -> Path:
 
 
 # TODO (hbrodin): Pending integration from different PR
+
 # class RunTraceCommand(Subcommand[TraceCommand]):
 #     name = "run"
 #     help = "run an instrumented binary"
