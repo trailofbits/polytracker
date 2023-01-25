@@ -456,7 +456,6 @@ class TraceDiff:
             status.write("Traces do not differ")
         return status.getvalue()
 
-
 # TODO (msurovic): Re-enable once TDProgramTrace.access_sequence() is implemented
 
 # class TraceDiffCommand(Command):

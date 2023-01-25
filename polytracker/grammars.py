@@ -1397,7 +1397,6 @@ def to_dot(graph: DiGraph, comment: Optional[str] = None) -> graphviz.Digraph:
             dot.edge(f"{str(parent)}", f"{str(child)}")
     return dot
 
-
 # TODO (msurovic): Re-enable once TDProgramTrace.functions() is implemented
 
 # class ExtractGrammarCommand(Command):
