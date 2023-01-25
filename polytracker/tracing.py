@@ -1279,6 +1279,7 @@ class ProgramTrace(ABC):
         except StopIteration:
             return True
 
+
 # TODO (msurovic): Pending integration from different PR
 
 # class TraceCommand(Command):

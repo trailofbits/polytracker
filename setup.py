@@ -107,12 +107,10 @@ setup(
         "docker~=4.4.0",
         "graphviz~=0.14.1",
         "intervaltree~=3.0.2",
-        "matplotlib~=3.3.0",
         "networkx~=2.4",
         "Pillow>=7.2.0",
         "prompt_toolkit~=3.0.8",
         "pygments~=2.7.3",
-        "pydot~=1.4.1",
         "tqdm>=4.59.0",  # We need at least this version to get the `delay` option
         "typing_extensions>=3.7.4.2",
         "types-setuptools~=57.4.9",
