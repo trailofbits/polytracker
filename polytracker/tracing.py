@@ -1,10 +1,4 @@
-"""A module defining the abstract classes used for represenging a program trace.
-
-The implementation of these classes that actually loads the SQLite database emitted by the PolyTracker instrumentation
-is in :mod:`polytracker.database`. For example, :class:`polytracker.database.DBProgramTrace` is mapped to
-:class:`polytracker.PolyTrackerTrace`.
-
-"""
+"""A module defining the abstract classes used for represenging a program trace."""
 
 from abc import ABC, abstractmethod
 from argparse import ArgumentParser, Namespace
@@ -1010,12 +1004,7 @@ class FunctionInvocation(ControlFlowEvent):
 
 
 class ProgramTrace(ABC):
-    """An abstract class for representing a program trace.
-
-    For a concrete implementation that loads a database produced from a PolyTracker instrumented binary, see
-    :class:`polytracker.database.DBProgramTrace`.
-
-    """
+    """An abstract class for representing a program trace."""
 
     _cfg: Optional[DiGraph[BasicBlock]] = None
     _func_cfg: Optional[DiGraph[Function]] = None
@@ -1181,9 +1170,6 @@ class ProgramTrace(ABC):
         This is equivalent to::
 
             iter(event for event in self if isinstance(event, FunctionEntry))
-
-        However, concrete implementations such as :class:`polytracker.database.DBProgramTrace` might have more efficient
-        implementations.
 
         """
         return iter(event for event in self if isinstance(event, FunctionEntry))
