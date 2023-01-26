@@ -421,13 +421,18 @@ class InstrumentTargets(Command):
         for target in args.targets:
             blight_cmds = _read_blight_journal(args.journal_path)
             target_cmd, target_path = _find_target(target, blight_cmds)
+
             bc_path = target_path.with_suffix(".bc")
             _extract_bitcode(target_path, bc_path)
-            _preopt_instrument_bitcode(bc_path, bc_path)
-            _optimize_bitcode(bc_path, bc_path)
+
+            pre_opt = bc_path.with_suffix(".preopt.bc")
+            _preopt_instrument_bitcode(bc_path, pre_opt)
+
+            opt_bc = bc_path.with_suffix(".opt.bc")
+            _optimize_bitcode(pre_opt, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
-                bc_path,
+                opt_bc,
                 inst_bc_path,
                 args.ignore_lists,
                 args.taint,
