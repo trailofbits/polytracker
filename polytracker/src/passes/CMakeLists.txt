@@ -6,7 +6,8 @@ endif(APPLE)
 
 add_library(
   PolytrackerPass SHARED taint_tracking.cpp remove_fn_attr.cpp
-                         function_tracing.cpp tainted_control_flow.cpp utils.cpp pass_plugin.cpp)
+                         function_tracing.cpp tainted_control_flow.cpp 
+                         basic_blocks.cpp utils.cpp pass_plugin.cpp)
 
 target_link_libraries(
   PolytrackerPass

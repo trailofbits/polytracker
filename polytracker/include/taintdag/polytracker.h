@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <span>
 
+#include "taintdag/basic_blocks_section.h"
 #include "taintdag/bitmap_section.h"
 #include "taintdag/control_flow_log.h"
 #include "taintdag/fnmapping.h"
@@ -69,6 +70,8 @@ public:
   // Log function exit
   void function_exit(Functions::index_t index);
 
+  void basic_block(uint32_t blockidx);
+
 private:
   taint_range_t create_source_taint(source_index_t src,
                                     std::span<uint8_t const> dst,
@@ -82,9 +85,9 @@ private:
   // ConcreteOutputFile is a specific configuration of the generic OutputFile
   // template. It determines the current layout of TDAG file in terms of which
   // sections and in which order they appear.
-  using ConcreteOutputFile =
-      OutputFile<Sources, Labels, StringTable, TaintSink,
-                 SourceLabelIndexSection, Functions, Events, ControlFlowLog>;
+  using ConcreteOutputFile = OutputFile<Sources, Labels, StringTable, TaintSink,
+                                        SourceLabelIndexSection, Functions,
+                                        Events, ControlFlowLog, BasicBlocksLog>;
   ConcreteOutputFile output_file_;
 
   // Tracking source offsets for streams (where offsets can be determined by

@@ -13,6 +13,7 @@
 #include "polytracker/passes/remove_fn_attr.h"
 #include "polytracker/passes/taint_tracking.h"
 #include "polytracker/passes/tainted_control_flow.h"
+#include "polytracker/passes/basic_blocks.h"
 
 llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "PolyTracker", "",
@@ -34,6 +35,10 @@ llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
                   }
                   if (name == "pt-tcf") {
                     mpm.addPass(polytracker::TaintedControlFlowPass());
+                    return true;
+                  }
+                  if (name == "pt-bb") {
+                    mpm.addPass(polytracker::BasicBlocksLogPass());
                     return true;
                   }
                   return false;

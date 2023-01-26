@@ -24,5 +24,18 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
     cflog = program_trace.tdfile._get_section(
         polytracker.taint_dag.TDControlFlowLogSection
     )
-    assert 10 == len(cflog)
-    assert [1, 2, 3, 4, 5, 6, 7, 8, 15, 3] == list(cflog)
+    # assert 10 == len(cflog)
+    # assert [1, 2, 3, 4, 5, 6, 7, 8, 15, 3] == list(cflog)
+    print(len(cflog))
+    for label, bb in cflog:
+        print(f"Label {label} affected control flow in bb {bb}")
+
+
+    bblog = program_trace.tdfile._get_section(
+        polytracker.taint_dag.TDBasicBlocksLogSection
+    )
+    print(f"WOUWOW {len(bblog)}")
+    for bb in bblog:
+        print(f"Visited basic block {bb}")
+
+    assert False

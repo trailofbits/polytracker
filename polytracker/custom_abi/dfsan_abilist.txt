@@ -36,6 +36,8 @@ fun:__polytracker_log_func_exit=uninstrumented
 fun:__polytracker_log_func_exit=discard
 fun:__polytracker_log_bb_entry=uninstrumented
 fun:__polytracker_log_bb_entry=discard
+fun:__polytracker_log_basic_block=uninstrumented
+fun:__polytracker_log_basic_block=discard
 # Make these custom
 fun:__polytracker_log_taint_cmp=uninstrumented
 fun:__polytracker_log_taint_cmp=custom

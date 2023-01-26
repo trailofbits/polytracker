@@ -151,13 +151,16 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
 
+    # TODO (hbrodin): By inserting the basic blocks log here, we risk preventing optimizations
+    # as each block likely needs to be visited...
+
     cmd = [
         "opt",
         "-load",
         str(POLY_PASS_PATH),
         "-load-pass-plugin",
         str(POLY_PASS_PATH),
-        "-passes=pt-tcf",
+        "-passes=pt-tcf,pt-bb",
         str(input_bitcode),
         "-o",
         str(output_bitcode)
