@@ -51,3 +51,8 @@ extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
   *ret_label = conditional_label;
   return conditional;
 }
+
+
+extern "C" void __polytracker_log_basic_block(uint32_t blockidx) {
+  get_polytracker_tdag().basic_block(blockidx);
+}

@@ -144,6 +144,37 @@ class TDControlFlowLogSection:
             yield self[i]
 
     def __len__(self):
+        return len(self.section) // (2*sizeof(c_uint32))
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            # TODO(hbrodin): Implement
+            return None
+        else:
+            label = c_uint32.from_buffer_copy(
+                self.section[key * 2 * sizeof(c_uint32) :]
+            ).value
+            bb = c_uint32.from_buffer_copy(
+                self.section[key * 2 * sizeof(c_uint32) + sizeof(c_uint32):]
+            ).value
+
+
+            return  (label, bb)
+
+class TDBasicBlocksLogSection:
+    """TDAG Basic Blocks log section
+
+    Enables enumeration of all visited basic blocks (not entirely usefull )
+    """
+
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield self[i]
+
+    def __len__(self):
         return len(self.section) // sizeof(c_uint32)
 
     def __getitem__(self, key):
@@ -356,6 +387,8 @@ class TDFile:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
             elif hdr.tag == 8:
                 self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
+            elif hdr.tag == 9:
+                self.sections.append(TDBasicBlocksLogSection(self.buffer, hdr))
             else:
                 raise Exception("Unsupported section tag")
 

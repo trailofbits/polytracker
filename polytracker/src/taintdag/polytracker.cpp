@@ -194,4 +194,11 @@ void PolyTracker::function_exit(Functions::index_t index) {
   events.log_fn_event(Event::kind_t::exit, index);
 }
 
+
+void PolyTracker::basic_block(uint32_t blockidx) {
+  auto &bbs{output_file_.section<BasicBlocksLog>()};
+  bbs.record(blockidx);
+
+}
+
 } // namespace taintdag
