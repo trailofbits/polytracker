@@ -158,7 +158,6 @@ class TDControlFlowLogSection:
                 self.section[key * 2 * sizeof(c_uint32) + sizeof(c_uint32):]
             ).value
 
-
             return  (label, bb)
 
 class TDBasicBlocksLogSection:
@@ -367,6 +366,7 @@ class TDFile:
                 TDFunctionsSection,
                 TDEventsSection,
                 TDControlFlowLogSection,
+                TDBasicBlocksLogSection,
             ]
         ] = []
         for i in range(0, self.filemeta.section_count):
