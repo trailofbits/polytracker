@@ -16,6 +16,11 @@ class TaintForestNode:
         self.source: Optional[Input] = source
         self.affected_control_flow: bool = affected_control_flow
 
+        if affected_control_flow:
+            self.color = "green"
+        else:
+            self.color = "black"
+
     @property
     @abstractmethod
     def parent_labels(self) -> Optional[Tuple[int, int]]:
@@ -67,12 +72,9 @@ class TaintForest:
 
         for node in self:
             if node.affected_control_flow:
-                node.colour = "green"
-            else:
-                node.colour = "magenta"
+                node.color = "green"
 
-            dag.add_node(
-                f"source flow {node.source}, label {node.label}", node_color=node.colour)
+            dag.add_node(node.label, source=node.source, color=node.color, font_weight="bold")
 
             if node.parent_one:
                 dag.add_edge(node.parent_one.label, node.label)
@@ -91,7 +93,8 @@ class TaintForest:
 
         for node in self.tforest:
             if node.affected_control_flow:
-                dag.add_node(f"source flow {node.source}, label {node.label}")
+
+                dag.add_node(node.label)
 
                 if node.parent_one:
                     dag.add_edge(node.parent_one.label, node.label)

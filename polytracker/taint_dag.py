@@ -282,6 +282,10 @@ class TDFnHeader(Structure):
 class TDNode:
     def __init__(self, affects_control_flow: bool = False):
         self.affects_control_flow = affects_control_flow
+        if affects_control_flow:
+            self.color = "green"
+        else:
+            self.color = "black"
 
     def __repr__(self) -> str:
         return f"affects control flow {self.affects_control_flow}"
@@ -439,9 +443,10 @@ class TDFile:
     def decode_node(self, label: int) -> TDNode:
         v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
-        st = (v >> self.source_taint_bit_shift) & 1
+        source_taint = (v >> self.source_taint_bit_shift) & 1
         affects_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
-        if st:
+
+        if source_taint:
             idx = v & self.source_index_mask
             offset = (v >> self.source_index_bits) & self.source_offset_mask
             return TDSourceNode(idx, offset, affects_cf)
@@ -646,16 +651,24 @@ class TDTaintForest(TaintForest):
         return result
 
     def create_node(self, label: int) -> TDTaintForestNode:
-        node = self.trace.tdfile.decode_node(label)
+        node: TDNode = self.trace.tdfile.decode_node(label)
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
             source = Input(fdhdr.fd, str(path), fdhdr.size)
-            return TDTaintForestNode(self, label, source, node.affects_control_flow)
+            return TDTaintForestNode(
+                self,
+                label,
+                source,
+                node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):
             return TDTaintForestNode(
-                self, label, None, node.affects_control_flow, (node.left, node.right)
+                self,
+                label,
+                None,
+                node.affects_control_flow,
+                parent_labels=(node.left, node.right)
             )
 
         # TDRangeNode has to be unfolded into a tree of union nodes in a sum-like

@@ -29,6 +29,11 @@ class DiGraph(nx.DiGraph, Generic[N]):
         self._dominator_forest: Optional[DiGraph[N]] = None
         self._roots: Optional[Collection[N]] = None
         self._path_lengths: Optional[Dict[N, Dict[N, int]]] = None
+        # self.nodes will normally give you a NodeView which we treat
+        # as a list[N] here, e.g. NodeView(('hi', 'hello')) but if you want
+        # properties for each node, set data=True.
+        # example properties view: NodeDataView({'hi': {'source': None, 'color': 'green', 'font_weight': 'bold'}, 'hello': {'source': 'hi', 'color': 'blue'}})
+        self._nodes_with_properties = self.nodes(data=True)
 
     def path_length(self, from_node: N, to_node: N) -> Union[int, float]:
         if self._path_lengths is None:
@@ -150,10 +155,13 @@ class DiGraph(nx.DiGraph, Generic[N]):
         if node_filter is None:
             node_filter = default_node_filter
         # Sort nodes into roots and inner nodes
-        root_nodes = []
-        inner_nodes = []
-        for node in sorted(filter(node_filter, self.nodes)):  # type: N
-            if node in self.roots:
+        root_nodes: list[N] = []
+        inner_nodes: list[N] = []
+        for node in sorted(filter(node_filter, self._nodes_with_properties)):
+            # _nodes_with_properties is a list of tuples (int, dict[str, str])
+            # from the underlying nx.DiGraph we initialised this class with.
+            # the first member is the integer node label.
+            if node[0] in self.roots:
                 root_nodes.append(node)
             else:
                 inner_nodes.append(node)
@@ -164,19 +172,27 @@ class DiGraph(nx.DiGraph, Generic[N]):
             node_attr={"shape": "square"},
             edge_attr={"style": "invis"},
         )
-        for node in root_nodes:
-            roots.node(str(node), label=labeler(node))
+        for root in root_nodes:
+            print(root)
+            roots.node(
+                str(root[0]),
+                label=labeler(root[0]),
+                color=root[1].get('color'))
         # Add invisible edges to enforce root node ordering within a rank
         for i in range(len(root_nodes) - 1):
-            roots.edge(str(root_nodes[i]), str(root_nodes[i + 1]))
+            roots.edge(str(root_nodes[i][0]), str(root_nodes[i + 1][0]))
         # Add inner nodes
-        inner = graphviz.Digraph(name="inner")
-        for node in inner_nodes:
-            inner.node(str(node), label=labeler(node))
+        inners = graphviz.Digraph(name="inner")
+        for inner in inner_nodes:
+            print(inner)
+            inners.node(
+                str(inner[0]),
+                label=labeler(inner[0]),
+                color=inner[1].get('color'))
 
         result = graphviz.Digraph(comment=comment)
         result.subgraph(roots)
-        result.subgraph(inner)
+        result.subgraph(inners)
         for src, dst in self.edges:
             if node_filter(src) and node_filter(dst):
                 result.edge(str(src), str(dst))
