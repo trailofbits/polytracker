@@ -3,7 +3,7 @@ from typing import Iterator, Optional, Tuple
 
 from .graphs import DAG
 from .inputs import Input
-from .plugins import Command
+from .plugins import Command, Subcommand
 
 import networkx as nx
 
@@ -66,12 +66,38 @@ class TaintForest:
         dag: nx.DiGraph = nx.DiGraph()
 
         for node in self:
-            dag.add_node(node.label)
+            if node.affected_control_flow:
+                node.colour = "green"
+            else:
+                node.colour = "magenta"
+
+            dag.add_node(
+                f"source flow {node.source}, label {node.label}", node_color=node.colour)
+
             if node.parent_one:
                 dag.add_edge(node.parent_one.label, node.label)
 
             if node.parent_two:
                 dag.add_edge(node.parent_two.label, node.label)
+
+        return DAG(dag)
+
+    def to_tainted_control_flow_graph(self) -> DAG[TaintForestNode]:
+        """Returns a subgraph of the overall taint forest with ONLY control-flow-affecting nodes.
+
+        TODO colour nodes by source
+        """
+        dag: nx.DiGraph = nx.DiGraph()
+
+        for node in self.tforest:
+            if node.affected_control_flow:
+                dag.add_node(f"source flow {node.source}, label {node.label}")
+
+                if node.parent_one:
+                    dag.add_edge(node.parent_one.label, node.label)
+
+                if node.parent_two:
+                    dag.add_edge(node.parent_two.label, node.label)
 
         return DAG(dag)
 
@@ -97,9 +123,32 @@ class ExportTaintForest(Command):
         from . import PolyTrackerTrace
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
-        graph = trace.taint_forest.to_graph()
+        graph: DAG[TaintForestNode] = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
         print(
             f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`"
+        )
+
+class ExportControlFlowLog(Subcommand):
+    parent_type = ExportTaintForest
+
+    name = "cfl"
+    help = "export the control-flow-affecting subsection of the taint forest to GraphViz (DOT) format"
+
+    def __init_arguments__(self, parser):
+        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument(
+            "OUTPUT_PATH", type=str, help="path to which to save the .dot file"
+        )
+
+    def run(self, args):
+        from . import PolyTrackerTrace
+
+        trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
+        graph: DAG[TaintForestNode] = trace.taint_forest.to_tainted_control_flow_graph()
+        graph.to_dot().save(args.OUTPUT_PATH)
+        print(f"Exported the control-flow-affecting subsection of the taint forest to {args.OUTPUT_PATH}")
+        print(
+            f"To render it to a PDF, run `dot -Tpdf -o cfl.pdf {args.OUTPUT_PATH}`"
         )
