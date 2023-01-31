@@ -16,10 +16,11 @@ class TaintForestNode:
         self.source: Optional[Input] = source
         self.affected_control_flow: bool = affected_control_flow
 
-        if affected_control_flow:
-            self.color = "green"
-        else:
-            self.color = "black"
+        # https://graphviz.org/doc/info/colors.html
+        self.color = "grey30"
+        self.fontcolor = "grey30"
+        self.style = "filled"
+        self.fillcolor = "ghostwhite"
 
     @property
     @abstractmethod
@@ -71,36 +72,52 @@ class TaintForest:
         dag: nx.DiGraph = nx.DiGraph()
 
         for node in self:
-            if node.affected_control_flow:
-                node.color = "green"
+            if node.affected_control_flow and node.color == "grey30":
+                # make sure all control flow affecting things get coloured
+                # https://graphviz.org/doc/info/colors.html
+                node.color = "black"
+                node.fontcolor = "black"
+                node.fillcolor = "limegreen"
 
-            dag.add_node(node.label, source=node.source, color=node.color, font_weight="bold")
+            dag.add_node(
+                node.label,
+                source=node.source,
+                color=node.color,
+                fontcolor=node.fontcolor,
+                fillcolor=node.fillcolor,
+                style=node.style,)
 
             if node.parent_one:
-                dag.add_edge(node.parent_one.label, node.label)
+                dag.add_edge(node.parent_one.label, node.label, color=node.parent_one.color)
 
             if node.parent_two:
-                dag.add_edge(node.parent_two.label, node.label)
+                dag.add_edge(node.parent_two.label, node.label, color=node.parent_two.color)
 
         return DAG(dag)
 
     def to_tainted_control_flow_graph(self) -> DAG[TaintForestNode]:
-        """Returns a subgraph of the overall taint forest with ONLY control-flow-affecting nodes.
+        """Returns a subset of the overall taint forest with ONLY control-flow-affecting nodes.
 
-        TODO colour nodes by source
+        TODO fill node colour by source taint / origin bytes
+        TODO node text and outline colour by basic block
         """
         dag: nx.DiGraph = nx.DiGraph()
 
-        for node in self.tforest:
+        for node in self:
             if node.affected_control_flow:
-
-                dag.add_node(node.label)
+                dag.add_node(
+                    node.label,
+                    source=node.source,
+                    color=node.color,
+                    fontcolor=node.fontcolor,
+                    fillcolor=node.fillcolor,
+                    style=node.style,)
 
                 if node.parent_one:
-                    dag.add_edge(node.parent_one.label, node.label)
+                    dag.add_edge(node.parent_one.label, node.label, color=node.parent_one.color)
 
                 if node.parent_two:
-                    dag.add_edge(node.parent_two.label, node.label)
+                    dag.add_edge(node.parent_two.label, node.label, color=node.parent_two.color)
 
         return DAG(dag)
 
@@ -117,9 +134,9 @@ class ExportTaintForest(Command):
     help = "export a taint forest to GraphViz (DOT) format"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("-t", type=str, help="the trace TDAG file (probably called polytracker.tdag)", dest="POLYTRACKER_DB")
         parser.add_argument(
-            "OUTPUT_PATH", type=str, help="path to which to save the .dot file"
+            "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
     def run(self, args):
@@ -128,9 +145,10 @@ class ExportTaintForest(Command):
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
+        pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
         print(
-            f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`"
+            f"To render it to a PDF, run `dot -Tpdf -o {pdf}.pdf {args.OUTPUT_PATH}`"
         )
 
 class ExportControlFlowLog(Subcommand):
@@ -140,9 +158,9 @@ class ExportControlFlowLog(Subcommand):
     help = "export the control-flow-affecting subsection of the taint forest to GraphViz (DOT) format"
 
     def __init_arguments__(self, parser):
-        parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
+        parser.add_argument("-t", type=str, help="the trace TDAG file (probably called polytracker.tdag)", dest="POLYTRACKER_DB")
         parser.add_argument(
-            "OUTPUT_PATH", type=str, help="path to which to save the .dot file"
+            "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
     def run(self, args):
@@ -151,7 +169,8 @@ class ExportControlFlowLog(Subcommand):
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_tainted_control_flow_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
+        pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the control-flow-affecting subsection of the taint forest to {args.OUTPUT_PATH}")
         print(
-            f"To render it to a PDF, run `dot -Tpdf -o cfl.pdf {args.OUTPUT_PATH}`"
+            f"To render it to a PDF, run `dot -Tpdf -o {pdf}.pdf {args.OUTPUT_PATH}`"
         )

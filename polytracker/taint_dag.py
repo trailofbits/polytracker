@@ -280,20 +280,21 @@ class TDFnHeader(Structure):
 
 
 class TDNode:
-    def __init__(self, affects_control_flow: bool = False):
-        self.affects_control_flow = affects_control_flow
-        if affects_control_flow:
-            self.color = "green"
-        else:
-            self.color = "black"
+    def __init__(self, affected_control_flow: bool = False):
+        self.affected_control_flow = affected_control_flow
+
+        self.color = "grey30"
+        self.fontcolor = "grey30"
+        self.fillcolor = "ghostwhite"
+        self.style = "filled"
 
     def __repr__(self) -> str:
-        return f"affects control flow {self.affects_control_flow}"
+        return f"affects control flow {self.affected_control_flow}"
 
 
 class TDSourceNode(TDNode):
-    def __init__(self, idx: int, offset: int, affects_control_flow: bool = False):
-        super().__init__(affects_control_flow)
+    def __init__(self, idx: int, offset: int, affected_control_flow: bool = False):
+        super().__init__(affected_control_flow)
         self.idx = idx
         self.offset = offset
 
@@ -302,8 +303,8 @@ class TDSourceNode(TDNode):
 
 
 class TDRangeNode(TDNode):
-    def __init__(self, first: int, last: int, affects_control_flow: bool = False):
-        super().__init__(affects_control_flow)
+    def __init__(self, first: int, last: int, affected_control_flow: bool = False):
+        super().__init__(affected_control_flow)
         # First label of the range
         self.first = first
         # Last label of the range
@@ -314,8 +315,8 @@ class TDRangeNode(TDNode):
 
 
 class TDUnionNode(TDNode):
-    def __init__(self, left: int, right: int, affects_control_flow: bool = False):
-        super().__init__(affects_control_flow)
+    def __init__(self, left: int, right: int, affected_control_flow: bool = False):
+        super().__init__(affected_control_flow)
         self.left = left
         self.right = right
 
@@ -580,7 +581,7 @@ class TDProgramTrace(ProgramTrace):
 
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
-            if source_node.affects_control_flow:
+            if source_node.affected_control_flow:
                 tf_node = self.taint_forest.get_node(source_label)
                 result.add(self.file_offset(tf_node))
 
@@ -660,14 +661,14 @@ class TDTaintForest(TaintForest):
                 self,
                 label,
                 source,
-                node.affects_control_flow)
+                node.affected_control_flow)
 
         elif isinstance(node, TDUnionNode):
             return TDTaintForestNode(
                 self,
                 label,
                 None,
-                node.affects_control_flow,
+                node.affected_control_flow,
                 parent_labels=(node.left, node.right)
             )
 
@@ -685,7 +686,7 @@ class TDTaintForest(TaintForest):
                     self,
                     synth_label,
                     None,
-                    node.affects_control_flow,
+                    node.affected_control_flow,
                     (curr, n),
                 )
                 curr = synth_label
@@ -694,7 +695,7 @@ class TDTaintForest(TaintForest):
                 self,
                 label,
                 None,
-                node.affects_control_flow,
+                node.affected_control_flow,
                 (curr, node.last),
             )
 

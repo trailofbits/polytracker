@@ -18,6 +18,7 @@ import graphviz
 import networkx as nx
 
 from polytracker.cache import OrderedSet
+from polytracker.inputs import Input
 
 N = TypeVar("N")
 D = TypeVar("D", bound="DiGraph")
@@ -165,6 +166,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
                 root_nodes.append(node)
             else:
                 inner_nodes.append(node)
+
         # Add root nodes
         roots = graphviz.Digraph(
             name="roots",
@@ -172,23 +174,33 @@ class DiGraph(nx.DiGraph, Generic[N]):
             node_attr={"shape": "square"},
             edge_attr={"style": "invis"},
         )
+
         for root in root_nodes:
-            print(root)
+            rlabel = root[0]
             roots.node(
                 str(root[0]),
-                label=labeler(root[0]),
-                color=root[1].get('color'))
+                label=labeler(rlabel),
+                color=root[1].get('color'),
+                fontcolor=root[1].get('fontcolor'),
+                fillcolor=root[1].get('fillcolor'),
+                style=root[1].get('style'),)
+
         # Add invisible edges to enforce root node ordering within a rank
         for i in range(len(root_nodes) - 1):
             roots.edge(str(root_nodes[i][0]), str(root_nodes[i + 1][0]))
+
         # Add inner nodes
         inners = graphviz.Digraph(name="inner")
+
         for inner in inner_nodes:
-            print(inner)
+            ilabel = inner[0]
             inners.node(
                 str(inner[0]),
-                label=labeler(inner[0]),
-                color=inner[1].get('color'))
+                label=labeler(ilabel),
+                color=inner[1].get('color'),
+                fontcolor=inner[1].get('fontcolor'),
+                fillcolor=inner[1].get('fillcolor'),
+                style=inner[1].get('style'),)
 
         result = graphviz.Digraph(comment=comment)
         result.subgraph(roots)

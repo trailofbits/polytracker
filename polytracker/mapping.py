@@ -106,7 +106,7 @@ class InputOutputMapping:
                 marker = marker.ljust(source_offset + 1, b"\0")
                 markers[source_index] = marker
 
-            if source_node.affects_control_flow:
+            if source_node.affected_control_flow:
                 marker[source_offset] = 1
 
         # Now, iterate all taint labels written to outputs (sinks). Walk them backwards to reach
@@ -115,18 +115,18 @@ class InputOutputMapping:
         # node (see above).
         for s in tqdm(list(self.tdfile.sinks)):
             sn = self.tdfile.decode_node(s.label)
-            if sn.affects_control_flow:
+            if sn.affected_control_flow:
                 continue
 
             # If it is a source node add it (unless it affects control flow as it was already
             # set by the initial sweep).
-            if isinstance(sn, TDSourceNode) and not sn.affects_control_flow:
+            if isinstance(sn, TDSourceNode) and not sn.affected_control_flow:
                 markers[sn.idx][sn.offset] = 1
             else:
                 for lbl, n in self.dfs_walk(s.label, seen):
                     if isinstance(n, TDSourceNode):
                         markers[n.idx][n.offset] = 1
-                    elif n.affects_control_flow:
+                    elif n.affected_control_flow:
                         if isinstance(n, TDUnionNode):
                             seen.add(n.left)
                             seen.add(n.right)
