@@ -17,8 +17,8 @@ class TaintForestNode:
         self.affected_control_flow: bool = affected_control_flow
 
         # https://graphviz.org/doc/info/colors.html
-        self.color = "grey30"
-        self.fontcolor = "grey30"
+        self.color = "webgrey"
+        self.fontcolor = "webgrey"
         self.style = "filled"
         self.fillcolor = "ghostwhite"
 
@@ -72,7 +72,7 @@ class TaintForest:
         dag: nx.DiGraph = nx.DiGraph()
 
         for node in self:
-            if node.affected_control_flow and node.color == "grey30":
+            if node.affected_control_flow:
                 # make sure all control flow affecting things get coloured
                 # https://graphviz.org/doc/info/colors.html
                 node.color = "black"

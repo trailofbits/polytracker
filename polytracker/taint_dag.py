@@ -283,8 +283,8 @@ class TDNode:
     def __init__(self, affected_control_flow: bool = False):
         self.affected_control_flow = affected_control_flow
 
-        self.color = "grey30"
-        self.fontcolor = "grey30"
+        self.color = "webgrey"
+        self.fontcolor = "webgrey"
         self.fillcolor = "ghostwhite"
         self.style = "filled"
 
@@ -445,20 +445,20 @@ class TDFile:
         v = self.read_node(label)
         # This needs to be kept in sync with implementation in encoding.cpp
         source_taint = (v >> self.source_taint_bit_shift) & 1
-        affects_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
+        affected_cf = (v >> self.affects_control_flow_bit_shift) & 1 != 0
 
         if source_taint:
             idx = v & self.source_index_mask
             offset = (v >> self.source_index_bits) & self.source_offset_mask
-            return TDSourceNode(idx, offset, affects_cf)
+            return TDSourceNode(idx, offset, affected_cf)
         else:
             v1 = (v >> self.val1_shift) & self.label_mask
             v2 = v & self.label_mask
 
             if v1 > v2:
-                return TDUnionNode(v1, v2, affects_cf)
+                return TDUnionNode(v1, v2, affected_cf)
             else:
-                return TDRangeNode(v1, v2, affects_cf)
+                return TDRangeNode(v1, v2, affected_cf)
 
     @property
     def nodes(self) -> Iterator[TDNode]:
@@ -656,6 +656,9 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
+            # 'source' is the path to the section of the source file
+            # (the tainted input bytes). do not print this as part
+            #  of graphing, it can be big
             source = Input(fdhdr.fd, str(path), fdhdr.size)
             return TDTaintForestNode(
                 self,
