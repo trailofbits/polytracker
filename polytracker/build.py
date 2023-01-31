@@ -160,7 +160,7 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
         str(POLY_PASS_PATH),
         "-load-pass-plugin",
         str(POLY_PASS_PATH),
-        "-passes=pt-tcf,pt-bb",
+        "-passes=pt-tcf",
         str(input_bitcode),
         "-o",
         str(output_bitcode)
