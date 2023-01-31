@@ -54,7 +54,7 @@ public:
                                                    std::span<uint8_t> dst);
 
   // Update the label, it affects control flow
-  void affects_control_flow(label_t taint_label);
+  void affects_control_flow(label_t taint_label, uint32_t blockid);
 
   // Control flow logging enable/disable
   inline void enable_control_flow_logging() { log_control_flow_ = true; }

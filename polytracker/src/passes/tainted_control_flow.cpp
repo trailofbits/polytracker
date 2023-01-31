@@ -62,7 +62,18 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
           new_srcop = ir.CreatePtrToInt(srcop, ir.getInt64Ty());
         }
 
-        auto callret = ir.CreateCall(cond_br_log_fn, ir.CreateSExtOrTrunc(new_srcop, ir.getInt64Ty()));
+        auto bb = bi.getParent();
+        auto bb_address = reinterpret_cast<uintptr_t>(bb);
+        uint32_t block_id;
+        if (auto bid_iter = block_ids_.find(bb_address); bid_iter != block_ids_.end()) {
+          block_id = bid_iter->second;
+        } else {
+          block_id = block_counter_++;
+          block_ids_[bb_address] = block_counter_;
+        }
+
+        auto basic_block_arg = llvm::ConstantInt::get(bb->getContext(), llvm::APInt(32, block_id, false));
+        auto callret = ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(new_srcop, ir.getInt64Ty()), basic_block_arg});
 
         llvm::Value* new_dstop = callret;
         if (new_srcop != srcop) {
@@ -87,7 +98,7 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
       llvm::AttributeList::get(
           mod.getContext(),
           {{llvm::AttributeList::FunctionIndex, llvm::Attribute::get(mod.getContext(), llvm::Attribute::ReadNone)}}),
-      ir.getInt64Ty(), ir.getInt64Ty());
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
 }
 
 llvm::PreservedAnalyses

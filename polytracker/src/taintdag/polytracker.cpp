@@ -171,10 +171,10 @@ void PolyTracker::taint_sink(int fd, util::Offset offset, label_t label,
   }
 }
 
-void PolyTracker::affects_control_flow(label_t lbl) {
+void PolyTracker::affects_control_flow(label_t lbl, uint32_t blockid) {
   output_file_.section<Labels>().affects_control_flow(lbl);
   if (log_control_flow_) {
-    output_file_.section<ControlFlowLog>().record(lbl);
+    output_file_.section<ControlFlowLog>().record(lbl, blockid);
   }
 }
 

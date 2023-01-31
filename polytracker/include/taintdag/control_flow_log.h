@@ -31,8 +31,8 @@ struct ControlFlowLog
         bblog_{of.output_file.template section<BasicBlocksLog>()} {}
 
   // Record that `label` affected control flow.
-  void record(label_t label) {
-    auto current_bb = bblog_.current_block_index;
+  void record(label_t label, uint32_t blockid) {
+    auto current_bb = blockid; //bblog_.current_block_index;
     if (!construct(std::make_pair(label, current_bb))) {
         error_exit("Failed to record label ", label,
                    " as affecting control flow");

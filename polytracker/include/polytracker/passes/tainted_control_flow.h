@@ -10,6 +10,7 @@
 
 #include <llvm/IR/InstVisitor.h>
 #include <llvm/IR/PassManager.h>
+#include <unordered_map>
 
 namespace polytracker {
 
@@ -32,6 +33,9 @@ public:
   // void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
   // void visitSwitchInst(llvm::SwitchInst &si);
+
+  std::unordered_map<uintptr_t, uint32_t> block_ids_;
+  uint32_t block_counter_{0};
 };
 
 } // namespace polytracker
