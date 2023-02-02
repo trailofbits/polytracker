@@ -14,8 +14,9 @@
 
 namespace polytracker {
 
-class TaintedControlFlowPass : public llvm::PassInfoMixin<TaintedControlFlowPass>,
-                          public llvm::InstVisitor<TaintedControlFlowPass> {
+class TaintedControlFlowPass
+    : public llvm::PassInfoMixin<TaintedControlFlowPass>,
+      public llvm::InstVisitor<TaintedControlFlowPass> {
   //
   llvm::IntegerType *label_ty{nullptr};
   // Taint tracking startup
@@ -27,15 +28,24 @@ class TaintedControlFlowPass : public llvm::PassInfoMixin<TaintedControlFlowPass
   void insertTaintStartupCall(llvm::Module &mod);
   void declareLoggingFunctions(llvm::Module &mod);
 
+  uint32_t get_block_id(llvm::Instruction &i);
+  uint32_t get_function_id(llvm::Instruction &i);
+
+  llvm::ConstantInt *get_block_id_const(llvm::Instruction &i);
+  llvm::ConstantInt *get_function_id_const(llvm::Instruction &i);
+
 public:
   llvm::PreservedAnalyses run(llvm::Module &mod,
                               llvm::ModuleAnalysisManager &mam);
   // void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
-  // void visitSwitchInst(llvm::SwitchInst &si);
+  void visitSwitchInst(llvm::SwitchInst &si);
 
   std::unordered_map<uintptr_t, uint32_t> block_ids_;
   uint32_t block_counter_{0};
+
+  std::unordered_map<uintptr_t, uint32_t> function_ids_;
+  uint32_t function_counter_{0};
 };
 
 } // namespace polytracker
