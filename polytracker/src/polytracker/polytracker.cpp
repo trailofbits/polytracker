@@ -44,14 +44,16 @@ extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
 }
 
 extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
-    uint64_t conditional, uint32_t blockid, dfsan_label conditional_label, dfsan_label block_label, dfsan_label *ret_label) {
+    uint64_t conditional, uint32_t blockid, uint32_t functionid,
+    dfsan_label conditional_label, dfsan_label block_label,
+    dfsan_label function_label, dfsan_label *ret_label) {
   if (conditional_label > 0) {
-    get_polytracker_tdag().affects_control_flow(conditional_label, blockid);
+    // get_polytracker_tdag().affects_control_flow(conditional_label, blockid);
+    get_polytracker_tdag().affects_control_flow(conditional_label, functionid);
   }
   *ret_label = conditional_label;
   return conditional;
 }
-
 
 extern "C" void __polytracker_log_basic_block(uint32_t blockidx) {
   get_polytracker_tdag().basic_block(blockidx);

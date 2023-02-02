@@ -64,15 +64,22 @@ TaintedControlFlowPass::get_function_id_const(llvm::Instruction &i) {
   return llvm::ConstantInt::get(i.getContext(),
                                 llvm::APInt(32, get_function_id(i), false));
 }
-// void TaintedControlFlowPass::visitGetElementPtrInst(llvm::GetElementPtrInst
-// &gep) {
-//   for (auto &idx : gep.indices()) {
-//     if (llvm::isa<llvm::ConstantInt>(idx)) {
-//       continue;
-//     }
-//     insertCondBrLogCall(gep, idx);
-//   }
-// }
+
+void TaintedControlFlowPass::visitGetElementPtrInst(
+    llvm::GetElementPtrInst &gep) {
+  llvm::IRBuilder<> ir(&gep);
+  for (auto &idx : gep.indices()) {
+    if (llvm::isa<llvm::ConstantInt>(idx)) {
+      continue;
+    }
+
+    auto callret = ir.CreateCall(
+        cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()), get_block_id_const(gep), get_function_id_const(gep)});
+
+    idx = ir.CreateSExtOrTrunc(callret, idx->getType());
+  }
+}
 
 void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
   if (bi.isUnconditional()) {
@@ -84,56 +91,9 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 
   auto callret = ir.CreateCall(
       cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(bi)});
+      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(bi), get_function_id_const(bi)});
 
   bi.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
-
-  // if (auto cmp = dyn_cast<llvm::CmpInst>(cond)) {
-  //   if (cmp->isIntPredicate()) {
-  //     llvm::IRBuilder<> ir(cmp);
-  //     auto num_operands = cmp->getNumOperands();
-  //     for (auto i = 0; i < num_operands; i++) {
-  //       auto srcop = cmp->getOperand(i);
-  //       // Ignore constants
-  //       if (llvm::isa<llvm::ConstantInt>(srcop)) {
-  //         continue;
-  //       }
-  //       auto srcty = srcop->getType();
-  //       auto new_srcop = srcop;
-  //       if (srcty->isPointerTy()) {
-  //         new_srcop = ir.CreatePtrToInt(srcop, ir.getInt64Ty());
-  //       }
-
-  //       auto bb = bi.getParent();
-  //       auto bb_address = reinterpret_cast<uintptr_t>(bb);
-  //       uint32_t block_id;
-  //       if (auto bid_iter = block_ids_.find(bb_address);
-  //           bid_iter != block_ids_.end()) {
-  //         block_id = bid_iter->second;
-  //       } else {
-  //         block_id = block_counter_++;
-  //         block_ids_[bb_address] = block_counter_;
-  //       }
-
-  //       auto basic_block_arg = llvm::ConstantInt::get(
-  //           bb->getContext(), llvm::APInt(32, block_id, false));
-  //       auto callret = ir.CreateCall(
-  //           cond_br_log_fn, {ir.CreateSExtOrTrunc(new_srcop,
-  //           ir.getInt64Ty()),
-  //                            basic_block_arg});
-
-  //       llvm::Value *new_dstop = callret;
-  //       if (new_srcop != srcop) {
-  //         new_dstop = ir.CreateIntToPtr(callret, srcty);
-  //       }
-  //       cmp->setOperand(i, ir.CreateSExtOrTrunc(new_dstop, srcty));
-  //     }
-  //   }
-  // }
-
-  // auto callret = ir.CreateCall(cond_br_log_fn, ir.CreateSExtOrTrunc(cond,
-  // label_ty)); bi.setCondition(ir.CreateSExtOrTrunc(callret,
-  // cond->getType()));
 }
 
 void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
@@ -142,7 +102,7 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
 
   auto callret = ir.CreateCall(
       cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(si)});
+      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(si), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -156,7 +116,7 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
           {{llvm::AttributeList::FunctionIndex,
             llvm::Attribute::get(mod.getContext(),
                                  llvm::Attribute::ReadNone)}}),
-      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty(), ir.getInt32Ty());
 }
 
 llvm::PreservedAnalyses
