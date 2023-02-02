@@ -2,7 +2,6 @@ from inspect import getmembers, isclass
 from pkgutil import iter_modules
 from importlib import import_module
 
-# from .database import DBProgramTrace as PolyTrackerTrace
 from .__main__ import main
 from .taint_dag import TDProgramTrace as PolyTrackerTrace
 from .polytracker import *
