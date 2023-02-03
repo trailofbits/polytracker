@@ -18,19 +18,47 @@
 #include "polytracker/dfsan_types.h"
 #include "polytracker/passes/utils.h"
 
+#include <fstream>
+
+namespace polytracker {
+
+namespace detail {
+// Helper type to produce the json file of function names by functionid
+class FunctionMappingJSONWriter {
+public:
+  FunctionMappingJSONWriter(std::string_view filename)
+      : file(filename.data(), std::ios::binary) {
+    file << "[";
+  }
+
+  ~FunctionMappingJSONWriter() { file << "]"; }
+
+  void append(std::string_view name) {
+    // Will cause an additional ',' but don't care about that right now...
+    file << "\"" << name << "\",\n";
+  }
+
+private:
+  std::ofstream file;
+};
+} // namespace detail
+
 namespace {
 uint32_t get_or_add_mapping(uintptr_t key,
                             std::unordered_map<uintptr_t, uint32_t> &m,
-                            uint32_t &counter) {
+                            uint32_t &counter, std::string_view name,
+                            polytracker::detail::FunctionMappingJSONWriter *js) {
   if (auto it = m.find(key); it != m.end()) {
     return it->second;
   } else {
+    if (js) {
+      js->append(name);
+    }
     return m[key] = counter++;
   }
 }
-} // namespace
-namespace polytracker {
 
+} // namespace
 void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
                                                  llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
@@ -44,13 +72,15 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
 uint32_t TaintedControlFlowPass::get_block_id(llvm::Instruction &i) {
   auto bb = i.getParent();
   auto bb_address = reinterpret_cast<uintptr_t>(bb);
-  return get_or_add_mapping(bb_address, block_ids_, block_counter_);
+  return get_or_add_mapping(bb_address, block_ids_, block_counter_, "", nullptr);
 }
 
 uint32_t TaintedControlFlowPass::get_function_id(llvm::Instruction &i) {
   auto func = i.getParent()->getParent();
   auto func_address = reinterpret_cast<uintptr_t>(func);
-  return get_or_add_mapping(func_address, function_ids_, function_counter_);
+  std::string_view name = func->getName();
+  return get_or_add_mapping(func_address, function_ids_, function_counter_,
+                            name, function_mapping_writer_.get());
 }
 
 llvm::ConstantInt *
@@ -74,8 +104,8 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
     }
 
     auto callret = ir.CreateCall(
-        cond_br_log_fn,
-        {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()), get_block_id_const(gep), get_function_id_const(gep)});
+        cond_br_log_fn, {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
+                         get_block_id_const(gep), get_function_id_const(gep)});
 
     idx = ir.CreateSExtOrTrunc(callret, idx->getType());
   }
@@ -90,8 +120,8 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
   auto cond = bi.getCondition();
 
   auto callret = ir.CreateCall(
-      cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(bi), get_function_id_const(bi)});
+      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
+                       get_block_id_const(bi), get_function_id_const(bi)});
 
   bi.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -101,8 +131,8 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   auto cond = si.getCondition();
 
   auto callret = ir.CreateCall(
-      cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_block_id_const(si), get_function_id_const(si)});
+      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
+                       get_block_id_const(si), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -130,4 +160,12 @@ TaintedControlFlowPass::run(llvm::Module &mod,
   return llvm::PreservedAnalyses::none();
 }
 
+TaintedControlFlowPass::TaintedControlFlowPass()
+    : function_mapping_writer_(
+          std::make_unique<detail::FunctionMappingJSONWriter>(
+              "funcitonid.json")) {}
+
+TaintedControlFlowPass::~TaintedControlFlowPass() = default;
+TaintedControlFlowPass::TaintedControlFlowPass(TaintedControlFlowPass &&) =
+    default;
 } // namespace polytracker
