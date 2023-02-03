@@ -143,6 +143,10 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
 }
 
 void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
+  // TODO(hbrodin): Can't handle atm.
+  if (si.getType()->isVectorTy()) {
+    return;
+  }
   llvm::IRBuilder<> ir(&si);
   auto cond = si.getCondition();
 
