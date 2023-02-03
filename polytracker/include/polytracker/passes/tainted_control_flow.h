@@ -47,6 +47,7 @@ public:
   void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
   void visitSwitchInst(llvm::SwitchInst &si);
+  void visitSelectInst(llvm::SelectInst &si);
 
   std::unordered_map<uintptr_t, uint32_t> block_ids_;
   uint32_t block_counter_{0};

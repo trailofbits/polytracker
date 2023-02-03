@@ -142,6 +142,17 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
 
+void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
+  llvm::IRBuilder<> ir(&si);
+  auto cond = si.getCondition();
+
+  auto callret = ir.CreateCall(
+      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
+                       get_block_id_const(si), get_function_id_const(si)});
+
+  si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
+}
+
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   cond_br_log_fn = mod.getOrInsertFunction(
