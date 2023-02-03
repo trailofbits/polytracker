@@ -31,7 +31,11 @@ public:
     file << "[";
   }
 
-  ~FunctionMappingJSONWriter() { file << "]"; }
+  ~FunctionMappingJSONWriter() {
+    // Back up and erase the last ",\n"
+    file.seekp(-2, std::ios::cur);
+    file << "\n]\n";
+  }
 
   void append(std::string_view name) {
     // Will cause an additional ',' but don't care about that right now...
@@ -44,10 +48,10 @@ private:
 } // namespace detail
 
 namespace {
-uint32_t get_or_add_mapping(uintptr_t key,
-                            std::unordered_map<uintptr_t, uint32_t> &m,
-                            uint32_t &counter, std::string_view name,
-                            polytracker::detail::FunctionMappingJSONWriter *js) {
+uint32_t
+get_or_add_mapping(uintptr_t key, std::unordered_map<uintptr_t, uint32_t> &m,
+                   uint32_t &counter, std::string_view name,
+                   polytracker::detail::FunctionMappingJSONWriter *js) {
   if (auto it = m.find(key); it != m.end()) {
     return it->second;
   } else {
@@ -72,7 +76,8 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
 uint32_t TaintedControlFlowPass::get_block_id(llvm::Instruction &i) {
   auto bb = i.getParent();
   auto bb_address = reinterpret_cast<uintptr_t>(bb);
-  return get_or_add_mapping(bb_address, block_ids_, block_counter_, "", nullptr);
+  return get_or_add_mapping(bb_address, block_ids_, block_counter_, "",
+                            nullptr);
 }
 
 uint32_t TaintedControlFlowPass::get_function_id(llvm::Instruction &i) {
@@ -163,7 +168,7 @@ TaintedControlFlowPass::run(llvm::Module &mod,
 TaintedControlFlowPass::TaintedControlFlowPass()
     : function_mapping_writer_(
           std::make_unique<detail::FunctionMappingJSONWriter>(
-              "funcitonid.json")) {}
+              "functionid.json")) {}
 
 TaintedControlFlowPass::~TaintedControlFlowPass() = default;
 TaintedControlFlowPass::TaintedControlFlowPass(TaintedControlFlowPass &&) =
