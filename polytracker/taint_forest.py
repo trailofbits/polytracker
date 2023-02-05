@@ -77,21 +77,25 @@ class TaintForest:
                 # https://graphviz.org/doc/info/colors.html
                 node.color = "black"
                 node.fontcolor = "black"
-                node.fillcolor = "limegreen"
+                node.fillcolor = "webgrey"
 
             dag.add_node(
                 node.label,
+                # if this is a source node, it has a source: Input member
                 source=node.source,
+                # elsewise, it has one or two parents
+                parent_one=node.parent_one,
+                parent_two=node.parent_two,
                 color=node.color,
                 fontcolor=node.fontcolor,
                 fillcolor=node.fillcolor,
                 style=node.style,)
 
             if node.parent_one:
-                dag.add_edge(node.parent_one.label, node.label, color=node.parent_one.color)
+                dag.add_edge(node.parent_one.label, node.label, color="webgrey")
 
             if node.parent_two:
-                dag.add_edge(node.parent_two.label, node.label, color=node.parent_two.color)
+                dag.add_edge(node.parent_two.label, node.label, color="webgrey")
 
         return DAG(dag)
 
@@ -107,7 +111,11 @@ class TaintForest:
             if node.affected_control_flow:
                 dag.add_node(
                     node.label,
+                    # if this is a source node, it has a source: Input member
                     source=node.source,
+                    # elsewise, it has one or two parents
+                    parent_one=node.parent_one,
+                    parent_two=node.parent_two,
                     color=node.color,
                     fontcolor=node.fontcolor,
                     fillcolor=node.fillcolor,
@@ -139,12 +147,41 @@ class ExportTaintForest(Command):
             "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
+    def node_labeller(self, node) -> str:
+        def label_by_offset(source: Input) -> str:
+            label = f"[{source.track_start}]"
+            if source.track_end is not None:
+                label = f"[{source.track_start} - {source.track_end}]"
+            return label
+
+        print(node)
+
+        if isinstance(node, TaintForestNode) and node.source is not None:
+            return label_by_offset(node.source)
+        elif isinstance(node, tuple):
+            #networkx DAG tuple[label, dict]
+            attributes = node[1]
+            if attributes.get('source') is not None:
+                source = attributes.get('source')
+                return label_by_offset(source)
+            elif attributes.get('parent_one') is not None:
+                return self.node_labeller(attributes['parent_one'])
+            elif attributes.get('parent_two') is not None:
+                return self.node_labeller(attributes['parent_two'])
+        elif node.parent_one is not None:
+            #TDTaintForestNode
+            return self.node_labeller(node.parent_one)
+        elif node.parent_two is not None:
+            #TDTaintForestNode
+            return self.node_labeller(node.parent_two)
+
+
     def run(self, args):
         from . import PolyTrackerTrace
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_graph()
-        graph.to_dot().save(args.OUTPUT_PATH)
+        graph.to_dot(labeler=self.node_labeller).save(args.OUTPUT_PATH)
         pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
         print(

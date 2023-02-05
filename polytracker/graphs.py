@@ -176,10 +176,9 @@ class DiGraph(nx.DiGraph, Generic[N]):
         )
 
         for root in root_nodes:
-            rlabel = root[0]
             roots.node(
                 str(root[0]),
-                label=labeler(rlabel),
+                label=labeler(root),
                 color=root[1].get('color'),
                 fontcolor=root[1].get('fontcolor'),
                 fillcolor=root[1].get('fillcolor'),
@@ -193,10 +192,9 @@ class DiGraph(nx.DiGraph, Generic[N]):
         inners = graphviz.Digraph(name="inner")
 
         for inner in inner_nodes:
-            ilabel = inner[0]
             inners.node(
                 str(inner[0]),
-                label=labeler(ilabel),
+                label=labeler(inner),
                 color=inner[1].get('color'),
                 fontcolor=inner[1].get('fontcolor'),
                 fillcolor=inner[1].get('fillcolor'),
