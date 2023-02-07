@@ -10,15 +10,18 @@ import networkx as nx
 
 class TaintForestNode:
     def __init__(
-        self, label: int, source: Optional[Input], affected_control_flow: bool = False
+        self,
+        label: int,
+        source: Optional[Input],
+        affected_control_flow: bool = False,
     ):
         self.label: int = label
         self.source: Optional[Input] = source
         self.affected_control_flow: bool = affected_control_flow
 
         # https://graphviz.org/doc/info/colors.html
-        self.color = "webgrey"
-        self.fontcolor = "webgrey"
+        self.color = "black"
+        self.fontcolor = "black"
         self.style = "filled"
         self.fillcolor = "ghostwhite"
 
@@ -73,7 +76,6 @@ class TaintForest:
 
         for node in self:
             if node.affected_control_flow:
-                # make sure all control flow affecting things get coloured
                 # https://graphviz.org/doc/info/colors.html
                 node.color = "black"
                 node.fontcolor = "black"
@@ -81,11 +83,12 @@ class TaintForest:
 
             dag.add_node(
                 node.label,
-                # if this is a source node, it has a source: Input member
+                # if this is a source node, it has a reference back to the input
                 source=node.source,
                 # elsewise, it has one or two parents
                 parent_one=node.parent_one,
                 parent_two=node.parent_two,
+               # offset=node.offset,
                 color=node.color,
                 fontcolor=node.fontcolor,
                 fillcolor=node.fillcolor,
@@ -147,33 +150,54 @@ class ExportTaintForest(Command):
             "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
-    def node_labeller(self, node) -> str:
-        def label_by_offset(source: Input) -> str:
-            label = f"[{source.track_start}]"
-            if source.track_end is not None:
-                label = f"[{source.track_start} - {source.track_end}]"
-            return label
+    def node_labeller(self, node, trace) -> str:
+        def label_by_offset(offset: int, length: int, node: TaintForestNode) -> str:
+            if length > 1:
+                printable_offset = f"{offset} - {offset + length}"
+            else:
+                printable_offset = f"{offset}"
 
-        print(node)
+            # update node, and use value later where we called this labelling fn
+            if hasattr(node, 'offset') and printable_offset not in node.offset:
+                node.offset = f"[{node.offset}, {printable_offset}]"
+            else:
+                node.offset = f"[{printable_offset}]"
 
-        if isinstance(node, TaintForestNode) and node.source is not None:
-            return label_by_offset(node.source)
+            return node.offset
+
+        if isinstance(node, TaintForestNode) and node.is_canonical():
+            # source node (no parents)
+            offset = trace.file_offset(node)
+            print(f"possible offset version: o {offset.offset}, l {offset.length}")
+            return label_by_offset(offset.offset, offset.length, node)
         elif isinstance(node, tuple):
             #networkx DAG tuple[label, dict]
             attributes = node[1]
             if attributes.get('source') is not None:
-                source = attributes.get('source')
-                return label_by_offset(source)
+                tf_node = trace.tforest.get_node(node[0])
+                offset = trace.file_offset(tf_node)
+                print(f"possible offset version: o {offset.offset}, l {offset.length}")
+                return label_by_offset(offset.offset, offset.length, tf_node)
             elif attributes.get('parent_one') is not None:
-                return self.node_labeller(attributes['parent_one'])
+                return self.node_labeller(attributes['parent_one'], trace)
             elif attributes.get('parent_two') is not None:
-                return self.node_labeller(attributes['parent_two'])
+                return self.node_labeller(attributes['parent_two'], trace)
         elif node.parent_one is not None:
-            #TDTaintForestNode
-            return self.node_labeller(node.parent_one)
+            #node is a TDTaintForestNode
+            if node.parent_one.source is not None:
+                offset = node.parent_one.forest.trace.file_offset(node.parent_one)
+                print(f"possible offset version: o {offset.offset}, l {offset.length}")
+                return label_by_offset(offset.offset, offset.length, node)
+
+            return self.node_labeller(node.parent_one, trace)
         elif node.parent_two is not None:
-            #TDTaintForestNode
-            return self.node_labeller(node.parent_two)
+            #node is a TDTaintForestNode
+            if node.parent_two.source is not None:
+                offset = node.parent_two.forest.trace.file_offset(node.parent_two)
+                print(f"possible offset version: o {offset.offset}, l {offset.length}")
+                return label_by_offset(offset.offset, offset.length, node)
+
+            return self.node_labeller(node.parent_two, trace)
 
 
     def run(self, args):
@@ -181,7 +205,7 @@ class ExportTaintForest(Command):
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_graph()
-        graph.to_dot(labeler=self.node_labeller).save(args.OUTPUT_PATH)
+        graph.to_dot(trace, labeler=self.node_labeller).save(args.OUTPUT_PATH)
         pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
         print(
@@ -205,7 +229,7 @@ class ExportControlFlowLog(Subcommand):
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_tainted_control_flow_graph()
-        graph.to_dot().save(args.OUTPUT_PATH)
+        graph.to_dot(trace, labeler=self.node_labeller).save(args.OUTPUT_PATH)
         pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the control-flow-affecting subsection of the taint forest to {args.OUTPUT_PATH}")
         print(

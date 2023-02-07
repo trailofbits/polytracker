@@ -18,9 +18,9 @@ import graphviz
 import networkx as nx
 
 from polytracker.cache import OrderedSet
-from polytracker.inputs import Input
 
 N = TypeVar("N")
+T = TypeVar("T")
 D = TypeVar("D", bound="DiGraph")
 
 
@@ -143,8 +143,9 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
     def to_dot(
         self,
+        trace: T,
         comment: Optional[str] = None,
-        labeler: Optional[Callable[[N], str]] = None,
+        labeler: Optional[Callable[[N, T], str]] = None,
         node_filter=None,
     ) -> graphviz.Digraph:
         if labeler is None:
@@ -178,7 +179,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         for root in root_nodes:
             roots.node(
                 str(root[0]),
-                label=labeler(root),
+                label=labeler(root, trace),
                 color=root[1].get('color'),
                 fontcolor=root[1].get('fontcolor'),
                 fillcolor=root[1].get('fillcolor'),
@@ -194,7 +195,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         for inner in inner_nodes:
             inners.node(
                 str(inner[0]),
-                label=labeler(inner),
+                label=labeler(inner, trace),
                 color=inner[1].get('color'),
                 fontcolor=inner[1].get('fontcolor'),
                 fillcolor=inner[1].get('fillcolor'),

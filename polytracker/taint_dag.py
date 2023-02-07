@@ -511,6 +511,7 @@ class TDProgramTrace(ProgramTrace):
         raise NotImplementedError()
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
+        print(f"{node.label}, {node.source}")
         assert node.source is not None
         tdnode: TDNode = self.tdfile.decode_node(node.label)
         assert isinstance(tdnode, TDSourceNode)

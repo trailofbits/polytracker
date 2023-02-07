@@ -24,7 +24,7 @@ class InputProperties:
 
 
 class Input:
-    """A source of taint"""
+    """Defines an entire source of taint, like a file or socket. One Input will be created for any program trace. Source TaintForestNodes all have access to the same Input through their `source` member (which is None for non-source nodes). This means that every source-oriented TaintForestNode has the exact same Input source member!"""
 
     def __init__(
         self,
