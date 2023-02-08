@@ -150,54 +150,68 @@ class ExportTaintForest(Command):
             "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
-    def node_labeller(self, node, trace) -> str:
-        def label_by_offset(offset: int, length: int, node: TaintForestNode) -> str:
-            if length > 1:
-                printable_offset = f"{offset} - {offset + length}"
-            else:
-                printable_offset = f"{offset}"
+    def _label_by_offset(self, byte_offset_start: int, node: TaintForestNode) -> str:
+        """Given trace information sourced in node_labeller(), update this node's offset, which we will use to (re)label the resulting DOT graph."""
+        offset = f"{byte_offset_start}"
+        # update node, and use value later where we called this labelling fn
+        if hasattr(node, 'offset') and offset not in node.offset:
+            node.offset = f"{node.offset}, {offset}"
+        else:
+            node.offset = offset
+        print (f"OFFSET for {node.label} IS NOW {node.offset}")
+        return node.offset
 
-            # update node, and use value later where we called this labelling fn
-            if hasattr(node, 'offset') and printable_offset not in node.offset:
-                node.offset = f"[{node.offset}, {printable_offset}]"
-            else:
-                node.offset = f"[{printable_offset}]"
+    def node_labeller(self, node, trace, label=None) -> str:
+        """A node might not know its own offsets; iterate its right and left parents to build the list of offsets which taint it on the spot."""
 
-            return node.offset
-
-        if isinstance(node, TaintForestNode) and node.is_canonical():
-            # source node (no parents)
+        if isinstance(node, TaintForestNode) and node.source is not None:
+            # source node (no parents), so we can look up its offset directly
             offset = trace.file_offset(node)
-            print(f"possible offset version: o {offset.offset}, l {offset.length}")
-            return label_by_offset(offset.offset, offset.length, node)
+            print(f"SOURCE offset version: o {offset.offset}, l {offset.length} (existing label: {label})")
+            if not hasattr(node, "offset"):
+                node.offset = label
+            return self._label_by_offset(offset.offset, node)
         elif isinstance(node, tuple):
-            #networkx DAG tuple[label, dict]
-            attributes = node[1]
-            if attributes.get('source') is not None:
-                tf_node = trace.tforest.get_node(node[0])
+            #networkx DAG tuple[label, dict] needs to be translated into a TaintForestNode to be able ot be labelled
+            tf_node = trace.tforest.get_node(node[0])
+            if tf_node.source is not None:
                 offset = trace.file_offset(tf_node)
-                print(f"possible offset version: o {offset.offset}, l {offset.length}")
-                return label_by_offset(offset.offset, offset.length, tf_node)
-            elif attributes.get('parent_one') is not None:
-                return self.node_labeller(attributes['parent_one'], trace)
-            elif attributes.get('parent_two') is not None:
-                return self.node_labeller(attributes['parent_two'], trace)
+                print(f"DAG TUPLE SOURCE node offset version: o {offset.offset}, l {offset.length}, (existing label: {label})")
+                if not hasattr(node, "offset") and label is not None:
+                    tf_node.offset = label
+                return self._label_by_offset(offset.offset, tf_node)
+            else:
+                if tf_node.parent_one is not None:
+                    print("iterating over the parent ONE node to label this node")
+                    label = self.node_labeller(tf_node.parent_one, trace)
+
+                if tf_node.parent_two is not None:
+                    print("iterating over the parent TWO node to label this node")
+                    return self.node_labeller(tf_node.parent_one, trace, label)
         elif node.parent_one is not None:
-            #node is a TDTaintForestNode
-            if node.parent_one.source is not None:
-                offset = node.parent_one.forest.trace.file_offset(node.parent_one)
-                print(f"possible offset version: o {offset.offset}, l {offset.length}")
-                return label_by_offset(offset.offset, offset.length, node)
+        # node is a TDTaintForestNode so we want to check both its parents
+        # for tainted offsets. A node can be tainted by either left (one),
+        # right (two), or if both exist, both left and right parents.
+            if node.parent_one.source is None or node.parent_two.source is None:
+                print("checking left and right...")
+                label = self.node_labeller(node.parent_one, trace)
+                return self.node_labeller(node.parent_two, trace, label)
+            else:
+                offset_one = node.parent_one.forest.trace.file_offset(node.parent_one)
+                print(f"ONE possible offset version: o {offset_one.offset}, l {offset_one.length}")
+                if not hasattr(node, "offset") and label is not None:
+                    node.offset = label
+                self._label_by_offset(offset_one.offset, node)
 
-            return self.node_labeller(node.parent_one, trace)
-        elif node.parent_two is not None:
-            #node is a TDTaintForestNode
-            if node.parent_two.source is not None:
-                offset = node.parent_two.forest.trace.file_offset(node.parent_two)
-                print(f"possible offset version: o {offset.offset}, l {offset.length}")
-                return label_by_offset(offset.offset, offset.length, node)
+                offset_two = node.parent_two.forest.trace.file_offset(node.parent_two)
+                print(f"TWO possible offset version: o {offset_two.offset}, l {offset_two.length}")
+                if not hasattr(node, "offset") and label is not None:
+                    node.offset = label
+                return self._label_by_offset(offset_two.offset, node)
+        else:
+            # no label :(
+            print("how did ew get here???")
 
-            return self.node_labeller(node.parent_two, trace)
 
 
     def run(self, args):
