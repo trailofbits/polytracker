@@ -180,6 +180,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
             roots.node(
                 str(root[0]),
                 label=labeler(root, trace),
+                offset=root[1].get('offset'),
                 color=root[1].get('color'),
                 fontcolor=root[1].get('fontcolor'),
                 fillcolor=root[1].get('fillcolor'),
@@ -196,6 +197,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
             inners.node(
                 str(inner[0]),
                 label=labeler(inner, trace),
+                offset=inner[1].get('offset'),
                 color=inner[1].get('color'),
                 fontcolor=inner[1].get('fontcolor'),
                 fillcolor=inner[1].get('fillcolor'),
