@@ -199,11 +199,8 @@ class ExportTaintForest(Command):
                     if len(node.parent_two.offset) > 0:
                         print(f"CHILD NODE {node.label}. existing offset {node.offsets_to_string()}, adding parent TWO offsets {node.parent_two.offsets_to_string()}")
                         return node.update_offsets(node.parent_two.offset)
-                if node.source is None:
-                    print(f"wtf node? {node.label}")
-                    return "()"
-                else:
-                    return self.node_labeller(node, trace)
+                print(f"wtf node? {node.label} had offsets '{node.offsets_to_string()}'")
+                return "()"
         elif isinstance(node, tuple):
             # convert to a node in the graph, and return a label based on that
             tf_node: TaintForestNode = trace.tforest.get_node(node[0])
