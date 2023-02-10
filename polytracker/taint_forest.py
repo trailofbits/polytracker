@@ -183,7 +183,6 @@ class ExportTaintForest(Command):
     def node_labeller(self, node, trace) -> str:
         """Iterate back up the chain of each node's parents to build the list of offsets which taint it, on the spot.
         """
-
         if isinstance(node, TaintForestNode):
             if node.source is not None:
                 offset_from_trace = trace.file_offset(node)
@@ -212,61 +211,6 @@ class ExportTaintForest(Command):
             return self.node_labeller(tf_node, trace)
         else:
             return "???"
-
-        # if isinstance(node, tuple):
-        #     #networkx DAG tuple[label, dict] needs to be translated into a TaintForestNode to be able ot be labelled
-        #     tf_node: TaintForestNode = trace.tforest.get_node(node[0])
-        #     if tf_node.source is not None:
-        #         offset = trace.file_offset(tf_node)
-        #         print(f"DAG TUPLE SOURCE node offset for label {node[0]}: o {offset.offset} (existing label: {tf_node.offset})")
-        #         return tf_node.update_offsets
-        #(byte_offset_start=offset.offset)
-        #     else:
-        #         if tf_node.parent_one is not None:
-        #             if tf_node.parent_one.source is not None:
-        #                 offset_one = trace.file_offset(tf_node.parent_one)
-        #                 print(f"A) ONE possible offset for label {node[0]}: o {offset_one.offset} (existing: {tf_node.offset})")
-        #                 tf_node.update_offsets
-        #(byte_offset_start=offset_one.offset)
-        #             else:
-        #                 self.node_labeller(tf_node.parent_one, trace)
-
-        #         if tf_node.parent_two is not None:
-        #             if tf_node.parent_two.source is not None:
-        #                 offset_two = trace.file_offset(tf_node.parent_two)
-        #                 print(f"B) TWO possible offset for label {node[0]}: o {offset_two.offset} (existing: {tf_node.offset})")
-        #                 return tf_node.update_offsets
-        #(byte_offset_start=offset_two.offset)
-        #             else:
-        #                 return self.node_labeller(tf_node.parent_two, trace)
-        # elif isinstance(node, TaintForestNode) and node.source is not None:
-        #     offset = trace.file_offset(node)
-        #     print(f"SOURCE offset for label {node.label}: o {offset.offset}, l {offset.length} (existing label: {node.offset})")
-        #     return node.update_offsets
-       # (byte_offset_start=offset.offset)
-        # else:
-        # # We want to check both node parents for tainted offsets.
-        # # A node can be tainted by either left (one),
-        # # right (two), or if both exist, both left and right parents.
-        #     if node.parent_one.source is not None:
-        #         offset_one = trace.file_offset(node.parent_one)
-        #         print(f"ONE offset for label {node.label}: o {offset_one.offset} (existing: {node.offset})")
-        #         newlabel = node.update_offsets
-        #(byte_offset_start=offset_one.offset)
-        #         if node.parent_two is None:
-        #             return newlabel
-        #     else:
-        #         print(f"recursing parent one ({node.label} -> {node.parent_one.label})")
-        #         self.node_labeller(node.parent_one, trace)
-
-        #     if node.parent_two.source is not None:
-        #         offset_two = trace.file_offset(node.parent_two)
-        #         print(f"TWO offset for label {node.label}: o {offset_two.offset} (existing: {node.offset})")
-        #         return node.update_offsets
-        #(byte_offset_start=offset_two.offset)
-        #     else:
-        #         print(f"recursing parent two ({node.label} -> {node.parent_two.label})")
-        #         return self.node_labeller(node.parent_two, trace)
 
     def run(self, args):
         from . import PolyTrackerTrace
