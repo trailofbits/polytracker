@@ -1,16 +1,17 @@
-#include <atomic>
 #include <fcntl.h>
-#include <fstream>
-#include <iostream>
 #include <limits.h>
 #include <sanitizer/dfsan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <atomic>
+#include <fstream>
+#include <iostream>
+#include <string>
 #include <unordered_set>
 
 #include "polytracker/dfsan_types.h"
@@ -154,6 +155,7 @@ void taint_start(void) {
                      get_polytracker_db_name());
   if (auto logcf = getenv("POLYTRACKER_LOG_CONTROL_FLOW")) {
     if (*logcf == '1') {
+      printf("POLYTRACKER_LOG_CONTROL_FLOW: 1\n");
       get_polytracker_tdag().enable_control_flow_logging();
     }
   }

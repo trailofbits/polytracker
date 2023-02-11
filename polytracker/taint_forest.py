@@ -66,12 +66,13 @@ class TaintForestNode:
         return hash((self.label, self.source))
 
     def offsets_to_string(self) -> str:
+        """Return the list of offsets which influenced this node, as a string, for use in the DOT output representation of a taint forest or control flow affecting data graph."""
         return ", ".join(str(offset) for offset in sorted(self.offset))
 
     def update_offsets(self, new_offsets: set[int]) -> str:
         """Given trace information sourced in node_labeller(), update this node's offset, which we will use to (re)label the resulting Taint Forest DAG and the DAG-descriptive DOT.
 
-        This is not a complete offset sourcing - it still requires you to look the label up in the program trace. It's mostly for caching."""
+        This is not a complete offset sourcing - it still requires you to look the label up in the program trace. It's mostly for caching while building the DOT which represents the taint forest DAG."""
         print (f"OFFSET set for {self.label} before set: {self.offset}")
 
         self.offset.update(new_offsets)
@@ -199,8 +200,6 @@ class ExportTaintForest(Command):
                     if len(node.parent_two.offset) > 0:
                         print(f"CHILD NODE {node.label}. existing offset {node.offsets_to_string()}, adding parent TWO offsets {node.parent_two.offsets_to_string()}")
                         return node.update_offsets(node.parent_two.offset)
-                print(f"wtf node? {node.label} had offsets '{node.offsets_to_string()}'")
-                return "()"
         elif isinstance(node, tuple):
             # convert to a node in the graph, and return a label based on that
             tf_node: TaintForestNode = trace.tforest.get_node(node[0])

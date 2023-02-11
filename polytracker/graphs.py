@@ -53,6 +53,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
         self._roots = roots
 
     def _find_roots(self) -> Iterable[N]:
+        """This does not give you the input offsets, just the 0-ranked labels"""
         return (n for n, d in self.in_degree() if d == 0)
 
     @property
@@ -144,71 +145,77 @@ class DiGraph(nx.DiGraph, Generic[N]):
     def to_dot(
         self,
         trace: T,
-        comment: Optional[str] = None,
+        dot_graph_title: Optional[str] = None,
         labeler: Optional[Callable[[N, T], str]] = None,
-        node_filter=None,
     ) -> graphviz.Digraph:
         if labeler is None:
             labeler = str
 
-        def default_node_filter(x: Any) -> bool:
-            return True
+        result = graphviz.Digraph(comment=dot_graph_title)
 
-        if node_filter is None:
-            node_filter = default_node_filter
+        input_bytes = graphviz.Digraph(
+            name="input_bytes",
+            graph_attr={"rank": "same"},
+            edge_attr={"style": "invis"},
+            node_attr={"shape": "square",},
+        )
+
+        roots = graphviz.Digraph(
+            name="roots",
+            edge_attr={"style": "invis"},
+        )
+
+        inners = graphviz.Digraph(
+            name="inner"
+        )
+
         # Sort nodes into roots and inner nodes
-        root_nodes: list[N] = []
-        inner_nodes: list[N] = []
-        for node in sorted(filter(node_filter, self._nodes_with_properties)):
+        for node in sorted(self._nodes_with_properties):
             # _nodes_with_properties is a list of tuples (int, dict[str, str])
             # from the underlying nx.DiGraph we initialised this class with.
             # the first member is the integer node label.
             if node[0] in self.roots:
-                root_nodes.append(node)
+                if node[1].get('source') is not None:
+                    trace_node = trace.tdfile.decode_node(node[0])
+
+                    # must differ from the root node label (root_id)!
+                    input_byte_id = "b" + str(trace_node.offset)
+                    print(f"a byte! :DD {input_byte_id}")
+                    input_bytes.node(
+                        input_byte_id,
+                        label=f"{input_byte_id}",
+                        shape="square",
+                        style="filled",
+                        fillcolor="thistle4",
+                        color="black",
+                    )
+
+                    root_id = str(node[0])
+                    roots.node(
+                        root_id, # !!different from byte node label!!
+                        label=labeler(node, trace),
+                        color=node[1].get('color'),
+                        fontcolor=node[1].get('fontcolor'),
+                        fillcolor=node[1].get('fillcolor'),
+                        style=node[1].get('style'),)
+
+                    result.edge(input_byte_id, root_id, color="thistle4")
             else:
-                inner_nodes.append(node)
+                inners.node(
+                    str(node[0]),
+                    label=labeler(node, trace),
+                    color=node[1].get('color'),
+                    fontcolor=node[1].get('fontcolor'),
+                    fillcolor=node[1].get('fillcolor'),
+                    style=node[1].get('style'),)
 
-        # Add root nodes
-        roots = graphviz.Digraph(
-            name="roots",
-            graph_attr={"rank": "same"},
-            node_attr={"shape": "square"},
-            edge_attr={"style": "invis"},
-        )
-
-        for root in root_nodes:
-            roots.node(
-                str(root[0]),
-                label=labeler(root, trace),
-                offset=root[1].get('offset'),
-                color=root[1].get('color'),
-                fontcolor=root[1].get('fontcolor'),
-                fillcolor=root[1].get('fillcolor'),
-                style=root[1].get('style'),)
-
-        # Add invisible edges to enforce root node ordering within a rank
-        for i in range(len(root_nodes) - 1):
-            roots.edge(str(root_nodes[i][0]), str(root_nodes[i + 1][0]))
-
-        # Add inner nodes
-        inners = graphviz.Digraph(name="inner")
-
-        for inner in inner_nodes:
-            inners.node(
-                str(inner[0]),
-                label=labeler(inner, trace),
-                offset=inner[1].get('offset'),
-                color=inner[1].get('color'),
-                fontcolor=inner[1].get('fontcolor'),
-                fillcolor=inner[1].get('fillcolor'),
-                style=inner[1].get('style'),)
-
-        result = graphviz.Digraph(comment=comment)
+        result.subgraph(input_bytes)
         result.subgraph(roots)
         result.subgraph(inners)
+
         for src, dst in self.edges:
-            if node_filter(src) and node_filter(dst):
-                result.edge(str(src), str(dst))
+            result.edge(str(src), str(dst), color="black")
+
         return result
 
 
