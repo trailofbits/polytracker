@@ -185,7 +185,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
                         label=f"{input_byte_id}",
                         shape="square",
                         style="filled",
-                        fillcolor="thistle4",
+                        fillcolor="ivory3",
                         color="black",
                     )
 
@@ -198,7 +198,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
                         fillcolor=node[1].get('fillcolor'),
                         style=node[1].get('style'),)
 
-                    result.edge(input_byte_id, root_id, color="thistle4")
+                    result.edge(input_byte_id, root_id, color="ivory4")
             else:
                 inners.node(
                     str(node[0]),
