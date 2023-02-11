@@ -514,7 +514,6 @@ class TDProgramTrace(ProgramTrace):
         assert node.source is not None
         tdnode: TDNode = self.tdfile.decode_node(node.label)
         assert isinstance(tdnode, TDSourceNode)
-        print(f"file_offset returned offset {tdnode.offset} for label {node.label}")
         return ByteOffset(node.source, tdnode.offset)
 
     @property
@@ -657,9 +656,6 @@ class TDTaintForest(TaintForest):
 
         if isinstance(node, TDSourceNode):
             path, fdhdr = self.trace.tdfile.fd_headers[node.idx]
-            # 'source' is the path to the section of the source file
-            # (the tainted input bytes). do not print this as part
-            #  of graphing, it can be big
             source = Input(fdhdr.fd, str(path), fdhdr.size)
             return TDTaintForestNode(
                 self,

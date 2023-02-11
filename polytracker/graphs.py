@@ -180,7 +180,6 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
                     # must differ from the root node label (root_id)!
                     input_byte_id = "b" + str(trace_node.offset)
-                    print(f"a byte! :DD {input_byte_id}")
                     input_bytes.node(
                         input_byte_id,
                         label=f"{input_byte_id}",
