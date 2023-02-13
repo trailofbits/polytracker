@@ -123,7 +123,6 @@ def verify_in_container(inputfile: Path, tool: Tool):
     work.mkdir()
 
     with store_stats(data / STATSJSON) as stats:
-
         fm = FileMutator(inputfile)
         output_file = work / f"output{tool.output_extension()}"
 
