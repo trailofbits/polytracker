@@ -221,3 +221,12 @@ TDUnionNode
    :undoc-members:
    :inherited-members:
    :show-inheritance:
+
+TDUntaintedNode
+***************
+
+.. autoclass:: TDUntaintedNode
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
