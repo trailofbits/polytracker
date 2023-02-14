@@ -104,7 +104,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#earleyqueue">EarleyQueue</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#earleystate">EarleyState</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#emptyproduction">EmptyProduction</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#extractgrammarcommand">ExtractGrammarCommand</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#grammar">Grammar</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#grammarerror">GrammarError</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#match">Match</a></li>
@@ -541,78 +540,6 @@ set self.__traceback__ to tb and return self.</p>
 <dt class="sig sig-object py" id="polytracker.grammars.EmptyProduction.to_tree">
 <span class="sig-name descname"><span class="pre">to_tree</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.parsing.html#polytracker.parsing.MutableParseTree" title="polytracker.parsing.MutableParseTree"><span class="pre">MutableParseTree</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><span class="pre">Union</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.grammars.Production" title="polytracker.grammars.Production"><span class="pre">Production</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.grammars.Rule" title="polytracker.grammars.Rule"><span class="pre">Rule</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="polytracker.parsing.html#polytracker.parsing.Terminal" title="polytracker.parsing.Terminal"><span class="pre">Terminal</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.grammars.EmptyProduction.to_tree" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
-
-</dd></dl>
-
-</section>
-<section id="extractgrammarcommand">
-<h3>ExtractGrammarCommand<a class="headerlink" href="#extractgrammarcommand" title="Permalink to this heading">¶</a></h3>
-<dl class="py class">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.grammars.</span></span><span class="sig-name descname"><span class="pre">ExtractGrammarCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.__init__" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.extension_types">
-<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.11)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">[&lt;class</span> <span class="pre">'polytracker.datalog.ExtractDatalogCommand'&gt;]</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.extension_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>An auto-populated list of eny extensions to this command.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.full_name">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.full_name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.help">
-<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'extract</span> <span class="pre">a</span> <span class="pre">grammar</span> <span class="pre">from</span> <span class="pre">one</span> <span class="pre">or</span> <span class="pre">more</span> <span class="pre">program</span> <span class="pre">traces'</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.help" title="Permalink to this definition">¶</a></dt>
-<dd><p>Help string for this command.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'grammar'</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.name" title="Permalink to this definition">¶</a></dt>
-<dd><p>The name of this plugin.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.parent">
-<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.parent" title="Permalink to this definition">¶</a></dt>
-<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.parent_parsers">
-<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.11)"><span class="pre">Tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.11)"><span class="pre">ArgumentParser</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
-<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.11)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Callback for when the command is run.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.subcommand_types">
-<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Type" title="(in Python v3.11)"><span class="pre">Type</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>An auto-populated list of subcommands of this command.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.grammars.ExtractGrammarCommand.subparser">
-<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.11)"><span class="pre">Any</span></a><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.grammars.ExtractGrammarCommand.subparser" title="Permalink to this definition">¶</a></dt>
-<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
-</dd></dl>
 
 </dd></dl>
 

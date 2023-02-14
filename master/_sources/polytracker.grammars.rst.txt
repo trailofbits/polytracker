@@ -69,15 +69,6 @@ EmptyProduction
    :inherited-members:
    :show-inheritance:
 
-ExtractGrammarCommand
-*********************
-
-.. autoclass:: ExtractGrammarCommand
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 Grammar
 *******
 

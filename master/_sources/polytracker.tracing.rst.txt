@@ -186,15 +186,6 @@ Taints
    :inherited-members:
    :show-inheritance:
 
-TraceCommand
-************
-
-.. autoclass:: TraceCommand
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 TraceEvent
 **********
 

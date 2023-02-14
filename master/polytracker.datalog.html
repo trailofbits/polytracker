@@ -105,7 +105,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#datalogrulelist">DatalogRuleList</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#datalogtruefact">DatalogTrueFact</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#datalogtruefactdecl">DatalogTrueFactDecl</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#extractdatalogcommand">ExtractDatalogCommand</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#datalog-functions">datalog functions</a><ul>
@@ -412,95 +411,6 @@ ex: Head(a, d) :- A(a, b), B(b, c) C(c, d).</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="polytracker.datalog.DatalogTrueFactDecl.val">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">val</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.datalog.DatalogTrueFactDecl.val" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-</section>
-<section id="extractdatalogcommand">
-<h3>ExtractDatalogCommand<a class="headerlink" href="#extractdatalogcommand" title="Permalink to this heading">¶</a></h3>
-<dl class="py class">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.datalog.</span></span><span class="sig-name descname"><span class="pre">ExtractDatalogCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><code class="xref py py-class docutils literal notranslate"><span class="pre">CommandExtension</span></code></a>[<a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtractGrammarCommand</span></code></a>]</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.__class_getitem__">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">__class_getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.__class_getitem__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parameterizes a generic class.</p>
-<p>At least, parameterizing a generic class is the <em>main</em> thing this method
-does. For example, for some generic class <cite>Foo</cite>, this is called when we
-do <cite>Foo[int]</cite> - there, with <cite>cls=Foo</cite> and <cite>params=int</cite>.</p>
-<p>However, note that this method is also called when defining generic
-classes in the first place with <cite>class Foo(Generic[T]): …</cite>.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Plugin" title="polytracker.plugins.Plugin"><span class="pre">Plugin</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.__init__" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls">
-<span class="sig-name descname"><span class="pre">datalog_fact_decls</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFactDecl" title="polytracker.datalog.DatalogFactDecl"><span class="pre">DatalogFactDecl</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_fact_decls" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_facts">
-<span class="sig-name descname"><span class="pre">datalog_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogFact" title="polytracker.datalog.DatalogFact"><span class="pre">DatalogFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_facts" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.datalog_grammar">
-<span class="sig-name descname"><span class="pre">datalog_grammar</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogGrammar" title="polytracker.datalog.DatalogGrammar"><span class="pre">DatalogGrammar</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.datalog_grammar" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.full_name">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.full_name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'datalog'</span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.name" title="Permalink to this definition">¶</a></dt>
-<dd><p>The name of this plugin.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent">
-<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent" title="Permalink to this definition">¶</a></dt>
-<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
-</dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent_command">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">parent_command</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">C</span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_command" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns the parent command associated with this extension</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent_parsers">
-<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ArgumentParser</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.parent_type">
-<span class="sig-name descname"><span class="pre">parent_type</span></span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.parent_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtractGrammarCommand</span></code></a></p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="polytracker.grammars.html#polytracker.grammars.ExtractGrammarCommand" title="polytracker.grammars.ExtractGrammarCommand"><span class="pre">ExtractGrammarCommand</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.11)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.run" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.true_fact_decl">
-<span class="sig-name descname"><span class="pre">true_fact_decl</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFactDecl" title="polytracker.datalog.DatalogTrueFactDecl"><span class="pre">DatalogTrueFactDecl</span></a></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_fact_decl" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.datalog.ExtractDatalogCommand.true_facts">
-<span class="sig-name descname"><span class="pre">true_facts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.datalog.DatalogTrueFact" title="polytracker.datalog.DatalogTrueFact"><span class="pre">DatalogTrueFact</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.datalog.ExtractDatalogCommand.true_facts" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

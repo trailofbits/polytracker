@@ -15,28 +15,10 @@ ControlFlowDiff
    :inherited-members:
    :show-inheritance:
 
-TemporalVisualization
-*********************
-
-.. autoclass:: TemporalVisualization
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 TraceDiff
 *********
 
 .. autoclass:: TraceDiff
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
-TraceDiffCommand
-****************
-
-.. autoclass:: TraceDiffCommand
    :members:
    :undoc-members:
    :inherited-members:

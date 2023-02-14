@@ -126,7 +126,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#taintedchunk">TaintedChunk</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#taintedregion">TaintedRegion</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#taints">Taints</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#tracecommand">TraceCommand</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#traceevent">TraceEvent</a></li>
 </ul>
 </li>
@@ -2102,93 +2101,6 @@ of sources is arbitrary.</p>
 <dt class="sig sig-object py" id="polytracker.tracing.Taints.to_regions">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_regions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">offsets</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterable" title="(in Python v3.11)"><span class="pre">Iterable</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.ByteOffset" title="polytracker.tracing.ByteOffset"><span class="pre">ByteOffset</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_sorted</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.11)"><span class="pre">Iterator</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#polytracker.tracing.TaintedRegion" title="polytracker.tracing.TaintedRegion"><span class="pre">TaintedRegion</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#polytracker.tracing.Taints.to_regions" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts the list of byte offsets into contiguous regions.</p>
-</dd></dl>
-
-</dd></dl>
-
-</section>
-<section id="tracecommand">
-<h3>TraceCommand<a class="headerlink" href="#tracecommand" title="Permalink to this heading">¶</a></h3>
-<dl class="py class">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.tracing.</span></span><span class="sig-name descname"><span class="pre">TraceCommand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.11)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Command" title="polytracker.plugins.Command"><code class="xref py py-class docutils literal notranslate"><span class="pre">Command</span></code></a></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argument_parser</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.11)"><span class="pre">ArgumentParser</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand.__init__" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.extension_types">
-<span class="sig-name descname"><span class="pre">extension_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'CommandExtension'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.extension_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>An auto-populated list of eny extensions to this command.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.extensions">
-<span class="sig-name descname"><span class="pre">extensions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.CommandExtension" title="polytracker.plugins.CommandExtension"><span class="pre">CommandExtension</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.extensions" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py property">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.full_name">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.full_name" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.help">
-<span class="sig-name descname"><span class="pre">help</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'commands</span> <span class="pre">related</span> <span class="pre">to</span> <span class="pre">tracing'</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.help" title="Permalink to this definition">¶</a></dt>
-<dd><p>Help string for this command.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'trace'</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.name" title="Permalink to this definition">¶</a></dt>
-<dd><p>The name of this plugin.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.parent">
-<span class="sig-name descname"><span class="pre">parent</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Plugin'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parent" title="Permalink to this definition">¶</a></dt>
-<dd><p>The parent of this plugin, if it is a sub-plugin.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.parent_parsers">
-<span class="sig-name descname"><span class="pre">parent_parsers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ArgumentParser</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">()</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parent_parsers" title="Permalink to this definition">¶</a></dt>
-<dd><p>An optional sequence of parent argument parsers from which to parse options.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.parser">
-<span class="sig-name descname"><span class="pre">parser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser" title="(in Python v3.11)"><span class="pre">ArgumentParser</span></a></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.parser" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/argparse.html#argparse.Namespace" title="(in Python v3.11)"><span class="pre">Namespace</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.tracing.TraceCommand.run" title="Permalink to this definition">¶</a></dt>
-<dd><p>Callback for when the command is run.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>args</strong> – The result of parsing the commandline arguments set up by <code class="xref py py-meth docutils literal notranslate"><span class="pre">Command.__init_arguments__()</span></code>.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.subcommand_types">
-<span class="sig-name descname"><span class="pre">subcommand_types</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'Subcommand'</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.subcommand_types" title="Permalink to this definition">¶</a></dt>
-<dd><p>An auto-populated list of subcommands of this command.</p>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.subcommands">
-<span class="sig-name descname"><span class="pre">subcommands</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="polytracker.plugins.html#polytracker.plugins.Subcommand" title="polytracker.plugins.Subcommand"><span class="pre">Subcommand</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.subcommands" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="polytracker.tracing.TraceCommand.subparser">
-<span class="sig-name descname"><span class="pre">subparser</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#polytracker.tracing.TraceCommand.subparser" title="Permalink to this definition">¶</a></dt>
-<dd><p>A subparser, auto-populated if subcommand_types is not <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
 </dd></dl>
 
 </dd></dl>

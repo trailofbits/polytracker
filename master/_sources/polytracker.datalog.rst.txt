@@ -96,15 +96,6 @@ DatalogTrueFactDecl
    :inherited-members:
    :show-inheritance:
 
-ExtractDatalogCommand
-*********************
-
-.. autoclass:: ExtractDatalogCommand
-   :members:
-   :undoc-members:
-   :inherited-members:
-   :show-inheritance:
-
 datalog functions
 -----------------
 
