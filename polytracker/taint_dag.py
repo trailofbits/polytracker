@@ -194,14 +194,16 @@ class TDControlFlowLogSection:
 
     @staticmethod
     def _decode_varint(buffer):
-        val = buffer[0]
-        buffer = buffer[1:]
-
-        shift = 7
-        while buffer and buffer[0] > 0x7F:
-            val += (buffer[0] & 0x7F) << shift
+        shift = 0
+        val = 0
+        while buffer:
+            curr = buffer[0]
+            val |= (curr & 0x7F) << shift
             shift += 7
             buffer = buffer[1:]
+            if curr & 0x80 == 0:
+                break
+
         return val, buffer
 
     @staticmethod
