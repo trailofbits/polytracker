@@ -212,7 +212,7 @@ class TDControlFlowLogSection:
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        self.id_to_name_array = None
+        self.funcmapping = None
 
     def __iter__(self):
         buffer = self.section
