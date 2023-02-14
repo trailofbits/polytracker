@@ -13,6 +13,10 @@ def test_tdfile(program_trace: ProgramTrace):
     # 8 source labels, 5 unions/ranges + zero-label (unused)
     assert tdfile.label_count == 14
 
+    t0 = cast(taint_dag.TDUntaintedNode, tdfile.decode_node(0))
+    assert isinstance(t0, taint_dag.TDUntaintedNode)
+    assert t0.affects_control_flow is False
+
     t1 = cast(taint_dag.TDSourceNode, tdfile.decode_node(1))
     assert isinstance(t1, taint_dag.TDSourceNode)
     assert t1.affects_control_flow is True

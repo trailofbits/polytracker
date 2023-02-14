@@ -61,7 +61,7 @@ def iter_cavity_offsets(
     filename: Union[Path, str], cavities_file: Path
 ) -> Iterable[int]:
     """Iterate each offset considered a cavity"""
-    for (first, last) in iter_cavities(filename, cavities_file):
+    for first, last in iter_cavities(filename, cavities_file):
         for offset in range(first, last + 1):
             yield offset
 

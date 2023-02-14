@@ -339,7 +339,6 @@ def file_cavity_detection(
     with create_work_dir(Path(output_dir, file.stem)) as tmpd, proc_metadata(
         dst_meta
     ) as meta, tdag_dropper(dst_tdag, drop_tdag):
-
         output_file = tmpd / f"{file.stem}{tool.output_extension()}"
         results = tool.run_instrumented(file, output_file)
         meta["instrumentation"] = results
