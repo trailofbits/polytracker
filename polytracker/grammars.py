@@ -44,8 +44,6 @@ from .tracing import (
     TraceEvent,
 )
 
-from . import PolyTrackerTrace
-
 log = getLogger("grammars")
 
 
