@@ -1396,46 +1396,48 @@ def to_dot(graph: DiGraph, comment: Optional[str] = None) -> graphviz.Digraph:
     return dot
 
 
-class ExtractGrammarCommand(Command):
-    name = "grammar"
-    help = "extract a grammar from one or more program traces"
+# TODO (msurovic): Re-enable once TDProgramTrace.functions() is implemented
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.traces: List[ProgramTrace] = []
-        self.grammar: Optional[Grammar] = None
+# class ExtractGrammarCommand(Command):
+#     name = "grammar"
+#     help = "extract a grammar from one or more program traces"
 
-    def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument(
-            "TRACES",
-            nargs="+",
-            type=str,
-            help="extract a grammar from the provided PolyTracker trace databases",
-        )
-        parser.add_argument(
-            "--simplify", "-s", action="store_true", help="simplify the grammar"
-        )
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         self.traces: List[ProgramTrace] = []
+#         self.grammar: Optional[Grammar] = None
 
-    def run(self, args: Namespace):
-        self.traces = []
-        # try:
-        #     for trace_db_path in args.TRACES:
-        #         trace = PolyTrackerTrace.load(trace_db_path)
-        #         # to_dot(trace.cfg).save("cfg.dot")
-        #         # print(f"num nodes {trace.cfg.number_of_nodes()}")
-        #         # if not trace.is_cfg_connected():
-        #         #     roots = list(trace.cfg_roots())
-        #         #     if len(roots) == 0:
-        #         #         log.error(f"Basic block trace of {trace_db_path} has no roots!\n\n")
-        #         #     else:
-        #         #         root_names = "".join(f"\t{r!s}\n" for r in roots)
-        #         #         log.error(
-        #         #             f"Basic block trace of {trace_db_path} has multiple roots:\n{root_names}"
-        #         #         )
-        #         #     exit(1)
-        #         self.traces.append(trace)
-        # except ValueError as e:
-        #     log.error(f"{e!s}\n\n")
-        #     exit(1)
-        self.grammar = extract(self.traces, args.simplify)
-        print(str(self.grammar))
+#     def __init_arguments__(self, parser: ArgumentParser):
+#         parser.add_argument(
+#             "TRACES",
+#             nargs="+",
+#             type=str,
+#             help="extract a grammar from the provided PolyTracker trace databases",
+#         )
+#         parser.add_argument(
+#             "--simplify", "-s", action="store_true", help="simplify the grammar"
+#         )
+
+#     def run(self, args: Namespace):
+#         self.traces = []
+#         try:
+#             for trace_db_path in args.TRACES:
+#                 trace = PolyTrackerTrace.load(trace_db_path)
+#                 # to_dot(trace.cfg).save("cfg.dot")
+#                 # print(f"num nodes {trace.cfg.number_of_nodes()}")
+#                 # if not trace.is_cfg_connected():
+#                 #     roots = list(trace.cfg_roots())
+#                 #     if len(roots) == 0:
+#                 #         log.error(f"Basic block trace of {trace_db_path} has no roots!\n\n")
+#                 #     else:
+#                 #         root_names = "".join(f"\t{r!s}\n" for r in roots)
+#                 #         log.error(
+#                 #             f"Basic block trace of {trace_db_path} has multiple roots:\n{root_names}"
+#                 #         )
+#                 #     exit(1)
+#                 self.traces.append(trace)
+#         except ValueError as e:
+#             log.error(f"{e!s}\n\n")
+#             exit(1)
+#         self.grammar = extract(self.traces, args.simplify)
+#         print(str(self.grammar))

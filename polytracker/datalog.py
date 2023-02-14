@@ -2,7 +2,7 @@ from argparse import ArgumentParser, Namespace
 from typing import List, Dict, Union
 
 from .grammars import (
-    ExtractGrammarCommand,
+    # ExtractGrammarCommand,
     Terminal,
     ProgramTrace,
     trace_to_grammar,
@@ -237,61 +237,63 @@ class DatalogGrammar:
         )
 
 
-class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
-    name = "datalog"
-    parent_type = ExtractGrammarCommand
-    datalog_grammar: DatalogGrammar
-    datalog_fact_decls: List[DatalogFactDecl]
-    datalog_facts: List[DatalogFact]
-    true_fact_decl: DatalogTrueFactDecl
-    true_facts: List[DatalogTrueFact]
+# TODO (msurovic): Re-enable once TDProgramTrace.access_sequence() is implemented
 
-    def __init_arguments__(self, parser: ArgumentParser):
-        parser.add_argument(
-            "--extract-datalog",
-            "-d",
-            type=str,
-            default=None,
-            help="path to which to optionally save a datalog grammar",
-        )
+# class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
+#     name = "datalog"
+#     parent_type = ExtractGrammarCommand
+#     datalog_grammar: DatalogGrammar
+#     datalog_fact_decls: List[DatalogFactDecl]
+#     datalog_facts: List[DatalogFact]
+#     true_fact_decl: DatalogTrueFactDecl
+#     true_facts: List[DatalogTrueFact]
 
-    def run(self, command: ExtractGrammarCommand, args: Namespace):
-        if len(command.traces) > 1:
-            raise NotImplementedError(
-                "TODO: Add support for generating DataLog grammars from multiple traces"
-            )
-        elif args.extract_datalog is None:
-            return 0
-        trace = command.traces[0]
-        inputs = list(trace.inputs)
-        if len(inputs) != 1:
-            raise NotImplementedError(
-                "TODO: Add support for extracting DataLog grammars from traces with more than "
-                "one input"
-            )
-        data = inputs[0].content
-        self.datalog_grammar = DatalogGrammar(trace)
-        unique_bytes: Dict[int, bool] = {}
-        self.datalog_fact_decls = []
-        self.datalog_facts = []
-        self.true_fact_decl = DatalogTrueFactDecl()
-        self.true_facts = []
-        for i, byte in enumerate(data):
-            # Add another true fact
-            self.true_facts.append(DatalogTrueFact(i))
-            # Declare the new type of byte
-            if byte not in unique_bytes:
-                self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
-                unique_bytes[byte] = True
-            self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
-        return 0
+#     def __init_arguments__(self, parser: ArgumentParser):
+#         parser.add_argument(
+#             "--extract-datalog",
+#             "-d",
+#             type=str,
+#             default=None,
+#             help="path to which to optionally save a datalog grammar",
+#         )
 
-    def __str__(self):
-        facts = "\n".join(
-            [self.true_fact_decl.val]
-            + [x.val + "." for x in self.true_facts]
-            + [x.val for x in self.datalog_fact_decls]
-            + [fact.val for fact in self.datalog_facts]
-        )
-        grammar = self.datalog_grammar.val
-        return f"{facts}\n\n{grammar}"
+#     def run(self, command: ExtractGrammarCommand, args: Namespace):
+#         if len(command.traces) > 1:
+#             raise NotImplementedError(
+#                 "TODO: Add support for generating DataLog grammars from multiple traces"
+#             )
+#         elif args.extract_datalog is None:
+#             return 0
+#         trace = command.traces[0]
+#         inputs = list(trace.inputs)
+#         if len(inputs) != 1:
+#             raise NotImplementedError(
+#                 "TODO: Add support for extracting DataLog grammars from traces with more than "
+#                 "one input"
+#             )
+#         data = inputs[0].content
+#         self.datalog_grammar = DatalogGrammar(trace)
+#         unique_bytes: Dict[int, bool] = {}
+#         self.datalog_fact_decls = []
+#         self.datalog_facts = []
+#         self.true_fact_decl = DatalogTrueFactDecl()
+#         self.true_facts = []
+#         for i, byte in enumerate(data):
+#             # Add another true fact
+#             self.true_facts.append(DatalogTrueFact(i))
+#             # Declare the new type of byte
+#             if byte not in unique_bytes:
+#                 self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
+#                 unique_bytes[byte] = True
+#             self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
+#         return 0
+
+#     def __str__(self):
+#         facts = "\n".join(
+#             [self.true_fact_decl.val]
+#             + [x.val + "." for x in self.true_facts]
+#             + [x.val for x in self.datalog_fact_decls]
+#             + [fact.val for fact in self.datalog_facts]
+#         )
+#         grammar = self.datalog_grammar.val
+#         return f"{facts}\n\n{grammar}"
