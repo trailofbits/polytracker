@@ -11,7 +11,8 @@ add_executable(
   fntrace.cpp
   union.cpp
   labeldeq.cpp
-  stream_offset.cpp)
+  stream_offset.cpp
+  control_flow_log.cpp)
 
 target_include_directories(
   ${TAINTDAG_UNITTEST} PUBLIC ${CMAKE_SOURCE_DIR}/polytracker/include

@@ -171,10 +171,11 @@ void PolyTracker::taint_sink(int fd, util::Offset offset, label_t label,
   }
 }
 
-void PolyTracker::affects_control_flow(label_t lbl, uint32_t blockid) {
+void PolyTracker::affects_control_flow(label_t lbl, uint32_t function_id) {
   output_file_.section<Labels>().affects_control_flow(lbl);
   if (log_control_flow_) {
-    output_file_.section<ControlFlowLog>().record(lbl, blockid);
+    output_file_.section<ControlFlowLog>().tainted_control_flow(lbl,
+                                                                function_id);
   }
 }
 
@@ -194,11 +195,17 @@ void PolyTracker::function_exit(Functions::index_t index) {
   events.log_fn_event(Event::kind_t::exit, index);
 }
 
-
 void PolyTracker::basic_block(uint32_t blockidx) {
   auto &bbs{output_file_.section<BasicBlocksLog>()};
   bbs.record(blockidx);
+}
 
+void PolyTracker::enter_function(uint32_t function_id) {
+  output_file_.section<ControlFlowLog>().enter_function(function_id);
+}
+
+void PolyTracker::leave_function(uint32_t function_id) {
+  output_file_.section<ControlFlowLog>().leave_function(function_id);
 }
 
 } // namespace taintdag

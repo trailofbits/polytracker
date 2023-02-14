@@ -146,6 +146,7 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     cmd = ["opt", "-O3", str(input_bitcode), "-o", str(output_bitcode)]
     subprocess.check_call(cmd)
 
+
 def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -163,7 +164,7 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
         "-passes=pt-tcf",
         str(input_bitcode),
         "-o",
-        str(output_bitcode)
+        str(output_bitcode),
     ]
     # execute `cmd`
     subprocess.check_call(cmd)

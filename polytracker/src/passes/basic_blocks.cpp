@@ -32,22 +32,20 @@ namespace polytracker {
 
 void BasicBlocksLogPass::visitBasicBlock(llvm::BasicBlock &BB) {
   llvm::IRBuilder<> ir(&*(BB.getFirstInsertionPt()));
-  auto basic_block_arg = llvm::ConstantInt::get(BB.getContext(), llvm::APInt(32, counter++, false));
+  auto basic_block_arg = llvm::ConstantInt::get(
+      BB.getContext(), llvm::APInt(32, counter++, false));
   ir.CreateCall(basic_blocks_log_fn, {basic_block_arg});
-
-
 }
 
 void BasicBlocksLogPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   // Assuming there won't be more than 2^32 basic blocks in a program.
-  basic_blocks_log_fn = mod.getOrInsertFunction("__polytracker_log_basic_block",
-                                           ir.getVoidTy(), ir.getInt32Ty());
+  basic_blocks_log_fn = mod.getOrInsertFunction(
+      "__polytracker_log_basic_block", ir.getVoidTy(), ir.getInt32Ty());
 }
 
 llvm::PreservedAnalyses
-BasicBlocksLogPass::run(llvm::Module &mod,
-                            llvm::ModuleAnalysisManager &mam) {
+BasicBlocksLogPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   declareLoggingFunctions(mod);
   for (auto &fn : mod) {
     visit(fn);

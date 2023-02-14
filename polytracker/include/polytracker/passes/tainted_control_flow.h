@@ -26,18 +26,23 @@ class TaintedControlFlowPass
   llvm::FunctionCallee taint_start_fn;
   // Log taint label affecting control flow
   llvm::FunctionCallee cond_br_log_fn;
+  // Log enter/leave functions
+  llvm::FunctionCallee fn_enter_log_fn;
+  llvm::FunctionCallee fn_leave_log_fn;
+
   // Helpers
   void insertCondBrLogCall(llvm::Instruction &inst, llvm::Value *val);
   void insertTaintStartupCall(llvm::Module &mod);
   void declareLoggingFunctions(llvm::Module &mod);
 
-  uint32_t get_block_id(llvm::Instruction &i);
-  uint32_t get_function_id(llvm::Instruction &i);
 
-  llvm::ConstantInt *get_block_id_const(llvm::Instruction &i);
+  llvm::ConstantInt *get_function_id_const(llvm::Function &f);
   llvm::ConstantInt *get_function_id_const(llvm::Instruction &i);
 
 public:
+
+  using function_id = uint32_t;
+
   TaintedControlFlowPass();
   TaintedControlFlowPass(TaintedControlFlowPass &&);
   ~TaintedControlFlowPass();
@@ -49,11 +54,13 @@ public:
   void visitSwitchInst(llvm::SwitchInst &si);
   void visitSelectInst(llvm::SelectInst &si);
 
-  std::unordered_map<uintptr_t, uint32_t> block_ids_;
-  uint32_t block_counter_{0};
+  void instrumentFunctionEnter(llvm::Function &func);
+  void visitReturnInst(llvm::ReturnInst &ri);
 
-  std::unordered_map<uintptr_t, uint32_t> function_ids_;
-  uint32_t function_counter_{0};
+  function_id function_mapping(llvm::Function &func);
+
+  std::unordered_map<uintptr_t, function_id> function_ids_;
+  function_id function_counter_{0};
 
   std::unique_ptr<detail::FunctionMappingJSONWriter> function_mapping_writer_;
 };

@@ -39,6 +39,8 @@ public:
 
   void append(std::string_view name) {
     // Will cause an additional ',' but don't care about that right now...
+    // The destructor will back up two steps and replace the ',' with a newline
+    // and array termination.
     file << "\"" << name << "\",\n";
   }
 
@@ -51,13 +53,11 @@ namespace {
 uint32_t
 get_or_add_mapping(uintptr_t key, std::unordered_map<uintptr_t, uint32_t> &m,
                    uint32_t &counter, std::string_view name,
-                   polytracker::detail::FunctionMappingJSONWriter *js) {
+                   polytracker::detail::FunctionMappingJSONWriter &js) {
   if (auto it = m.find(key); it != m.end()) {
     return it->second;
   } else {
-    if (js) {
-      js->append(name);
-    }
+    js.append(name);
     return m[key] = counter++;
   }
 }
@@ -73,31 +73,18 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
   ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
-uint32_t TaintedControlFlowPass::get_block_id(llvm::Instruction &i) {
-  auto bb = i.getParent();
-  auto bb_address = reinterpret_cast<uintptr_t>(bb);
-  return get_or_add_mapping(bb_address, block_ids_, block_counter_, "",
-                            nullptr);
-}
-
-uint32_t TaintedControlFlowPass::get_function_id(llvm::Instruction &i) {
-  auto func = i.getParent()->getParent();
-  auto func_address = reinterpret_cast<uintptr_t>(func);
-  std::string_view name = func->getName();
-  return get_or_add_mapping(func_address, function_ids_, function_counter_,
-                            name, function_mapping_writer_.get());
-}
-
 llvm::ConstantInt *
-TaintedControlFlowPass::get_block_id_const(llvm::Instruction &i) {
-  return llvm::ConstantInt::get(i.getContext(),
-                                llvm::APInt(32, get_block_id(i), false));
+TaintedControlFlowPass::get_function_id_const(llvm::Function &func) {
+  auto func_address = reinterpret_cast<uintptr_t>(&func);
+  std::string_view name = func.getName();
+  auto fid = get_or_add_mapping(func_address, function_ids_, function_counter_,
+                                name, *function_mapping_writer_);
+  return llvm::ConstantInt::get(func.getContext(), llvm::APInt(32, fid, false));
 }
 
 llvm::ConstantInt *
 TaintedControlFlowPass::get_function_id_const(llvm::Instruction &i) {
-  return llvm::ConstantInt::get(i.getContext(),
-                                llvm::APInt(32, get_function_id(i), false));
+  return get_function_id_const(*(i.getParent()->getParent()));
 }
 
 void TaintedControlFlowPass::visitGetElementPtrInst(
@@ -108,9 +95,9 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
       continue;
     }
 
-    auto callret = ir.CreateCall(
-        cond_br_log_fn, {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
-                         get_block_id_const(gep), get_function_id_const(gep)});
+    auto callret = ir.CreateCall(cond_br_log_fn,
+                                 {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
+                                  get_function_id_const(gep)});
 
     idx = ir.CreateSExtOrTrunc(callret, idx->getType());
   }
@@ -125,8 +112,8 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
   auto cond = bi.getCondition();
 
   auto callret = ir.CreateCall(
-      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
-                       get_block_id_const(bi), get_function_id_const(bi)});
+      cond_br_log_fn,
+      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(bi)});
 
   bi.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -136,8 +123,8 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   auto cond = si.getCondition();
 
   auto callret = ir.CreateCall(
-      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
-                       get_block_id_const(si), get_function_id_const(si)});
+      cond_br_log_fn,
+      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -151,8 +138,8 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
   auto cond = si.getCondition();
 
   auto callret = ir.CreateCall(
-      cond_br_log_fn, {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()),
-                       get_block_id_const(si), get_function_id_const(si)});
+      cond_br_log_fn,
+      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
 }
@@ -166,7 +153,26 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
           {{llvm::AttributeList::FunctionIndex,
             llvm::Attribute::get(mod.getContext(),
                                  llvm::Attribute::ReadNone)}}),
-      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty(), ir.getInt32Ty());
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+
+  fn_enter_log_fn = mod.getOrInsertFunction("__polytracker_enter_function",
+                                            ir.getVoidTy(), ir.getInt32Ty());
+
+  fn_leave_log_fn = mod.getOrInsertFunction("__polytracker_leave_function",
+                                            ir.getVoidTy(), ir.getInt32Ty());
+}
+
+void TaintedControlFlowPass::instrumentFunctionEnter(llvm::Function &func) {
+  if (func.isDeclaration()) {
+    return;
+  }
+  llvm::IRBuilder<> ir(&*func.getEntryBlock().begin());
+  ir.CreateCall(fn_enter_log_fn, get_function_id_const(func));
+}
+
+void TaintedControlFlowPass::visitReturnInst(llvm::ReturnInst &ri) {
+  llvm::IRBuilder<> ir(&ri);
+  ir.CreateCall(fn_leave_log_fn, get_function_id_const(ri));
 }
 
 llvm::PreservedAnalyses
@@ -175,6 +181,7 @@ TaintedControlFlowPass::run(llvm::Module &mod,
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
   declareLoggingFunctions(mod);
   for (auto &fn : mod) {
+    instrumentFunctionEnter(fn);
     visit(fn);
   }
   return llvm::PreservedAnalyses::none();

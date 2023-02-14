@@ -1,8 +1,16 @@
+import cxxfilt
+import json
 import pytest
 import subprocess
 
 import polytracker
 from pathlib import Path
+
+from polytracker.taint_dag import (
+    TDEnterFunctionEvent,
+    TDLeaveFunctionEvent,
+    TDTaintedControlFlowEvent,
+)
 
 
 @pytest.mark.program_trace("test_cf_log.cpp")
@@ -19,23 +27,43 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
             "POLYTRACKER_LOG_CONTROL_FLOW": "1",
         },
     )
+
     program_trace = polytracker.PolyTrackerTrace.load(trace_file)
 
     cflog = program_trace.tdfile._get_section(
         polytracker.taint_dag.TDControlFlowLogSection
     )
-    # assert 10 == len(cflog)
-    # assert [1, 2, 3, 4, 5, 6, 7, 8, 15, 3] == list(cflog)
-    print(len(cflog))
-    for label, bb in cflog:
-        print(f"Label {label} affected control flow in bb {bb}")
 
+    # The functionid mapping is available next to the built binary
+    with open(instrumented_binary.parent / "functionid.json", "rb") as f:
+        functionid_mapping = list(map(cxxfilt.demangle, json.load(f)))
 
-    bblog = program_trace.tdfile._get_section(
-        polytracker.taint_dag.TDBasicBlocksLogSection
-    )
-    print(f"WOUWOW {len(bblog)}")
-    for bb in bblog:
-        print(f"Visited basic block {bb}")
+    # Apply the id to function mappign
+    cflog.function_id_mapping(functionid_mapping)
 
-    assert False
+    expected_seq = [
+        TDEnterFunctionEvent(["main"]),
+        TDTaintedControlFlowEvent(["main"], 1),
+        TDTaintedControlFlowEvent(["main"], 2),
+        TDTaintedControlFlowEvent(["main"], 3),
+        TDTaintedControlFlowEvent(["main"], 4),
+        TDTaintedControlFlowEvent(["main"], 5),
+        TDTaintedControlFlowEvent(["main"], 6),
+        TDTaintedControlFlowEvent(["main"], 7),
+        TDTaintedControlFlowEvent(["main"], 8),
+        TDTaintedControlFlowEvent(["main"], 15),
+        TDTaintedControlFlowEvent(["main"], 3),
+        TDEnterFunctionEvent(["main", "f1(unsigned char)"]),
+        TDTaintedControlFlowEvent(["main", "f1(unsigned char)"], 7),
+        TDEnterFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
+        TDTaintedControlFlowEvent(
+            ["main", "f1(unsigned char)", "f2(unsigned char)"], 7
+        ),
+        TDLeaveFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
+        TDLeaveFunctionEvent(["main", "f1(unsigned char)"]),
+        TDLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
+    ]
+
+    # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
+    for got, expected in zip(cflog, expected_seq):
+        assert got == expected

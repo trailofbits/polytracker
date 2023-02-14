@@ -54,7 +54,7 @@ public:
                                                    std::span<uint8_t> dst);
 
   // Update the label, it affects control flow
-  void affects_control_flow(label_t taint_label, uint32_t blockid);
+  void affects_control_flow(label_t taint_label, uint32_t function_id);
 
   // Control flow logging enable/disable
   inline void enable_control_flow_logging() { log_control_flow_ = true; }
@@ -71,6 +71,9 @@ public:
   void function_exit(Functions::index_t index);
 
   void basic_block(uint32_t blockidx);
+
+  void enter_function(uint32_t function_id);
+  void leave_function(uint32_t function_id);
 
 private:
   taint_range_t create_source_taint(source_index_t src,

@@ -136,10 +136,12 @@ public:
     return std::get<T>(sections_);
   }
 
-private:
-  // Splits the larger pool of mmap:ed memory into smaller sections
-  // and returns a span for each section type T
-  template <typename T> std::span<uint8_t> do_allocation() {
+private :
+    // Splits the larger pool of mmap:ed memory into smaller sections
+    // and returns a span for each section type T
+    template <typename T>
+    std::span<uint8_t>
+    do_allocation() {
     constexpr auto idx = util::TypeIndex<T, std::tuple<Sections...>>::index;
     constexpr auto align = T::align_of;
     auto begin = alloc_ptr_ + (reinterpret_cast<uintptr_t>(alloc_ptr_) % align);

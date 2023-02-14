@@ -129,6 +129,57 @@ class TDLabelSection:
         return len(self.section) // sizeof(c_uint64)
 
 
+class TDEnterFunctionEvent:
+    """Emitted whenever execution enters a function.
+    The callstack member is the callstack right before entering the function,
+    having the function just entered as the last member of the callstack.
+    """
+
+    def __init__(self, callstack):
+        """Callstack after entering function"""
+        self.callstack = callstack
+
+    def __repr__(self) -> str:
+        return f"Enter: {self.callstack}"
+
+    def __eq__(self, __o: object) -> bool:
+        return self.callstack == __o.callstack
+
+
+class TDLeaveFunctionEvent:
+    """Emitted whenever execution leaves a function.
+    The callstack member is the callstack right before leaving the function,
+    having the function about to leave as the last member of the callstack.
+    """
+
+    def __init__(self, callstack):
+        """Callstack before leaving function"""
+        self.callstack = callstack
+
+    def __repr__(self) -> str:
+        return f"Leave: {self.callstack}"
+
+    def __eq__(self, __o: object) -> bool:
+        return self.callstack == __o.callstack
+
+
+class TDTaintedControlFlowEvent:
+    """Emitted whenever a control flow change is influenced by tainted data.
+    The label that influenced the control flow is available in the `label` member.
+    Current callstack (including the function the control flow happened in) is available
+    in the `callstack` member."""
+
+    def __init__(self, callstack, label):
+        self.callstack = callstack
+        self.label = label
+
+    def __repr__(self) -> str:
+        return f"TaintedControlFlow label {self.label} callstack {self.callstack}"
+
+    def __eq__(self, __o: object) -> bool:
+        return self.label == __o.label and self.callstack == __o.callstack
+
+
 class TDControlFlowLogSection:
     """TDAG Control flow log section
 
@@ -136,30 +187,71 @@ class TDControlFlowLogSection:
     Enables enumeration/random access of items
     """
 
+    # NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`.
+    ENTER_FUNCTION = 0
+    LEAVE_FUNCTION = 1
+    TAINTED_CONTROL_FLOW = 2
+
+    @staticmethod
+    def _decode_varint(buffer):
+        val = buffer[0]
+        buffer = buffer[1:]
+
+        shift = 7
+        while buffer and buffer[0] > 0x7F:
+            val += (buffer[0] & 0x7F) << shift
+            shift += 7
+            buffer = buffer[1:]
+        return val, buffer
+
+    @staticmethod
+    def _align_callstack(target_function_id, callstack):
+        while callstack and callstack[-1] != target_function_id:
+            yield TDLeaveFunctionEvent(callstack[:])
+            callstack.pop()
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.id_to_name_array = None
 
     def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+        buffer = self.section
+        callstack = []
+        while buffer:
+            event = buffer[0]
+            buffer = buffer[1:]
+            function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
+            if self.funcmapping != None:
+                function_id = self.funcmapping[function_id]
 
-    def __len__(self):
-        return len(self.section) // (2*sizeof(c_uint32))
+            if event == TDControlFlowLogSection.ENTER_FUNCTION:
+                callstack.append(function_id)
+                yield TDEnterFunctionEvent(callstack[:])
+            elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
+                # Align call stack, if needed
+                yield from TDControlFlowLogSection._align_callstack(
+                    function_id, callstack
+                )
 
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            # TODO(hbrodin): Implement
-            return None
-        else:
-            label = c_uint32.from_buffer_copy(
-                self.section[key * 2 * sizeof(c_uint32) :]
-            ).value
-            bb = c_uint32.from_buffer_copy(
-                self.section[key * 2 * sizeof(c_uint32) + sizeof(c_uint32):]
-            ).value
+                # TODO(hbrodin): If the callstack doesn't contain function_id at all, this will break.
+                yield TDLeaveFunctionEvent(callstack[:])
+                callstack.pop()
+            else:
+                # Align call stack, if needed
+                yield from TDControlFlowLogSection._align_callstack(
+                    function_id, callstack
+                )
 
+                label, buffer = TDControlFlowLogSection._decode_varint(buffer)
+                yield TDTaintedControlFlowEvent(callstack[:], label)
 
-            return  (label, bb)
+        # Drain callstack with artifical TDLeaveFunction events (using a dummy function id that doesn't exist)
+        yield from TDControlFlowLogSection._align_callstack(-1, callstack)
+
+    def function_id_mapping(self, id_to_name_array):
+        """This method stores an array used to translate from function id to symbolic names"""
+        self.funcmapping = id_to_name_array
+
 
 class TDBasicBlocksLogSection:
     """TDAG Basic Blocks log section
@@ -743,6 +835,12 @@ class TDInfo(Command):
             action="store_true",
             help="print function trace events",
         )
+        parser.add_argument(
+            "--print-control-flow-log",
+            "-c",
+            action="store_true",
+            help="print function trace events",
+        )
 
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
@@ -770,3 +868,7 @@ class TDInfo(Command):
             if args.print_function_trace:
                 for e in tdfile.events:
                     print(f"{e}")
+
+            if args.print_control_flow_log:
+                for obj in tdfile._get_section(TDControlFlowLogSection):
+                    print(f"{obj}")

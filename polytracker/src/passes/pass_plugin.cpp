@@ -9,11 +9,11 @@
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 
+#include "polytracker/passes/basic_blocks.h"
 #include "polytracker/passes/function_tracing.h"
 #include "polytracker/passes/remove_fn_attr.h"
 #include "polytracker/passes/taint_tracking.h"
 #include "polytracker/passes/tainted_control_flow.h"
-#include "polytracker/passes/basic_blocks.h"
 
 llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "PolyTracker", "",
