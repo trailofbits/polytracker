@@ -37,9 +37,9 @@ def _handle_cmd(build_cmd: List[str], blight_journal: Path) -> None:
     ARTIFACT_STORE_PATH_ENV: str = _ensure_env_set("WLLVM_ARTIFACT_STORE")
     ARTIFACT_STORE_PATH: Path = _ensure_path_exists(Path(ARTIFACT_STORE_PATH_ENV))
 
-    CXX_INCLUDE_PATH: Path = _cxx_dir_path() / "include" / "c++" / "v1"
+    CXX_INCLUDE_PATH: Path = _cxx_dir_path() / "clean_build" / "include" / "c++" / "v1"
     CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
-    CXX_LIB_PATH: Path = _cxx_dir_path() / "lib"
+    CXX_LIB_PATH: Path = _cxx_dir_path() / "clean_build" / "lib"
 
     LINK_LIBS: List[str] = [
         str(CXX_LIB_PATH / "libc++.a"),
@@ -90,8 +90,8 @@ def _lower_bitcode(
         _compiler_dir_path() / "lib" / "libPolytracker.a"
     )
     POLYCXX_LIBS: List[str] = [
-        str(_cxx_dir_path() / "lib" / "libc++.a"),
-        str(_cxx_dir_path() / "lib" / "libc++abi.a"),
+        str(_cxx_dir_path() / "poly_build" / "lib" / "libc++.a"),
+        str(_cxx_dir_path() / "poly_build" / "lib" / "libc++abi.a"),
         str(POLY_LIB_PATH),
         "-lm",
         "-ltinfo",
@@ -100,7 +100,6 @@ def _lower_bitcode(
 
     DFSAN_LIB_PATH_ENV: str = _ensure_env_set("DFSAN_LIB_PATH")
     DFSAN_LIB_PATH: Path = _ensure_path_exists(Path(DFSAN_LIB_PATH_ENV))
-    CXX_LIB_PATH: Path = _cxx_dir_path() / "lib"
 
     blight_record = blight_cmd["Record"]
     blight_inputs = blight_cmd["FindInputs"]["inputs"]
@@ -126,7 +125,6 @@ def _lower_bitcode(
         str(output_file),
         *args,
         "-pie",
-        f"-Wl,-rpath,{CXX_LIB_PATH}",
         "-Wl,--allow-multiple-definition",
         "-Wl,--start-group",
         *libs,

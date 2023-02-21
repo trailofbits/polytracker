@@ -1,4 +1,4 @@
-find_package(LLVM 12 CONFIG REQUIRED)
+find_package(LLVM 13 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -48,7 +48,7 @@ set(TAINTDAG_SOURCES
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
 
-set(POLYTRACKER_COMPILE_OPTS -fno-exceptions -fno-rtti -Wall -Werror)
+set(POLYTRACKER_COMPILE_OPTS -stdlib=libc++ -fno-exceptions -fno-rtti -Wall -Werror)
 
 if(XRAY_ON)
   list(APPEND POLYTRACKER_COMPILE_OPTS -fxray-instrument
@@ -56,7 +56,10 @@ if(XRAY_ON)
 endif()
 
 target_include_directories(Polytracker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/include)
+target_include_directories(Polytracker PRIVATE ${CXX_LIB_PATH}/include/c++/v1)
 target_compile_options(Polytracker PRIVATE ${POLYTRACKER_COMPILE_OPTS})
-target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only)
+target_link_directories(Polytracker PUBLIC ${CXX_LIB_PATH}/lib)
+target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only c++)
+set_property(TARGET Polytracker PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 install(TARGETS Polytracker DESTINATION ${POLYTRACKER_LIB_DIR})

@@ -14,12 +14,15 @@ add_executable(
   stream_offset.cpp)
 
 target_include_directories(${TAINTDAG_UNITTEST}
-                           PUBLIC ${CMAKE_SOURCE_DIR}/polytracker/include)
+                           PRIVATE ${CMAKE_SOURCE_DIR}/polytracker/include)
 
-target_compile_options(${TAINTDAG_UNITTEST} PRIVATE -fno-rtti -Wall -Werror)
+target_include_directories(${TAINTDAG_UNITTEST}
+                           PRIVATE ${CXX_LIB_PATH}/include/c++/v1)
 
+target_compile_options(${TAINTDAG_UNITTEST} PRIVATE -stdlib=libc++
+                                                    -Wall -Werror)
 target_link_libraries(${TAINTDAG_UNITTEST} Polytracker Catch2::Catch2
-                      spdlog::spdlog_header_only)
+                      spdlog::spdlog_header_only ${CXX_LIB_PATH}/lib/libc++.a ${CXX_LIB_PATH}/lib/libc++abi.a)
 
 add_test(
   NAME test_${TAINTDAG_UNITTEST}
