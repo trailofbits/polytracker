@@ -18,8 +18,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   clang-13                                            \
   cmake                                               \
   git                                                 \
-  file \
-  gdb cmake-curses-gui
+  file
 
 RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-13 10
 RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-13 10
