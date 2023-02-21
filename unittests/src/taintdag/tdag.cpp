@@ -122,7 +122,8 @@ TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
                     test::ErrorExit);
   REQUIRE_THROWS_AS(sb.offset(last.end()), test::ErrorExit);
 
-  REQUIRE_THROWS_AS(sb.offset(nullptr), test::ErrorExit);
+  REQUIRE_THROWS_AS(sb.offset(static_cast<uint8_t const *>(nullptr)),
+                    test::ErrorExit);
   REQUIRE_THROWS_AS(
       sb.offset(reinterpret_cast<uint8_t const *>(&backing + sizeof(backing))),
       test::ErrorExit);
