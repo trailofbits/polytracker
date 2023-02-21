@@ -1,4 +1,4 @@
-find_package(LLVM 13 CONFIG REQUIRED)
+find_package(LLVM 12 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})

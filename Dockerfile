@@ -15,16 +15,16 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   ca-certificates                                     \
   libstdc++-10-dev                                    \
   golang                                              \
-  clang-13                                            \
+  clang-12                                            \
   cmake                                               \
   git                                                 \
   file
 
-RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-13 10
-RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-13 10
-RUN update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-13 10
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-13 10
-RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-13 10
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10
+RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10
+RUN update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10
+RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
 
 WORKDIR /
 RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git
