@@ -13,7 +13,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   python3.8-dev                                       \
   python-is-python3                                   \
   ca-certificates                                     \
-  libstdc++-10-dev                                    \
   golang                                              \
   clang-12                                            \
   cmake                                               \
