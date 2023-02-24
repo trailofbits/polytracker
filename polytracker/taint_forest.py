@@ -82,6 +82,9 @@ class TaintForestNode:
         # note graphviz will always add edges in an unsorted order
         return self.offsets_to_string()
 
+    def label_myself(self, global_trace) -> str:
+        pass
+
 
 class TaintForest:
     @abstractmethod
@@ -96,6 +99,31 @@ class TaintForest:
     @abstractmethod
     def __getitem__(self, label: int) -> Iterator[TaintForestNode]:
         raise NotImplementedError()
+
+    def node_labeller(self, node, trace) -> str:
+        """Iterate back up the branch of parents from `node` to build the complete list of offsets which taint `node`, on the spot, caching intermediate offset list results at each node in the branch.
+
+        This builds the data-flow analogue to the "program slice" for this node.
+        """
+        if isinstance(node, TaintForestNode):
+            if node.source is not None:
+                offset_from_trace = trace.file_offset(node)
+                return node.update_offsets(set([offset_from_trace.offset]))
+            else:
+                if node.parent_one is not None:
+                    self.node_labeller(node.parent_one, trace)
+                    if len(node.parent_one.offset) > 0:
+                        node.update_offsets(node.parent_one.offset)
+                if node.parent_two is not None:
+                    self.node_labeller(node.parent_two, trace)
+                    if len(node.parent_two.offset) > 0:
+                        return node.update_offsets(node.parent_two.offset)
+        elif isinstance(node, tuple):
+            # convert to a node in the graph, and return a label based on that
+            tf_node: TaintForestNode = trace.tforest.get_node(node[0])
+            return self.node_labeller(tf_node, trace)
+        else:
+            return "???"
 
     def to_graph(self) -> DAG[TaintForestNode]:
         dag: nx.DiGraph = nx.DiGraph()
@@ -114,7 +142,6 @@ class TaintForest:
                 # elsewise, it has one or two parents
                 parent_one=node.parent_one,
                 parent_two=node.parent_two,
-               # offset=node.offset,
                 color=node.color,
                 fontcolor=node.fontcolor,
                 fillcolor=node.fillcolor,
@@ -176,37 +203,12 @@ class ExportTaintForest(Command):
             "-o", type=str, help="name to save resulting .dot information as", dest="OUTPUT_PATH"
         )
 
-    def node_labeller(self, node, trace) -> str:
-        """Iterate back up the chain of each node's parents to build the list of offsets which taint it, on the spot.
-
-        Not to be used on byte offset representation nodes. Just use this on nodes that come from the taint forest, which represent labels in shadow memory!
-        """
-        if isinstance(node, TaintForestNode):
-            if node.source is not None:
-                offset_from_trace = trace.file_offset(node)
-                return node.update_offsets(set([offset_from_trace.offset]))
-            else:
-                if node.parent_one is not None:
-                    self.node_labeller(node.parent_one, trace)
-                    if len(node.parent_one.offset) > 0:
-                        node.update_offsets(node.parent_one.offset)
-                if node.parent_two is not None:
-                    self.node_labeller(node.parent_two, trace)
-                    if len(node.parent_two.offset) > 0:
-                        return node.update_offsets(node.parent_two.offset)
-        elif isinstance(node, tuple):
-            # convert to a node in the graph, and return a label based on that
-            tf_node: TaintForestNode = trace.tforest.get_node(node[0])
-            return self.node_labeller(tf_node, trace)
-        else:
-            return "???"
-
     def run(self, args):
         from . import PolyTrackerTrace
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_graph()
-        graph.to_dot(trace, labeler=self.node_labeller).save(args.OUTPUT_PATH)
+        graph.to_dot(trace, labeler=trace.taint_forest.node_labeller).save(args.OUTPUT_PATH)
         pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
         print(
@@ -230,7 +232,7 @@ class ExportControlFlowLog(Subcommand):
 
         trace = PolyTrackerTrace.load(args.POLYTRACKER_DB)
         graph: DAG[TaintForestNode] = trace.taint_forest.to_tainted_control_flow_graph()
-        graph.to_dot(trace, labeler=self.node_labeller).save(args.OUTPUT_PATH)
+        graph.to_dot(trace, labeler=trace.taint_forest.node_labeller).save(args.OUTPUT_PATH)
         pdf = args.OUTPUT_PATH.split(".dot")[0]
         print(f"Exported the control-flow-affecting subsection of the taint forest to {args.OUTPUT_PATH}")
         print(
