@@ -39,9 +39,6 @@ ENV BITCODE=/cxx_clean_bitcode
 RUN mkdir -p $BITCODE
 ENV WLLVM_BC_STORE=$BITCODE
 
-ENV CC="gclang"
-ENV CXX="gclang++"
-
 ENV LIBCXX_BUILD_DIR=/llvm-project/build
 ENV LIBCXX_INSTALL_DIR=/cxx_lib/clean_build
 
@@ -49,6 +46,8 @@ RUN cmake -GNinja \
   -B$LIBCXX_BUILD_DIR \
   -S/llvm-project/runtimes \
   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  -DCMAKE_C_COMPILER="gclang" \
+  -DCMAKE_CXX_COMPILER="gclang++" \
   -DCMAKE_INSTALL_PREFIX=$LIBCXX_INSTALL_DIR \
   -DLIBCXXABI_ENABLE_SHARED=NO \
   -DLIBCXX_ENABLE_SHARED=NO \
@@ -64,9 +63,6 @@ ENV BITCODE=/cxx_poly_bitcode
 RUN mkdir -p $BITCODE
 ENV WLLVM_BC_STORE=$BITCODE
 
-ENV CC="gclang"
-ENV CXX="gclang++"
-
 ENV LIBCXX_BUILD_DIR=/llvm-project/llvm/build
 ENV LIBCXX_INSTALL_DIR=/cxx_lib/poly_build
 
@@ -74,6 +70,8 @@ RUN cmake -GNinja \
   -B$LIBCXX_BUILD_DIR \
   -S/llvm-project/runtimes \
   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  -DCMAKE_C_COMPILER="gclang" \
+  -DCMAKE_CXX_COMPILER="gclang++" \
   -DCMAKE_INSTALL_PREFIX=$LIBCXX_INSTALL_DIR \
   -DLIBCXXABI_ENABLE_SHARED=NO \
   -DLIBCXX_ENABLE_SHARED=NO \
@@ -97,12 +95,12 @@ FROM polytracker-python as polytracker-cxx
 
 ARG DFSAN_FILENAME_ARCH=x86_64
 
-ENV CC="clang"
-ENV CXX="clang++"
 RUN cmake -GNinja \
   -B/polytracker-build \
   -S/polytracker \
   -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  -DCMAKE_C_COMPILER="clang" \
+  -DCMAKE_CXX_COMPILER="clang++" \
   -DCXX_LIB_PATH=/cxx_lib/poly_build \
   -DCMAKE_INSTALL_PREFIX=/polytracker-install
 
