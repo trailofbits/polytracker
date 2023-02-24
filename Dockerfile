@@ -18,6 +18,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   git                                                 \
   file
 
+RUN pip3 install pytest blight
+
 RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10
 RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10
 RUN update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10
@@ -26,9 +28,6 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 1
 
 WORKDIR /
 RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git
-RUN git clone --depth 1 --branch master https://github.com/trailofbits/blight.git
-
-RUN pip3 install pytest /blight
 
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH="$PATH:/root/go/bin"
