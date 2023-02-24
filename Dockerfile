@@ -26,13 +26,14 @@ RUN update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 1
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10
 RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
 
-WORKDIR /
-RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git
-
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH="$PATH:/root/go/bin"
 
-FROM base as clean-libcxx
+FROM base as llvm-sources
+
+RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git /llvm-project
+
+FROM llvm-sources as clean-libcxx
 
 ENV BITCODE=/cxx_clean_bitcode
 RUN mkdir -p $BITCODE
