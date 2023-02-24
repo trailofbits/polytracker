@@ -12,7 +12,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   python3-pip                                         \
   python3.8-dev                                       \
   python-is-python3                                   \
-  ca-certificates                                     \
   golang                                              \
   clang-12                                            \
   cmake                                               \
@@ -30,8 +29,6 @@ RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-pro
 RUN git clone --depth 1 --branch master https://github.com/trailofbits/blight.git
 
 RUN pip3 install pytest /blight
-
-RUN update-ca-certificates
 
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH="$PATH:/root/go/bin"
