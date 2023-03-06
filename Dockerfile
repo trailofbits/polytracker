@@ -30,7 +30,7 @@ RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 1
 
 # Install gllvm for builds with bitcode references embedded in binary build targets
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
-ENV PATH="$PATH:/root/go/bin"
+ENV PATH=$PATH:/root/go/bin
 
 # Clone llvm to build `libc++` from source
 FROM base as llvm-sources
