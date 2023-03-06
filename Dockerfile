@@ -3,8 +3,6 @@ FROM ubuntu:jammy as base
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 ARG BUILD_TYPE="Release"
-ARG PARALLEL_LINK_JOBS=1
-ARG LLVM_TARGET_NAME=X86
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
