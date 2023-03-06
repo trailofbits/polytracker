@@ -1,9 +1,11 @@
+# Build base image
 FROM ubuntu:jammy as base
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 ARG BUILD_TYPE="Release"
 
+# Install base build dependencies via apt
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   ninja-build                                         \
@@ -16,21 +18,34 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   git                                                 \
   file
 
+# Install python dependencies via pip
 RUN pip3 install pytest blight
 
+# Install symlinks to clang and llvm bitcode tools
 RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10
 RUN update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10
 RUN update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10
 RUN update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
 
+# Install gllvm for builds with bitcode references embedded in binary build targets
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH="$PATH:/root/go/bin"
 
+# Clone llvm to build `libc++` from source
 FROM base as llvm-sources
 
 RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git /llvm-project
 
+# TODO(msurovic): I don't think there is a reason why we should be building
+# both `clean-libcxx` and `polytracker-libcxx`. The former is used when
+# linking an uninstrumented target of the user project. The latter is used
+# when linking the instrumented target of the user project. Not building
+# either results in `libc++` symbols missing from the instrumented target.
+# Why this happens is anyone's guess.
+
+# Build "clean" `libc++` with `gclang`. Used to link the uninstrumented
+# target of the user project. Installed into `/cxx_lib/clean_build`.
 FROM llvm-sources as clean-libcxx
 
 ENV WLLVM_BC_STORE=/cxx_clean_bitcode
@@ -54,7 +69,9 @@ RUN cmake -GNinja \
 
 RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`nproc`+1))
 
-FROM clean-libcxx as polytracker-libcxx
+# Build "poly" `libc++` with `gclang`. Used to link the instrumented
+# target of the user project. Installed into `/cxx_lib/poly_build`.
+FROM clean-libcxx as poly-libcxx
 
 ENV WLLVM_BC_STORE=/cxx_poly_bitcode
 RUN mkdir -p $WLLVM_BC_STORE
@@ -80,16 +97,15 @@ RUN cmake -GNinja \
 
 RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`nproc`+1))
 
-FROM polytracker-libcxx as polytracker-python
+# Build and install the polytracker
+FROM poly-libcxx as polytracker
+
+ARG DFSAN_FILENAME_ARCH=x86_64
 
 WORKDIR /workdir
 COPY . /polytracker
 
 RUN pip3 install /polytracker
-
-FROM polytracker-python as polytracker-cxx
-
-ARG DFSAN_FILENAME_ARCH=x86_64
 
 RUN cmake -GNinja \
   -B/polytracker-build \
