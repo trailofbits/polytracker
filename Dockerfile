@@ -6,6 +6,14 @@ LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 ARG BUILD_TYPE="Release"
 
 # Install base build dependencies via apt
+
+# NOTE(msurovic): We install `clang` and related bitcode utilities via `apt`
+# in version 12 because the `clang-13` package contains version 13.0.1 which
+# has weird behavior wrt `-Werror`. The flag seems to be raised even if the
+# user doesn't explicitly specify so. We believe this is intentional on the
+# part of LLVM to mimic `gcc` behavior. MuPDF doesn't build with `clang-13`
+# installed from `apt`, for example.
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
   ninja-build                                         \
