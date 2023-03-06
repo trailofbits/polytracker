@@ -5,8 +5,6 @@ LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
 ARG BUILD_TYPE="Release"
 
-# Install base build dependencies via apt
-
 # NOTE(msurovic): We install `clang` and related bitcode utilities via `apt`
 # in version 12 because the `clang-13` package contains version 13.0.1 which
 # has weird behavior wrt `-Werror`. The flag seems to be raised even if the
@@ -14,16 +12,18 @@ ARG BUILD_TYPE="Release"
 # part of LLVM to mimic `gcc` behavior. MuPDF doesn't build with `clang-13`
 # installed from `apt`, for example.
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y update
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
-  ninja-build                                         \
-  python3-pip                                         \
-  python3.8-dev                                       \
-  python-is-python3                                   \
-  golang                                              \
-  clang-12                                            \
-  cmake                                               \
-  git                                                 \
+# Install base build dependencies via apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get -y update && apt-get -y install \
+  ninja-build                               \
+  python3-pip                               \
+  python3.8-dev                             \
+  python-is-python3                         \
+  golang                                    \
+  clang-12                                  \
+  cmake                                     \
+  git                                       \
   file
 
 # Install python dependencies via pip
@@ -46,11 +46,11 @@ FROM base as llvm-sources
 RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git /llvm-project
 
 # TODO(msurovic): I don't think there is a reason why we should be building
-# both `clean-libcxx` and `polytracker-libcxx`. The former is used when
-# linking an uninstrumented target of the user project. The latter is used
-# when linking the instrumented target of the user project. Not building
-# either results in `libc++` symbols missing from the instrumented target.
-# Why this happens is anyone's guess.
+# both `clean-libcxx` and `poly-libcxx`. The former is used when linking an
+# uninstrumented target of the user project. The latter is used when linking
+# the instrumented target of the user project. Not building either results in
+# `libc++` symbols missing from the instrumented target. Why this happens is
+# anyone's guess.
 
 # Build "clean" `libc++` with `gclang`. Used to link the uninstrumented
 # target of the user project. Installed into `/cxx_lib/clean_build`.
