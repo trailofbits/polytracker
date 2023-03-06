@@ -33,9 +33,8 @@ RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-pro
 
 FROM llvm-sources as clean-libcxx
 
-ENV BITCODE=/cxx_clean_bitcode
-RUN mkdir -p $BITCODE
-ENV WLLVM_BC_STORE=$BITCODE
+ENV WLLVM_BC_STORE=/cxx_clean_bitcode
+RUN mkdir -p $WLLVM_BC_STORE
 
 ENV LIBCXX_BUILD_DIR=/llvm-project/build
 ENV LIBCXX_INSTALL_DIR=/cxx_lib/clean_build
@@ -57,9 +56,8 @@ RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`np
 
 FROM clean-libcxx as polytracker-libcxx
 
-ENV BITCODE=/cxx_poly_bitcode
-RUN mkdir -p $BITCODE
-ENV WLLVM_BC_STORE=$BITCODE
+ENV WLLVM_BC_STORE=/cxx_poly_bitcode
+RUN mkdir -p $WLLVM_BC_STORE
 
 ENV LIBCXX_BUILD_DIR=/llvm-project/llvm/build
 ENV LIBCXX_INSTALL_DIR=/cxx_lib/poly_build
