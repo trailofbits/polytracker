@@ -106,17 +106,16 @@ RUN cmake -GNinja \
 
 RUN cmake --build /polytracker-build --target install -j$((`nproc`+1))
 
-# Setting up build enviornment for targets
-RUN mkdir /build_artifacts
-
 ENV DFSAN_LIB_PATH=/polytracker-install/lib/linux/libclang_rt.dfsan-${DFSAN_FILENAME_ARCH}.a
 ENV CXX_LIB_PATH=/cxx_lib
-ENV WLLVM_BC_STORE=/cxx_clean_bitcode
-ENV WLLVM_ARTIFACT_STORE=/build_artifacts
-ENV POLYTRACKER_CAN_RUN_NATIVELY=1
-ENV PATH="/polytracker-install/bin:/root/go/bin:${PATH}"
-
-ENV POLYTRACKER_CAN_RUN_NATIVELY=1
-ENV PATH=/polytracker-install/bin:$PATH
-ENV DFSAN_OPTIONS="strict_data_dependencies=0"
 ENV COMPILER_DIR=/polytracker-install/share/polytracker
+
+ENV DFSAN_OPTIONS="strict_data_dependencies=0"
+
+ENV WLLVM_BC_STORE=/project_bitcode
+ENV WLLVM_ARTIFACT_STORE=/project_artifacts
+
+RUN mkdir $WLLVM_ARTIFACT_STORE
+RUN mkdir $WLLVM_BC_STORE
+
+ENV PATH=$PATH:/polytracker-install/bin
