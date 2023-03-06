@@ -133,7 +133,6 @@ ENV DFSAN_OPTIONS="strict_data_dependencies=0"
 ENV WLLVM_BC_STORE=/project_bitcode
 ENV WLLVM_ARTIFACT_STORE=/project_artifacts
 
-RUN mkdir $WLLVM_ARTIFACT_STORE
-RUN mkdir $WLLVM_BC_STORE
+RUN mkdir $WLLVM_ARTIFACT_STORE && mkdir $WLLVM_BC_STORE
 
 ENV PATH=$PATH:/polytracker-install/bin
