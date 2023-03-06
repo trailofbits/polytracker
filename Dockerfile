@@ -19,7 +19,6 @@ RUN apt-get -y update && apt-get -y install \
   ninja-build                               \
   python3-pip                               \
   python3.8-dev                             \
-  python-is-python3                         \
   golang                                    \
   clang-12                                  \
   cmake                                     \
@@ -34,7 +33,8 @@ RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
     update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10 && \
     update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
     update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 # Install gllvm for builds with bitcode references embedded in binary build targets
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
