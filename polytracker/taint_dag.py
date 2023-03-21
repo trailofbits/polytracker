@@ -124,7 +124,7 @@ class TDLabelSection:
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def read_raw(self, label):
-        return c_uint64.from_buffer_copy(self.section[label * sizeof(c_uint64) :]).value
+        return c_uint64.from_buffer_copy(self.section, label * sizeof(c_uint64)).value
 
     def count(self):
         return len(self.section) // sizeof(c_uint64)
@@ -164,7 +164,7 @@ class TDBitmapSection:
         """
         index = 0
         for offset in range(0, len(self.section), sizeof(c_uint64)):
-            bucket = c_uint64.from_buffer_copy(self.section[offset:]).value
+            bucket = c_uint64.from_buffer_copy(self.section, offset).value
             if bucket == 0:
                 index += 64  # No bits set, just advance the bit index
             else:

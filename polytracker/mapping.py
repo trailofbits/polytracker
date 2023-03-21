@@ -87,6 +87,11 @@ class InputOutputMapping:
         # iterating over sinks as any taint node that affects control flow will
         # already have all of its source taints affecting control flow, and thus
         # be in the marker array already.
+        # with tqdm(desc="indexing taint sources", unit="labels", leave=False) as t:
+        #     total = 0
+        #     for _ in self.tdfile.input_labels():
+        #         t.update(1)
+        #         total += 1
         with tqdm(desc="indexing taint sources", unit="labels", leave=False) as t:
             for source_label in self.tdfile.input_labels():
                 t.update(1)
