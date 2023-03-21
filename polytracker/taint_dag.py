@@ -8,6 +8,7 @@ from typing import (
     Tuple,
     List,
     Set,
+    Type,
     cast,
 )
 
@@ -291,6 +292,17 @@ class TDEvent(Structure):
         return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
 
 
+TDSection = Union[
+    TDLabelSection,
+    TDSourceSection,
+    TDStringSection,
+    TDSinkSection,
+    TDSourceIndexSection,
+    TDFunctionsSection,
+    TDEventsSection,
+]
+
+
 class TDFile:
     def __init__(self, file: BinaryIO) -> None:
         # This needs to be kept in sync with implementation in encoding.cpp
@@ -307,35 +319,33 @@ class TDFile:
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
-        self.sections: List[
-            Union[
-                TDLabelSection,
-                TDSourceSection,
-                TDStringSection,
-                TDSinkSection,
-                TDSourceIndexSection,
-                TDFunctionsSection,
-                TDEventsSection,
-            ]
-        ] = []
+        self.sections: List[TDSection] = []
+        self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
         for i in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
+                self.sections_by_type[TDSourceSection] = self.sections[-1]
             elif hdr.tag == 2:
                 self.sections.append(TDLabelSection(self.buffer, hdr))
+                self.sections_by_type[TDLabelSection] = self.sections[-1]
             elif hdr.tag == 3:
                 self.sections.append(TDStringSection(self.buffer, hdr))
+                self.sections_by_type[TDStringSection] = self.sections[-1]
             elif hdr.tag == 4:
                 self.sections.append(TDSinkSection(self.buffer, hdr))
+                self.sections_by_type[TDSinkSection] = self.sections[-1]
             elif hdr.tag == 5:
                 self.sections.append(TDSourceIndexSection(self.buffer, hdr))
+                self.sections_by_type[TDSourceIndexSection] = self.sections[-1]
             elif hdr.tag == 6:
                 self.sections.append(TDFunctionsSection(self.buffer, hdr))
+                self.sections_by_type[TDFunctionsSection] = self.sections[-1]
             elif hdr.tag == 7:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
+                self.sections_by_type[TDEventsSection] = self.sections[-1]
             else:
-                raise Exception("Unsupported section tag")
+                raise NotImplementedError("Unsupported section tag")
 
             section_offset += sizeof(TDSectionMeta)
 
@@ -345,38 +355,38 @@ class TDFile:
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
         self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
 
-    def _get_section(self, wanted_type):
-        return next(filter(lambda x: isinstance(x, wanted_type), self.sections))
+    def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
+        return self.sections_by_type[wanted_type]
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
-        sources = self._get_section(TDSourceSection)
-        strings = self._get_section(TDStringSection)
+        sources = self.sections_by_type[TDSourceSection]
+        strings = self.sections_by_type[TDStringSection]
 
-        yield from map(
-            lambda x: (Path(strings.read_string(x.name_offset)), x), sources.enumerate()
+        yield from (
+            (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
         )
 
     def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
-        functions = self._get_section(TDFunctionsSection)
-        strings = self._get_section(TDStringSection)
+        functions = self.sections_by_type[TDFunctionsSection]
+        strings = self.sections_by_type[TDStringSection]
 
         for header in functions:
             name = strings.read_string(header.name_offset)
-            yield (name, header)
+            yield name, header
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
-        return self._get_section(TDSourceIndexSection).enumerate_set_bits()
+        return self.sections_by_type[TDSourceIndexSection].enumerate_set_bits()
 
     @property
     def label_count(self):
-        return self._get_section(TDLabelSection).count()
+        return self.sections_by_type[TDLabelSection].count()
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
 
-        result = self._get_section(TDLabelSection).read_raw(label)
+        result = self.sections_by_type[TDLabelSection].read_raw(label)
 
         self.raw_nodes[label] = result
         return result
@@ -410,14 +420,14 @@ class TDFile:
 
     @property
     def sinks(self) -> Iterator[TDSink]:
-        yield from self._get_section(TDSinkSection).enumerate()
+        yield from self.sections_by_type[TDSinkSection].enumerate()
 
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
     @property
     def events(self) -> Iterator[TDEvent]:
-        yield from self._get_section(TDEventsSection)
+        yield from self.sections_by_type[TDEventsSection]
 
 
 class TDTaintOutput(TaintOutput):
