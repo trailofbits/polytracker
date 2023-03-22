@@ -142,10 +142,20 @@ class InputOutputMapping:
                         elif isinstance(n, TDRangeNode):
                             seen.update(range(n.first, n.last + 1))
 
+        # Flatten all files by name in case files are opened multiple times
+        merged = {}
+
+        for k,v in markers.items():
+            fname = self.tdfile.fd_headers[k][0]
+            if fname in merged:
+                merged[fname] = bytes(a | b for (a, b) in zip(merged[fname], v))
+            else:
+                merged[fname] = v
+
         # Convert the source index to the source path and marker bit arrays to ranges
         return {
-            self.tdfile.fd_headers[k][0]: self.marker_to_ranges(v)
-            for (k, v) in markers.items()
+            k: self.marker_to_ranges(v)
+            for (k, v) in merged.items()
         }
 
 
