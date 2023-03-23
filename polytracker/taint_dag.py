@@ -359,16 +359,16 @@ class TDFile:
         return self.sections_by_type[wanted_type]
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
-        sources = self.sections_by_type[TDSourceSection]
-        strings = self.sections_by_type[TDStringSection]
+        sources = cast(TDSourceSection, self.sections_by_type[TDSourceSection])
+        strings = cast(TDStringSection, self.sections_by_type[TDStringSection])
 
         yield from (
             (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
         )
 
     def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
-        functions = self.sections_by_type[TDFunctionsSection]
-        strings = self.sections_by_type[TDStringSection]
+        functions = cast(TDFunctionsSection, self.sections_by_type[TDFunctionsSection])
+        strings = cast(TDStringSection, self.sections_by_type[TDStringSection])
 
         for header in functions:
             name = strings.read_string(header.name_offset)
@@ -376,7 +376,10 @@ class TDFile:
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
-        return self.sections_by_type[TDSourceIndexSection].enumerate_set_bits()
+        source_indices = cast(
+            TDSourceIndexSection, self.sections_by_type[TDSourceIndexSection]
+        )
+        return source_indices.enumerate_set_bits()
 
     @property
     def label_count(self):
@@ -386,7 +389,8 @@ class TDFile:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
 
-        result = self.sections_by_type[TDLabelSection].read_raw(label)
+        labels = cast(TDLabelSection, self.sections_by_type[TDLabelSection])
+        result = labels.read_raw(label)
 
         self.raw_nodes[label] = result
         return result
@@ -420,14 +424,15 @@ class TDFile:
 
     @property
     def sinks(self) -> Iterator[TDSink]:
-        yield from self.sections_by_type[TDSinkSection].enumerate()
+        sinks = cast(TDSinkSection, self.sections_by_type[TDSinkSection])
+        yield from sinks.enumerate()
 
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
     @property
     def events(self) -> Iterator[TDEvent]:
-        yield from self.sections_by_type[TDEventsSection]
+        yield from cast(TDEventsSection, self.sections_by_type[TDEventsSection])
 
 
 class TDTaintOutput(TaintOutput):
