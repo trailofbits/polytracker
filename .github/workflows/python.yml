@@ -29,15 +29,15 @@ jobs:
       - name: Flake8
         run: |
           echo "This flake8 run stops the build if there are Python syntax errors or undefined names, and returns 0 if successful."
-          flake8 build_in_docker docs eval polytracker tests setup.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 build_in_docker docs eval polytracker tests setup.py --count --select=E9,F63,F7,F82 --show-source --statistics --exclude compiler-rt
 
           echo "This flake8 run will exit 0 if there are errors! Note exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide"
-          flake8 build_in_docker docs eval polytracker tests setup.py --ignore=F405,F403,W503,E203,E265 --count --exit-zero --max-complexity=30 --max-line-length=127 --statistics
+          flake8 build_in_docker docs eval polytracker tests setup.py --ignore=F405,F403,W503,E203,E265 --count --exit-zero --max-complexity=30 --max-line-length=127 --statistics --exclude compiler-rt
       - name: Black
         run: |
           black --check . --exclude '/(polytracker/src|third_party)/'
       - name: MyPy
         run: |
-          mypy --python-version ${{ matrix.python-version }} --ignore-missing-imports polytracker tests build_in_docker eval
+          mypy --python-version ${{ matrix.python-version }} --ignore-missing-imports polytracker tests build_in_docker eval --exclude compiler-rt
       - name: PolyTracker tests
         run: docker run --rm trailofbits/polytracker pytest

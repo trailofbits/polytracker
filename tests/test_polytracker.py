@@ -188,12 +188,7 @@ def test_cxx_global_object(program_trace: ProgramTrace):
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
 def test_taint_forest(program_trace: ProgramTrace):
     had_taint_union = False
-    for taint_node in tqdm(
-        program_trace.taint_forest.nodes(),
-        leave=False,
-        desc="validating",
-        unit=" taint nodes",
-    ):
+    for taint_node in program_trace.taint_forest.nodes():
         if taint_node.is_canonical():
             assert taint_node.parent_one is None
             assert taint_node.parent_two is None

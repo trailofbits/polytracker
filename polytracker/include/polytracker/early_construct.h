@@ -2,6 +2,7 @@
 #define EARLY_CONSTRUCT_HPP_
 
 #include <type_traits>
+#include <utility>
 
 // Helpers for early construction
 // The macros and template methods used have been tuned to give equal

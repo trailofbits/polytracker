@@ -8,6 +8,7 @@
 
 #include "taintdag/fnmapping.h"
 
+#include <iostream>
 #include <string_view>
 
 namespace taintdag {
@@ -20,6 +21,7 @@ using index_t = Functions::index_t;
 
 std::optional<index_t> Functions::add_mapping(std::string_view name) {
   // Lock `mappings`
+  // std::cout << "BREAK 1" << std::endl;
   std::unique_lock mappings_lock(mappings_mutex);
   // See if we already have a mapping of `name`
   if (auto it{mappings.find(name)}; it != mappings.end()) {

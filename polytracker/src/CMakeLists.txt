@@ -1,4 +1,4 @@
-find_package(LLVM 13 CONFIG REQUIRED)
+find_package(LLVM 12 CONFIG REQUIRED)
 
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -14,6 +14,16 @@ set_target_properties(
 )
 
 add_subdirectory(passes)
+
+set(COMPILER_RT_SANITIZERS_TO_BUILD dfsan CACHE STRING "")
+set(COMPILER_RT_BUILD_BUILTINS OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_CRT OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_PROFILE OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_XRAY OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_LIBFUZZER OFF CACHE BOOL "")
+set(COMPILER_RT_BUILD_MEMPROF OFF CACHE BOOL "")
+
+add_subdirectory(compiler-rt)
 
 set(POLYTRACKER_DIR polytracker)
 set(POLYTRACKER_SOURCES ${POLYTRACKER_DIR}/main.cpp
@@ -38,18 +48,18 @@ set(TAINTDAG_SOURCES
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
 
-set(POLYTRACKER_COMPILE_OPTS -fno-exceptions -fno-rtti -Wall -Werror
-                             -stdlib=libc++ -fPIC)
+set(POLYTRACKER_COMPILE_OPTS -stdlib=libc++ -fno-exceptions -fno-rtti -Wall -Werror)
 
 if(XRAY_ON)
   list(APPEND POLYTRACKER_COMPILE_OPTS -fxray-instrument
        -fxray-instruction-threshold=1)
 endif()
 
-target_include_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_INCLUDE})
+target_include_directories(Polytracker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/compiler-rt/include)
+target_include_directories(Polytracker PRIVATE ${CXX_LIB_PATH}/include/c++/v1)
 target_compile_options(Polytracker PRIVATE ${POLYTRACKER_COMPILE_OPTS})
-target_link_options(Polytracker PRIVATE -stdlib=libc++)
-target_link_directories(Polytracker PRIVATE ${POLYTRACKER_CXX_LIB})
-target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only)
+target_link_directories(Polytracker PUBLIC ${CXX_LIB_PATH}/lib)
+target_link_libraries(Polytracker LLVMPassConfig spdlog::spdlog_header_only c++)
+set_property(TARGET Polytracker PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 install(TARGETS Polytracker DESTINATION ${POLYTRACKER_LIB_DIR})
