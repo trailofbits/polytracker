@@ -1,6 +1,6 @@
 # Create a separate image with the latest source
 FROM ubuntu:focal AS openjpg-sources
-WORKDIR /polytracker/the_klondike
+WORKDIR /
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git && git clone https://github.com/uclouvain/openjpeg.git
 
@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y git && git clone https://github.com/ucl
 FROM trailofbits/polytracker:latest
 MAINTAINER Henrik Brodin <henrik.brodin@trailofbits.com>
 
-WORKDIR /polytracker/the_klondike
-COPY --from=openjpg-sources /polytracker/the_klondike/openjpeg /polytracker/the_klondike/openjpeg
+WORKDIR /
+COPY --from=openjpg-sources /openjpeg /openjpeg
 
 RUN mkdir -p openjpeg/build
 WORKDIR openjpeg/build

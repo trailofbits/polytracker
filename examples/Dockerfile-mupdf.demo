@@ -1,24 +1,22 @@
 FROM ubuntu:focal AS sources
 
-RUN mkdir -p /polytracker/the_klondike
-
-WORKDIR /polytracker/the_klondike
+WORKDIR /
 
 ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
 
 RUN git clone --recursive --branch 1.20.0 git://git.ghostscript.com/mupdf.git
-WORKDIR /polytracker/the_klondike/mupdf
+WORKDIR /mupdf
 RUN git submodule update --init
 
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
-WORKDIR /polytracker/the_klondike
+WORKDIR /
 
-COPY --from=sources /polytracker/the_klondike/mupdf /polytracker/the_klondike/mupdf
+COPY --from=sources /mupdf /mupdf
 
-WORKDIR /polytracker/the_klondike/mupdf
+WORKDIR /mupdf
 RUN git checkout d00de0e96a4a5ec90ffc30837d40cd624a6a89e0
 # Instrument mutool
 RUN polytracker build make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=release install

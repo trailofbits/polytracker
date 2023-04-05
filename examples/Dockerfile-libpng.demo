@@ -1,23 +1,23 @@
 FROM trailofbits/polytracker
 LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com"
 
-WORKDIR /polytracker/acropalypse
+WORKDIR /acropalypse
 
 RUN apt-get update && apt-get -y upgrade && apt-get install -y curl
 
 RUN curl -L https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz --output libpng.tar.xz 
 RUN tar xvf libpng.tar.xz
-WORKDIR /polytracker/acropalypse/libpng-1.6.39
+WORKDIR /acropalypse/libpng-1.6.39
 
 RUN curl -L https://zlib.net/zlib-1.2.13.tar.xz --output zlib.tar.xz
 RUN tar xf zlib.tar.xz
 
-WORKDIR /polytracker/acropalypse/libpng-1.6.39/zlib-1.2.13/
+WORKDIR /acropalypse/libpng-1.6.39/zlib-1.2.13/
 RUN polytracker build ./configure
 RUN polytracker build make
 RUN polytracker extract-bc -o ../libz.bc libz.a
 
-WORKDIR /polytracker/acropalypse/libpng-1.6.39
+WORKDIR /acropalypse/libpng-1.6.39
 
 RUN CPPFLAGS="-I$(pwd)/zlib-1.2.13/include" LDFLAGS="-L$(pwd)/zlib-1.2.13/lib" polytracker build ./configure --disable-shared
 RUN CPPFLAGS="-I$(pwd)/zlib-1.2.13/include" LDFLAGS="-L$(pwd)/zlib-1.2.13/lib" polytracker build make pngtest
