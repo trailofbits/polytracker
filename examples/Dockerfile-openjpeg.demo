@@ -1,25 +1,21 @@
-# Create a separate image with the latest source
-FROM ubuntu:focal AS openjpg-sources
-WORKDIR /
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y git && git clone https://github.com/uclouvain/openjpeg.git
-
-# Now, build the openjpg image using previously downloaded source
-FROM trailofbits/polytracker:latest
-MAINTAINER Henrik Brodin <henrik.brodin@trailofbits.com>
+FROM trailofbits/polytracker
+LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com"
 
 WORKDIR /
-COPY --from=openjpg-sources /openjpeg /openjpeg
+RUN apt-get update && apt-get install -y git
 
-RUN mkdir -p openjpeg/build
-WORKDIR openjpeg/build
-RUN polytracker build cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=on -DBUILD_MJ2:bool=on
-RUN polytracker build make install
-WORKDIR bin
+RUN git clone https://github.com/uclouvain/openjpeg.git
 
+WORKDIR /openjpeg
+RUN polytracker build cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL=ON -DBUILD_MJ2=ON
+
+WORKDIR /openjpeg/build
+RUN polytracker build cmake --build .
+
+WORKDIR /openjpeg/build/bin
 RUN polytracker extract-bc opj_decompress -o opj_decompress.bc
 RUN polytracker extract-bc libopenjp2.a -o libopenjp2.a.bc
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker optimize-bc exec.bc -o exec.bc
+RUN polytracker opt-bc exec.bc -o exec.bc
 RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
-RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_track
+RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_track --journal-path ../blight_journal.jsonl
