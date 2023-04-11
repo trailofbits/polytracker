@@ -1,0 +1,11 @@
+FROM trailofbits/polytracker
+LABEL org.opencontainers.image.authors="marek.surovic@trailofbits.com"
+
+WORKDIR /
+RUN apt-get update && apt-get install -y git
+
+RUN git clone https://github.com/google/wuffs.git
+
+WORKDIR /wuffs
+RUN polytracker build bash build-example.sh example/convert-to-nia/
+RUN polytracker instrument-targets --taint --ftrace example-convert-to-nia
