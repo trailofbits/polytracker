@@ -2,7 +2,7 @@
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="lisa.overall@trailofbits.com"
 
-RUN rm -rf /polytracker/examples/http/picohttpparser && mkdir -p /polytracker/examples/jpeg/picohttpparser
+RUN rm -rf /polytracker/examples/http/picohttpparser && mkdir -p /polytracker/examples/http/picohttpparser
 
 WORKDIR /polytracker/examples/http/picohttpparser
 RUN git clone https://github.com/h2o/picohttpparser.git
