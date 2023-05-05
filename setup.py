@@ -114,6 +114,7 @@ setup(
         "tqdm>=4.59.0",  # We need at least this version to get the `delay` option
         "typing_extensions>=3.7.4.2",
         "types-setuptools~=57.4.9",
+        "graphtage~=0.2.7",
     ],
     extras_require={
         "dev": [
