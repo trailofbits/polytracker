@@ -19,7 +19,8 @@ namespace taintdag {
 
 struct Labels : public FixedSizeAlloc<storage_t> {
   static constexpr uint8_t tag{2};
-  static constexpr size_t allocation_size{sizeof(storage_t)*(static_cast<size_t>(max_label) + 1)};
+  static constexpr size_t allocation_size{sizeof(storage_t) *
+                                          (static_cast<size_t>(max_label) + 1)};
 
   // How many labels to scan backwards to detect if the same Taint is about to
   // be produced.

@@ -361,6 +361,8 @@ class TDFile:
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
         sources = self.sections_by_type[TDSourceSection]
         strings = self.sections_by_type[TDStringSection]
+        assert isinstance(sources, TDSourceSection)
+        assert isinstance(strings, TDStringSection)
 
         yield from (
             (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
@@ -369,6 +371,8 @@ class TDFile:
     def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
         functions = self.sections_by_type[TDFunctionsSection]
         strings = self.sections_by_type[TDStringSection]
+        assert isinstance(functions, TDFunctionsSection)
+        assert isinstance(strings, TDStringSection)
 
         for header in functions:
             name = strings.read_string(header.name_offset)
@@ -376,17 +380,22 @@ class TDFile:
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
-        return self.sections_by_type[TDSourceIndexSection].enumerate_set_bits()
+        source_index_section = self.sections_by_type[TDSourceIndexSection]
+        assert isinstance(source_index_section, TDSourceIndexSection)
+        return source_index_section.enumerate_set_bits()
 
     @property
     def label_count(self):
-        return self.sections_by_type[TDLabelSection].count()
+        label_section = self.sections_by_type[TDLabelSection]
+        assert isinstance(label_section, TDLabelSection)
+        return label_section.count()
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
-
-        result = self.sections_by_type[TDLabelSection].read_raw(label)
+        label_section = self.sections_by_type[TDLabelSection]
+        assert isinstance(label_section, TDLabelSection)
+        result = label_section.read_raw(label)
 
         self.raw_nodes[label] = result
         return result
@@ -420,14 +429,18 @@ class TDFile:
 
     @property
     def sinks(self) -> Iterator[TDSink]:
-        yield from self.sections_by_type[TDSinkSection].enumerate()
+        sink_section = self.sections_by_type[TDSinkSection]
+        assert isinstance(sink_section, TDSinkSection)
+        yield from sink_section.enumerate()
 
     def read_event(self, offset: int) -> TDEvent:
         return TDEvent.from_buffer_copy(self.buffer, offset)
 
     @property
     def events(self) -> Iterator[TDEvent]:
-        yield from self.sections_by_type[TDEventsSection]
+        events_section = self.sections_by_type[TDEventsSection]
+        assert isinstance(events_section, TDEventsSection)
+        yield from events_section
 
 
 class TDTaintOutput(TaintOutput):
