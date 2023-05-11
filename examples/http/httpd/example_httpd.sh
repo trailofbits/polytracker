@@ -7,4 +7,5 @@ if [[ "$(docker images -q trailofbits/polytracker-demo-http-httpd 2>/dev/null)" 
 	docker build -t trailofbits/polytracker-demo-http-httpd .
 fi
 
-docker run --read-only -ti --rm -e POLYPATH="$1" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-http-httpd:latest /polytracker/examples/http/httpd/harness_httpd.sh "$1"
+# NOTE: cannot pass --read-only because httpd needs to be able to write to /usr/local/apache2/logs/error_log
+docker run -ti --rm -e POLYPATH="$1" --mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-http-httpd:latest /polytracker/examples/http/httpd/harness_httpd.sh "$1"

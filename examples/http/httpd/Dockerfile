@@ -1,4 +1,3 @@
-# Create a separate image with the latest source
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="lisa.overall@trailofbits.com"
 
@@ -6,8 +5,7 @@ RUN rm -rf /polytracker/examples/http/httpd && mkdir -p /polytracker/examples/ht
 
 WORKDIR /polytracker/examples/http/httpd
 RUN git clone --branch 2.4.13 https://github.com/apache/httpd.git
-RUN apt update && apt install -y curl autoconf libtool-bin && rm -rf /var/lib/apt/lists/*
-# libapr1-dev libaprutil1-dev libpcre3-dev
+RUN apt update && apt install -y netcat curl autoconf libtool-bin && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /polytracker/examples/http/httpd/httpd
 RUN mkdir -p srclib/apr srclib/apr-util srclib/pcre srclib/expat
@@ -27,43 +25,32 @@ RUN curl -L https://github.com/libexpat/libexpat/releases/download/R_2_4_7/expat
 WORKDIR /polytracker/examples/http/httpd/httpd/srclib/pcre
 RUN polytracker build ./configure --disable-shared
 RUN polytracker build make
-# NOTE: no longer needed after --disable-shared
-RUN polytracker extract-bc -o ../../libpcre.bc .libs/libpcre.a
 
 WORKDIR /polytracker/examples/http/httpd/httpd/srclib/expat
 RUN polytracker build ./configure --disable-shared
 RUN polytracker build make
-# NOTE: no longer needed after --disable-shared
-RUN polytracker extract-bc -o ../../libexpat.bc  lib/.libs/libexpat.a
 
 # apr, apr-util are configured via httpd's configure script
 
 WORKDIR /polytracker/examples/http/httpd/httpd
 RUN polytracker build ./buildconf 
-# NOTE: CFLAGS reported unused during instrumentation
 RUN CFLAGS="-I$(pwd)/srclib/pcre -I$(pwd)/srclib/expat/lib" \
-LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
-    polytracker build ./configure --disable-shared --with-mpm=prefork --with-pcre=srclib/pcre/pcre-config --with-included-apr
-# NOTE: CFLAGS reported unused during instrumentation 
+    LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
+    polytracker build ./configure --disable-shared --with-mpm=prefork --with-pcre=srclib/pcre/pcre-config --with-included-apr \
+    --enable-mods-static='authz_core unixd'
 RUN CFLAGS="-I$(pwd)/srclib/pcre -I$(pwd)/srclib/expat/lib" \
-LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \ 
+    LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \ 
     polytracker build make -j$((`nproc`+1))
 
-# NOTE: no longer needed after configuring dependencies with --disable-shared
-# RUN polytracker extract-bc -o httpd.bc httpd
-# RUN llvm-link -o httpd-linked.bc httpd.bc libpcre.bc libexpat.bc
-# RUN polytracker instrument-bc --taint --ftrace httpd-linked.bc -o instrumented.bc
-
-# TODO: fails here due to undefined references to getrandom()
 RUN polytracker instrument-targets --taint --ftrace httpd
-
-# NOTE: no longer needed after configuring dependencies with --disable-shared
-# RUN polytracker lower-bc instrumented.bc -t httpd -o httpd.instrumented
-
 RUN mv httpd.instrumented httpd_track
+# overwrite binary to be installed with our polytracker-instrumented version 
+RUN cp httpd_track httpd  
+RUN polytracker build make install
 
 COPY harness_httpd.sh /polytracker/examples/http/httpd/
+COPY httpd.conf /usr/local/apache2/conf/
 
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]
-#WORKDIR /workdir
+WORKDIR /workdir
