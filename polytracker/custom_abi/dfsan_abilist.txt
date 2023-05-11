@@ -25,6 +25,8 @@ fun:open=uninstrumented
 fun:open=custom
 fun:open64=uninstrumented
 fun:open64=custom
+fun:getrandom=uninstrumented
+fun:getrandom=discard
 
 
 ##########################################

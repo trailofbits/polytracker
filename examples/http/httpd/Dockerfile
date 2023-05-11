@@ -55,12 +55,12 @@ LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
 # RUN polytracker instrument-bc --taint --ftrace httpd-linked.bc -o instrumented.bc
 
 # TODO: fails here due to undefined references to getrandom()
-# RUN polytracker instrument-targets --taint --ftrace httpd
+RUN polytracker instrument-targets --taint --ftrace httpd
 
 # NOTE: no longer needed after configuring dependencies with --disable-shared
 # RUN polytracker lower-bc instrumented.bc -t httpd -o httpd.instrumented
 
-# RUN mv httpd.instrumented httpd_track
+RUN mv httpd.instrumented httpd_track
 
 COPY harness_httpd.sh /polytracker/examples/http/httpd/
 
