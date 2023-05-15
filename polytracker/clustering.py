@@ -33,12 +33,20 @@ from tqdm import tqdm
 T = TypeVar("T")
 
 
-def ordered_edit_distance(s: Sequence[T], t: Sequence[T]) -> int:
+def infinite_distance(s: Iterable[T], t: Iterable[T]) -> int:
+    """Returns a distance that should be greater than any possibile edit distance between the two sequences"""
+    return max(max(s), max(t)) ** 2
+
+
+def ordered_edit_distance(
+    s: Sequence[T], t: Sequence[T], infinite_cost: Optional[int] = None
+) -> int:
     """Calculates the edit distance between two sequences.
 
     The sequences are assumed to be ordered, and T should support subtraction (e.g., like an int)
     """
-    infinite_cost = max(max(s), max(t)) ** 2
+    if infinite_cost is None:
+        infinite_cost = infinite_distance(s, t)
     # if the sequences have no overlap, then they are an infinite distance apart
     if len(set(s) & set(t)) == 0:
         return infinite_cost
@@ -58,11 +66,15 @@ def ordered_edit_distance(s: Sequence[T], t: Sequence[T]) -> int:
                 right_neighbor: Optional[T] = None
                 if i < len(s):
                     right_neighbor = s[i]
-                # if left_neighbor is None or right_neighbor is None:
-                #     deletion_cost = 1
-                # else:
-                #     assert right_neighbor > left_neighbor
-                #     deletion_cost = right_neighbor - left_neighbor
+                if left_neighbor is None and right_neighbor is None:
+                    deletion_cost = infinite_cost
+                elif left_neighbor is None:
+                    deletion_cost = right_neighbor - s[i - 1]
+                elif right_neighbor is None:
+                    deletion_cost = s[i - 1] - left_neighbor
+                else:
+                    assert right_neighbor > left_neighbor
+                    deletion_cost = right_neighbor - left_neighbor
                 if left_neighbor is not None and t[j - 1] < left_neighbor:
                     insertion_cost = infinite_cost
                     substitution_cost = infinite_cost
@@ -70,10 +82,10 @@ def ordered_edit_distance(s: Sequence[T], t: Sequence[T]) -> int:
                     insertion_cost = infinite_cost
                     substitution_cost = infinite_cost
                 else:
-                    insertion_cost = t[j - 1]
                     substitution_cost = abs(s[i - 1] - t[j - 1])
+                    insertion_cost = substitution_cost
                 distance[i][j] = min(
-                    distance[i - 1][j] + s[i - 1],  # deletion
+                    distance[i - 1][j] + deletion_cost,  # deletion
                     distance[i][j - 1] + insertion_cost,  # insertion
                     distance[i - 1][j - 1] + substitution_cost,
                 )
@@ -167,6 +179,9 @@ class Matching(Generic[T]):
             self.s2.indexes.keys() - set(self.mapping.values())
         )
         self._edit_distance: Optional[int] = None
+        self.infinite_cost: int = infinite_distance(
+            range(len(self.s1)), range(len(self.s2))
+        )
 
     @property
     def edit_distance(self) -> int:
@@ -176,13 +191,15 @@ class Matching(Generic[T]):
             len(self.s2.indexes[u]) for u in self.unmatched_s2
         )
         for s, t in self.mapping.items():
-            distance += ordered_edit_distance(self.s1.indexes[s], self.s2.indexes[t])
+            distance += ordered_edit_distance(
+                self.s1.indexes[s], self.s2.indexes[t], infinite_cost=self.infinite_cost
+            )
         self._edit_distance = distance
         return distance
 
     @property
     def similarity(self) -> float:
-        max_length = max(len(self.s1), len(self.s2))
+        max_length = max(sum(self.s1), sum(self.s2))
         if max_length == 0:
             return 0.0
         return 1.0 - float(self.edit_distance) / float(max_length)
@@ -207,11 +224,13 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
     perfectly_matched_indexes = (
         s1.elements_by_index.keys() & s2.elements_by_index.keys()
     )
-    sys.stderr.write(f"{len(perfectly_matched_indexes)} bytes are perfect matchings!\n")
     for matched_indexes in perfectly_matched_indexes:
         perfect_matchings[s1.elements_by_index[matched_indexes]] = s2.elements_by_index[
             matched_indexes
         ]
+    sys.stderr.write(
+        f"{len(perfectly_matched_indexes)} of {min(len(s1), len(s2))} bytes are perfect matchings!\n"
+    )
     labels1 = [label for label in s1.indexes.keys() if label not in perfect_matchings]
     labels2 = [
         label
@@ -223,6 +242,7 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
     weights: List[List[int]] = [[0] * len(labels2) for _ in range(len(labels1))]
     min_edge: Optional[int] = None
     max_edge: Optional[int] = None
+    infinite_cost = infinite_distance(range(len(s1)), range(len(s2)))
     for (i, l1), (j, l2) in tqdm(
         product(enumerate(labels1), enumerate(labels2)),
         desc="Calculating edit distances",
@@ -230,7 +250,9 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
         unit="pairs",
         total=len(labels1) * len(labels2),
     ):
-        distance = ordered_edit_distance(s1.indexes[l1], s2.indexes[l2])
+        distance = ordered_edit_distance(
+            s1.indexes[l1], s2.indexes[l2], infinite_cost=infinite_cost
+        )
         weights[i][j] = distance
         if min_edge is None or min_edge > distance:
             min_edge = distance
@@ -244,6 +266,8 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
         {
             labels1[from_index]: labels2[to_index]
             for from_index, to_index in zip(*left_matches)
+            if set(s1.indexes[labels1[from_index]]) & set(s2.indexes[labels2[to_index]])
+            # only include matchings that have at least one index of overlap
         }
     )
     return Matching(
@@ -330,7 +354,9 @@ class Clusters(Command):
             for k, v in m.mapping.items():
                 indexes1 = m.s1.indexes[k]
                 indexes2 = m.s2.indexes[v]
-                cost = ordered_edit_distance(indexes1, indexes2)
+                cost = ordered_edit_distance(
+                    indexes1, indexes2, infinite_cost=m.infinite_cost
+                )
                 if cost > 0:
                     print(f"{indexes1} -> {indexes2} cost {cost}")
             print(f"cost={m.edit_distance}, similarity={m.similarity}")
