@@ -1,0 +1,32 @@
+FROM ubuntu:focal
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com, henrik.brodin@trailofbits.com"
+WORKDIR /nitro
+
+RUN apt-get update && \
+	apt-get install -y libcurl4-openssl-dev libssl-dev git cmake clang-12 build-essential python python-numpy
+
+RUN git clone https://github.com/mdaus/nitro.git
+WORKDIR /nitro/nitro/build/release
+
+RUN cmake ../.. \
+	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable -fsanitize=address,undefined" \
+	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable -fsanitize=address,undefined" \
+	-DCMAKE_LINK_FLAGS="-fsanitize=address,undefined" \
+  -DCMAKE_BUILD_TYPE=Release -DCODA_BUILD_TESTS=OFF -DENABLE_PYTHON=OFF
+
+RUN cmake --build . -j$((`nproc`+1)) --target show_nitf++ --config Release 
+
+RUN cp modules/c++/nitf/show_nitf++ nitro_Release
+
+WORKDIR /nitro/nitro/build/debug
+
+RUN cmake ../.. \
+	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable -fsanitize=address,undefined" \
+	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable -fsanitize=address,undefined" \
+	-DCMAKE_LINK_FLAGS="-fsanitize=address,undefined" \
+  -DCMAKE_BUILD_TYPE=Debug -DCODA_BUILD_TESTS=OFF -DENABLE_PYTHON=OFF
+
+RUN cmake --build . -j$((`nproc`+1)) --target show_nitf++ --config Debug 
+
+RUN cp modules/c++/nitf/show_nitf++ nitro_Debug
