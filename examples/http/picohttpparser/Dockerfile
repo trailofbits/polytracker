@@ -13,6 +13,6 @@ RUN polytracker build make -j$((`nproc`+1))
 RUN polytracker instrument-targets --taint --ftrace example_picohttpparser
 RUN mv example_picohttpparser.instrumented example_picohttpparser_track
 
-# Note, the /workdir directory is intended to be mounted at runtime
-VOLUME ["/workdir"]
+# Note, the /workdir and /testcase directories are intended to be mounted at runtime
+VOLUME ["/workdir", "/testcase"]
 WORKDIR /workdir
