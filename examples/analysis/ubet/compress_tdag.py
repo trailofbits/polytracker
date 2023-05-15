@@ -4,8 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 import os
 
-
-# TODO(hbrodin): This should probably become a 'polytracker minimize' command
+# Note: This is being integrated into PolyTracker directly as `polytracker compress <tdag_file.tdag>`
 
 def copy_section(fin, fout, section_in: taint_dag.TDSectionMeta, section_out: taint_dag.TDSectionMeta):
   assert section_in.size == section_out.size
