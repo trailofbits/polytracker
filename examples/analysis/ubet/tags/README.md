@@ -1,6 +1,6 @@
 # how to use a .tags file
 
-Our PolyFile support for NITF is at time of writing limited to NITF 2.1, so in looking for quick ways to examine and tag the fields in NITF 2.0 files, I came across the VSCode extension "Hex Editor With Tags" (VSCode extension ID: notblank00.hexeditor), a mod of the Microsoft Hex Editor VSCode extension that adds colorizing. It's frankly a lot more manual than and nowhere near as nice as Polyfile, but it worked for some quick examples.
+Our [PolyFile](https://github.com/trailofbits/polyfile) support for NITF is at time of writing limited to NITF 2.1, so in looking for quick ways to examine and tag the fields in NITF 2.0 files, I came across the VSCode extension "Hex Editor With Tags" (VSCode extension ID: notblank00.hexeditor), a mod of the Microsoft Hex Editor VSCode extension that adds colorizing. It's frankly a lot more manual than and nowhere near as nice as Polyfile, but it worked for some quick examples.
 
 ## i_3034c.ntf
 
