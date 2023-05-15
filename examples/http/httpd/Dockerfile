@@ -51,6 +51,6 @@ RUN polytracker build make install
 COPY harness_httpd.sh /polytracker/examples/http/httpd/
 COPY httpd.conf /usr/local/apache2/conf/
 
-# Note, the /workdir directory is intended to be mounted at runtime
-VOLUME ["/workdir"]
+# Note, the /workdir and /testcase directories are intended to be mounted at runtime
+VOLUME ["/workdir", "/testcase"]
 WORKDIR /workdir

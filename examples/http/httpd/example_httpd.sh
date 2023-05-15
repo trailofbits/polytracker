@@ -13,7 +13,8 @@ if [[ "$(docker images -q trailofbits/polytracker-demo-http-httpd 2>/dev/null)" 
 	docker build -t trailofbits/polytracker-demo-http-httpd .
 fi
 
-HOST_PATH=$(realpath $1)
+HOST_PATH=$(realpath "$1")
+BASENAME=$(basename "$HOST_PATH")
 HOST_DIR=$(dirname "$HOST_PATH")
 
 # NOTE: cannot pass --read-only because httpd needs to be able to write to /usr/local/apache2/logs/error_log
@@ -25,8 +26,10 @@ if [[ "$HOST_DIR" == "$SCRIPT_DIR" ]]; then
 		--mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-http-httpd:latest \
 		/polytracker/examples/http/httpd/harness_httpd.sh "$1"
 else
-	CONTAINER_PATH=/workdir/$(basename "$1")
-	docker run -ti --rm -v "$HOST_PATH":"$CONTAINER_PATH" -e POLYPATH="$CONTAINER_PATH" -e POLYDB="$CONTAINER_PATH.tdag" \
-		--mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-http-httpd:latest \
+	CONTAINER_PATH=/testcase/"$BASENAME"
+	docker run -ti --rm -e POLYPATH="$CONTAINER_PATH" -e POLYDB=/workdir/"$BASENAME".tdag \
+		--mount type=bind,source="$(pwd)",target=/workdir \
+		--mount type=bind,source="$HOST_PATH",target="$CONTAINER_PATH" \
+		trailofbits/polytracker-demo-http-httpd:latest \
 		/polytracker/examples/http/httpd/harness_httpd.sh "$CONTAINER_PATH"
 fi
