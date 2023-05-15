@@ -2,10 +2,9 @@
 
 ## last updated May 2023, kelly.kaoudis@trailofbits.com
 
-### ubet/
-Tooling, examples, and other artifacts of the UBet paper that are not yet integrated into main PolyTracker. This tooling is generally referenced from Dockerfiles in the parent directory.
+### analysis/nitf/
+Some early experiments with NITF parser exploration that eventually resulted in the paper referenced below.
 
-### analysis/
-Small scripts and other assorted tooling which might be copied into containers or run in the native working environment to automate learning about how Polytracker works.
+### analysis/ubet/
+Tooling, examples, and other artifacts of the LangSec '23 paper [Automatically Detecting Variability Bugs Through Hybrid Control and Data Flow Analysis](https://langsec.org/spw23/papers.html#variability) that are not yet integrated into main PolyTracker. This tooling is generally referenced from Dockerfiles in the parent directory.
 
-The point of these is reproduceability and knowledge sharing.
