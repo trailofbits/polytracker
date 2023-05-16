@@ -247,8 +247,10 @@ class TDSourceNode(TDNode):
         return f"TDSourceNode: {super()!s} idx {self.idx} offset {self.offset}"
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(idx={self.idx}, offset={self.offset}, " \
-               f"affects_control_flow={self.affects_control_flow})"
+        return (
+            f"{self.__class__.__name__}(idx={self.idx}, offset={self.offset}, "
+            f"affects_control_flow={self.affects_control_flow})"
+        )
 
 
 class TDRangeNode(TDNode):
@@ -263,8 +265,10 @@ class TDRangeNode(TDNode):
         return f"TDRangeNode: {super()!s} [{self.first}, {self.last}]"
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(first={self.first}, last={self.last}, " \
-               f"affects_control_flow={self.affects_control_flow})"
+        return (
+            f"{self.__class__.__name__}(first={self.first}, last={self.last}, "
+            f"affects_control_flow={self.affects_control_flow})"
+        )
 
 
 class TDUnionNode(TDNode):
@@ -277,8 +281,10 @@ class TDUnionNode(TDNode):
         return f"TDUnionNode: {super()!s} ({self.left}, {self.right})"
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(left={self.left}, right={self.right}, " \
-               f"affects_control_flow={self.affects_control_flow})"
+        return (
+            f"{self.__class__.__name__}(left={self.left}, right={self.right}, "
+            f"affects_control_flow={self.affects_control_flow})"
+        )
 
 
 class TDUntaintedNode(TDNode):
@@ -348,7 +354,6 @@ class TDNodeIterator:
 
     def __reversed__(self) -> "TDNodeIterator":
         return self.__class__(file=self.file, reverse=not self.reverse)
-
 
 
 class TDFile:
