@@ -3,6 +3,7 @@ The `clusters` command.
 """
 
 from typing import (
+    Generator,
     Tuple,
     List,
     Optional,
@@ -13,11 +14,11 @@ from typing import (
     Generic,
     Dict,
     Iterable,
-    Set,
+    Set
 )
 
 from .plugins import Command
-from .taint_dag import TDFile, TDSourceNode, TDUnionNode, TDRangeNode
+from .taint_dag import TDFDHeader, TDFile, TDNode, TDRangeNode, TDSourceNode, TDSourceSection, TDUnionNode
 from pathlib import Path
 
 from itertools import product
@@ -31,6 +32,99 @@ import networkx as nx
 from tqdm import tqdm
 
 T = TypeVar("T")
+
+
+Label = int
+ClusterID = int
+
+
+def dfs(file: TDFile, label: Label) -> Generator[Tuple[Label, TDNode], Optional[bool], None]:
+    stack: List[Label] = [label]
+    while stack:
+        label = stack.pop()
+        node = file.decode_node(label)
+        expand_ancestors = yield label, node
+        if expand_ancestors is None:
+            expand_ancestors = True
+        if isinstance(node, TDSourceNode):
+            pass
+        elif isinstance(node, TDUnionNode):
+            if expand_ancestors:
+                stack.append(min(node.left, node.right))
+                stack.append(max(node.left, node.right))
+        elif isinstance(node, TDRangeNode):
+            if expand_ancestors:
+                stack.extend(range(node.first, node.last + 1))
+        else:
+            raise NotImplementedError()
+
+
+def cluster(file: TDFile) -> Dict[TDFDHeader, Dict[int, ClusterID]]:
+    num_labels = file.label_count
+    equivalence_classes: Dict[ClusterID, ClusterID] = {}
+    clusters_by_label: Dict[Label, ClusterID] = {}
+    sources = list(file.sections_by_type[TDSourceSection].enumerate())
+    clusters_by_source: Dict[TDFDHeader, Dict[int, ClusterID]] = {
+        source: {}
+        for source in sources
+    }
+    for label in tqdm(range(num_labels - 1, 0, -1), desc="clustering", unit="nodes", leave=False, total=num_labels):
+        # all of label's descendants are guaranteed to have already been clustered
+        if label in clusters_by_label:
+            continue
+        equivalence_classes[label] = label
+        ancestor_clusters: Set[ClusterID] = {label}
+        ancestors = dfs(file, label)
+        root_sources: List[Tuple[TDFDHeader, int]] = []
+        try:
+            while True:
+                ancestor_label, node = next(ancestors)
+                # ancestor_label is guaranteed to be in descending order
+                if ancestor_label in clusters_by_label:
+                    ancestor_clusters.add(equivalence_classes[clusters_by_label[ancestor_label]])
+                    ancestors.send(False)  # do not expand any of this node's ancestors
+                else:
+                    clusters_by_label[ancestor_label] = label
+                if isinstance(node, TDSourceNode):
+                    source = sources[node.idx]
+                    root_sources.append((source, node.offset))
+                    if node.offset in clusters_by_source[source]:
+                        # this means the byte offset was read multiple times, and might be in different clusters
+                        existing_cluster = equivalence_classes[clusters_by_source[source][node.offset]]
+                        ancestor_clusters.add(existing_cluster)
+        except StopIteration:
+            pass
+        new_cluster = max(ancestor_clusters)
+        for lbl in ancestor_clusters:
+            equivalence_classes[lbl] = new_cluster
+        for source, offset in root_sources:
+            clusters_by_source[source][offset] = new_cluster
+    # collapse the equivalence classes
+    changed = True
+    while changed:
+        changed = False
+        new_values: Dict[ClusterID, ClusterID] = {}
+        for c1, c2 in equivalence_classes.items():
+            if c1 != c2 and equivalence_classes[c2] != c2:
+                changed = True
+                assert equivalence_classes[c2] > c2
+                new_values[c1] = equivalence_classes[c2]
+        for c1, c2 in new_values.items():
+            equivalence_classes[c1] = c2
+    assert all(
+        all(
+            equivalence_classes[equivalence_classes[cluster_id]] == equivalence_classes[cluster_id]
+            for cluster_id in assignment.values()
+        )
+        for assignment in clusters_by_source.values()
+    )
+    return {
+        source: {
+            offset: equivalence_classes[cluster_id]
+            for offset, cluster_id in clustering.items()
+        }
+        for source, clustering in clusters_by_source.items()
+    }
 
 
 def infinite_distance(s: Iterable[T], t: Iterable[T]) -> int:
@@ -122,6 +216,15 @@ def index_array(g: nx.DiGraph, s: Dict[int, int]) -> List[int]:
     for i, c in enumerate(clusters(g, s)):
         for o in c:
             ids[o] = i
+    return ids
+
+
+def dict_to_list(d: Dict[int, int]) -> List[int]:
+    if not d:
+        return []
+    ids = [-1] * (max(d.keys()) + 1)
+    for offset, value in d.items():
+        ids[offset] = value
     return ids
 
 
@@ -298,6 +401,7 @@ class Clusters(Command):
         )
 
     def to_graph(self, f: TDFile) -> Tuple[nx.DiGraph, Dict[int, int]]:
+        clustering = cluster(f)
         graph = nx.DiGraph()
         sources: Dict[int, int] = dict()
         offsets: Dict[int, List[int]] = defaultdict(list)
@@ -342,14 +446,35 @@ class Clusters(Command):
                 return self.to_graph(TDFile(file))
 
         if args.match:
-            sys.stderr.write("Loading TDAGs...\n")
-            sys.stderr.flush()
-            ias = map(graph_and_sources, args.match)
-            sys.stderr.write("Indexing the labels...\n")
-            sys.stderr.flush()
-            ias = map(lambda x: index_array(*x), ias)
+            path1, path2 = args.match
+            with open(path1, "rb") as file:
+                clustering1 = cluster(TDFile(file))
+            with open(path2, "rb") as file:
+                clustering2 = cluster(TDFile(file))
+            if not clustering1:
+                sys.stderr.write(f"Error: {path1!s} has no taint data!\n")
+                exit(1)
+            elif not clustering2:
+                sys.stderr.write(f"Error: {path2!s} has no taint data!\n")
+                exit(1)
+            if len(clustering1) > 1:
+                sys.stderr.write(f"Warning: {path1!s} has taint information from multiple input sources; using the largest\n")
+                taints = sorted([(len(offsets), source) for source, offsets in clustering1.items()])
+                for _, to_remove in taints[:-1]:
+                    # remove all but the last (biggest) source:
+                    del clustering1[to_remove]
+            if len(clustering2) > 1:
+                sys.stderr.write(f"Warning: {path2!s} has taint information from multiple input sources; using the largest\n")
+                taints = sorted([(len(offsets), source) for source, offsets in clustering2.items()])
+                for _, to_remove in taints[:-1]:
+                    # remove all but the last (biggest) source:
+                    del clustering2[to_remove]
+            index1 = dict_to_list(next(iter(clustering1.values())))
+            del clustering1
+            index2 = dict_to_list(next(iter(clustering2.values())))
+            del clustering2
             sys.stderr.write("Matching...\n")
-            m = match(*ias)
+            m = match(index1, index2)
             print(f"{args.match[0]} -> {args.match[1]}")
             for k, v in m.mapping.items():
                 indexes1 = m.s1.indexes[k]

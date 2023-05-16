@@ -212,6 +212,9 @@ class TDFDHeader(Structure):
         ("size", c_uint64),
     ]
 
+    def __hash__(self):
+        return hash((self.name_offset, self.fd, self.size))
+
     def invalid_size(self):
         return self.size == 0xFFFFFFFFFFFFFFFF
 
@@ -227,8 +230,11 @@ class TDNode:
     def __init__(self, affects_control_flow: bool = False):
         self.affects_control_flow = affects_control_flow
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"affects control flow {self.affects_control_flow}"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(affects_control_flow={self.affects_control_flow})"
 
 
 class TDSourceNode(TDNode):
@@ -237,8 +243,12 @@ class TDSourceNode(TDNode):
         self.idx = idx
         self.offset = offset
 
-    def __repr__(self) -> str:
-        return f"TDSourceNode: {super().__repr__()} idx {self.idx} offset {self.offset}"
+    def __str__(self) -> str:
+        return f"TDSourceNode: {super()!s} idx {self.idx} offset {self.offset}"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(idx={self.idx}, offset={self.offset}, " \
+               f"affects_control_flow={self.affects_control_flow})"
 
 
 class TDRangeNode(TDNode):
@@ -249,8 +259,12 @@ class TDRangeNode(TDNode):
         # Last label of the range
         self.last = last
 
-    def __repr__(self) -> str:
-        return f"TDRangeNode: {super().__repr__()} [{self.first}, {self.last}]"
+    def __str__(self) -> str:
+        return f"TDRangeNode: {super()!s} [{self.first}, {self.last}]"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(first={self.first}, last={self.last}, " \
+               f"affects_control_flow={self.affects_control_flow})"
 
 
 class TDUnionNode(TDNode):
@@ -259,16 +273,23 @@ class TDUnionNode(TDNode):
         self.left = left
         self.right = right
 
-    def __repr__(self) -> str:
-        return f"TDUnionNode: {super().__repr__()} ({self.left}, {self.right})"
+    def __str__(self) -> str:
+        return f"TDUnionNode: {super()!s} ({self.left}, {self.right})"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(left={self.left}, right={self.right}, " \
+               f"affects_control_flow={self.affects_control_flow})"
 
 
 class TDUntaintedNode(TDNode):
     def __init__(self):
         super().__init__(False)
 
-    def __repr__(self) -> str:
-        return f"TDUntaintedNode: {super().__repr__()}"
+    def __str__(self) -> str:
+        return f"TDUntaintedNode: {super()!s}"
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
 
 
 class TDSink(Structure):
@@ -277,7 +298,7 @@ class TDSink(Structure):
     # _pack_ = 1
     _fields_ = [("offset", c_int64), ("label", c_uint32), ("fdidx", c_uint8)]
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
@@ -288,7 +309,7 @@ class TDEvent(Structure):
         ENTRY = 0
         EXIT = 1
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
 
 
@@ -301,6 +322,33 @@ TDSection = Union[
     TDFunctionsSection,
     TDEventsSection,
 ]
+
+
+class TDNodeIterator:
+    def __init__(self, file: "TDFile", reverse: bool = False):
+        self.file: TDFile = file
+        self.reverse: bool = reverse
+
+    def __iter__(self) -> Iterator[TDNode]:
+        if self.reverse:
+            r = range(self.file.label_count - 1, 0, -1)
+        else:
+            r = range(1, self.file.label_count)
+        for label in r:
+            yield self.file.decode_node(label)
+
+    def __len__(self):
+        return self.file.label_count - 1
+
+    def __getitem__(self, index: int) -> TDNode:
+        if self.reverse:
+            return self.file.decode_node(self.file.label_count - index - 1)
+        else:
+            return self.file.decode_node(index + 1)
+
+    def __reversed__(self) -> "TDNodeIterator":
+        return self.__class__(file=self.file, reverse=not self.reverse)
+
 
 
 class TDFile:
@@ -418,9 +466,8 @@ class TDFile:
                 return TDRangeNode(v1, v2, affects_cf)
 
     @property
-    def nodes(self) -> Iterator[TDNode]:
-        for label in range(1, self.label_count):
-            yield self.decode_node(label)
+    def nodes(self) -> TDNodeIterator:
+        return TDNodeIterator(self)
 
     @property
     def sinks(self) -> Iterator[TDSink]:
@@ -559,7 +606,7 @@ class TDTaintForestNode(TaintForestNode):
         self.forest: TDTaintForest = forest
         self.parents: Optional[Tuple[int, int]] = parent_labels
 
-    def __repr__(self):
+    def __str__(self):
         return (
             f"label: {self.label} ; "
             f"input: {None if self.source is None else self.source.uid} ; "
