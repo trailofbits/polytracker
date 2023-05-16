@@ -79,9 +79,7 @@ def compare_src(db_files):
         nodes = [tdf.decode_node(input_label) for tdf in tdfiles]
         print(f"label: {input_label} {nodes}")
 
-    for (i, tup) in enumerate(
-        map(lambda *x: tuple(x), *(tdf.sinks for tdf in tdfiles))
-    ):
+    for i, tup in enumerate(map(lambda *x: tuple(x), *(tdf.sinks for tdf in tdfiles))):
         print(
             f"{i}: {tup} {[' <- DIFFERENCE', ''][all(e.label == tup[0].label for e in tup)]}"
         )
