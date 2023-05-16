@@ -1687,6 +1687,7 @@ fun:abs=functional
 fun:accept=uninstrumented
 fun:accept=custom
 fun:accept4=uninstrumented
+fun:accept4=custom
 fun:access=uninstrumented
 fun:acct=uninstrumented
 fun:acos=uninstrumented

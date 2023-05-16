@@ -471,6 +471,7 @@ EXT_C_FUNC int __dfsw_accept4(int socket, struct sockaddr *address,
                              dfsan_label socket_label,
                              dfsan_label address_label,
                              dfsan_label address_len_label,
+                             dfsan_label flags_label,
                              dfsan_label *ret_label) {
   int client_socket = accept4(socket, address, address_len, flags);
   if (client_socket >= 0) {
