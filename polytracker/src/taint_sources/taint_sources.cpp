@@ -466,6 +466,23 @@ EXT_C_FUNC int __dfsw_accept(int socket, struct sockaddr *address,
   return client_socket;
 }
 
+EXT_C_FUNC int __dfsw_accept4(int socket, struct sockaddr *address,
+                             socklen_t *address_len, int flags, 
+                             dfsan_label socket_label,
+                             dfsan_label address_label,
+                             dfsan_label address_len_label,
+                             dfsan_label *ret_label) {
+  int client_socket = accept4(socket, address, address_len, flags);
+  if (client_socket >= 0) {
+    if (auto name = connect_name(client_socket); name) {
+      get_polytracker_tdag().open_file(client_socket, *name);
+    }
+  }
+
+  *ret_label = 0;
+  return client_socket;
+}
+
 EXT_C_FUNC int __dfsw_connect(int socket, const struct sockaddr *address,
                               socklen_t address_len, dfsan_label socket_label,
                               dfsan_label address_label,
