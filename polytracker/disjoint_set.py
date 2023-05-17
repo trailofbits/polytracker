@@ -1,4 +1,16 @@
-from typing import Dict, FrozenSet, Generic, Hashable, Iterable, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import (
+    Dict,
+    FrozenSet,
+    Generic,
+    Hashable,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 T = TypeVar("T", bound=Hashable)
 C = TypeVar("C")
@@ -101,7 +113,14 @@ class DisjointSet(Generic[T]):
             count1 = self._counts[id1]
             count2 = self._counts[id2]
             if count1 < count2 or (count1 == count2 and id2 < id1):
-                ancestor1, ancestor2, id1, id2, count1, count2 = ancestor2, ancestor1, id2, id1, count2, count1
+                ancestor1, ancestor2, id1, id2, count1, count2 = (
+                    ancestor2,
+                    ancestor1,
+                    id2,
+                    id1,
+                    count2,
+                    count1,
+                )
             self._counts[id1] = count1 + count2
             del self._counts[id2]
             self._parents[id2] = id1
@@ -109,7 +128,11 @@ class DisjointSet(Generic[T]):
 
     def __str__(self):
         contents = " | ".join(
-            (", ".join(map(repr, sorted(subset, key=lambda t: self._indexes_by_element[t]))))
+            (
+                ", ".join(
+                    map(repr, sorted(subset, key=lambda t: self._indexes_by_element[t]))
+                )
+            )
             for subset in self.subsets()
         )
         return f"{{{contents}}}"
