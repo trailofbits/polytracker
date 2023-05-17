@@ -3,15 +3,18 @@
 set -e
 
 APACHE_ROOT=/usr/local/apache2
-$APACHE_ROOT/bin/apachectl -k start
+$APACHE_ROOT/bin/apachectl -X &
+# needed for server initialization in single-worker mode
+sleep 10
 
 # send request (from text file - first command line arg) to instrumented httpd
 nc localhost 80 <"$1"
 
-# alternatively:
-# APACHE_PID=$(cat /usr/local/apache2/logs/httpd.pid)
-# kill $APACHE_PID
-# wait $APACHE_PID
+APACHE_PID=$(cat /usr/local/apache2/logs/httpd.pid)
+kill "$APACHE_PID"
+wait
 
-# alternatively: graceful-stop, in which currently open connections are not aborted
-$APACHE_ROOT/bin/apachectl -k stop
+# Oddly, these cause issues with TDAG production and does not include socket fds among TDAG sources
+# but only when run from the same terminal
+# $APACHE_ROOT/bin/apachectl stop
+# $APACHE_ROOT/bin/apachectl graceful-stop
