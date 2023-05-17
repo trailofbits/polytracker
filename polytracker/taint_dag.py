@@ -140,6 +140,9 @@ class TDSinkSection:
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
+    def __len__(self):
+        return len(self.section) // sizeof(TDSink)
+
     def enumerate(self):
         for offset in range(0, len(self.section), sizeof(TDSink)):
             yield TDSink.from_buffer_copy(self.section[offset:])
@@ -230,6 +233,15 @@ class TDNode:
     def __init__(self, affects_control_flow: bool = False):
         self.affects_control_flow = affects_control_flow
 
+    def __hash__(self):
+        return hash(self.affects_control_flow)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TDNode)
+            and other.affects_control_flow == self.affects_control_flow
+        )
+
     def __str__(self) -> str:
         return f"affects control flow {self.affects_control_flow}"
 
@@ -242,6 +254,17 @@ class TDSourceNode(TDNode):
         super().__init__(affects_control_flow)
         self.idx = idx
         self.offset = offset
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.idx, self.offset))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TDSourceNode)
+            and super().__eq__(other)
+            and self.idx == other.idx
+            and self.offset == other.offset
+        )
 
     def __str__(self) -> str:
         return f"TDSourceNode: {super()!s} idx {self.idx} offset {self.offset}"
@@ -261,6 +284,17 @@ class TDRangeNode(TDNode):
         # Last label of the range
         self.last = last
 
+    def __hash__(self):
+        return hash((super().__hash__(), self.first, self.last))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TDRangeNode)
+            and super().__eq__(other)
+            and self.first == other.first
+            and self.last == other.last
+        )
+
     def __str__(self) -> str:
         return f"TDRangeNode: {super()!s} [{self.first}, {self.last}]"
 
@@ -277,6 +311,17 @@ class TDUnionNode(TDNode):
         self.left = left
         self.right = right
 
+    def __hash__(self):
+        return hash((super().__hash__(), self.left, self.right))
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, TDUnionNode)
+            and super().__eq__(other)
+            and self.left == other.left
+            and self.right == other.right
+        )
+
     def __str__(self) -> str:
         return f"TDUnionNode: {super()!s} ({self.left}, {self.right})"
 
@@ -290,6 +335,12 @@ class TDUnionNode(TDNode):
 class TDUntaintedNode(TDNode):
     def __init__(self):
         super().__init__(False)
+
+    def __hash__(self):
+        return hash(self.__class__.__name__)
+
+    def __eq__(self, other):
+        return isinstance(other, TDUntaintedNode)
 
     def __str__(self) -> str:
         return f"TDUntaintedNode: {super()!s}"
@@ -473,6 +524,11 @@ class TDFile:
     @property
     def nodes(self) -> TDNodeIterator:
         return TDNodeIterator(self)
+
+    @property
+    def num_sinks(self) -> int:
+        sinks = cast(TDSinkSection, self.sections_by_type[TDSinkSection])
+        return len(sinks)
 
     @property
     def sinks(self) -> Iterator[TDSink]:

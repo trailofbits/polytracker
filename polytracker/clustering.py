@@ -17,6 +17,7 @@ from typing import (
     Set,
 )
 
+from .disjoint_set import DisjointSet
 from .plugins import Command
 from .taint_dag import (
     TDFDHeader,
@@ -74,92 +75,49 @@ def dfs(
 
 
 def cluster(file: TDFile) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]:
-    num_labels = file.label_count
-    equivalence_classes: Dict[ClusterID, ClusterID] = {}
-    clusters_by_label: Dict[Label, ClusterID] = {}
     sources = list(file.read_fd_headers())
-    clusters_by_source: Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]] = {
-        source: {} for source in sources
-    }
-    for label in tqdm(
-        range(num_labels - 1, 0, -1),
-        desc="clustering",
-        unit="nodes",
+    sets: DisjointSet[int] = DisjointSet()
+    source_labels: Dict[int, Dict[int, int]] = {i: {} for i in range(len(sources))}
+    for s in tqdm(
+        file.sinks,
+        total=file.num_sinks,
+        desc="enumerating sinks",
         leave=False,
-        total=num_labels,
+        unit="nodes",
     ):
-        # all of label's descendants are guaranteed to have already been clustered
-        if label in clusters_by_label:
-            continue
-        equivalence_classes[label] = label
-        ancestor_clusters: Set[ClusterID] = {label}
-        ancestors = dfs(file, label)
-        root_sources: List[Tuple[Tuple[Path, TDFDHeader], int]] = []
+        cluster_id = sets.add(s.label)
         with tqdm(
             desc="enumerating ancestors",
             unit="nodes",
             leave=False,
-            total=num_labels - 1 - len(clusters_by_label),
+            total=file.label_count - 1 - len(sets),
             delay=1.0,
         ) as t:
             try:
+                ancestors = dfs(file, s.label)
                 while True:
                     ancestor_label, node = next(ancestors)
                     t.update(1)
-                    # ancestor_label is guaranteed to be in descending order
                     if isinstance(node, TDSourceNode):
-                        source = sources[node.idx]
-                        root_sources.append((source, node.offset))
-                        if node.offset in clusters_by_source[source]:
-                            # this means the byte offset was read multiple times, and might be in different clusters
-                            existing_cluster = equivalence_classes[
-                                clusters_by_source[source][node.offset]
-                            ]
-                            ancestor_clusters.add(existing_cluster)
-                    if ancestor_label in clusters_by_label:
-                        ancestor_clusters.add(
-                            equivalence_classes[clusters_by_label[ancestor_label]]
-                        )
+                        if node.offset in source_labels[node.idx]:
+                            # this source byte was read a separate time, so union our cluster with the preexisting
+                            cluster_id = sets.union(
+                                source_labels[node.idx][node.offset], cluster_id
+                            )
+                        source_labels[node.idx][node.offset] = cluster_id
+                    if ancestor_label in sets and ancestor_label != s.label:
+                        # this ancestor is in another cluster
+                        cluster_id = sets.union(cluster_id, ancestor_label)
                         ancestors.send(
                             False
                         )  # do not expand any of this node's ancestors
                     else:
-                        clusters_by_label[ancestor_label] = label
+                        new_cluster = sets.union(cluster_id, ancestor_label)
+                        assert new_cluster == cluster_id
                         ancestors.send(True)
             except StopIteration:
                 pass
-        new_cluster = max(ancestor_clusters)
-        for lbl in ancestor_clusters:
-            equivalence_classes[lbl] = new_cluster
-        for source, offset in root_sources:
-            clusters_by_source[source][offset] = new_cluster
-    # collapse the equivalence classes
-    changed = True
-    while changed:
-        changed = False
-        new_values: Dict[ClusterID, ClusterID] = {}
-        for c1, c2 in equivalence_classes.items():
-            if c1 != c2 and equivalence_classes[c2] != c2:
-                changed = True
-                assert equivalence_classes[c2] > c2
-                new_values[c1] = equivalence_classes[c2]
-        for c1, c2 in new_values.items():
-            equivalence_classes[c1] = c2
-    assert all(
-        all(
-            equivalence_classes[equivalence_classes[cluster_id]]
-            == equivalence_classes[cluster_id]
-            for cluster_id in assignment.values()
-        )
-        for assignment in clusters_by_source.values()
-    )
-    return {
-        source: {
-            offset: equivalence_classes[cluster_id]
-            for offset, cluster_id in clustering.items()
-        }
-        for source, clustering in clusters_by_source.items()
-    }
+    return {sources[source_idx]: labels for source_idx, labels in source_labels.items()}
 
 
 def infinite_distance(s: Iterable[T], t: Iterable[T]) -> int:
@@ -436,7 +394,6 @@ class Clusters(Command):
         )
 
     def to_graph(self, f: TDFile) -> Tuple[nx.DiGraph, Dict[int, int]]:
-        clustering = cluster(f)
         graph = nx.DiGraph()
         sources: Dict[int, int] = dict()
         offsets: Dict[int, List[int]] = defaultdict(list)
