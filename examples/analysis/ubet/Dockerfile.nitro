@@ -3,22 +3,28 @@ ENV DEBIAN_FRONTEND=noninteractive
 LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com, henrik.brodin@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
+# kaoudis, May 2023: Nitro (or more likely, coda-oss) has done something weird
+# and Nitro no longer can find PYTHON_HOME. Using ENABLE_PYTHON=OFF for now
+# so that this Dockerfile at least builds. Enable the Nitro SWIG bindings
+# at your own risk!
+
 RUN apt-get update && \
-	apt-get install -y libcurl4-openssl-dev libssl-dev
+	apt-get install -y libcurl4-openssl-dev libssl-dev python3
 
 RUN pip install cxxfilt
 
 RUN git clone https://github.com/mdaus/nitro.git
-WORKDIR /polytracker/the_klondike/nitro
-RUN	mkdir build
 WORKDIR /polytracker/the_klondike/nitro/build/release
 
+# Build Nitro: Release
 RUN polytracker build cmake ../.. \
-	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
-	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
-  -DCMAKE_BUILD_TYPE=Release -DCODA_BUILD_TESTS=OFF
+ 	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+ 	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
+   -DCMAKE_BUILD_TYPE=Release \
+	 -DCODA_BUILD_TESTS=OFF \
+	 -DENABLE_PYTHON=OFF
 
-RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++ --config Release 
+RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++ --config Release
 
 RUN cp modules/c++/nitf/show_nitf++ nitro_Release
 
@@ -29,15 +35,16 @@ RUN polytracker instrument-targets \
 
 RUN mv show_nitf++.instrumented nitro_trackRelease
 
-
-
+# Build Nitro: Debug
 WORKDIR /polytracker/the_klondike/nitro/build/debug
 RUN polytracker build cmake ../.. \
 	-DCMAKE_C_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
 	-DCMAKE_CXX_FLAGS="-w -D_POSIX_C_SOURCE=200809L -DCODA_OSS_NO_is_trivially_copyable" \
-  -DCMAKE_BUILD_TYPE=Debug -DCODA_BUILD_TESTS=OFF
+  -DCMAKE_BUILD_TYPE=Debug \
+-DCODA_BUILD_TESTS=OFF \
+-DENABLE_PYTHON=OFF
 
-RUN polytracker build cmake  --build . -j$((`nproc`+1)) --clean-first --target show_nitf++ --config Debug 
+RUN polytracker build cmake  --build . -j$((`nproc`+1)) --clean-first --target show_nitf++ --config Debug
 RUN cp modules/c++/nitf/show_nitf++ nitro_Debug
 RUN polytracker instrument-targets \
 	--taint \
@@ -45,3 +52,10 @@ RUN polytracker instrument-targets \
 	show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_trackDebug
+
+# If this Dockerfile is run with run.sh, this will link to the external
+# location where the evaluation scripts live, and you'll be dropped into a
+# shell so you can work in a configured environment.
+# Note to the unwary: compiler-rt sanitizers and Polytracker are NOT COMPATIBLE.
+# If you need compiler-rt, please use Dockerfile.nitro.sanitizers.
+WORKDIR /polytracker/the_klondike/nitro/build/ubet
