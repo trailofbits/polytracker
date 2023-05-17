@@ -75,13 +75,16 @@ def dfs(
 
 
 def cluster(
-    file: TDFile, treat_nodes_affecting_control_flow_as_syncs: bool = True
+    file: TDFile, treat_nodes_affecting_control_flow_as_syncs: bool = True, include_output_nodes_as_syncs: bool = False
 ) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]:
     sources = list(file.read_fd_headers())
     sets: DisjointSet[int] = DisjointSet()
     source_labels: Dict[int, Dict[int, int]] = {i: {} for i in range(len(sources))}
-    sinks = (s.label for s in file.sinks)
-    num_sinks = file.num_sinks
+    sinks: Iterable[int] = ()
+    num_sinks: int = 0
+    if include_output_nodes_as_syncs:
+        sinks = (s.label for s in file.sinks)
+        num_sinks = file.num_sinks
     if treat_nodes_affecting_control_flow_as_syncs:
         sinks = chain(sinks, (label for label, _ in file.nodes_affecting_control_flow))
         num_sinks += len(file.nodes_affecting_control_flow)
