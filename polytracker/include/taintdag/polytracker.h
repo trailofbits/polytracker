@@ -12,6 +12,7 @@
 #include <span>
 
 #include "taintdag/bitmap_section.h"
+#include "taintdag/control_flow_log.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/fntrace.h"
 #include "taintdag/labels.h"
