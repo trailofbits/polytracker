@@ -389,6 +389,50 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
     )
 
 
+class MultipleTaintSourcesError(ValueError):
+    def __init__(self, tdag_path: Path, sources: Iterable[Path]):
+        self.tdag_path: Path = tdag_path
+        self.sources: Tuple[Path, ...] = tuple(sources)
+        source_names = "\n".join(map(str, self.sources))
+        super().__init__(f"{tdag_path!s} has multiple taint sources:\n{source_names}")
+
+
+def load_indexes_for_matching(
+    path: Path, from_source: Optional[str] = None
+) -> List[int]:
+    with open(path, "rb") as file:
+        tdfile = TDFile(file)
+        sources = [path for path, _ in tdfile.read_fd_headers()]
+        if not sources:
+            raise ValueError(f"{path!s} has no taint data!")
+        elif from_source is None and len(sources) > 1:
+            raise MultipleTaintSourcesError(path, sources)
+        clustering = cluster(tdfile)
+    assert clustering
+    cluster_dict: Dict[int, int]
+    source_header: TDFDHeader
+    if from_source is not None:
+        for (source_path, header), mapping in clustering.items():
+            if str(source_path) == from_source:
+                cluster_dict = mapping
+                source_header = header
+                break
+        else:
+            source_names = "\n".join(map(str, sources))
+            raise KeyError(
+                f"{path!s} has no taint source named {from_source!r}! Sources are:\n{source_names}"
+            )
+    else:
+        assert len(clustering) == 1
+        (_, source_header), cluster_dict = next(iter(clustering.items()))
+    del clustering
+    if source_header.invalid_size():
+        size: Optional[int] = None
+    else:
+        size = source_header.size
+    return dict_to_list(cluster_dict, num_elements=size)
+
+
 class Clusters(Command):
     name = "clusters"
     help = "clusters input byte offsets based on their interaction"
@@ -407,6 +451,22 @@ class Clusters(Command):
             type=Path,
             nargs=2,
             help="print cluster matching for two trace files",
+        )
+
+        parser.add_argument(
+            "-s1",
+            "--source1",
+            type=str,
+            nargs="?",
+            help="the name of the source from the first TDAG to match",
+        )
+
+        parser.add_argument(
+            "-s2",
+            "--source2",
+            type=str,
+            nargs="?",
+            help="the name of the source from the second TDAG to match",
         )
 
     def to_graph(self, f: TDFile) -> Tuple[nx.DiGraph, Dict[int, int]]:
@@ -455,56 +515,13 @@ class Clusters(Command):
 
         if args.match:
             path1, path2 = args.match
-            with open(path1, "rb") as file:
-                clustering1 = cluster(TDFile(file))
-            with open(path2, "rb") as file:
-                clustering2 = cluster(TDFile(file))
-            if not clustering1:
-                sys.stderr.write(f"Error: {path1!s} has no taint data!\n")
+            try:
+                index1 = load_indexes_for_matching(path1, from_source=args.source1)
+                index2 = load_indexes_for_matching(path2, from_source=args.source2)
+            except (KeyError, MultipleTaintSourcesError, ValueError) as e:
+                msg = str(e).replace("\\n", "\n")[1:-1]
+                sys.stderr.write(f"Error: {msg}\n")
                 exit(1)
-            elif not clustering2:
-                sys.stderr.write(f"Error: {path2!s} has no taint data!\n")
-                exit(1)
-            sys.stderr.write(
-                f"{path1!s} taint sources: {', '.join((str(p) for p, _ in clustering1.keys()))}\n"
-            )
-            sys.stderr.write(
-                f"{path2!s} taint sources: {', '.join((str(p) for p, _ in clustering2.keys()))}\n"
-            )
-            if len(clustering1) > 1:
-                sys.stderr.write(
-                    f"Warning: {path1!s} has taint information from multiple input sources; using the largest\n"
-                )
-                taints = sorted(
-                    [(len(offsets), source) for source, offsets in clustering1.items()]
-                )
-                for _, to_remove in taints[:-1]:
-                    # remove all but the last (biggest) source:
-                    del clustering1[to_remove]
-            if len(clustering2) > 1:
-                sys.stderr.write(
-                    f"Warning: {path2!s} has taint information from multiple input sources; using the largest\n"
-                )
-                taints = sorted(
-                    [(len(offsets), source) for source, offsets in clustering2.items()]
-                )
-                for _, to_remove in taints[:-1]:
-                    # remove all but the last (biggest) source:
-                    del clustering2[to_remove]
-            (_, header), clustering = next(iter(clustering1.items()))
-            if header.invalid_size():
-                size: Optional[int] = None
-            else:
-                size = header.size
-            index1 = dict_to_list(clustering, num_elements=size)
-            del clustering1
-            (_, header), clustering = next(iter(clustering2.items()))
-            if header.invalid_size():
-                size: Optional[int] = None
-            else:
-                size = header.size
-            index2 = dict_to_list(clustering, num_elements=size)
-            del clustering2
             sys.stderr.write("Matching...\n")
             m = match(index1, index2)
             print(f"{args.match[0]} -> {args.match[1]}")
