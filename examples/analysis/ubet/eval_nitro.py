@@ -296,12 +296,12 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
         rel_entry = rel[relidx] if relidx < len_rel else None
 
         if dbg_entry is None:
-            print_cols("", str(rel_entry), "")  # , rel_funcname(rel_entry[1]))
+            print_cols("", str(rel_entry), "")
             relidx += 1
             continue
 
         if rel_entry is None:
-            print_cols(str(dbg_entry), "", "")  # dbg_funcname(dbg_entry[1]))
+            print_cols(str(dbg_entry), "", "")
             dbgidx += 1
             continue
 
@@ -343,130 +343,6 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
 
     return
 
-    # dbg_offset_to_func = {}
-    # rel_offset_to_func = {}
-
-    # for offset, func in dbg:
-    #   stroffset = str(offset)
-    #   if stroffset in dbg_offset_to_func:
-    #     if func in dbg_offset_to_func[stroffset]:
-    #       dbg_offset_to_func[stroffset][func] += 1
-    #     else:
-    #       dbg_offset_to_func[stroffset][func] = 1
-    #   else:
-    #       dbg_offset_to_func[stroffset] = {func: 1}
-
-    # # print(dbg_offset_to_func)
-    # for k,v in dbg_offset_to_func.items():
-    #   print(k, v)
-
-    # for (i,d) in enumerate(dbg):
-
-
-def custome():
-    lastdbg = None
-    lastrel = None
-
-    dbgidx = 0
-    relidx = 0
-
-    dbrelmap = {}
-
-    while True:
-        db = dbg[dbgidx] if len(dbg) > dbgidx else None
-        re = rel[relidx] if len(rel) > relidx else None
-        if db is None and re is None:
-            break
-        nextrel = rel[relidx + 1] if len(rel) > relidx + 1 else None
-        use_dbg = False
-        use_rel = False
-
-        if db is not None:
-            if db[0] == re[0]:
-                if db[1] in dbrelmap:
-                    if dbrelmap[db[1]] != re[1]:
-                        print(
-                            f"INCONSITENCY!!! db1{db[1]} dbrelmap[db1] {dbrelmap[db[1]]} re[1] {re[1]}"
-                        )
-                    else:
-                        dbgidx += 1
-                        relidx += 1
-                        use_dbg = True
-                        use_rel = True
-                else:
-                    dbrelmap[db[1]] = re[1]
-                    use_dbg = True
-                    use_rel = True
-            elif db == lastdbg:  # debug repeated once more
-                dbgidx += 1  # Try to make dbg catch up
-                use_dbg = True
-            elif re == lastrel:  # release repeated once more
-                relidx += 1  # Try to make rel catch up
-                use_rel = True
-            elif db[0] == nextrel[0]:  # Release did something additional
-                use_rel = True
-                relidx += 1
-            else:
-                print(f"Inconsistency db {db} re {re}")
-                relidx += 1
-                dbgidx += 1
-
-        # ndiffs = 0
-        # if db:
-        #   if lastdbg != db[1]:
-        #     ndiffs += 1
-        #   lastdbg = db[1]
-        # if rel:
-        #   if lastrel != re[1]:
-        #     ndiffs +=1
-        #   lastrel = re[1]
-        # if ndiffs > 0:
-        #   print("")
-
-        # print(f"{i}: dbg: {db} rel: {re} eq: {db == re}")
-        msg = ""
-        if use_dbg:
-            msg += "dbg " + str(db) + " "
-        if use_rel:
-            msg += "rel " + str(re)
-        print(msg)
-        lastrel = re
-        lastdbg = db
-
-    # import difflib
-    # for line in difflib.unified_diff(dbg, rel, fromfile="Debug.tdag", tofile="Release.tdag", n=100000):
-    #   print(line)
-
-    # print("DEBUG ENTRIES")
-    # for (entry,bb) in cflog:
-    #   print(f"{entry} ** {dbg_tdfile.decode_node(entry)} *** {input_set(entry, dbg_tdfile)} BB {bb}")
-    # # cfdbg = list(cflog)
-
-    # print("RELEASE ENTRIES")
-    # for (entry,bb) in cflog:
-    #   print(f"{entry} ** {rel_tdfile.decode_node(entry)} *** {input_set(entry, rel_tdfile)} BB {bb}")
-    # cfrel = list(cflog)
-
-    # dbglist = []
-    # rellist = []
-    # for i in range(0, max(len(cfdbg), len(cfrel))):
-    #   dbg = sorted(list(map(lambda x: x.offset, (input_set(cfdbg[i][0], dbg_tdfile), cfdbg[i][1])))) if len(cfdbg) > i else [()]
-    #   rel = sorted(list(map(lambda x: x.offset, (input_set(cfrel[i][0], rel_tdfile), cfrel[i][1])))) if len(cfrel) > i else [()]
-    #   if len(cfdbg) > i:
-    #     dbglist.append(str(dbg))
-    #   if len(cfrel) > i:
-    #     rellist.append(str(rel))
-    #   print(f"{i}: {[hex(x) for x in dbg]} - {[hex(x) for x in rel]} {dbg==rel}")
-
-    # print("DIFF")
-    # import difflib
-    # for line in difflib.unified_diff(dbglist, rellist, fromfile="Debug.tdag", tofile="Release.tdag", n=100000):
-    #   print(line)
-
-    # import difflib
-    # for line in difflib.unified_diff(dbg_cf_bbs, rel_cf_bbs, fromfile="Debug.tdag", tofile="Release.tdag", n=100000):
-    #   print(line)
-
 
 def compare_input_output(dbg_tdfile, rel_tdfile):
     dbg_mapping = InputOutputMapping(dbg_tdfile).mapping()
@@ -497,8 +373,6 @@ def compare_output_input(dbg_tdfile, rel_tdfile):
 def do_comparison(path: Path, args):
     dbg_tdag = path / db_name(True)
     rel_tdag = path / db_name(False)
-    # dbg_tdag = path / "Debug.tdag"
-    # rel_tdag = path / "release.tdag"
     print(f"Compare {dbg_tdag} and {rel_tdag}")
 
     dbg_trace = PolyTrackerTrace.load(dbg_tdag)

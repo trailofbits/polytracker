@@ -1,13 +1,12 @@
 # /usr/bin/python
 import os
 import random
-import string
 import sys
 import subprocess
 from typing import List, Tuple
 from pathlib import Path
 
-from polytracker import PolyTrackerTrace, taint_dag
+from polytracker import PolyTrackerTrace
 
 
 src_arg = Path(sys.argv[1])
@@ -122,7 +121,6 @@ def main():
         print("=============================")
         print(f"input: {result[0]}")
 
-        # print(result)
         if all(e == result[1][0] for e in result[1]):
             print("OK!")
         else:

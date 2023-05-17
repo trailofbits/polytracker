@@ -2,10 +2,10 @@
  * command-line argument.
  *
  * With optimizations disabled, Clang / LLVM 15.0.0 run on the code in Listing
- * 1 will produce a binary that operates consistently dependent on input. With
- * optimizations enabled, Clang will optimize out the first branch of the
- * conditional, which invokes undefined behavior; the -O3 optimized program
- * always returns zero.
+ * 1 will produce a binary that operates consistently dependent on input. Due
+ * to undefined behavior in the first branch of the conditional, a program
+ * version compiled with optimizations (-03) will only return 0;
+ * Clang elides the undefined behavior during optimization.
  *
  * Listing 1: According to the C++20 specification, a bitwise left shift
  * operation (as on line 9 here) results in undefined behavior if the right
