@@ -30,7 +30,7 @@ from .taint_dag import (
 )
 from pathlib import Path
 
-from itertools import product
+from itertools import chain, product
 from collections import defaultdict
 import sys
 
@@ -74,18 +74,27 @@ def dfs(
             raise NotImplementedError()
 
 
-def cluster(file: TDFile) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]:
+def cluster(
+    file: TDFile, treat_nodes_affecting_control_flow_as_syncs: bool = True
+) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]:
     sources = list(file.read_fd_headers())
     sets: DisjointSet[int] = DisjointSet()
     source_labels: Dict[int, Dict[int, int]] = {i: {} for i in range(len(sources))}
-    for s in tqdm(
-        file.sinks,
-        total=file.num_sinks,
+    sinks = (s.label for s in file.sinks)
+    num_sinks = file.num_sinks
+    if treat_nodes_affecting_control_flow_as_syncs:
+        sinks = chain(sinks, (label for label, _ in file.nodes_affecting_control_flow))
+        num_sinks += len(file.nodes_affecting_control_flow)
+    for sink_label in tqdm(
+        sinks,
+        total=num_sinks,
         desc="enumerating sinks",
         leave=False,
         unit="nodes",
     ):
-        cluster_id = sets.add(s.label)
+        if sink_label in sets:
+            continue
+        cluster_id = sets.add(sink_label)
         with tqdm(
             desc="enumerating ancestors",
             unit="nodes",
@@ -94,7 +103,7 @@ def cluster(file: TDFile) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]
             delay=1.0,
         ) as t:
             try:
-                ancestors = dfs(file, s.label)
+                ancestors = dfs(file, sink_label)
                 while True:
                     ancestor_label, node = next(ancestors)
                     t.update(1)
@@ -105,7 +114,7 @@ def cluster(file: TDFile) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]
                                 source_labels[node.idx][node.offset], cluster_id
                             )
                         source_labels[node.idx][node.offset] = cluster_id
-                    if ancestor_label in sets and ancestor_label != s.label:
+                    if ancestor_label in sets and ancestor_label != sink_label:
                         # this ancestor is in another cluster
                         cluster_id = sets.union(cluster_id, ancestor_label)
                         ancestors.send(
@@ -117,6 +126,8 @@ def cluster(file: TDFile) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]
                         ancestors.send(True)
             except StopIteration:
                 pass
+    # Also add source bytes that affected control flow
+
     return {sources[source_idx]: labels for source_idx, labels in source_labels.items()}
 
 
@@ -212,10 +223,15 @@ def index_array(g: nx.DiGraph, s: Dict[int, int]) -> List[int]:
     return ids
 
 
-def dict_to_list(d: Dict[int, int]) -> List[int]:
+def dict_to_list(d: Dict[int, int], num_elements: Optional[int] = None) -> List[int]:
     if not d:
         return []
-    ids = [-1] * (max(d.keys()) + 1)
+    max_key_value = max(d.keys()) + 1
+    if num_elements is None:
+        num_elements = max_key_value
+    else:
+        num_elements = max(num_elements, max_key_value)
+    ids = [-1] * num_elements
     for offset, value in d.items():
         ids[offset] = value
     return ids
@@ -475,9 +491,19 @@ class Clusters(Command):
                 for _, to_remove in taints[:-1]:
                     # remove all but the last (biggest) source:
                     del clustering2[to_remove]
-            index1 = dict_to_list(next(iter(clustering1.values())))
+            (_, header), clustering = next(iter(clustering1.items()))
+            if header.invalid_size():
+                size: Optional[int] = None
+            else:
+                size = header.size
+            index1 = dict_to_list(clustering, num_elements=size)
             del clustering1
-            index2 = dict_to_list(next(iter(clustering2.values())))
+            (_, header), clustering = next(iter(clustering2.items()))
+            if header.invalid_size():
+                size: Optional[int] = None
+            else:
+                size = header.size
+            index2 = dict_to_list(clustering, num_elements=size)
             del clustering2
             sys.stderr.write("Matching...\n")
             m = match(index1, index2)

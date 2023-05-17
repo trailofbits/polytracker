@@ -407,6 +407,22 @@ class TDNodeIterator:
         return self.__class__(file=self.file, reverse=not self.reverse)
 
 
+class TDNodeAffectingControlFlowIterator:
+    def __init__(self, file: "TDFile"):
+        self.file: TDFile = file
+        self._len: int = -1
+
+    def __iter__(self) -> Iterator[Tuple[int, TDNode]]:
+        for label, node in enumerate(TDNodeIterator(self.file), start=1):
+            if node.affects_control_flow:
+                yield label, node
+
+    def __len__(self):
+        if self._len < 0:
+            self._len = sum(1 for _ in self)
+        return self._len
+
+
 class TDFile:
     def __init__(self, file: BinaryIO) -> None:
         # This needs to be kept in sync with implementation in encoding.cpp
@@ -524,6 +540,10 @@ class TDFile:
     @property
     def nodes(self) -> TDNodeIterator:
         return TDNodeIterator(self)
+
+    @property
+    def nodes_affecting_control_flow(self) -> TDNodeAffectingControlFlowIterator:
+        return TDNodeAffectingControlFlowIterator(self)
 
     @property
     def num_sinks(self) -> int:
