@@ -75,7 +75,9 @@ def dfs(
 
 
 def cluster(
-    file: TDFile, treat_nodes_affecting_control_flow_as_syncs: bool = True, include_output_nodes_as_syncs: bool = False
+    file: TDFile,
+    treat_nodes_affecting_control_flow_as_syncs: bool = True,
+    include_output_nodes_as_syncs: bool = False,
 ) -> Dict[Tuple[Path, TDFDHeader], Dict[int, ClusterID]]:
     sources = list(file.read_fd_headers())
     sets: DisjointSet[int] = DisjointSet()
@@ -191,31 +193,6 @@ def ordered_edit_distance(
                     distance[i - 1][j - 1] + substitution_cost,
                 )
     return distance[len(s)][len(t)]
-
-
-def clusters(g: nx.DiGraph, s: Dict[int, int]) -> Iterable[Iterable[int]]:
-    sys.stderr.write(
-        f"Calculating the weakly connected components of a {len(g)}-node graph...\n"
-    )
-    sys.stderr.flush()
-    cs = nx.weakly_connected_components(g)
-
-    cs = map(lambda x: x.intersection(s), cs)
-    cs = map(lambda c: map(s.get, c), cs)
-    return map(lambda x: sorted(list(x)), cs)
-
-    return (
-        sorted(list(x))
-        for x in (
-            map(s.get, c)
-            for c in (
-                y.intersection(s)
-                for y in tqdm(
-                    cs, desc="Clustering", unit="connected components", leave=False
-                )
-            )
-        )
-    )
 
 
 def index_array(g: nx.DiGraph, s: Dict[int, int]) -> List[int]:
@@ -393,10 +370,15 @@ def match(s1: Sequence[T], s2: Sequence[T]) -> Matching[T]:
 
 
 class MultipleTaintSourcesError(ValueError):
-    def __init__(self, tdag_path: Path, sources: Iterable[Path]):
+    def __init__(self, tdag_path: Path, sources: Iterable[Tuple[Path, TDFDHeader]]):
         self.tdag_path: Path = tdag_path
-        self.sources: Tuple[Path, ...] = tuple(sources)
-        source_names = "\n".join(map(str, self.sources))
+        self.sources: Tuple[Tuple[Path, TDFDHeader], ...] = tuple(sources)
+        source_names = "\n".join(
+            (
+                f"{p!s}\t({'?' if h.invalid_size() else h.size!s} bytes) "
+                for p, h in self.sources
+            )
+        )
         super().__init__(f"{tdag_path!s} has multiple taint sources:\n{source_names}")
 
 
@@ -405,7 +387,7 @@ def load_indexes_for_matching(
 ) -> List[int]:
     with open(path, "rb") as file:
         tdfile = TDFile(file)
-        sources = [path for path, _ in tdfile.read_fd_headers()]
+        sources = list(tdfile.read_fd_headers())
         if not sources:
             raise ValueError(f"{path!s} has no taint data!")
         elif from_source is None and len(sources) > 1:
@@ -421,7 +403,7 @@ def load_indexes_for_matching(
                 source_header = header
                 break
         else:
-            source_names = "\n".join(map(str, sources))
+            source_names = "\n".join((str(s) for s, _ in sources))
             raise KeyError(
                 f"{path!s} has no taint source named {from_source!r}! Sources are:\n{source_names}"
             )
@@ -472,31 +454,6 @@ class Clusters(Command):
             help="the name of the source from the second TDAG to match",
         )
 
-    def to_graph(self, f: TDFile) -> Tuple[nx.DiGraph, Dict[int, int]]:
-        graph = nx.DiGraph()
-        sources: Dict[int, int] = dict()
-        offsets: Dict[int, List[int]] = defaultdict(list)
-        # Create graph from TDFile
-        for label, node in tqdm(enumerate(f.nodes, start=1), total=f.label_count):
-            graph.add_node(label)
-            if isinstance(node, TDSourceNode):
-                sources[label] = node.offset
-                offsets[node.offset].append(label)
-            elif isinstance(node, TDUnionNode):
-                graph.add_edge(node.right, label)
-                graph.add_edge(node.left, label)
-            elif isinstance(node, TDRangeNode):
-                for range_label in range(node.first, node.last + 1):
-                    graph.add_edge(range_label, label)
-            else:
-                raise Exception("Unsupported node type")
-        # Merge nodes that correspond to the same offset
-        for ns in offsets.values():
-            for n in ns[1:]:
-                nx.contracted_nodes(graph, ns[0], n, copy=False)
-
-        return graph, sources
-
     def run(self, args):
         def to_intervals(c: Iterable[int]) -> List[Tuple[int, int]]:
             r: List[Tuple[int, int]] = []
@@ -509,12 +466,12 @@ class Clusters(Command):
                 r.append((b, e))
             return r
 
-        def print_intervals(i: Tuple[int, int]) -> str:
-            return f"{i[0]} - {i[1]}"
-
-        def graph_and_sources(path: Path) -> Tuple[nx.DiGraph, Dict[int, int]]:
-            with open(path, "rb") as file:
-                return self.to_graph(TDFile(file))
+        def interval_to_str(i: Tuple[int, int]) -> str:
+            i_from, i_to = i
+            if i_from != i_to:
+                return f"{i_from}–{i_to}"
+            else:
+                return str(i_from)
 
         if args.match:
             path1, path2 = args.match
@@ -524,6 +481,11 @@ class Clusters(Command):
             except (KeyError, MultipleTaintSourcesError, ValueError) as e:
                 msg = str(e).replace("\\n", "\n")[1:-1]
                 sys.stderr.write(f"Error: {msg}\n")
+                if isinstance(e, MultipleTaintSourcesError):
+                    sys.stderr.write(
+                        "\nUse the `-s1` and `-s2` options to specify the input source against which "
+                        "you'd like to match\n"
+                    )
                 exit(1)
             sys.stderr.write("Matching...\n")
             m = match(index1, index2)
@@ -538,5 +500,16 @@ class Clusters(Command):
                     print(f"{indexes1} -> {indexes2} cost {cost}")
             print(f"cost={m.edit_distance}, similarity={m.similarity}")
         else:
-            for c in clusters(*graph_and_sources(args.trace_file)):
-                print(list(map(print_intervals, to_intervals(c))))
+            with open(args.trace_file, "rb") as file:
+                for (path, _), mapping in cluster(TDFile(file)).items():
+                    print(str(path))
+                    clusters: Dict[int, List[int]] = {
+                        idx: [] for idx in mapping.values()
+                    }
+                    for offset, cluster_idx in mapping.items():
+                        clusters[cluster_idx].append(offset)
+                    for cluster_idx in sorted(clusters.keys()):
+                        offsets = clusters[cluster_idx]
+                        print(
+                            f"\tc{cluster_idx}:\t{', '.join(map(interval_to_str, to_intervals(offsets)))}"
+                        )
