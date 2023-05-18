@@ -195,14 +195,6 @@ def ordered_edit_distance(
     return distance[len(s)][len(t)]
 
 
-def index_array(g: nx.DiGraph, s: Dict[int, int]) -> List[int]:
-    ids = [-1] * (max(s.values()) + 1)
-    for i, c in enumerate(clusters(g, s)):
-        for o in c:
-            ids[o] = i
-    return ids
-
-
 def dict_to_list(d: Dict[int, int], num_elements: Optional[int] = None) -> List[int]:
     if not d:
         return []
@@ -279,22 +271,24 @@ class Matching(Generic[T]):
     def edit_distance(self) -> int:
         if self._edit_distance is not None:
             return self._edit_distance
-        distance = sum(len(self.s1.indexes[u]) for u in self.unmatched_s1) + sum(
-            len(self.s2.indexes[u]) for u in self.unmatched_s2
-        )
+        distance = len(self.s1) + len(self.s2)
         for s, t in self.mapping.items():
-            distance += ordered_edit_distance(
+            additional_cost = ordered_edit_distance(
                 self.s1.indexes[s], self.s2.indexes[t], infinite_cost=self.infinite_cost
             )
+            fixed_cost = len(self.s1.indexes[s]) + len(self.s2.indexes[t])
+            distance_diff = max(fixed_cost - additional_cost, 0)
+            distance -= distance_diff
+        assert distance <= len(self.s1) + len(self.s2)
         self._edit_distance = distance
         return distance
 
     @property
     def similarity(self) -> float:
-        max_length = max(sum(self.s1), sum(self.s2))
-        if max_length == 0:
+        max_cost = len(self.s1) + len(self.s2)
+        if max_cost == 0:
             return 0.0
-        return 1.0 - float(self.edit_distance) / float(max_length)
+        return 1.0 - float(self.edit_distance) / float(max_cost)
 
     def __str__(self):
         return (
