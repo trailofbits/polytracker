@@ -61,9 +61,9 @@ public:
 
   // Instrumentation callback for when execution enters a function
   // NOTE: There is a overlap in functionality between this and `function_entry`
-  // they will co-exist for now as they operate slightly different. The underlying
-  // reason is that this was developed separately to support the Tainted Control
-  // Flow logging mechanism.
+  // they will co-exist for now as they operate slightly different. The
+  // underlying reason is that this was developed separately to support the
+  // Tainted Control Flow logging mechanism.
   void enter_function(uint32_t function_id);
 
   // Instrumentation callback for when execution leaves a function
@@ -103,7 +103,6 @@ private:
   static constexpr size_t offset_capacity = size_t{max_source_index} + 1;
   StreamOffset<offset_capacity> stream_read_offsets_;
   StreamOffset<offset_capacity> stream_write_offsets_;
-
 };
 
 } // namespace taintdag

@@ -146,6 +146,7 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     cmd = ["opt", "-O3", str(input_bitcode), "-o", str(output_bitcode)]
     subprocess.check_call(cmd)
 
+
 def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -164,6 +165,7 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
     ]
     # execute `cmd`
     subprocess.check_call(cmd)
+
 
 def _instrument_bitcode(
     input_bitcode: Path,
@@ -421,7 +423,6 @@ class InstrumentTargets(Command):
             action="store_true",
             help="instrument with control affecting dataflow logging",
         )
-
 
     def run(self, args: argparse.Namespace):
         for target in args.targets:

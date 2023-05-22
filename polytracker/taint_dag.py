@@ -129,6 +129,7 @@ class TDLabelSection:
     def count(self):
         return len(self.section) // sizeof(c_uint64)
 
+
 class TDEnterFunctionEvent:
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
@@ -162,6 +163,7 @@ class TDLeaveFunctionEvent:
     def __eq__(self, __o: object) -> bool:
         return self.callstack == __o.callstack
 
+
 class TDTaintedControlFlowEvent:
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
@@ -177,6 +179,7 @@ class TDTaintedControlFlowEvent:
 
     def __eq__(self, __o: object) -> bool:
         return self.label == __o.label and self.callstack == __o.callstack
+
 
 class TDControlFlowLogSection:
     """TDAG Control flow log section
@@ -218,7 +221,7 @@ class TDControlFlowLogSection:
         buffer = self.section
         callstack = []
         while buffer:
-            event = c_uint8.from_buffer_copy(buffer,0).value
+            event = c_uint8.from_buffer_copy(buffer, 0).value
             buffer = buffer[1:]
             function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
             if self.funcmapping != None:
@@ -251,6 +254,7 @@ class TDControlFlowLogSection:
     def function_id_mapping(self, id_to_name_array):
         """This method stores an array used to translate from function id to symbolic names"""
         self.funcmapping = id_to_name_array
+
 
 class TDSinkSection:
     """TDAG Sinks section

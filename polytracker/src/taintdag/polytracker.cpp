@@ -176,8 +176,7 @@ void PolyTracker::affects_control_flow(label_t lbl) {
 }
 
 void PolyTracker::log_tainted_control_flow(label_t lbl, uint32_t function_id) {
-  output_file_.section<ControlFlowLog>().tainted_control_flow(lbl,
-                                                                function_id);
+  output_file_.section<ControlFlowLog>().tainted_control_flow(lbl, function_id);
 }
 
 void PolyTracker::enter_function(uint32_t function_id) {
@@ -187,7 +186,6 @@ void PolyTracker::enter_function(uint32_t function_id) {
 void PolyTracker::leave_function(uint32_t function_id) {
   output_file_.section<ControlFlowLog>().leave_function(function_id);
 }
-
 
 Functions::index_t PolyTracker::function_entry(std::string_view name) {
   auto &functions{output_file_.section<Functions>()};

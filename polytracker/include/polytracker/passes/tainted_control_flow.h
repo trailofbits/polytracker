@@ -35,12 +35,10 @@ class TaintedControlFlowPass
   void insertTaintStartupCall(llvm::Module &mod);
   void declareLoggingFunctions(llvm::Module &mod);
 
-
   llvm::ConstantInt *get_function_id_const(llvm::Function &f);
   llvm::ConstantInt *get_function_id_const(llvm::Instruction &i);
 
 public:
-
   using function_id = uint32_t;
 
   TaintedControlFlowPass();
