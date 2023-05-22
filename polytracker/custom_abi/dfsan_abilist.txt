@@ -30,6 +30,10 @@ fun:open64=custom
 ##########################################
 # Polytracker functions
 #########################################
+fun:__polytracker_leave_function=uninstrumented
+fun:__polytracker_leave_function=discard
+fun:__polytracker_enter_function=uninstrumented
+fun:__polytracker_enter_function=discard
 fun:__polytracker_log_func_entry=uninstrumented
 fun:__polytracker_log_func_entry=discard
 fun:__polytracker_log_func_exit=uninstrumented
@@ -43,6 +47,8 @@ fun:__polytracker_log_taint_op=uninstrumented
 fun:__polytracker_log_taint_op=custom
 fun:__polytracker_log_conditional_branch=uninstrumented
 fun:__polytracker_log_conditional_branch=custom
+fun:__polytracker_log_tainted_control_flow=uninstrumented
+fun:__polytracker_log_tainted_control_flow=custom
 # -- end
 fun:__polytracker_dump=uninstrumented
 fun:__polytracker_dump=discard
