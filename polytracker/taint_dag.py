@@ -144,7 +144,9 @@ class TDEnterFunctionEvent:
         return f"Enter: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
-        return self.callstack == __o.callstack
+        if isinstance(__o, TDEnterFunctionEvent):
+            return self.callstack == __o.callstack
+        return False
 
 
 class TDLeaveFunctionEvent:
@@ -161,7 +163,9 @@ class TDLeaveFunctionEvent:
         return f"Leave: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
-        return self.callstack == __o.callstack
+        if isinstance(__o, TDLeaveFunctionEvent):
+            return self.callstack == __o.callstack
+        return False
 
 
 class TDTaintedControlFlowEvent:
@@ -178,7 +182,9 @@ class TDTaintedControlFlowEvent:
         return f"TaintedControlFlow label {self.label} callstack {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
-        return self.label == __o.label and self.callstack == __o.callstack
+        if isinstance(__o, TDTaintedControlFlowEvent):
+            return self.label == __o.label and self.callstack == __o.callstack
+        return False
 
 
 class TDControlFlowLogSection:
