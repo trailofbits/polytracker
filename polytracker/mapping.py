@@ -61,7 +61,7 @@ class InputOutputMapping:
 
         return result
 
-    def marker_to_ranges(self, m: bytearray) -> List[CavityType]:
+    def marker_to_ranges(self, m: bytes) -> List[CavityType]:
         ranges = []
         start = None
         for i, v in enumerate(m):
@@ -87,27 +87,31 @@ class InputOutputMapping:
         # iterating over sinks as any taint node that affects control flow will
         # already have all of its source taints affecting control flow, and thus
         # be in the marker array already.
-        for source_label in self.tdfile.input_labels():
-            source_node = self.tdfile.decode_node(source_label)
-            assert isinstance(source_node, TDSourceNode)
-            source_index = source_node.idx
-            source_offset = source_node.offset
+        with tqdm(desc="indexing taint sources", unit="labels", leave=False) as t:
+            for source_label in self.tdfile.input_labels():
+                t.update(1)
+                source_node = self.tdfile.decode_node(source_label)
+                assert isinstance(source_node, TDSourceNode)
+                source_index = source_node.idx
+                source_offset = source_node.offset
 
-            if source_index not in markers:
-                # Attempt to get the size of the file, to prevent reallocation of the markers array.
-                # Use whatever size is greater (size hint will be zero for failures) to allocate the
-                # array.
-                fdheader = self.tdfile.fd_headers[source_index][1]
-                size = source_offset + 1 if fdheader.invalid_size() else fdheader.size
-                markers[source_index] = bytearray(size)
+                if source_index not in markers:
+                    # Attempt to get the size of the file, to prevent reallocation of the markers array.
+                    # Use whatever size is greater (size hint will be zero for failures) to allocate the
+                    # array.
+                    fdheader = self.tdfile.fd_headers[source_index][1]
+                    size = (
+                        source_offset + 1 if fdheader.invalid_size() else fdheader.size
+                    )
+                    markers[source_index] = bytearray(size)
 
-            marker = markers[source_index]
-            if source_offset >= len(marker):
-                marker = marker.ljust(source_offset + 1, b"\0")
-                markers[source_index] = marker
+                marker = markers[source_index]
+                if source_offset >= len(marker):
+                    marker = marker.ljust(source_offset + 1, b"\0")
+                    markers[source_index] = marker
 
-            if source_node.affects_control_flow:
-                marker[source_offset] = 1
+                if source_node.affects_control_flow:
+                    marker[source_offset] = 1
 
         # Now, iterate all taint labels written to outputs (sinks). Walk them backwards to reach
         # source nodes and mark any source offset contributing to outputs. If a node affects
@@ -133,11 +137,18 @@ class InputOutputMapping:
                         elif isinstance(n, TDRangeNode):
                             seen.update(range(n.first, n.last + 1))
 
+        # Flatten all files by name in case files are opened multiple times
+        merged: Dict[Path, bytes] = {}
+
+        for k, v in markers.items():
+            fname = self.tdfile.fd_headers[k][0]
+            if fname in merged:
+                merged[fname] = bytes(a | b for (a, b) in zip(merged[fname], v))
+            else:
+                merged[fname] = bytes(v)
+
         # Convert the source index to the source path and marker bit arrays to ranges
-        return {
-            self.tdfile.fd_headers[k][0]: self.marker_to_ranges(v)
-            for (k, v) in markers.items()
-        }
+        return {k: self.marker_to_ranges(v) for (k, v) in merged.items()}
 
 
 class MapInputsToOutputs(Command):
