@@ -12,7 +12,7 @@
 #include <catch2/catch.hpp>
 
 TEST_CASE("Simple varint encoding") {
-  using namespace taintdag::details;
+  using namespace taintdag::detail;
   uint8_t buffer[5];
 
   SECTION("Encode 0") {

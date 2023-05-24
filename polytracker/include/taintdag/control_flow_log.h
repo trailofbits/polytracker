@@ -16,7 +16,7 @@
 
 namespace taintdag {
 
-namespace details {
+namespace detail {
 // A uint32_t varint encoded by setting highest bit for all but the final byte.
 // Requires up to 5 bytes of storage as each output byte uses 7 input bits.
 // Total maximum need is floor(32/7) = 5. Returns number of bytes required.
@@ -30,7 +30,7 @@ size_t varint_encode(uint32_t val, uint8_t *buffer) {
   return buffer - orig_buffer;
 }
 // TODO (hbrodin): Should probably used std::span
-} // namespace details
+} // namespace detail
 
 struct ControlFlowLog : public SectionBase {
   enum EventType {
@@ -49,7 +49,7 @@ struct ControlFlowLog : public SectionBase {
   void function_event(EventType evt, uint32_t function_id) {
     uint8_t buffer[6];
     buffer[0] = static_cast<uint8_t>(evt);
-    auto used = details::varint_encode(function_id, &buffer[1]);
+    auto used = detail::varint_encode(function_id, &buffer[1]);
     auto total = used + 1;
 
     if (auto wctx = write(total)) {
@@ -71,9 +71,9 @@ struct ControlFlowLog : public SectionBase {
     // 1 byte event, <= 5 bytes function id, <= 5 bytes label
     uint8_t buffer[11];
     buffer[0] = static_cast<uint8_t>(TaintedControlFlow);
-    auto used = details::varint_encode(function_id, &buffer[1]);
+    auto used = detail::varint_encode(function_id, &buffer[1]);
     auto total = used + 1;
-    used = details::varint_encode(label, &buffer[total]);
+    used = detail::varint_encode(label, &buffer[total]);
     total += used;
 
     if (auto wctx = write(total)) {
