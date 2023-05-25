@@ -433,12 +433,9 @@ class InstrumentTargets(Command):
             _extract_bitcode(target_path, bc_path)
             if args.cflog:
                 # Control affecting data flow logging happens before optimization
-                pre_opt = bc_path.with_suffix(".preopt.bc")
-                _preopt_instrument_bitcode(bc_path, pre_opt)
+                _preopt_instrument_bitcode(bc_path, bc_path)
 
-                _optimize_bitcode(pre_opt, opt_bc)
-            else:
-                _optimize_bitcode(bc_path, opt_bc)
+            _optimize_bitcode(bc_path, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
                 opt_bc,
