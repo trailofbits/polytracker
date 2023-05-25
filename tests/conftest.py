@@ -35,7 +35,7 @@ def build(target: Path, binary: Path) -> None:
 
 
 def instrument(target: str) -> None:
-    cmd = ["instrument-targets", "--taint", "--ftrace", target]
+    cmd = ["instrument-targets", "--taint", "--ftrace", "--cflog", target]
     run_polytracker(cmd)
 
 
