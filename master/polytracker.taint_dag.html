@@ -105,6 +105,8 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">polytracker.taint_dag</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#taint-dag-classes">taint_dag classes</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#tdbitmapsection">TDBitmapSection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdcontrolflowlogsection">TDControlFlowLogSection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdenterfunctionevent">TDEnterFunctionEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdevent">TDEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdeventssection">TDEventsSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdfdheader">TDFDHeader</a></li>
@@ -114,6 +116,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#tdfunctionssection">TDFunctionsSection</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdinfo">TDInfo</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdlabelsection">TDLabelSection</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdleavefunctionevent">TDLeaveFunctionEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdnode">TDNode</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdprogramtrace">TDProgramTrace</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdrangenode">TDRangeNode</a></li>
@@ -127,6 +130,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintforest">TDTaintForest</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintforestnode">TDTaintForestNode</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdtaintoutput">TDTaintOutput</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tdtaintedcontrolflowevent">TDTaintedControlFlowEvent</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tdunionnode">TDUnionNode</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tduntaintednode">TDUntaintedNode</a></li>
 </ul>
@@ -228,6 +232,62 @@ not change as the implementation does not handle endianess in any specific way.<
 <span class="sig-name descname"><span class="pre">enumerate_set_bits</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDBitmapSection.enumerate_set_bits" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enumerates all bits that are set</p>
 <p>The index of each bit that is set will be yielded.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdcontrolflowlogsection">
+<h3>TDControlFlowLogSection<a class="headerlink" href="#tdcontrolflowlogsection" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDControlFlowLogSection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>TDAG Control flow log section</p>
+<p>Interprets the control flow log section in a TDAG file.
+Enables enumeration/random access of items</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection.ENTER_FUNCTION">
+<span class="sig-name descname"><span class="pre">ENTER_FUNCTION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection.ENTER_FUNCTION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection.LEAVE_FUNCTION">
+<span class="sig-name descname"><span class="pre">LEAVE_FUNCTION</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection.LEAVE_FUNCTION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection.TAINTED_CONTROL_FLOW">
+<span class="sig-name descname"><span class="pre">TAINTED_CONTROL_FLOW</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection.TAINTED_CONTROL_FLOW" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mem</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hdr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDControlFlowLogSection.function_id_mapping">
+<span class="sig-name descname"><span class="pre">function_id_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_to_name_array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDControlFlowLogSection.function_id_mapping" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method stores an array used to translate from function id to symbolic names</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdenterfunctionevent">
+<h3>TDEnterFunctionEvent<a class="headerlink" href="#tdenterfunctionevent" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEnterFunctionEvent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDEnterFunctionEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEnterFunctionEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Emitted whenever execution enters a function.
+The callstack member is the callstack right before entering the function,
+having the function just entered as the last member of the callstack.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDEnterFunctionEvent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDEnterFunctionEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callstack after entering function</p>
 </dd></dl>
 
 </dd></dl>
@@ -598,6 +658,24 @@ Corresponds to Labels in labels.h.</p>
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDLabelSection.read_raw">
 <span class="sig-name descname"><span class="pre">read_raw</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLabelSection.read_raw" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdleavefunctionevent">
+<h3>TDLeaveFunctionEvent<a class="headerlink" href="#tdleavefunctionevent" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLeaveFunctionEvent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDLeaveFunctionEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLeaveFunctionEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Emitted whenever execution leaves a function.
+The callstack member is the callstack right before leaving the function,
+having the function about to leave as the last member of the callstack.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDLeaveFunctionEvent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDLeaveFunctionEvent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Callstack before leaving function</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -1083,6 +1161,24 @@ Corresponds to StringTableBase in string_table.h.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="polytracker.taint_dag.TDTaintOutput.taints">
 <span class="sig-name descname"><span class="pre">taints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="polytracker.tracing.html#polytracker.tracing.Taints" title="polytracker.tracing.Taints"><span class="pre">Taints</span></a></span></span><a class="headerlink" href="#polytracker.taint_dag.TDTaintOutput.taints" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="tdtaintedcontrolflowevent">
+<h3>TDTaintedControlFlowEvent<a class="headerlink" href="#tdtaintedcontrolflowevent" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDTaintedControlFlowEvent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">polytracker.taint_dag.</span></span><span class="sig-name descname"><span class="pre">TDTaintedControlFlowEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDTaintedControlFlowEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Emitted whenever a control flow change is influenced by tainted data.
+The label that influenced the control flow is available in the <cite>label</cite> member.
+Current callstack (including the function the control flow happened in) is available
+in the <cite>callstack</cite> member.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="polytracker.taint_dag.TDTaintedControlFlowEvent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">callstack</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#polytracker.taint_dag.TDTaintedControlFlowEvent.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </dd></dl>

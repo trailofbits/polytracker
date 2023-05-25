@@ -15,6 +15,24 @@ TDBitmapSection
    :inherited-members:
    :show-inheritance:
 
+TDControlFlowLogSection
+***********************
+
+.. autoclass:: TDControlFlowLogSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDEnterFunctionEvent
+********************
+
+.. autoclass:: TDEnterFunctionEvent
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
 TDEvent
 *******
 
@@ -91,6 +109,15 @@ TDLabelSection
 **************
 
 .. autoclass:: TDLabelSection
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDLeaveFunctionEvent
+********************
+
+.. autoclass:: TDLeaveFunctionEvent
    :members:
    :undoc-members:
    :inherited-members:
@@ -208,6 +235,15 @@ TDTaintOutput
 *************
 
 .. autoclass:: TDTaintOutput
+   :members:
+   :undoc-members:
+   :inherited-members:
+   :show-inheritance:
+
+TDTaintedControlFlowEvent
+*************************
+
+.. autoclass:: TDTaintedControlFlowEvent
    :members:
    :undoc-members:
    :inherited-members:
