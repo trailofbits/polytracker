@@ -31,6 +31,7 @@ RUN cp modules/c++/nitf/show_nitf++ nitro_Release
 RUN polytracker instrument-targets \
 	--taint \
 	--ftrace \
+	--cflog \
 	show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_trackRelease
@@ -49,6 +50,7 @@ RUN cp modules/c++/nitf/show_nitf++ nitro_Debug
 RUN polytracker instrument-targets \
 	--taint \
 	--ftrace \
+	--cflog \
 	show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_trackDebug
