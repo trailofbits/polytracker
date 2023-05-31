@@ -29,4 +29,5 @@ done
 INTERNAL="/polytracker/the_klondike/nitro/build/ubet"
 echo "run.sh: using $(pwd) as the volume attached to ${IMAGE_NAME} container internal location ${INTERNAL}"
 
+#shellcheck disable=SC2086
 docker run -it --rm --volume "$(pwd)":"${INTERNAL}" ub-container /usr/bin/bash ${PASSTHROUGH_DOCKER_ARGS}
