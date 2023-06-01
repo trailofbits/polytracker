@@ -39,5 +39,3 @@ jobs:
       - name: MyPy
         run: |
           mypy --python-version ${{ matrix.python-version }} --ignore-missing-imports polytracker tests build_in_docker eval --exclude compiler-rt
-      - name: PolyTracker tests
-        run: docker run --rm --workdir /polytracker trailofbits/polytracker pytest

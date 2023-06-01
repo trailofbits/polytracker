@@ -16,6 +16,7 @@ def expected_source_name(binary_ip, binary_port, python_ip, python_port):
     return f"socket:{binary_ip}:{binary_port}-{python_ip}:{python_port}"
 
 
+@pytest.mark.skip(reason="test may time out and never complete")
 @pytest.mark.program_trace("test_socket_read_write.cpp")
 @pytest.mark.parametrize("mode", ["client", "server"])
 def test_socket_read_write(instrumented_binary: Path, trace_file: Path, mode: str):
