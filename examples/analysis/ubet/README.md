@@ -21,6 +21,20 @@ NITF is a binary image file format. Each NITF packages one or more visual data r
 #### :blue_book: NITF standard
 There are three publicly available versions of MIL-STD-2500 (A, B, and C) that collectively describe [NITF](https://www.wikidata.org/wiki/Q26218335) as Nitro understands it. As *we* understand it, MIL-STD-2500a and MIL-STD-2500b together describe NITF 2.0 (note most NITF 2.0 files will map better to the fields described in MIL-STD-2500a, but some NITF 2.0 files will map better to the fields described in MIL-STD-2500b!). MIL-STD-2500c is closest to NITF 2.1. [MIL-STD-1300a](https://web.archive.org/web/20130217094453/http://www.gwg.nga.mil/ntb/baseline/docs/1300a/1300a.pdf) may also be relevant to understanding the format. `NSIF` is another closely related format that is good to understand to figure out the overlaps between the A, B, and C NITF standards.
 
+#### Reproducing our results, or making results like them
+From the current working directory (`examples/analysis/ubet`):
+
+```
+docker build -t trailofbits/polytracker-nitro -f
+docker run -ti --rm -v $(pwd):workdir trailofbits/polytracker-nitro
+cd /workdir
+find nitfdir/ -type f | python3 eval_nitro.py --locate
+mkdir output
+python3 eval_nitro.py --cflog --compare output/U_2001E.NTF/
+```
+
+There is also a script `run.sh` in the cwd that you can use to just drop into an appropriately configured environment using one of the above Dockerfiles for any experiments you'd like to run.
+
 | :exclamation: Note for the unwary |
 | --------------------------------- |
 Nitro replaces an old semi-custom build system known as [WAF](https://github.com/mdaus/nitro#building-with-waf) with a new build layer on top of CMake, [coda-oss](https://github.com/mdaus/coda-oss) that bakes in a bespoke stdlib implementation. We've had to [macro some of this out](https://github.com/trailofbits/polytracker/blob/master/examples/Dockerfile-nitro-nitf.demo#L16), since it relies on implementation-specific behaviour of GCC and is not entirely compatible with Clang. We are aware of other implementation-specific and undefined behaviour related issues within the coda-oss code that we are in the process of gathering more data on using this analysis and instrumentation code, in order to report to the Nitro maintainers, beyond the bugs discussed in the LangSec paper.
