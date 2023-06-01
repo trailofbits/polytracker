@@ -25,7 +25,7 @@ There are three publicly available versions of MIL-STD-2500 (A, B, and C) that c
 From the current working directory (`examples/analysis/ubet`):
 
 ```
-docker build -t trailofbits/polytracker-nitro -f
+docker build -t trailofbits/polytracker-nitro -f <DOCKERFILE HERE>
 docker run -ti --rm -v $(pwd):workdir trailofbits/polytracker-nitro
 cd /workdir
 find nitfdir/ -type f | python3 eval_nitro.py --locate

@@ -14,6 +14,8 @@ RUN apt-get update && \
 RUN pip install cxxfilt
 
 RUN git clone https://github.com/mdaus/nitro.git
+WORKDIR /polytracker/the_klondike/nitro
+RUN git checkout b39ccc4c07e84e6c05cecb9ae24143373a3ed8e2
 WORKDIR /polytracker/the_klondike/nitro/build/release
 
 # Build Nitro: Release
