@@ -20,12 +20,12 @@ HOST_DIR=$(dirname "$HOST_PATH")
 # mount the file if it's not already in /workdir
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 if [[ "$HOST_DIR" == "$SCRIPT_DIR" ]]; then
-	docker run --read-only -ti --rm -e POLYPATH="$1" -e POLYDB="$1.tdag" \
+	docker run --read-only -ti --rm -e POLYPATH="$1" -e POLYDB="$1.tdag" -e POLYTRACKER_STDOUT_SINK=1\
 		--mount type=bind,source="$(pwd)",target=/workdir trailofbits/polytracker-demo-http-picohttpparser:latest \
 		/polytracker/examples/http/picohttpparser/example_picohttpparser_track "$1"
 else
 	CONTAINER_PATH=/testcase/"$BASENAME"
-	docker run --read-only -ti --rm -e POLYPATH="$CONTAINER_PATH" -e POLYDB=/workdir/"$BASENAME".tdag \
+	docker run --read-only -ti --rm -e POLYPATH="$CONTAINER_PATH" -e POLYDB=/workdir/"$BASENAME".tdag -e POLYTRACKER_STDOUT_SINK=1 \
 		--mount type=bind,source="$(pwd)",target=/workdir \
 		--mount type=bind,source="$HOST_PATH",target="$CONTAINER_PATH" \
 		trailofbits/polytracker-demo-http-picohttpparser:latest \
