@@ -1,5 +1,35 @@
 """
 The `clusters` command.
+
+Clustering Approach
+===================
+
+The same input is run through to different instrumented programs, resulting in two TDAGs.
+
+  (1) For each TDAG, assign a "cluster" to each input byte
+
+      (1.1) We do this using a disjoint-set data structure
+
+      (1.2) Initially assign each input byte to its own set in the disjoint-set
+
+      (1.3) Do a DFS traversal of the TDAG
+
+      (1.4) If a node in the traversal is a taint union, union the ancestors' sets in the disjoint-set
+
+      (1.5) The resulting sets in the disjoint-set are the clusters
+
+      (1.6) Clusters are not necessarily contiguous (i.e., cluster "A" might include bytes at offsets 0 and 2)
+
+  (2) Create a complete bipartite graph with a color class for each TDAG and a node for each cluster
+
+      (2.1) Weight the edges based upon the edit distance between the clusters' byte offsets (see the
+            `ordered_edit_distance` function, below)
+
+  (3) Find the minimum weight perfect matching in the weighted bipartite graph
+
+  (4) The resulting matching is the sum of the weights of the edges in the matching from step (3), plus
+      the weights of unmatched clusters
+
 """
 
 from typing import (
