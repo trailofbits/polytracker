@@ -8,6 +8,15 @@
 #define ERROR_PARSE -2
 #define ERROR_REQUEST_TOO_LONG -3
 
+// tiny hack to make a union (range) for a memory range and ensure it is considered a taint sink
+void make_union(char *p, size_t len) {
+    int sum = 0;
+    for (size_t i=0;i<len;i++) {
+        sum += (int)*p++;
+    }
+    write(1, &sum, sizeof(int));
+}
+
 int parse_http_request(char *fpath) {
     FILE *infile = fopen(fpath, "rb");
 	unsigned long location = 0;
@@ -48,11 +57,16 @@ int parse_http_request(char *fpath) {
     }
 
     printf("request is %d bytes long\n", pret);
+    make_union(method, method_len);
     printf("method is %.*s\n", (int)method_len, method);
+    make_union(path, path_len);
     printf("path is %.*s\n", (int)path_len, path);
+    make_union((char*)&minor_version, sizeof(minor_version));
     printf("HTTP version is 1.%d\n", minor_version);
     printf("headers:\n");
     for (i = 0; i != num_headers; ++i) {
+        make_union(headers[i].name, headers[i].name_len);
+        make_union(headers[i].value, headers[i].value_len);
         printf("%.*s: %.*s\n", (int)headers[i].name_len, headers[i].name,
             (int)headers[i].value_len, headers[i].value);
     }
