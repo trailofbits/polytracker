@@ -3,8 +3,6 @@ import pytest
 from subprocess import CalledProcessError
 from typing import Dict, Union
 
-from tqdm import tqdm
-
 from polytracker import (
     BasicBlockEntry,
     FunctionEntry,

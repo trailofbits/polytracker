@@ -1,0 +1,173 @@
+DIFF
+--- Debug.tdag
+
++++ Release.tdag
+
+@@ -1,55 +1,158 @@
+
+ [360, 361, 362] 3 byte field: Number of Images (NUMI) replaced with Number of Image Segments in 2500c
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [379, 380, 381] 3 byte field: Number of Symbols (NUMS)
+ [382, 383, 384] 3 byte field: Number of Labels (NUML)
+ [385, 386, 387] 3 byte field: Number of Text Files (NUMT)
+ [388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
+ [391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
+ [394, 395, 396, 397, 398]
+ [399, 400, 401, 402, 403]
+ [354, 355, 356, 357, 358, 359] NITF File Header Length (HL)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [775] Image Coordinate System (ICORDS)
+-[775] Image Coordinate System (ICORDS)
+-[775] Image Coordinate System (ICORDS)
+ [776] Number of Image Comments (NICOM)
+-[783] Number of Bands (NBANDS) 3 meaning RGB
+-[783]
+ [783]
+ [783]
+ [783]
+ [783]
+ [783]
+ [796] 1st (Y) Band Number of LUTS (NLUTS1)
+ [783] Number of Bands (NBANDS) 3 meaning RGB
+ [809] nth (2nd; Cr) Band Number of LUTS (NLUTSnn)
+ [783] Number of Bands (NBANDS) 3 meaning RGB
+ [822] nth (3rd; Cb) Band Number of LUTS (NLUTSnn)
+ [783] Number of Bands (NBANDS) 3 meaning RGB
+ [863, 864, 865, 866, 867] User Defined Image Data Length (UDIDL)
+ [868, 869, 870, 871, 872] Extended Subheader Data Length (IXSHDL)
+ [363, 364, 365, 366, 367, 368] Length of 1st Image Subheader (LISH001)
++[369, 370, 371, 372, 373, 374, 375, 376, 377, 378] Length of 1st Image (LI001)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [379, 380, 381] 3 byte field: Number of Symbols (NUMS)
+ [382, 383, 384] 3 byte field: Number of Labels (NUML)
+ [385, 386, 387] 3 byte field: Number of Text Files (NUMT)
+ [388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
+ [391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [379, 380, 381] 3 byte field: Number of Symbols (NUMS)
+ [382, 383, 384] 3 byte field: Number of Labels (NUML)
+ [385, 386, 387] 3 byte field: Number of Text Files (NUMT)
+ [388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
+ [391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
++[778] 2nd byte of IC field. Image Compression (IC) C3 is JPEG
++[778] 2nd byte of IC field. Image Compression (IC) C3 is JPEG
++[777] 1st byte of IC field. Image Compression (IC) C3 is JPEG
++[777] 1st byte of IC field. Image Compression (IC) C3 is JPEG
++[782] last byte of Compression Rate Code (COMRAT) ???
++[782] last byte of Compression Rate Code (COMRAT) ???
++[779] 1st byte of Compression Rate Code (COMRAT) ???
++[779] 1st byte of Compression Rate Code (COMRAT) ???
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[379, 380, 381] 3 byte field: Number of Symbols (NUMS)
++[379, 380, 381] 3 byte field: Number of Symbols (NUMS)
++[379, 380, 381] 3 byte field: Number of Symbols (NUMS)
++[382, 383, 384] 3 byte field: Number of Labels (NUML)
++[382, 383, 384] 3 byte field: Number of Labels (NUML)
++[382, 383, 384] 3 byte field: Number of Labels (NUML)
++[385, 386, 387] 3 byte field: Number of Text Files (NUMT)
++[385, 386, 387] 3 byte field: Number of Text Files (NUMT)
++[385, 386, 387] 3 byte field: Number of Text Files (NUMT)
++[388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
++[388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
++[388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
++[391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
++[391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
++[391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+ [360, 361, 362] 3 byte field: Number of Images (NUMI)
+-[360, 361, 362] 3 byte field: Number of Images (NUMI)
+-[360, 361, 362] 3 byte field: Number of Images (NUMI)
+-[360, 361, 362] 3 byte field: Number of Images (NUMI)
+-[360, 361, 362] 3 byte field: Number of Images (NUMI)
++[379, 380, 381] 3 byte field: Number of Symbols (NUMS)
++[382, 383, 384] 3 byte field: Number of Labels (NUML)
++[385, 386, 387] 3 byte field: Number of Text Files (NUMT)
++[388, 389, 390] 3 byte field: Number of Data Extension Segments (NUMDES)
++[391, 392, 393] 3 byte field: Number of Reserved Extension Segements (NUMRES)
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
++[783] Number of Bands (NBANDS) 3 meaning RGB
