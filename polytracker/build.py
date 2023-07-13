@@ -430,12 +430,13 @@ class InstrumentTargets(Command):
             target_cmd, target_path = _find_target(target, blight_cmds)
             bc_path = target_path.with_suffix(".bc")
             opt_bc = bc_path.with_suffix(".opt.bc")
+            preopt_bc = bc_path.with_suffix(".preopt.bc")
             _extract_bitcode(target_path, bc_path)
             if args.cflog:
                 # Control affecting data flow logging happens before optimization
-                _preopt_instrument_bitcode(bc_path, bc_path)
+                _preopt_instrument_bitcode(bc_path, preopt_bc)
 
-            _optimize_bitcode(bc_path, opt_bc)
+            _optimize_bitcode(preopt_bc if args.cflog else bc_path, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
                 opt_bc,
