@@ -10,7 +10,7 @@
 
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
-bool polytracker_is_initialized = false;
+static bool polytracker_is_initialized = false;
 
 extern "C" taintdag::Functions::index_t
 __polytracker_log_func_entry(char *name, uint16_t len) {
