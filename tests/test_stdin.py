@@ -18,7 +18,7 @@ def test_stdin_read(instrumented_binary: Path, trace_file: Path, method: str):
         [str(instrumented_binary), method],
         input=stdin_data.encode("utf-8"),
         env={"POLYDB": str(trace_file), "POLYTRACKER_STDIN_SOURCE": str(1)},
-    )
+    ).check_returncode()
     program_trace = polytracker.PolyTrackerTrace.load(trace_file)
 
     # Ensure /dev/stdin is in the list of inputs
