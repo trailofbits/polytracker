@@ -1,0 +1,8 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    polytracker/src/compiler-rt,
+    examples,
+    the_klondike,
+    third_party
