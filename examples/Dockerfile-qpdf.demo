@@ -3,7 +3,7 @@ FROM ubuntu:focal AS qpdf-sources
 WORKDIR /polytracker/the_klondike
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git wget 
-RUN git clone https://github.com/qpdf/qpdf.git
+RUN git clone --depth=1 --branch 11.5 https://github.com/qpdf/qpdf.git
 RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && tar xf jpegsrc.v9e.tar.gz
 
 # Now, build the qpdf image using previously downloaded source
