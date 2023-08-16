@@ -10,6 +10,7 @@ on:
 jobs:
   lint-cxx:
     runs-on: ubuntu-22.04
+    timeout-minutes: 32
     steps:
       - uses: actions/checkout@v3
         with:
