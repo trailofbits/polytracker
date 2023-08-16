@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploydocs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       # NOTE: Needed to push to the repository.
       contents: write
