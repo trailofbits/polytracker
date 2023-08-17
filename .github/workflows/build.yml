@@ -94,5 +94,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: examples
-          file: Dockerfile-${{ matrix.example }}.demo
+          file: examples/Dockerfile-${{ matrix.example }}.demo
           tags: trailofbits/polytracker-demo-${{ matrix.example }}:latest
+          outputs: type=image,name=trailofbits/polytracker-demo-${{ matrix.example }}:latest
