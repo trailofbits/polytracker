@@ -33,7 +33,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          no-cache: true
           tags: trailofbits/polytracker:latest
           outputs: type=docker,dest=/tmp/polytracker.tar
 
