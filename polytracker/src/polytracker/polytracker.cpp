@@ -3,18 +3,27 @@
 #include "polytracker/taint_sources.h"
 #include "taintdag/fnmapping.h"
 #include "taintdag/polytracker.h"
+#include <sanitizer/dfsan_interface.h>
+
 #include <atomic>
 #include <inttypes.h>
 #include <iostream>
-#include <sanitizer/dfsan_interface.h>
 
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
-static bool polytracker_is_initialized = false;
+static std::atomic_flag polytracker_init_flag = ATOMIC_FLAG_INIT;
+
+static bool polytracker_is_initialized() {
+  return polytracker_init_flag.test(std::memory_order_relaxed);
+}
+
+static void polytracker_initialize() {
+  polytracker_init_flag.test_and_set(std::memory_order_relaxed);
+}
 
 extern "C" taintdag::Functions::index_t
 __polytracker_log_func_entry(char *name, uint16_t len) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return 0;
   }
   return get_polytracker_tdag().function_entry({name, len});
@@ -22,7 +31,7 @@ __polytracker_log_func_entry(char *name, uint16_t len) {
 
 extern "C" void
 __polytracker_log_func_exit(taintdag::Functions::index_t func_index) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return;
   }
   get_polytracker_tdag().function_exit(func_index);
@@ -30,14 +39,14 @@ __polytracker_log_func_exit(taintdag::Functions::index_t func_index) {
 
 extern "C" dfsan_label __polytracker_union_table(const dfsan_label &l1,
                                                  const dfsan_label &l2) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return 0;
   }
   return get_polytracker_tdag().union_labels(l1, l2);
 }
 
 extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return;
   }
 
@@ -49,7 +58,7 @@ extern "C" void __polytracker_log_conditional_branch(dfsan_label label) {
 extern "C" void
 __dfsw___polytracker_log_conditional_branch(uint64_t conditional,
                                             dfsan_label conditional_label) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return;
   }
   __polytracker_log_conditional_branch(conditional_label);
@@ -57,7 +66,7 @@ __dfsw___polytracker_log_conditional_branch(uint64_t conditional,
 
 extern "C" void __taint_start() {
   taint_start();
-  polytracker_is_initialized = true;
+  polytracker_initialize();
 }
 
 extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
@@ -67,7 +76,7 @@ extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
 extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
     uint64_t conditional, uint32_t functionid, dfsan_label conditional_label,
     dfsan_label function_label, dfsan_label *ret_label) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return 0;
   }
   if (conditional_label > 0) {
@@ -79,14 +88,14 @@ extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
 }
 
 extern "C" void __polytracker_enter_function(uint32_t function_id) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return;
   }
   get_polytracker_tdag().enter_function(function_id);
 }
 
 extern "C" void __polytracker_leave_function(uint32_t function_id) {
-  if (!polytracker_is_initialized) {
+  if (!polytracker_is_initialized()) {
     return;
   }
   get_polytracker_tdag().leave_function(function_id);
