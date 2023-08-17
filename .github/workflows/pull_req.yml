@@ -17,3 +17,5 @@ jobs:
         run: docker build . --file Dockerfile --tag trailofbits/polytracker --no-cache
       - name: Build the example Docker image
         run: docker build --no-cache examples --file examples/Dockerfile-${{ matrix.example }}.demo --tag trailofbits/polytracker-demo-${{ matrix.example }}
+      - name: PolyTracker tests
+        run: docker run --rm trailofbits/polytracker pytest /polytracker/tests
