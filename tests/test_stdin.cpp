@@ -104,19 +104,19 @@ int main(int argc, char *argv[]) {
   std::string_view method{argv[1]};
 
   if (method == "read") {
-    return stdin_read();
+    stdin_read();
   } else if (method == "fread") {
-    return stdin_fread();
+    stdin_fread();
   } else if (method == "getc") {
-    return stdin_getc();
+    stdin_getc();
   } else if (method == "getc_unlocked") {
-    return stdin_getc_unlocked();
+    stdin_getc_unlocked();
   } else if (method == "getchar") {
-    return stdin_getchar();
+    stdin_getchar();
   } else if (method == "getchar_unlocked") {
-    return stdin_getchar_unlocked();
+    stdin_getchar_unlocked();
   } else if (method == "fgetc") {
-    return stdin_fgetc();
+    stdin_fgetc();
   }
   return 0;
 }
