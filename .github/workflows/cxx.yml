@@ -4,12 +4,14 @@ on:
   workflow_dispatch: {}
   push:
     paths:
-    - "**.cpp"
-    - "**.h"
+      - "**.cpp"
+      - "**.h"
 
 jobs:
   lint-cxx:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 32
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -21,7 +23,7 @@ jobs:
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
       - name: C++ lint
         run: |
           python3 third_party/run-clang-format/run-clang-format.py \
