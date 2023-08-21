@@ -1,8 +1,11 @@
 [flake8]
+max-line-length = 127
+max-complexity = 30
+extend-ignore = F405,F403,W503,E203,E265
 exclude =
     .git,
     __pycache__,
-    polytracker/src/compiler-rt,
-    examples,
+    polytracker/src/compiler-rt/**,
+    examples/**,
     the_klondike,
     third_party
