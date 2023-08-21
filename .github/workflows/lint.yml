@@ -8,6 +8,8 @@ on:
   pull_request: {}
   merge_group: {}
 
+permissions: read-all
+
 jobs:
   lint:
     uses: trailofbits/.github/.github/workflows/lint.yml@v0.1.3
