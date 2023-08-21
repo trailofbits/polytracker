@@ -1,12 +1,12 @@
 name: Lint Everything
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
     branches:
       - master
-  pull_request:
-  merge_group:
+  pull_request: {}
+  merge_group: {}
 
 jobs:
   lint:
