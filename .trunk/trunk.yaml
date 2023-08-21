@@ -10,6 +10,10 @@ runtimes:
   enabled:
     - python@3.10.8
 lint:
+  ignore:
+    - linters: [ALL]
+      paths:
+        - polytracker/src/compiler-rt/**
   enabled:
     - actionlint@1.6.25
     - bandit@1.7.5
