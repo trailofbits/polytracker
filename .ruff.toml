@@ -1,0 +1,18 @@
+line-length = 127
+
+exclude = [
+  ".git",
+  "__pycache__",
+  "polytracker/src/compiler-rt/**",
+  "examples/**",
+  "the_klondike",
+  "third_party",
+]
+
+select = ["B", "D3", "D4", "E", "F", "W", "C9"]
+
+ignore = ["E501", "F403", "F405", "E265", "E203"]
+
+mccabe.max-complexity = 30
+
+target-version = "py38"
