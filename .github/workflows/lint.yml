@@ -1,4 +1,4 @@
-name: Lint Everything
+name: Trunk Lint
 
 on:
   workflow_dispatch: {}
