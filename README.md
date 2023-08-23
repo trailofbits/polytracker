@@ -208,6 +208,12 @@ POLYDB: A path to which to save the output database (default is polytracker.tdag
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
 
 POLYTRACKER_TAINT_ARGV: Set to '1' to use argv as a taint source.
+
+POLYTRACKER_STDIN_SOURCE: Set to '1' to use stdin as a taint source.
+
+POLYTRACKER_STDOUT_SINK: Set to '1' to use stdout as a taint sink.
+
+POLYTRACKER_STDERR_SINK: Set to '1' to use stderr as a taint sink.
 ```
 
 Polytracker will set its configuration parameters in the following order:
