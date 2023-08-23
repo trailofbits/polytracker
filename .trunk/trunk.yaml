@@ -1,6 +1,6 @@
 version: 0.1
 cli:
-  version: 1.14.0
+  version: 1.14.1
 plugins:
   sources:
     - id: trunk
@@ -8,6 +8,8 @@ plugins:
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
+    - go@1.19.5
+    - node@18.12.1
     - python@3.10.8
 lint:
   ignore:
@@ -15,10 +17,11 @@ lint:
       paths:
         - polytracker/src/compiler-rt/**
   enabled:
+    - taplo@0.8.1
     - actionlint@1.6.25
     - bandit@1.7.5
     - black@23.7.0
-    - checkov@2.4.4
+    - checkov@2.4.5
     - clang-format@16.0.3
     - flake8@6.1.0
     - git-diff-check
