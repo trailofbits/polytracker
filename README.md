@@ -289,53 +289,8 @@ versions of standard library bitcode. We highly recommend using our pre-built
 and tested Docker container if at all possible. Installing the PolyTracker
 Python package on your host system will allow you to seamlessly interact with
 the prebuilt Docker container. Otherwise, to install PolyTracker natively, we
-recommend first replicating the install process from the
-[`polytracker-llvm` Dockerfile](https://github.com/trailofbits/polytracker-llvm/blob/polytracker/Dockerfile),
-followed by replicating the install process from the
+recommend replicating the install process from the
 [PolyTracker Dockerfile](Dockerfile).
-
-### Build Dependencies
-
-- [**PolyTracker LLVM**](https://github.com/trailofbits/polytracker-llvm).
-  PolyTracker is built atop its own fork of LLVM,
-  [`polytracker-llvm`](https://github.com/trailofbits/polytracker-llvm). This
-  fork modifies the
-  [DataFlow Sanitizer](https://clang.llvm.org/docs/DataFlowSanitizer.html) to
-  use increased label sizes (to allow for tracking orders of magnitude more
-  taints), as well as alternative data structures to store them. We have
-  investigated up-streaming our changes into LLVM proper, but there has been
-  little interest.
-- [**CMake**](https://cmake.org)
-- [**Ninja**](https://ninja-build.org) (`ninja-build` on Ubuntu)
-
-### Runtime Dependencies
-
-The following tools are required to test and run PolyTracker:
-
-- Python 3.7+ and `pip` (`apt-get -y install python3.7 python3-pip`). These are
-  used for both seamlessly interacting with the Docker container (if necessary),
-  as well as post-processing and analyzing the artifacts produced from runtime
-  traces.
-- [gllvm](https://github.com/SRI-CSL/gllvm)
-  (`go get github.com/SRI-CSL/gllvm/cmd/...`) is used to create whole program
-  bitcode archives and to extract bitcode from targets.
-
-### Building on Apple silicon:
-
-Prebuilt Docker images for `polytracker-llvm` are only available for `amd64`.
-Users with `arm64` systems will have to build the image locally and then change
-`polytracker`'s Dockerfile to point to it:
-
-```commandline
-$ mkdir repos && cd repos
-$ git clone https://github.com/trailofbits/polytracker
-$ git clone https://github.com/trailofbits/polytracker-llvm
-$ cd polytracker-llvm
-$ DOCKER_BUILDKIT=1 docker build -t trailofbits/polytracker-llvm .
-$ cd ../polytracker
-$ ## Replace the first line of the Dockerfile with "FROM trailofbits/polytracker-llvm:latest" (no quotes)
-$ docker build -t trailofbits/polytracker .
-```
 
 ## Current Status and Known Issues
 
