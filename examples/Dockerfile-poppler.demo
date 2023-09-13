@@ -3,7 +3,7 @@ FROM ubuntu:focal AS poppler-sources
 WORKDIR /polytracker/the_klondike
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git
-RUN git clone https://anongit.freedesktop.org/git/poppler/poppler.git
+RUN git clone --depth=1 --branch poppler-23.06.0 https://anongit.freedesktop.org/git/poppler/poppler.git
 
 # Now, build the qpdf image using previously downloaded source
 FROM trailofbits/polytracker:latest

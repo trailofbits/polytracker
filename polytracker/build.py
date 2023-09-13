@@ -147,6 +147,26 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     subprocess.check_call(cmd)
 
 
+def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
+    POLY_PASS_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
+    )
+
+    cmd = [
+        "opt",
+        "-load",
+        str(POLY_PASS_PATH),
+        "-load-pass-plugin",
+        str(POLY_PASS_PATH),
+        "-passes=pt-tcf",
+        str(input_bitcode),
+        "-o",
+        str(output_bitcode),
+    ]
+    # execute `cmd`
+    subprocess.check_call(cmd)
+
+
 def _instrument_bitcode(
     input_bitcode: Path,
     output_bitcode: Path,
@@ -398,16 +418,27 @@ class InstrumentTargets(Command):
             help="specify additional ignore lists to polytracker",
         )
 
+        parser.add_argument(
+            "--cflog",
+            action="store_true",
+            help="instrument with control affecting dataflow logging",
+        )
+
     def run(self, args: argparse.Namespace):
         for target in args.targets:
             blight_cmds = _read_blight_journal(args.journal_path)
             target_cmd, target_path = _find_target(target, blight_cmds)
             bc_path = target_path.with_suffix(".bc")
+            opt_bc = bc_path.with_suffix(".opt.bc")
             _extract_bitcode(target_path, bc_path)
-            _optimize_bitcode(bc_path, bc_path)
+            if args.cflog:
+                # Control affecting data flow logging happens before optimization
+                _preopt_instrument_bitcode(bc_path, bc_path)
+
+            _optimize_bitcode(bc_path, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
-                bc_path,
+                opt_bc,
                 inst_bc_path,
                 args.ignore_lists,
                 args.taint,
