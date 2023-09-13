@@ -9,8 +9,8 @@ on:
 
 jobs:
   deploy:
-
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 32
 
     steps:
     - uses: actions/checkout@v3
