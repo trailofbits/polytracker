@@ -3,14 +3,22 @@
 set -e
 
 APACHE_ROOT=/usr/local/apache2
+
+# NB: this should be set via Docker if used with example_httpd.sh
+if [[ -z "${APACHE_PORT}" ]]; then
+	APACHE_PORT=80
+else
+	sed -i 's/:80/:'"$APACHE_PORT"'/g' "$APACHE_ROOT"/conf/httpd.conf
+fi
+
 $APACHE_ROOT/bin/apachectl -X &
 # needed for server initialization in single-worker mode
 sleep 10
 
 # send request (from text file - first command line arg) to instrumented httpd
-nc localhost 80 <"$1"
+nc localhost "$APACHE_PORT" <"$1"
 
-APACHE_PID=$(cat /usr/local/apache2/logs/httpd.pid)
+APACHE_PID=$(cat "$APACHE_ROOT"/logs/httpd.pid)
 kill "$APACHE_PID"
 wait
 
