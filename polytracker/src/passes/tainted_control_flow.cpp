@@ -10,59 +10,12 @@
 
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/Support/CommandLine.h>
-#include <llvm/Transforms/Utils/ModuleUtils.h>
-
-#include <spdlog/spdlog.h>
 
 #include "polytracker/dfsan_types.h"
 #include "polytracker/passes/utils.h"
 
-#include <fstream>
-
 namespace polytracker {
 
-namespace detail {
-// Helper type to produce the json file of function names by functionid
-class FunctionMappingJSONWriter {
-public:
-  FunctionMappingJSONWriter(std::string_view filename)
-      : file(filename.data(), std::ios::binary) {
-    file << "[";
-  }
-
-  ~FunctionMappingJSONWriter() {
-    // Back up and erase the last ",\n"
-    file.seekp(-2, std::ios::cur);
-    file << "\n]\n";
-  }
-
-  void append(std::string_view name) {
-    // Will cause an additional ',' but don't care about that right now...
-    // The destructor will back up two steps and replace the ',' with a newline
-    // and array termination.
-    file << "\"" << name << "\",\n";
-  }
-
-private:
-  std::ofstream file;
-};
-} // namespace detail
-
-namespace {
-uint32_t
-get_or_add_mapping(uintptr_t key, std::unordered_map<uintptr_t, uint32_t> &m,
-                   uint32_t &counter, std::string_view name,
-                   polytracker::detail::FunctionMappingJSONWriter &js) {
-  if (auto it = m.find(key); it != m.end()) {
-    return it->second;
-  } else {
-    js.append(name);
-    return m[key] = counter++;
-  }
-}
-
-} // namespace
 void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
                                                  llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
@@ -74,17 +27,8 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
 }
 
 llvm::ConstantInt *
-TaintedControlFlowPass::get_function_id_const(llvm::Function &func) {
-  auto func_address = reinterpret_cast<uintptr_t>(&func);
-  std::string_view name = func.getName();
-  auto fid = get_or_add_mapping(func_address, function_ids_, function_counter_,
-                                name, *function_mapping_writer_);
-  return llvm::ConstantInt::get(func.getContext(), llvm::APInt(32, fid, false));
-}
-
-llvm::ConstantInt *
 TaintedControlFlowPass::get_function_id_const(llvm::Instruction &i) {
-  return get_function_id_const(*(i.getParent()->getParent()));
+  return llvm::IRBuilder<>(&i).getInt32(0);
 }
 
 void TaintedControlFlowPass::visitGetElementPtrInst(
@@ -145,34 +89,14 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
 }
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
-  llvm::IRBuilder<> ir(mod.getContext());
+  auto &ctx = mod.getContext();
+  llvm::IRBuilder<> ir(ctx);
+  llvm::AttributeList al;
+  al = al.addAttribute(ctx, llvm::AttributeList::FunctionIndex,
+                       llvm::Attribute::ReadNone);
   cond_br_log_fn = mod.getOrInsertFunction(
-      "__polytracker_log_tainted_control_flow",
-      llvm::AttributeList::get(
-          mod.getContext(),
-          {{llvm::AttributeList::FunctionIndex,
-            llvm::Attribute::get(mod.getContext(),
-                                 llvm::Attribute::ReadNone)}}),
-      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
-
-  fn_enter_log_fn = mod.getOrInsertFunction("__polytracker_enter_function",
-                                            ir.getVoidTy(), ir.getInt32Ty());
-
-  fn_leave_log_fn = mod.getOrInsertFunction("__polytracker_leave_function",
-                                            ir.getVoidTy(), ir.getInt32Ty());
-}
-
-void TaintedControlFlowPass::instrumentFunctionEnter(llvm::Function &func) {
-  if (func.isDeclaration()) {
-    return;
-  }
-  llvm::IRBuilder<> ir(&*func.getEntryBlock().begin());
-  ir.CreateCall(fn_enter_log_fn, get_function_id_const(func));
-}
-
-void TaintedControlFlowPass::visitReturnInst(llvm::ReturnInst &ri) {
-  llvm::IRBuilder<> ir(&ri);
-  ir.CreateCall(fn_leave_log_fn, get_function_id_const(ri));
+      "__polytracker_log_tainted_control_flow", al, ir.getInt64Ty(),
+      ir.getInt64Ty(), ir.getInt32Ty());
 }
 
 llvm::PreservedAnalyses
@@ -181,18 +105,9 @@ TaintedControlFlowPass::run(llvm::Module &mod,
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
   declareLoggingFunctions(mod);
   for (auto &fn : mod) {
-    instrumentFunctionEnter(fn);
     visit(fn);
   }
   return llvm::PreservedAnalyses::none();
 }
 
-TaintedControlFlowPass::TaintedControlFlowPass()
-    : function_mapping_writer_(
-          std::make_unique<detail::FunctionMappingJSONWriter>(
-              "functionid.json")) {}
-
-TaintedControlFlowPass::~TaintedControlFlowPass() = default;
-TaintedControlFlowPass::TaintedControlFlowPass(TaintedControlFlowPass &&) =
-    default;
 } // namespace polytracker
