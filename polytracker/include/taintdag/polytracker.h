@@ -12,8 +12,8 @@
 #include <span>
 
 #include "taintdag/bitmap_section.h"
-#include "taintdag/fnmapping.h"
 #include "taintdag/events.h"
+#include "taintdag/fnmapping.h"
 #include "taintdag/labels.h"
 #include "taintdag/sink.h"
 #include "taintdag/stream_offset.h"

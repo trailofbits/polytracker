@@ -14,8 +14,8 @@
 #include <sanitizer/dfsan_interface.h>
 
 #include "taintdag/error.h"
-#include "taintdag/fnmapping.h"
 #include "taintdag/events.h"
+#include "taintdag/fnmapping.h"
 
 namespace taintdag {
 
