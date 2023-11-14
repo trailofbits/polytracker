@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 WORKDIR /polytracker/the_klondike
 
 RUN apt-get update && \
-  apt-get install -y autoconf autopoint binutils cmake fontconfig fonts-dejavu g++ gettext git ghostscript gperf libcairo2-dev libde265-dev libfreetype-dev libfontconfig-dev libjpeg-turbo8-dev libheif-dev libhwy-dev libopenjp2-7-dev libpango-1.0-0 libpng-dev libpng16-16 libraqm0 libtiff-dev libtool libbz2-dev locales make nasm pkg-config po4a unzip zip zlib1g-dev && \
+  apt-get install -y autoconf autopoint fontconfig fonts-dejavu gettext git ghostscript gperf libcairo2-dev libde265-dev libfreetype-dev libfontconfig-dev libjpeg-turbo8-dev libheif-dev libhwy-dev libopenjp2-7-dev libpango-1.0-0 libpng-dev libpng16-16 libraqm0 libtiff-dev libtool libbz2-dev locales po4a unzip zip zlib1g-dev && \
   locale-gen en_US.UTF-8
 
 RUN git clone https://github.com/ImageMagick/ImageMagick.git
