@@ -1,0 +1,67 @@
+FROM trailofbits/polytracker:latest
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+WORKDIR /polytracker/the_klondike
+
+# based on https://github.com/ImageMagick/ImageMagick/blob/main/.devcontainer/security/Dockerfile
+
+RUN apt-get update && \
+  apt-get install -y autoconf autopoint binutils clang cmake fontconfig fonts-dejavu g++ gettext git ghostscript gperf libc++-dev libc++abi-dev 	libcairo2-dev libde265-dev libfreetype-dev libfontconfig-dev libjpeg-turbo8-dev libheif-dev libhwy-dev libopenjp2-7-dev libpango-1.0-0 libraqm0 libtiff-dev libtool libbz2-dev locales make nasm pkg-config po4a unzip zip && \
+  locale-gen en_US.UTF-8
+
+RUN git clone https://github.com/ImageMagick/ImageMagick.git && \
+ mkdir -p /polytracker/the_klondike/ImageMagick/dependencies
+
+ENV WORK=/polytracker/the_klondike/ImageMagick
+ENV DEPS="$WORK/dependencies"
+
+WORKDIR "$DEPS"
+RUN git clone --depth 1 https://github.com/madler/zlib
+RUN git clone --depth 1 https://github.com/pnggroup/libpng
+
+ENV PATH=$PATH:/ImageMagick/bin
+ENV CXX=clang++
+ENV CC=clang
+# ENV LLVM_COMPILER=clang
+
+WORKDIR "$DEPS/zlib"
+RUN \
+  CFLAGS="-fPIC -static -Wl,-undefined,error" \
+  CXXFLAGS="-std=c++17 -fPIC -static -stdlib=libc++ -Wl,-undefined,error" \
+  ./configure \
+    --static \
+    --prefix="$WORK" \
+    --includedir="$WORK/include" \
+    --libdir="$WORK/lib" && \
+make -j$((`nproc`+1)) \
+  CFLAGS="-fPIC -static -Wl,-undefined,error" \
+  CXXFLAGS="-std=c++17 -fPIC -static -stdlib=libc++ -Wl,-undefined,error" && \
+make install
+
+WORKDIR "$DEPS/libpng"
+RUN cmake . \
+  -DCMAKE_INSTALL_PREFIX=$WORK \
+  -DPNG_STATIC=ON \
+  -DPNG_SHARED=OFF \
+  -DPNG_TESTS=OFF \
+  -DPNG_TOOLS=OFF && \
+make -j$((`nproc`+1)) \
+  LIBS=" -L$WORK/lib -l:zlib.a -lm" \
+  CFLAGS="-I$WORK/include -fPIC -static -Wl,-undefined,error" \
+  CXXFLAGS="-I$WORK/include -std=c++17 -fPIC -static -stdlib=libc++ -Wl,-undefined,error" && \
+make install
+
+WORKDIR "$WORK"
+# build imagemagick c.f. https://github.com/ImageMagick/ImageMagick/blob/main/Install-unix.txt, https://github.com/ImageMagick/ImageMagick/blob/main/QuickStart.txt
+# https://github.com/ImageMagick/ImageMagick/blob/main/configure
+RUN autoreconf -fiv
+RUN ./configure \
+    --prefix="$WORK" \
+    --disable-shared \
+    --disable-docs \
+    --without-magick-plus-plus \
+    --without-perl \
+    LIBS=" -L$WORK/lib -lz -lpng -lpng16"
+
+RUN polytracker build make -j$((`nproc`+1))
+# RUN polytracker instrument-targets --taint --ftrace magick
