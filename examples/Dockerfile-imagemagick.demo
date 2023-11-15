@@ -1,0 +1,32 @@
+FROM trailofbits/polytracker:latest
+ENV DEBIAN_FRONTEND=noninteractive
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+WORKDIR /polytracker/the_klondike
+
+RUN apt-get update && \
+  apt-get install -y autoconf autopoint gzip libcairo2-dev libde265-dev libfreetype-dev libfontconfig-dev libgs-dev libjpeg-turbo8-dev libheif-dev libhwy-dev libopenjp2-7-dev libpango-1.0-0 libraqm0 libtiff-dev libtool libbz2-dev libx11-dev libxml2-dev lzma-dev locales unzip zip zlib1g-dev libpng-dev libpng16-16 && \
+  locale-gen en_US.UTF-8
+
+RUN git clone https://github.com/ImageMagick/ImageMagick.git
+
+WORKDIR /polytracker/the_klondike/ImageMagick
+RUN polytracker build autoreconf -fiv
+RUN polytracker build ./configure \
+    --prefix="/polytracker/the_klondike/ImageMagick" \
+    --without-modules \
+    --disable-shared \
+    --enable-static \
+    --disable-docs \
+    --disable-openmp \
+    --without-magick-plus-plus \
+    --without-perl \
+    --without-x
+
+RUN polytracker build make -j$((`nproc`+1))
+
+RUN polytracker extract-bc utilities/magick -o magick.bc
+RUN llvm-link -only-needed magick.bc -o magick-linked.bc
+# opt-bc runs opt -O3, which fails / causes errors on imagemagick.
+RUN opt -O2 magick-linked.bc -o magick-o2.bc
+RUN polytracker instrument-bc --taint --ftrace magick-o2.bc -o magic-o2-instrumented.bc
+RUN polytracker lower-bc magic-o2-instrumented.bc -t magick -o magick_track
