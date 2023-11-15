@@ -15,11 +15,10 @@ RUN mkdir -p openjpeg/build
 WORKDIR openjpeg/build
 RUN polytracker build cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=on -DBUILD_MJ2:bool=on
 RUN polytracker build make install
-WORKDIR bin
 
-RUN polytracker extract-bc opj_decompress -o opj_decompress.bc
-RUN polytracker extract-bc libopenjp2.a -o libopenjp2.a.bc
+RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
+RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker optimize-bc exec.bc -o exec.bc
+RUN polytracker opt-bc exec.bc -o exec.bc
 RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
 RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_track
