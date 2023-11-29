@@ -23,6 +23,12 @@ parser = ArgumentParser(
 )
 parser.add_argument(
     "-a",
+    "--build_a",
+    type=Path,
+    help="Path to the first binary build to compare (should be the same software as build b, just built with different options)",
+)
+parser.add_argument(
+    "-ta",
     "--tdag_a",
     type=Path,
     help="Path to the first TDAG (A) trace to compare",
@@ -35,6 +41,12 @@ parser.add_argument(
 )
 parser.add_argument(
     "-b",
+    "--build_b",
+    type=Path,
+    help="Path to the second binary build to compare (should be the same software as build a, just built with different options)",
+)
+parser.add_argument(
+    "-tb",
     "--tdag_b",
     type=Path,
     help="Path to the second TDAG (B) trace to compare",
@@ -82,66 +94,86 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def run(binary_path: Path, filename: Path):
-    args = [binary_path, filename]
-    return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-
-def run_instrumented(binary_path: Path, inputfile: Path, targetdir: Path):
+def run_binary(binary_path: Path, input: Path, output_dir: Path, instrumented=True):
     """Runs the Polytracker-instrumented binary using the appropriate environment variables. Requires a Polytracker-capable environment, meaning should generally be run in the Polytracker container to avoid having to set up hacked custom LLVM, GLLVM, and friends."""
 
-    args = [binary_path, inputfile]
-    db_name: Path = binary_path.parts[-1]
+    if instrumented:
+        db_name: Path = binary_path.parts[-1]
+        e = {
+            "POLYDB": str(db_name),
+            "POLYTRACKER_STDOUT_SINK": "1",
+            "POLYTRACKER_LOG_CONTROL_FLOW": "1",
+        }
+    else:
+        e = {}
 
-    e = {
-        "POLYDB": str(db_name),
-        "POLYTRACKER_STDOUT_SINK": "1",
-        "POLYTRACKER_LOG_CONTROL_FLOW": "1",
-    }
+    args = [binary_path, input]
     ret = subprocess.run(args, env=e, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    rename(db_name, targetdir / db_name)
+
+    if db_name.exists():
+        rename(db_name, output_dir / db_name)
+    elif instrumented:
+        raise RuntimeError(
+            "Ran a Polytracker-instrumented binary, and could not find the DB after? Check manually if it exists."
+        )
+
     return ret
 
 
-def locate_candidates() -> None:
+def locate_candidates(buildA: Path, buildB: Path) -> None:
+    """Reads a set of file names from stdin and feeds them to both --build_a and --build_b binaries.
+
+    This is the primary driver for testing two binaries. It's possible to test two instrumented differing builds, or an uninstrumented and an instrumented build.
+
+    Having collected files your instrumented parser can process in a directory, you can feed them to this script's stdin using something along the lines of `find <directory_name/> -type f | python3 eval_nitro.py --locate`.
+
+    A "candidate input" is a file for which output differs between the two builds.
+    """
     for filename in stdin:
-        fn = Path(filename.rstrip()).absolute()
-        if not fn.exists():
-            print(f"Skipping non-existing {fn}.")
+        input_file = Path(filename.rstrip()).absolute()
+        if not input_file.exists():
+            print(f"Skipping non-existing {input_file}.")
             continue
 
-        print(f"Processing: {fn}")
+        nameA: str = buildA.name
+        nameB: str = buildB.name
 
-        runA = run(args.tdag_a, fn)
-        runB = run(args.tdag_b, fn)
-        if runA.stdout != runB.stdout or runA.stderr != runB.stderr:
-            targetdir = Path("./output") / fn.name
-            targetdir = targetdir.absolute()
-            if not targetdir.exists():
-                targetdir.mkdir(0o755)
-            log = targetdir / "log.txt"
+        targetdir = Path("./output") / input_file.name
+        targetdir = targetdir.absolute()
+        if not targetdir.exists():
+            targetdir.mkdir(0o755)
+        log = targetdir / "log.txt"
+        print(
+            f"Sending {input_file.name} A {nameA} | B {nameB} run output to {log.name}..."
+        )
 
-            with open(log, "w") as f:
-                f.write(f"FILE: {fn}\n")
-                f.write(f"first-stdout(utf-8): {runA.stdout.decode('utf-8')}\n")
-                f.write(f"first-stderr(utf-8): {runA.stderr.decode('utf-8')}\n")
-                f.write(f"second-stdout(utf-8): {runB.stdout.decode('utf-8')}\n")
-                f.write(f"second-stderr(utf-8): {runB.stderr.decode('utf-8')}\n")
+        print(f"{nameA} processing {input_file}...")
+        runA = run_binary(binary_path=buildA, input=input_file, output_dir=targetdir)
 
-            with open(targetdir / "stdout-first-raw", "wb") as f:
-                f.write(runA.stdout)
-            with open(targetdir / "stdout-second-raw", "wb") as f:
-                f.write(runB.stdout)
-            with open(targetdir / "stderr-first-raw", "wb") as f:
-                f.write(runA.stderr)
-            with open(targetdir / "stderr-second-raw", "wb") as f:
-                f.write(runB.stderr)
+        with open(targetdir / f"{nameA}-stdout-raw", "wb") as f:
+            f.write(runA.stdout)
+        with open(targetdir / f"{nameA}-stderr-raw", "wb") as f:
+            f.write(runA.stderr)
 
-            run_instrumented(args.tdag_a, fn, targetdir)
-            run_instrumented(args.tdag_b, fn, targetdir)
+        print(f"{nameB} processing {input_file}...")
+        runB = run_binary(binary_path=buildB, input=input_file, output_dir=targetdir)
+
+        with open(targetdir / f"{nameB}-stdout-raw", "wb") as f:
+            f.write(runB.stdout)
+        with open(targetdir / f"{nameB}-stderr-raw", "wb") as f:
+            f.write(runB.stderr)
+
+        # combined run information
+        with open(log, "w") as f:
+            f.write(f"{input_file.name} A {nameA} | B {nameB} run output\n--------\n")
+            f.write(f"{nameA}-stdout(utf-8): {runA.stdout.decode('utf-8')}\n--------\n")
+            f.write(f"{nameA}-stderr(utf-8): {runA.stderr.decode('utf-8')}\n--------\n")
+            f.write(f"{nameB}-stdout(utf-8): {runB.stdout.decode('utf-8')}\n--------\n")
+            f.write(f"{nameB}-stderr(utf-8): {runB.stderr.decode('utf-8')}\n--------\n")
 
 
 def node_equals(n1, n2):
+    """Polytracker TDAG node comparator."""
     if type(n1) is not type(n2):
         return False
 
@@ -159,37 +191,45 @@ def node_equals(n1, n2):
     return True
 
 
-def input_offsets(tdf):
-    ret = {}
-    for input_label in tdf.input_labels():
-        node = tdf.decode_node(input_label)
-        offset = node.offset
-        if offset in ret:
-            ret[offset].append(node)
+def input_offsets(tdag):
+    """Figure out where each node comes from in the input, and squash labels that descend from the same input offset(s) iff they are duplicates."""
+    offsets = {}
+    for input_label in tdag.input_labels():
+        nodes = tdag.decode_node(input_label)
+        offset = nodes.offset
+        if offset in offsets:
+            offsets[offset].append(nodes)
         else:
-            ret[offset] = [node]
+            offsets[offset] = [nodes]
 
     # Squash multiple labels at same offset if they are equal
-    for k, v in ret.items():
-        if all(node_equals(vals, v[0]) for vals in v):
-            ret[k] = v[:1]
-    return ret
+    for offset, nodes in offsets.items():
+        if all(node_equals(node, nodes[0]) for node in nodes):
+            offsets[offset] = nodes[:1]
+    return offsets
 
 
 def get_cflog_entries(tdag, function_id_path):
+    """Maps the function ID JSON to the TDAG control flow log."""
     with open(function_id_path) as f:
         function_id = load(f)
     cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
     cflog.function_id_mapping(list(map(cxxfilt.demangle, function_id)))
     return list(
         map(
-            lambda e: (input_offsets(e.label, tdag), e.callstack),
-            filter(lambda e: isinstance(e, taint_dag.TDTaintedControlFlowEvent), cflog),
+            lambda entry: (input_offsets(entry.label, tdag), entry.callstack),
+            filter(
+                lambda maybe_tainted_event: isinstance(
+                    maybe_tainted_event, taint_dag.TDTaintedControlFlowEvent
+                ),
+                cflog,
+            ),
         )
     )
 
 
 def print_cols(dbg, release, additional=""):
+    """Prettyprinter"""
     print(
         (dbg.ljust(OUTPUT_COLUMN_WIDTH))
         + release.ljust(OUTPUT_COLUMN_WIDTH)
@@ -198,6 +238,7 @@ def print_cols(dbg, release, additional=""):
 
 
 def compare_cflog(tdagA, tdagB):
+    """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names, walk through them and see what does not match."""
     cflogA = get_cflog_entries(tdagA, True)
     cflogB = get_cflog_entries(tdagB, False)
 
@@ -237,22 +278,22 @@ def compare_cflog(tdagA, tdagB):
             idxA += 1
             idxB += 1
         else:
-            # check if we should be stepping debug or release
+            # check if we should be stepping A or B cflogs
             # depending on shortest path
-            debug_steps = 0
-            release_steps = 0
+            stepsA = 0
+            stepsB = 0
 
-            while idxA + debug_steps < lenA:
-                if cflogA[idxA + debug_steps][0] == entryB[0]:
+            while idxA + stepsA < lenA:
+                if cflogA[idxA + stepsA][0] == entryB[0]:
                     break
-                debug_steps += 1
+                stepsA += 1
 
-            while idxB + release_steps < lenB:
-                if cflogB[idxB + release_steps][0] == entryA[0]:
+            while idxB + stepsB < lenB:
+                if cflogB[idxB + stepsB][0] == entryA[0]:
                     break
-                release_steps += 1
+                stepsB += 1
 
-            if debug_steps < release_steps:
+            if stepsA < stepsB:
                 print_cols(str(entryA[0]), "", callstackA)
                 idxA += 1
             else:
