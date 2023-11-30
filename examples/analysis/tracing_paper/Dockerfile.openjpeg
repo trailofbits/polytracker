@@ -30,5 +30,22 @@ RUN polytracker opt-bc exec.bc -o exec.bc
 RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
 RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_debug_track
 
+# References:
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
+# https://github.com/uclouvain/openjpeg/issues/1347
+# https://github.com/uclouvain/openjpeg/pull/1362
+# The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
+
 WORKDIR /polytracker/the_klondike/openjpeg/
 COPY analysis/tracing_paper/* /polytracker/the_klondike/openjpeg/analysis/
+RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
+    gunzip poc.j2k.gz
+
+# Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
+# This will create the TDAG and functionid.json traces for comparison.
+
+WORKDIR /polytracker/the_klondike/openjpeg/build/release
+RUN opj_decompress_release_track -i /polytracker/the_klondike/openjpeg/analysis/poc.j2k -o poc.j2k.png
+
+WORKDIR /polytracker/the_klondike/openjpeg/build/debug
+RUN opj_decompress_debug_track -i /polytracker/the_klondike/openjpeg/analysis/poc.j2k -o poc.j2k.png
