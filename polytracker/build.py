@@ -173,7 +173,11 @@ def _instrument_bitcode(
     ignore_lists: List[str],
     add_taint_tracking: bool,
     add_function_tracing: bool,
+    add_control_flow_log: bool = False,
 ) -> None:
+    if add_control_flow_log:
+        _preopt_instrument_bitcode(input_bitcode, input_bitcode)
+
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
@@ -299,6 +303,18 @@ class OptimizeBitcode(Command):
 
     def run(self, args: argparse.Namespace):
         _optimize_bitcode(args.input, args.output)
+
+
+class InstrumentCFLog(Command):
+    name = "instrument-cflog"
+    help = "instruments LLVM bitcode with the control flow log pass (analogously to use of instrument-targets --cflog); if run, MUST be run before bitcode optimisation with opt-bc"
+
+    def __init_arguments__(self, parser: argparse.ArgumentParser):
+        parser.add_argument("input", type=Path, help="input bitcode file")
+
+    def run(self, args: argparse.Namespace):
+        bc_path = args.input.with_suffix(".bc")
+        _preopt_instrument_bitcode(bc_path, bc_path)
 
 
 class InstrumentBitcode(Command):
