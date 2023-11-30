@@ -1,0 +1,34 @@
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com, kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /polytracker/the_klondike
+RUN apt-get update && \
+    apt-get install -y git && \
+    git clone https://github.com/uclouvain/openjpeg.git
+
+# build release binary
+WORKDIR /polytracker/the_klondike/openjpeg/build/release
+RUN polytracker build cmake ../.. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Release"
+RUN polytracker build make install
+RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
+RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
+RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
+RUN polytracker instrument-cflog exec.bc
+RUN polytracker opt-bc exec.bc -o exec.bc
+RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
+RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_release_track
+
+# build debug binary
+WORKDIR /polytracker/the_klondike/openjpeg/build/debug
+RUN polytracker build cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Debug"
+RUN polytracker build make install
+RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
+RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
+RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
+RUN polytracker instrument-cflog exec.bc
+RUN polytracker opt-bc exec.bc -o exec.bc
+RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
+RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_debug_track
+
+WORKDIR /polytracker/the_klondike/openjpeg/
+COPY analysis/tracing_paper/* /polytracker/the_klondike/openjpeg/analysis/
