@@ -2,7 +2,7 @@
 
 from argparse import ArgumentParser
 from functools import partialmethod
-from json import load
+import json
 from oi import OutputInputMapping
 from os import rename
 from pathlib import Path
@@ -10,6 +10,7 @@ from polytracker import PolyTrackerTrace, taint_dag
 from polytracker.mapping import InputOutputMapping
 import subprocess
 from sys import stdin
+import datetime
 from tqdm import tqdm
 
 import cxxfilt
@@ -37,7 +38,7 @@ parser.add_argument(
     "-fa",
     "--function_id_json_a",
     type=Path,
-    help="Path to functionid.json function trace for TDAG A",
+    help="Path to functionid.json function trace for TDAG A (created by polytracker's cflog pass)",
 )
 parser.add_argument(
     "-b",
@@ -49,7 +50,7 @@ parser.add_argument(
     "-tb",
     "--tdag_b",
     type=Path,
-    help="Path to the second TDAG (B) trace to compare",
+    help="Path to the second TDAG (B) trace to compare (created by polytracker's cflog pass)",
 )
 parser.add_argument(
     "-fb",
@@ -58,10 +59,11 @@ parser.add_argument(
     help="Path to functionid.json function trace for TDAG B",
 )
 parser.add_argument(
-    "-l",
-    "--locate",
-    action="store_true",
-    help="Filenames read from stdin are run in the instrumented binary and any discrepancies between builds are stored in the output directory. Can be executed as 'find dir -type f | python3 compare_tdags.py -l'",
+    "-e",
+    "--execute",
+    type=str,
+    nargs="+",
+    help="command line arguments (including input) to run for each candidate build, for example `<executable_passed_with -a or -b> -i image.j2k -o image.pgm` would require `-i image.j2k -o image.pgm`",
 )
 parser.add_argument(
     "--cflog",
@@ -94,82 +96,68 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def run_binary(binary_path: Path, input: Path, output_dir: Path, instrumented=True):
+def run_binary(
+    binary_path: Path, arguments: list[str], tstamp: float, instrumented=True
+):
     """Runs the Polytracker-instrumented binary using the appropriate environment variables. Requires a Polytracker-capable environment, meaning should generally be run in the Polytracker container to avoid having to set up hacked custom LLVM, GLLVM, and friends."""
 
     if instrumented:
-        db_name: Path = binary_path.parts[-1]
+        # instead of producing polytracker.tdag as POLYDB, use the binary name
         e = {
-            "POLYDB": str(db_name),
+            "POLYDB": f"{binary_path.name}-{tstamp}.tdag",
             "POLYTRACKER_STDOUT_SINK": "1",
             "POLYTRACKER_LOG_CONTROL_FLOW": "1",
         }
     else:
         e = {}
 
-    args = [binary_path, input]
+    args = [binary_path, "-i", *arguments, f"-o {binary_path.name}-{tstamp}.out.png"]
+    print(args)
     ret = subprocess.run(args, env=e, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    if db_name.exists():
-        rename(db_name, output_dir / db_name)
-    elif instrumented:
-        raise RuntimeError(
-            "Ran a Polytracker-instrumented binary, and could not find the DB after? Check manually if it exists."
-        )
 
     return ret
 
 
-def locate_candidates(buildA: Path, buildB: Path) -> None:
+def runner(buildA: Path, buildB: Path, program_args: list[str] = None) -> None:
     """Reads a set of file names from stdin and feeds them to both --build_a and --build_b binaries.
 
     This is the primary driver for testing two binaries. It's possible to test two instrumented differing builds, or an uninstrumented and an instrumented build.
-
-    Having collected files your instrumented parser can process in a directory, you can feed them to this script's stdin using something along the lines of `find <directory_name/> -type f | python3 eval_nitro.py --locate`.
-
-    A "candidate input" is a file for which output differs between the two builds.
     """
-    for filename in stdin:
-        input_file = Path(filename.rstrip()).absolute()
-        if not input_file.exists():
-            print(f"Skipping non-existing {input_file}.")
-            continue
+    nameA: str = buildA.name
+    nameB: str = buildB.name
 
-        nameA: str = buildA.name
-        nameB: str = buildB.name
+    tstamp: str = datetime.datetime.today().strftime("%Y-%b-%d-%H-%M")
 
-        targetdir = Path("./output") / input_file.name
-        targetdir = targetdir.absolute()
-        if not targetdir.exists():
-            targetdir.mkdir(0o755)
-        log = targetdir / "log.txt"
-        print(
-            f"Sending {input_file.name} A {nameA} | B {nameB} run output to {log.name}..."
-        )
+    targetdir = Path(f"./output-{tstamp}")
+    targetdir = targetdir.absolute()
+    if not targetdir.exists():
+        targetdir.mkdir(0o755)
+    log = targetdir / "log.txt"
+    print(f"Sending (A {nameA} | B {nameB}) {program_args} run output to {log.name}...")
 
-        print(f"{nameA} processing {input_file}...")
-        runA = run_binary(binary_path=buildA, input=input_file, output_dir=targetdir)
+    print(f"{nameA} {program_args}...")
+    runA = run_binary(buildA, program_args, tstamp)
 
-        with open(targetdir / f"{nameA}-stdout-raw", "wb") as f:
-            f.write(runA.stdout)
-        with open(targetdir / f"{nameA}-stderr-raw", "wb") as f:
-            f.write(runA.stderr)
+    with open(targetdir / f"{nameA}-stdout-raw", "wb") as f:
+        f.write(runA.stdout)
+    with open(targetdir / f"{nameA}-stderr-raw", "wb") as f:
+        f.write(runA.stderr)
 
-        print(f"{nameB} processing {input_file}...")
-        runB = run_binary(binary_path=buildB, input=input_file, output_dir=targetdir)
+    print(f"{nameB} {program_args}...")
+    runB = run_binary(buildB, program_args, tstamp)
 
-        with open(targetdir / f"{nameB}-stdout-raw", "wb") as f:
-            f.write(runB.stdout)
-        with open(targetdir / f"{nameB}-stderr-raw", "wb") as f:
-            f.write(runB.stderr)
+    with open(targetdir / f"{nameB}-stdout-raw", "wb") as f:
+        f.write(runB.stdout)
+    with open(targetdir / f"{nameB}-stderr-raw", "wb") as f:
+        f.write(runB.stderr)
 
-        # combined run information
-        with open(log, "w") as f:
-            f.write(f"{input_file.name} A {nameA} | B {nameB} run output\n--------\n")
-            f.write(f"{nameA}-stdout(utf-8): {runA.stdout.decode('utf-8')}\n--------\n")
-            f.write(f"{nameA}-stderr(utf-8): {runA.stderr.decode('utf-8')}\n--------\n")
-            f.write(f"{nameB}-stdout(utf-8): {runB.stdout.decode('utf-8')}\n--------\n")
-            f.write(f"{nameB}-stderr(utf-8): {runB.stderr.decode('utf-8')}\n--------\n")
+    # combined run information
+    with open(log, "w") as f:
+        f.write(f"'(A {nameA} | B {nameB}) {program_args}' run output\n--------\n")
+        f.write(f"{nameA}-stdout(utf-8): {runA.stdout.decode('utf-8')}\n--------\n")
+        f.write(f"{nameA}-stderr(utf-8): {runA.stderr.decode('utf-8')}\n--------\n")
+        f.write(f"{nameB}-stdout(utf-8): {runB.stdout.decode('utf-8')}\n--------\n")
+        f.write(f"{nameB}-stderr(utf-8): {runB.stderr.decode('utf-8')}\n--------\n")
 
 
 def node_equals(n1, n2):
@@ -209,12 +197,12 @@ def input_offsets(tdag):
     return offsets
 
 
-def get_cflog_entries(tdag, function_id_path):
+def get_cflog_entries(tdag: Path, function_id_path: Path) -> list[tuple]:
     """Maps the function ID JSON to the TDAG control flow log."""
-    with open(function_id_path) as f:
-        function_id = load(f)
+    with open(function_id_path) as function_id_json:
+        functions_list = json.load(function_id_json)
     cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
-    cflog.function_id_mapping(list(map(cxxfilt.demangle, function_id)))
+    cflog.function_id_mapping(list(map(cxxfilt.demangle, functions_list)))
     return list(
         map(
             lambda entry: (input_offsets(entry.label, tdag), entry.callstack),
@@ -237,10 +225,12 @@ def print_cols(dbg, release, additional=""):
     )
 
 
-def compare_cflog(tdagA, tdagB):
+def compare_cflog(
+    tdagA: Path, tdagB: Path, function_id_pathA: Path, function_id_pathB: Path
+):
     """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names, walk through them and see what does not match."""
-    cflogA = get_cflog_entries(tdagA, True)
-    cflogB = get_cflog_entries(tdagB, False)
+    cflogA = get_cflog_entries(tdagA, function_id_pathA)
+    cflogB = get_cflog_entries(tdagB, function_id_pathB)
 
     print("COMPARE CONTROL FLOW LOGS")
     n = max(len(cflogA), len(cflogB))
@@ -306,9 +296,9 @@ def compare_cflog(tdagA, tdagB):
 def compare_run_trace(tdag_a, tdag_b):
     for eventA, idxA, eventB, idxB in zip(
         tdag_a.events,
-        range(len(tdag_a.events)),
+        range(0, len(tdag_a.events)),
         tdag_b.events,
-        range(len(tdag_b.events)),
+        range(0, len(tdag_b.events)),
     ):
         fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
         fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
@@ -347,24 +337,33 @@ def compare_inputs_used(dbg_tdfile, rel_tdfile):
 
 
 if __name__ == "__main__":
-    if args.locate:
-        print("Locating candidates")
-        locate_candidates()
+    if args.execute:
+        print(f"Running '{args.execute}' for {args.build_a} and {args.build_b}")
+        runner(args.build_a, args.build_b, args.execute)
     elif args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}")
         traceA = PolyTrackerTrace.load(args.tdag_a)
         traceB = PolyTrackerTrace.load(args.tdag_b)
 
         if args.cflog:
-            compare_cflog(traceA.tdfile, traceB.tdfile)
+            print("Control flow log comparison...")
+            compare_cflog(
+                tdagA=traceA.tdfile,
+                tdagB=traceB.tdfile,
+                function_id_pathA=args.function_id_json_a,
+                function_id_pathB=args.function_id_json_b,
+            )
 
         if args.runtrace:
+            print("Run trace comparison...")
             compare_run_trace(traceA.tdfile, traceB.tdfile)
 
         if args.inputsused:
+            print("Inputs comparison...")
             compare_inputs_used(traceA.tdfile, traceB.tdfile)
 
         if args.enumdiff:
+            print("Enum diff...")
             enum_diff(traceA.tdfile, traceB.tdfile)
     else:
         print("Error: Need to provide either -a and -b, or --locate")
