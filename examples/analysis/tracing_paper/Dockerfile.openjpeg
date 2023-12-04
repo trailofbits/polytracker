@@ -5,27 +5,30 @@ WORKDIR /polytracker/the_klondike
 RUN apt-get update && \
     apt-get install -y git && \
     git clone https://github.com/uclouvain/openjpeg.git
+ENV LLVM_SYMBOLIZER_PATH=llvm-symbolizer-12
 
-# build release binary
+# build release binary - noting that CMAKE_BUILD_TYPE Release, which roughly equals adding -O3 -DNDEBUG to the compiler options, is not compatible with the cflog instrumentation pass -DCMAKE_BUILD_TYPE=RelWithDebInfo
 WORKDIR /polytracker/the_klondike/openjpeg/build/release
-RUN polytracker build cmake ../.. -DCMAKE_BUILD_TYPE=Release -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Release"
+RUN polytracker build cmake ../.. -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Release" -DCMAKE_C_FLAGS="-O1 -g" -DCMAKE_CXX_FLAGS="-O1 -g"
 RUN polytracker build make install
 RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
+RUN polytracker instrument-cflog opj_decompress.bc
 RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
+RUN polytracker instrument-cflog libopenjp2.a.bc
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker instrument-cflog exec.bc
 RUN polytracker opt-bc exec.bc -o exec.bc
 RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
 RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_release_track
 
 # build debug binary
 WORKDIR /polytracker/the_klondike/openjpeg/build/debug
-RUN polytracker build cmake ../.. -DCMAKE_BUILD_TYPE=Debug -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Debug"
+RUN polytracker build cmake ../.. -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Debug" -DCMAKE_C_FLAGS="-O0 -g" -DCMAKE_CXX_FLAGS="-O0 -g"
 RUN polytracker build make install
 RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
+RUN polytracker instrument-cflog opj_decompress.bc
 RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
+RUN polytracker instrument-cflog libopenjp2.a.bc
 RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker instrument-cflog exec.bc
 RUN polytracker opt-bc exec.bc -o exec.bc
 RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
 RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_debug_track
@@ -36,16 +39,12 @@ RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompres
 # https://github.com/uclouvain/openjpeg/pull/1362
 # The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
 
+# WORKDIR /polytracker/the_klondike/openjpeg/
+
+# RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
+#     gunzip poc.j2k.gz
+
+# # Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
+# # This will create the TDAG and functionid.json traces for comparison.
+
 WORKDIR /polytracker/the_klondike/openjpeg/
-COPY analysis/tracing_paper/* /polytracker/the_klondike/openjpeg/analysis/
-RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
-    gunzip poc.j2k.gz
-
-# Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
-# This will create the TDAG and functionid.json traces for comparison.
-
-WORKDIR /polytracker/the_klondike/openjpeg/build/release
-RUN opj_decompress_release_track -i /polytracker/the_klondike/openjpeg/analysis/poc.j2k -o poc.j2k.png
-
-WORKDIR /polytracker/the_klondike/openjpeg/build/debug
-RUN opj_decompress_debug_track -i /polytracker/the_klondike/openjpeg/analysis/poc.j2k -o poc.j2k.png
