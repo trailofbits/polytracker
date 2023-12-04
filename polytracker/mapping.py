@@ -202,7 +202,7 @@ class FileCavities(Command):
 
     def run(self, args):
         def print_cavity(path: Path, begin: LabelType, end: LabelType) -> None:
-            print(f"{path},{begin},{end}")
+            print(f"input path was: {path}; cavity: {begin},{end}")
 
         with open(args.POLYTRACKER_TF, "rb") as f:
             cavities = InputOutputMapping(TDFile(f)).file_cavities()
