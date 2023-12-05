@@ -14,7 +14,7 @@ COPY --from=libjpeg-sources /polytracker/the_klondike/jpeg-9e /polytracker/the_k
 
 WORKDIR /polytracker/the_klondike/jpeg-9e/build
 # Configure build
-RUN ../configure LDFLAGS="-static" CFLAGS="-g -O0"
+RUN LDFLAGS="-static" CFLAGS="-g -O3" CC=clang CXX=clang++ ../configure
 
 RUN polytracker build make -j$((`nproc`+1))
 RUN polytracker extract-bc djpeg -o djpeg.bc

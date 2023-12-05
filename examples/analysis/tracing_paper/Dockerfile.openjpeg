@@ -9,29 +9,33 @@ ENV LLVM_SYMBOLIZER_PATH=llvm-symbolizer-12
 
 # build release binary - noting that CMAKE_BUILD_TYPE Release, which roughly equals adding -O3 -DNDEBUG to the compiler options, is not compatible with the cflog instrumentation pass -DCMAKE_BUILD_TYPE=RelWithDebInfo
 WORKDIR /polytracker/the_klondike/openjpeg/build/release
-RUN polytracker build cmake ../.. -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Release" -DCMAKE_C_FLAGS="-O1 -g" -DCMAKE_CXX_FLAGS="-O1 -g"
-RUN polytracker build make install
-RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
-RUN polytracker instrument-cflog opj_decompress.bc
-RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
-RUN polytracker instrument-cflog libopenjp2.a.bc
-RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker opt-bc exec.bc -o exec.bc
-RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
-RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_release_track
+RUN polytracker build cmake -S ../.. -B . \
+    -DBUILD_JPWL:bool=ON \
+    -DBUILD_MJ2:bool=ON \
+    -DBUILD_DOC=OFF \
+    -DBUILD_LUTS_GENERATOR=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DBUILD_UNIT_TESTS=OFF \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/polytracker/the_klondike/openjpeg/build/release/bin -l:libopenjp2.a"
+RUN polytracker build cmake --build . -j$(nproc)
+RUN polytracker instrument-targets --taint --ftrace opj_decompress
 
 # build debug binary
 WORKDIR /polytracker/the_klondike/openjpeg/build/debug
-RUN polytracker build cmake ../.. -DBUILD_JPWL:bool=ON -DBUILD_MJ2:bool=ON -DBUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX:path="/polytracker/the_klondike/openjpeg/Debug" -DCMAKE_C_FLAGS="-O0 -g" -DCMAKE_CXX_FLAGS="-O0 -g"
-RUN polytracker build make install
-RUN polytracker extract-bc bin/opj_decompress -o opj_decompress.bc
-RUN polytracker instrument-cflog opj_decompress.bc
-RUN polytracker extract-bc bin/libopenjp2.a -o libopenjp2.a.bc
-RUN polytracker instrument-cflog libopenjp2.a.bc
-RUN llvm-link -only-needed opj_decompress.bc libopenjp2.a.bc -o exec.bc
-RUN polytracker opt-bc exec.bc -o exec.bc
-RUN polytracker instrument-bc --taint --ftrace exec.bc -o exec.bc -o exec.instrumented.bc
-RUN polytracker lower-bc exec.instrumented.bc -t opj_decompress -o opj_decompress_debug_track
+RUN polytracker build cmake -S ../.. -B . \
+    -DBUILD_JPWL:bool=ON \
+    -DBUILD_MJ2:bool=ON \
+    -DBUILD_DOC=OFF \
+    -DBUILD_LUTS_GENERATOR=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DBUILD_UNIT_TESTS=OFF \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/polytracker/the_klondike/openjpeg/build/debug/bin -l:libopenjp2.a"
+RUN polytracker build cmake --build . -j$(nproc)
+RUN polytracker instrument-targets --taint --ftrace opj_decompress
 
 # References:
 # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
