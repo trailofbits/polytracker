@@ -225,10 +225,17 @@ def print_cols(dbg, release, additional=""):
     )
 
 
+def show_cflog(tdag: Path, function_id_path: Path):
+    cflog = get_cflog_entries(tdag, function_id_path)
+
+    for entry in range(0, len(cflog)):
+        print_cols(str(entry), "", "")
+
+
 def compare_cflog(
     tdagA: Path, tdagB: Path, function_id_pathA: Path, function_id_pathB: Path
 ):
-    """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names, walk through them and see what does not match."""
+    """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names, walk through them and see what does not match. This matches up control flow log entries from each tdag."""
     cflogA = get_cflog_entries(tdagA, function_id_pathA)
     cflogB = get_cflog_entries(tdagB, function_id_pathB)
 
@@ -365,6 +372,9 @@ if __name__ == "__main__":
         if args.enumdiff:
             print("Enum diff...")
             enum_diff(traceA.tdfile, traceB.tdfile)
+    elif args.tdag_a and args.function_id_json_a and args.cflog:
+        print("Mapping and showing single control flow log...")
+        show_cflog(args.tdag_a, args.function_id_json_a)
     else:
         print("Error: Need to provide either -a and -b, or --locate")
         parser.print_help()
