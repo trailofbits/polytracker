@@ -14,7 +14,6 @@
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
 #include <spdlog/spdlog.h>
-
 #include "polytracker/dfsan_types.h"
 #include "polytracker/passes/utils.h"
 
@@ -70,7 +69,7 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
   if (inst.getType()->isVectorTy()) {
     dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
-  ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
+  ir.CreateCall(logCondBr, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
 llvm::ConstantInt *
@@ -91,11 +90,11 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
     llvm::GetElementPtrInst &gep) {
   llvm::IRBuilder<> ir(&gep);
   for (auto &idx : gep.indices()) {
-    if (llvm::isa<llvm::ConstantInt>(idx)) {
+    // we do not yet handle VectorTy
+    if ((llvm::isa<llvm::ConstantInt>(idx)) || (idx->getType()->isVectorTy())) {
       continue;
     }
-
-    auto callret = ir.CreateCall(cond_br_log_fn,
+    auto callret = ir.CreateCall(logElementPtr,
                                  {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
                                   get_function_id_const(gep)});
 
@@ -110,9 +109,8 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 
   llvm::IRBuilder<> ir(&bi);
   auto cond = bi.getCondition();
-
   auto callret = ir.CreateCall(
-      cond_br_log_fn,
+      logBranch,
       {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(bi)});
 
   bi.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
@@ -121,9 +119,8 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   llvm::IRBuilder<> ir(&si);
   auto cond = si.getCondition();
-
   auto callret = ir.CreateCall(
-      cond_br_log_fn,
+      logSwitch,
       {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
@@ -136,9 +133,8 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
   }
   llvm::IRBuilder<> ir(&si);
   auto cond = si.getCondition();
-
   auto callret = ir.CreateCall(
-      cond_br_log_fn,
+      logSelect,
       {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
 
   si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
@@ -146,8 +142,49 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
-  cond_br_log_fn = mod.getOrInsertFunction(
-      "__polytracker_log_tainted_control_flow",
+  // select
+  logSelect = mod.getOrInsertFunction(
+      "__polytracker_log_tcf_select",
+      llvm::AttributeList::get(
+          mod.getContext(),
+          {{llvm::AttributeList::FunctionIndex,
+            llvm::Attribute::get(mod.getContext(),
+                                 llvm::Attribute::ReadNone)}}),
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+
+  // switch
+  logSwitch = mod.getOrInsertFunction(
+      "__polytracker_log_tcf_switch",
+      llvm::AttributeList::get(
+          mod.getContext(),
+          {{llvm::AttributeList::FunctionIndex,
+            llvm::Attribute::get(mod.getContext(),
+                                 llvm::Attribute::ReadNone)}}),
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+
+  // branch
+  logBranch = mod.getOrInsertFunction(
+      "__polytracker_log_tcf_branch",
+      llvm::AttributeList::get(
+          mod.getContext(),
+          {{llvm::AttributeList::FunctionIndex,
+            llvm::Attribute::get(mod.getContext(),
+                                 llvm::Attribute::ReadNone)}}),
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+
+  // element ptr
+  logElementPtr = mod.getOrInsertFunction(
+      "__polytracker_log_tcf_el_ptr",
+      llvm::AttributeList::get(
+          mod.getContext(),
+          {{llvm::AttributeList::FunctionIndex,
+            llvm::Attribute::get(mod.getContext(),
+                                 llvm::Attribute::ReadNone)}}),
+      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+
+  // cond br
+  logCondBr = mod.getOrInsertFunction(
+      "__polytracker_log_tcf_cond_br",
       llvm::AttributeList::get(
           mod.getContext(),
           {{llvm::AttributeList::FunctionIndex,
