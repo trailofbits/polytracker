@@ -25,11 +25,7 @@ class TaintedControlFlowPass
   // Taint tracking startup
   llvm::FunctionCallee taint_start_fn;
   // Log taint label affecting control flow
-  llvm::FunctionCallee logSelect;
-  llvm::FunctionCallee logSwitch;
-  llvm::FunctionCallee logBranch;
-  llvm::FunctionCallee logElementPtr;
-  llvm::FunctionCallee logCondBr;
+  llvm::FunctionCallee cond_br_log_fn;
   // Log enter/leave functions
   llvm::FunctionCallee fn_enter_log_fn;
   llvm::FunctionCallee fn_leave_log_fn;
