@@ -2,30 +2,57 @@
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com, kelly.kaoudis@trailofbits.com"
 ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /polytracker/the_klondike
+
+WORKDIR /polytracker/libpng
+
 RUN apt-get update && \
-    apt-get install -y wget
-ENV LLVM_SYMBOLIZER_PATH=llvm-symbolizer-12
-RUN wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz
-RUN tar xvf libpng-1.6.39.tar.xz
-WORKDIR /polytracker/the_klondike/libpng-1.6.39
+    apt-get install -y wget && \
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz && \
+    cp -r libpng-1.6.39 release && \
+    cp -r libpng-1.6.39 debug && \
+    wget https://zlib.net/current/zlib.tar.gz && \
+    tar xvf zlib.tar.gz && \
+    cp -r zlib-1.3 release/zlib && \
+    cp -r zlib-1.3 debug/zlib
 
-RUN wget https://zlib.net/current/zlib.tar.gz
-RUN tar xvf zlib.tar.gz
+# need 2 clean copies so we can have opt and unopt builds
+# following cmake build type convention:
+# 1. Release: `-O3 -DNDEBUG`
+# 2. Debug: `-O0 -g`
+ENV RELEASE=/polytracker/libpng/release
+ENV DEBUG=/polytracker/libpng/debug
 
-WORKDIR /polytracker/the_klondike/libpng-1.6.39/zlib-1.3/
-RUN polytracker build ./configure
+# build release version of zlib
+WORKDIR "$RELEASE/zlib"
+RUN CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-O3 -DNDEBUG" polytracker build ./configure
 RUN polytracker build make
-RUN polytracker extract-bc -o ../libz.bc libz.a
-RUN polytracker instrument-cflog ../libz.bc
+RUN polytracker extract-bc -o libz.bc libz.a
+RUN polytracker instrument-cflog libz.bc
 
-WORKDIR /polytracker/the_klondike/libpng-1.6.39
-
-RUN CFLAGS="-O2 -g" CPPFLAGS="-I$(pwd)/zlib-1.3/include -O2 -g" LDFLAGS="-L$(pwd)/zlib-1.3/lib" polytracker build ./configure --disable-shared
-RUN CFLAGS="-O2 -g" CPPFLAGS="-I$(pwd)/zlib-1.3/include -O2 -g" LDFLAGS="-L$(pwd)/zlib-1.3/lib" polytracker build make pngtest
+# # build release version of libpng linking our built zlib
+WORKDIR "$RELEASE"
+RUN CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build ./configure --disable-shared
+RUN CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build make pngtest
 RUN polytracker extract-bc -o pngtest.bc pngtest
 RUN polytracker instrument-cflog pngtest.bc
+RUN llvm-link -o pngtest-linked.bc pngtest.bc zlib/libz.bc
+RUN polytracker instrument-bc --taint --ftrace pngtest-linked.bc -o instrumented.bc
+RUN polytracker lower-bc instrumented.bc -t pngtest -o pngtest.instrumented
 
-RUN llvm-link -o pngtest-linked.bc pngtest.bc libz.bc
+# # build debug version of zlib
+WORKDIR "$DEBUG/zlib"
+RUN CFLAGS="-O0 -g" CPPFLAGS="-O0 -g" polytracker build ./configure
+RUN polytracker build make
+RUN polytracker extract-bc -o libz.bc libz.a
+RUN polytracker instrument-cflog libz.bc
+
+# # build debug version of libpng linking our built zlib
+WORKDIR "$DEBUG"
+RUN CFLAGS="-O0 -g" CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" LDFLAGS="-L$DEBUG/zlib/lib" polytracker build ./configure --disable-shared
+RUN CFLAGS="-O0 -g" CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" LDFLAGS="-L$DEBUG/zlib/lib" polytracker build make pngtest
+RUN polytracker extract-bc -o pngtest.bc pngtest
+RUN polytracker instrument-cflog pngtest.bc
+RUN llvm-link -o pngtest-linked.bc pngtest.bc zlib/libz.bc
 RUN polytracker instrument-bc --taint --ftrace pngtest-linked.bc -o instrumented.bc
 RUN polytracker lower-bc instrumented.bc -t pngtest -o pngtest.instrumented
