@@ -5,35 +5,34 @@ WORKDIR /polytracker/the_klondike
 RUN apt-get update && \
     apt-get install -y git && \
     git clone https://github.com/uclouvain/openjpeg.git
-ENV LLVM_SYMBOLIZER_PATH=llvm-symbolizer-12
 
-# build release binary - noting that CMAKE_BUILD_TYPE Release, which roughly equals adding -O3 -DNDEBUG to the compiler options, is not compatible with the cflog instrumentation pass -DCMAKE_BUILD_TYPE=RelWithDebInfo
-WORKDIR /polytracker/the_klondike/openjpeg/build/release
-RUN polytracker build cmake -GNinja -S ../.. -B . \
+# build release binary
+ENV RELEASE=/polytracker/the_klondike/openjpeg/build/release
+WORKDIR "$RELEASE"
+RUN polytracker build cmake -S ../.. -B . \
     -DBUILD_JPWL:bool=ON \
     -DBUILD_MJ2:bool=ON \
     -DBUILD_DOC=OFF \
-    -DBUILD_LUTS_GENERATOR=OFF \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_UNIT_TESTS=OFF \
     -DBUILD_TESTING=OFF \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_EXE_LINKER_FLAGS="-L/polytracker/the_klondike/openjpeg/build/release/bin -l:libopenjp2.a"
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_EXE_LINKER_FLAGS="-L$RELEASE/bin -l:libopenjp2.a"
 RUN polytracker build cmake --build . -j$(nproc)
 RUN polytracker instrument-targets --taint --ftrace --cflog opj_decompress
 
 # build debug binary
-WORKDIR /polytracker/the_klondike/openjpeg/build/debug
-RUN polytracker build cmake -GNinja -S ../.. -B . \
+ENV DEBUG=/polytracker/the_klondike/openjpeg/build/debug
+WORKDIR "$DEBUG"
+RUN polytracker build cmake -S ../.. -B . \
     -DBUILD_JPWL:bool=ON \
     -DBUILD_MJ2:bool=ON \
     -DBUILD_DOC=OFF \
-    -DBUILD_LUTS_GENERATOR=OFF \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_UNIT_TESTS=OFF \
     -DBUILD_TESTING=OFF \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_EXE_LINKER_FLAGS="-L/polytracker/the_klondike/openjpeg/build/debug/bin -l:libopenjp2.a"
+    -DCMAKE_EXE_LINKER_FLAGS="-L$DEBUG/bin -l:libopenjp2.a"
 RUN polytracker build cmake --build . -j$(nproc)
 RUN polytracker instrument-targets --taint --ftrace --cflog opj_decompress
 
