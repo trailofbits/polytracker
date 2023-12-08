@@ -30,7 +30,7 @@ RUN polytracker build make
 RUN polytracker extract-bc -o libz.bc libz.a
 RUN polytracker instrument-cflog libz.bc
 
-# # build release version of libpng linking our built zlib
+# build release version of libpng linking our built zlib - can also use prebuilt linux makefile
 WORKDIR "$RELEASE"
 RUN CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build ./configure --disable-shared
 RUN CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build make pngtest
@@ -40,14 +40,14 @@ RUN llvm-link -o pngtest-linked.bc pngtest.bc zlib/libz.bc
 RUN polytracker instrument-bc --taint --ftrace pngtest-linked.bc -o instrumented.bc
 RUN polytracker lower-bc instrumented.bc -t pngtest -o pngtest.instrumented
 
-# # build debug version of zlib
+# build debug version of zlib
 WORKDIR "$DEBUG/zlib"
 RUN CFLAGS="-O0 -g" CPPFLAGS="-O0 -g" polytracker build ./configure
 RUN polytracker build make
 RUN polytracker extract-bc -o libz.bc libz.a
 RUN polytracker instrument-cflog libz.bc
 
-# # build debug version of libpng linking our built zlib
+# build debug version of libpng linking our built zlib
 WORKDIR "$DEBUG"
 RUN CFLAGS="-O0 -g" CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" LDFLAGS="-L$DEBUG/zlib/lib" polytracker build ./configure --disable-shared
 RUN CFLAGS="-O0 -g" CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" LDFLAGS="-L$DEBUG/zlib/lib" polytracker build make pngtest
