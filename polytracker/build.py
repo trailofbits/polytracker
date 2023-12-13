@@ -173,11 +173,7 @@ def _instrument_bitcode(
     ignore_lists: List[str],
     add_taint_tracking: bool,
     add_function_tracing: bool,
-    add_control_flow_log: bool = False,
 ) -> None:
-    if add_control_flow_log:
-        _preopt_instrument_bitcode(input_bitcode, input_bitcode)
-
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
