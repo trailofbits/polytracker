@@ -4,8 +4,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /polytracker/tiff
 
+# need 2 clean copies so we can have opt and unopt builds
+# following cmake build type convention:
+# 1. Release: `-O3 -DNDEBUG`
+# 2. Debug: `-O0 -g`
+ENV RELEASE=/polytracker/tiff/release
+ENV DEBUG=/polytracker/tiff/debug
+
 RUN apt-get update && \
-    apt-get install -y gettext wget && \
+    apt-get install -y gettext wget libtool && \
     # libtiff #
     wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
     tar xvf tiff-4.3.0.tar.gz && \
@@ -24,13 +31,6 @@ RUN apt-get update && \
     tar xvf jpegsrc.v9e.tar.gz && \
     cp -r jpeg-9e release/libjpeg && \
     cp -r jpeg-9e debug/libjpeg
-
-# need 2 clean copies so we can have opt and unopt builds
-# following cmake build type convention:
-# 1. Release: `-O3 -DNDEBUG`
-# 2. Debug: `-O0 -g`
-ENV RELEASE=/polytracker/tiff/release
-ENV DEBUG=/polytracker/tiff/debug
 
 # build release version of zlib
 WORKDIR "$RELEASE/zlib"
@@ -60,73 +60,68 @@ RUN \
 
 # build release version of libtiff
 WORKDIR "$RELEASE"
-RUN \
+RUN ./autogen.sh && \
   DIR_GZLIB="$RELEASE/zlib" \
   DIR_JPEGLIB="$RELEASE/libjpeg" \
   DIRS_LIBINC="$RELEASE/zlib $RELEASE/libjpeg" \
-  DSOSUF="a" \
-  CC=blight-cc \
-  CXX=blight-c++ \
   CPPFLAGS="-I$RELEASE/zlib/include -I$RELEASE/libjpeg/include"\
   CFLAGS="-O3 -DNDEBUG" \
   CXXFLAGS="-O3 -DNDEBUG" \
-  LDFLAGS="-L$RELEASE/zlib/lib -L$RELEASE/libjpeg/lib -lpthread" \
+  LDFLAGS="-L$RELEASE/zlib/lib -L$RELEASE/libjpeg/lib -lstdc++ -static -fPIC -lpthread" \
   polytracker build ./configure \
     --prefix="$RELEASE" \
-    --exec-prefix="$RELEASE" && \
+    --exec-prefix="$RELEASE" \
+    --enable-shared=no \
+    --enable-static=no && \
   polytracker build make -j$((`nproc`+1)) && \
   polytracker build make install
 
 # instrument release version of libtiff - tiffdump (one of several utils)
-RUN polytracker extract-bc bin/tiffdump -o tiffdump.bc && \
-  polytracker instrument-cflog tiffdump.bc && \
-  llvm-link --only-needed -o tiffdump_linked.bc tiffdump.bc "$RELEASE/zlib/libz.bc" "$RELEASE/libjpeg/libjpeg.bc" && \
-  polytracker instrument-bc --taint --ftrace tiffdump_linked.bc -o instrumented.bc && \
-  polytracker lower-bc instrumented.bc -t tiffdump -o tiffdump.instrumented
+RUN polytracker instrument-targets --ftrace --cflog --taint tiffdump
 
 # build debug version of zlib
-WORKDIR "$DEBUG/zlib"
-RUN \
-  CFLAGS="-O0 -g" \
-  CPPFLAGS="-O0 -g" \
-  polytracker build ./configure && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker extract-bc libz.a -o libz.bc && \
-  polytracker instrument-cflog libz.bc
+# WORKDIR "$DEBUG/zlib"
+# RUN \
+#   CFLAGS="-O0 -g" \
+#   CPPFLAGS="-O0 -g" \
+#   polytracker build ./configure && \
+#   polytracker build make -j$((`nproc`+1)) && \
+#   polytracker extract-bc libz.a -o libz.bc && \
+#   polytracker instrument-cflog libz.bc
 
-# build debug version of libjpeg
-WORKDIR "$DEBUG/libjpeg"
-RUN \
-  AR_FLAGS="crs" \
-  CFLAGS="-O0 -g" \
-  CC=blight-cc \
-  polytracker build ./configure \
-    --enable-static \
-    --disable-shared \
-    --prefix="$DEBUG/libjpeg" \
-    --exec-prefix="$DEBUG/libjpeg" && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker build make install && \
-  polytracker extract-bc lib/libjpeg.a -o libjpeg.bc && \
-  polytracker instrument-cflog libjpeg.bc
+# # build debug version of libjpeg
+# WORKDIR "$DEBUG/libjpeg"
+# RUN \
+#   AR_FLAGS="crs" \
+#   CFLAGS="-O0 -g" \
+#   CC=blight-cc \
+#   polytracker build ./configure \
+#     --enable-static \
+#     --disable-shared \
+#     --prefix="$DEBUG/libjpeg" \
+#     --exec-prefix="$DEBUG/libjpeg" && \
+#   polytracker build make -j$((`nproc`+1)) && \
+#   polytracker build make install && \
+#   polytracker extract-bc lib/libjpeg.a -o libjpeg.bc && \
+#   polytracker instrument-cflog libjpeg.bc
 
-# build debug version of libtiff
-WORKDIR "$DEBUG"
-RUN \
-  DIR_GZLIB="$DEBUG/zlib" \
-  DIR_JPEGLIB="$DEBUG/libjpeg" \
-  DIRS_LIBINC="$DEBUG/zlib $DEBUG/libjpeg" \
-  DSOSUF="a" \
-  CC=blight-cc \
-  CXX=blight-c++ \
-  CPPFLAGS="-I$DEBUG/zlib/include -I$DEBUG/libjpeg/include"\
-  CFLAGS="-O0 -g" \
-  CXXFLAGS="-O0 -g" \
-  LDFLAGS="-L$DEBUG/zlib/lib -L$DEBUG/libjpeg/lib -lpthread" \
-  polytracker build ./configure \
-    --prefix="$DEBUG" \
-    --exec-prefix="$DEBUG" && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker build make install
+# # build debug version of libtiff
+# WORKDIR "$DEBUG"
+# RUN \
+#   DIR_GZLIB="$DEBUG/zlib" \
+#   DIR_JPEGLIB="$DEBUG/libjpeg" \
+#   DIRS_LIBINC="$DEBUG/zlib $DEBUG/libjpeg" \
+#   DSOSUF="a" \
+#   CC=blight-cc \
+#   CXX=blight-c++ \
+#   CPPFLAGS="-I$DEBUG/zlib/include -I$DEBUG/libjpeg/include"\
+#   CFLAGS="-O0 -g" \
+#   CXXFLAGS="-O0 -g" \
+#   LDFLAGS="-L$DEBUG/zlib/lib -L$DEBUG/libjpeg/lib -lpthread" \
+#   polytracker build ./configure \
+#     --prefix="$DEBUG" \
+#     --exec-prefix="$DEBUG" && \
+#   polytracker build make -j$((`nproc`+1)) && \
+#   polytracker build make install
 # RUN polytracker extract-bc lib/libtiff.a -o libtiff.bc
 # RUN polytracker instrument-cflog libtiff.bc
