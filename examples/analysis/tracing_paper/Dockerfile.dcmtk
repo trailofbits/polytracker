@@ -1,0 +1,269 @@
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /polytracker/dcmtk
+
+#ftp'd from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images
+COPY imgdisplay_testcases.zip "./imgdisplay_testcases.zip"
+
+# need 2 clean copies so we can have opt and unopt builds
+# following cmake build type convention:
+# 1. Release: `-O3 -DNDEBUG`
+# 2. Debug: `-O0 -g`
+ENV RELEASE=/polytracker/dcmtk/release
+ENV DEBUG=/polytracker/dcmtk/debug
+
+# dcmtk install instructions: https://support.dcmtk.org/docs/file_install.html
+
+RUN apt-get update && \
+    apt-get install -y gettext wget vim ripgrep unzip && \
+    # dcmtk #
+    wget https://support.dcmtk.org/redmine/attachments/download/184/dcmtk-3.6.7.tar.gz && \
+    tar xvf dcmtk-3.6.7.tar.gz && \
+    cp -r dcmtk-3.6.7 release && \
+    cp -r dcmtk-3.6.7 debug && \
+    # libpng #
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz && \
+    cp -r libpng-1.6.39 release/libpng && \
+    cp -r libpng-1.6.39 debug/libpng && \
+    # zlib #
+    wget https://zlib.net/current/zlib.tar.gz && \
+    tar xvf zlib.tar.gz && \
+    cp -r zlib-1.3 release/zlib && \
+    cp -r zlib-1.3 debug/zlib && \
+    # libjpeg (v9e) #
+    wget https://ijg.org/files/jpegsrc.v9e.tar.gz && \
+    tar xvf jpegsrc.v9e.tar.gz && \
+    cp -r jpeg-9e release/libjpeg && \
+    cp -r jpeg-9e debug/libjpeg && \
+    # libtiff #
+    wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
+    tar xvf tiff-4.3.0.tar.gz && \
+    cp -r tiff-4.3.0 release/libtiff && \
+    cp -r tiff-4.3.0 debug/libtiff && \
+    # libtiff also wants a local blight-install ;-;
+    cp /usr/local/bin/blight-install release/libtiff && \
+    cp /usr/local/bin/blight-install debug/libtiff
+
+# build release version of zlib
+WORKDIR "$RELEASE/zlib"
+RUN \
+  CFLAGS="-O3 -DNDEBUG" \
+  CPPFLAGS="-O3 -DNDEBUG" \
+  polytracker build ./configure && \
+  polytracker build make -j$((`nproc`+1)) && \
+  polytracker extract-bc libz.a -o libz.bc && \
+  polytracker instrument-cflog libz.bc
+
+# build release version of libjpeg
+WORKDIR "$RELEASE/libjpeg"
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O3 -DNDEBUG" \
+  CC=blight-cc \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$RELEASE/libjpeg" \
+    --exec-prefix="$RELEASE/libjpeg" && \
+    polytracker build make -j$((`nproc`+1)) && \
+    polytracker build make install && \
+    polytracker extract-bc lib/libjpeg.a -o libjpeg.bc && \
+    polytracker instrument-cflog libjpeg.bc
+
+# build release version of libtiff
+WORKDIR "$RELEASE/libtiff"
+RUN \
+  DIR_GZLIB="$RELEASE/zlib" \
+  DIR_JPEGLIB="$RELEASE/libjpeg" \
+  DIRS_LIBINC="$RELEASE/zlib $RELEASE/libjpeg" \
+  DSOSUF="a" \
+  CC=blight-cc \
+  CXX=blight-c++ \
+  CPPFLAGS="-I$RELEASE/zlib/include -I$RELEASE/libjpeg/include"\
+  CFLAGS="-O3 -DNDEBUG" \
+  CXXFLAGS="-O3 -DNDEBUG" \
+  LDFLAGS="-L$RELEASE/zlib/lib -L$RELEASE/libjpeg/lib -lpthread" \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$RELEASE/libtiff" \
+    --exec-prefix="$RELEASE/libtiff" && \
+  polytracker build make -j$((`nproc`+1)) && \
+  polytracker build make install && \
+  polytracker extract-bc lib/libtiff.a -o libtiff.bc && \
+  polytracker instrument-cflog libtiff.bc
+
+# build release version of libpng linking our built zlib
+WORKDIR "$RELEASE/libpng"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O3 -DNDEBUG" \
+  CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" \
+  LDFLAGS="-L$RELEASE/zlib/lib" \
+  CC=blight-cc \
+  polytracker build make libpng.a -j$((`nproc`+1)) && \
+  polytracker extract-bc libpng.a -o libpng.bc && \
+  polytracker instrument-cflog libpng.bc
+
+# build release version of dcmtk linking our built dependencies
+WORKDIR "$RELEASE/build"
+ENV DCMDICTPATH="$RELEASE/dcmdata/data/dicom.dic"
+RUN polytracker build cmake -S .. -B . \
+  -DBUILD_APPS:BOOL=ON \
+  -DBUILD_SHARED_LIBS:BOOL=OFF \
+  -DCMAKE_BUILD_TYPE:STRING=Release \
+  -DCMAKE_EXE_LINKER_FLAGS=" \
+    -L$RELEASE/zlib/lib \
+    -L$RELEASE/libpng/lib \
+    -L$RELEASE/libjpeg/lib \
+    -L$RELEASE/libtiff/lib \
+    -lstdc++ \
+    -fPIC \
+    -lpthread" \
+  -DDCMTK_DEFAULT_DICT:STRING=builtin \
+  -DDCMTK_USE_DCMDICTPATH:BOOL=OFF \
+  -DDCMTK_ENABLE_CHARSET_CONVERSION:STRING=oficonv \
+  -DDCMTK_ENABLE_MANPAGES:BOOL=OFF \
+  -DDCMTK_WITH_ICU:BOOL=OFF \
+  -DDCMTK_WITH_STDLIBC_ICONV:BOOL=OFF \
+  -DZLIB_INCLUDE_DIR="$RELEASE/zlib" \
+  -DZLIB_LIBRARY_RELEASE="$RELEASE/zlib/libz.a" \
+  -DDCMTK_WITH_PNG:BOOL=ON \
+  -DPNG_LIBRARY_RELEASE="$RELEASE/libpng/libpng.a" \
+  -DPNG_PNG_INCLUDE_DIR="$RELEASE/libpng" \
+  -DDCMTK_WITH_OPENJPEG:BOOL=ON \
+  -DJPEG_INCLUDE_DIR="$RELEASE/libjpeg/include" \
+  -DJPEG_LIBRARY_RELEASE="$RELEASE/libjpeg/lib/libjpeg.a" \
+  -DOpenJPEG_DIR="$RELEASE/libjpeg" \
+  -DDCMTK_WITH_TIFF:BOOL=ON \
+  -DTIFF_INCLUDE_DIR="$RELEASE/libtiff/include" \
+  -DTIFF_LIBRARY_RELEASE="$RELEASE/libtiff/lib/libtiff.a" && \
+  polytracker build cmake --build . -j$((`nproc`+1))
+
+# # instrument dcmdump https://support.dcmtk.org/docs/mod_dcmdata.html (others could be dcm2json, dcm2pdf, dcm2xml, dcmconv, dcmrle, dcmdrle, dcmgpdir, dump2dcm, img2dcm, pdf2dcm, stl2dcm, xml2dcm)
+RUN polytracker extract-bc lib/libdcmdata.a -o libdcmdata.bc && \
+  polytracker extract-bc bin/dcmdump -o dcmdump.bc && \
+  polytracker extract-bc lib/libofstd.a -o libofstd.bc && \
+  polytracker instrument-cflog dcmdump.bc && \
+  polytracker instrument-cflog libdcmdata.bc && \
+  polytracker instrument-cflog libofstd.bc && \
+  llvm-link --only-needed -o dcmdump_linked.bc dcmdump.bc libofstd.bc libdcmdata.bc "$RELEASE/libpng/libpng.bc" "$RELEASE/zlib/libz.bc" "$RELEASE/libjpeg/libjpeg.bc" "$RELEASE/libtiff/libtiff.bc" && \
+  polytracker instrument-bc --taint --ftrace dcmdump_linked.bc -o instrumented.bc && \
+  polytracker lower-bc instrumented.bc -t dcmdump -o dcmdump.instrumented
+
+# instrument dcmodify https://support.dcmtk.org/docs/mod_dcmdata.html
+
+# instrument dcm2pnm https://support.dcmtk.org/docs/mod_dcmimage.html (others could be dcmquant, dcmscale)
+
+# instrument dcmdjpeg https://support.dcmtk.org/docs/mod_dcmjpeg.html (others we could do are dcmcjpeg, dcmj2pnm, dcmmkdir)
+
+# build debug version of zlib
+WORKDIR "$DEBUG/zlib"
+RUN \
+  CFLAGS="-O0 -g" \
+  CPPFLAGS="-O0 -g" \
+  polytracker build ./configure && \
+  polytracker build make -j$((`nproc`+1)) && \
+  polytracker extract-bc libz.a -o libz.bc && \
+  polytracker instrument-cflog libz.bc
+
+# build debug version of libjpeg
+WORKDIR "$DEBUG/libjpeg"
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O0 -g" \
+  CC=blight-cc \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$DEBUG/libjpeg" \
+    --exec-prefix="$DEBUG/libjpeg" && \
+    polytracker build make -j$((`nproc`+1)) && \
+    polytracker build make install && \
+    polytracker extract-bc lib/libjpeg.a -o libjpeg.bc && \
+    polytracker instrument-cflog libjpeg.bc
+
+# build debug version of libtiff
+WORKDIR "$DEBUG/libtiff"
+RUN \
+  DIR_GZLIB="$DEBUG/zlib" \
+  DIR_JPEGLIB="$DEBUG/libjpeg" \
+  DIRS_LIBINC="$DEBUG/zlib $DEBUG/libjpeg" \
+  DSOSUF="a" \
+  CC=blight-cc \
+  CXX=blight-c++ \
+  CPPFLAGS="-I$DEBUG/zlib/include -I$DEBUG/libjpeg/include"\
+  CFLAGS="-O0 -g" \
+  CXXFLAGS="-O0 -g" \
+  LDFLAGS="-L$DEBUG/zlib/lib -L$DEBUG/libjpeg/lib -lpthread" \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$DEBUG/libtiff" \
+    --exec-prefix="$DEBUG/libtiff" && \
+  polytracker build make -j$((`nproc`+1)) && \
+  polytracker build make install && \
+  polytracker extract-bc lib/libtiff.a -o libtiff.bc && \
+  polytracker instrument-cflog libtiff.bc
+
+# build release version of libpng linking our built zlib
+WORKDIR "$DEBUG/libpng"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O0 -g" \
+  CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" \
+  LDFLAGS="-L$DEBUG/zlib/lib" \
+  CC=blight-cc \
+  polytracker build make libpng.a -j$((`nproc`+1)) && \
+  polytracker extract-bc libpng.a -o libpng.bc && \
+  polytracker instrument-cflog libpng.bc
+
+# build debug version of dcmtk linking our built dependencies
+WORKDIR "$DEBUG/build"
+ENV DCMDICTPATH="$DEBUG/dcmdata/data/dicom.dic"
+RUN polytracker build cmake -S .. -B . \
+  -DBUILD_APPS:BOOL=ON \
+  -DBUILD_SHARED_LIBS:BOOL=OFF \
+  -DCMAKE_BUILD_TYPE:STRING=Debug \
+  -DCMAKE_EXE_LINKER_FLAGS=" \
+    -L$DEBUG/zlib/lib \
+    -L$DEBUG/libpng/lib \
+    -L$DEBUG/libjpeg/lib \
+    -L$DEBUG/libtiff/lib \
+    -lstdc++ \
+    -fPIC \
+    -lpthread" \
+  -DDCMTK_DEFAULT_DICT:STRING=builtin \
+  -DDCMTK_USE_DCMDICTPATH:BOOL=OFF \
+  -DDCMTK_ENABLE_CHARSET_CONVERSION:STRING=oficonv \
+  -DDCMTK_ENABLE_MANPAGES:BOOL=OFF \
+  -DDCMTK_WITH_ICU:BOOL=OFF \
+  -DDCMTK_WITH_STDLIBC_ICONV:BOOL=OFF \
+  -DZLIB_INCLUDE_DIR="$DEBUG/zlib" \
+  -DZLIB_LIBRARY_DEBUG="$DEBUG/zlib/libz.a" \
+  -DDCMTK_WITH_PNG:BOOL=ON \
+  -DPNG_LIBRARY_DEBUG="$DEBUG/libpng/libpng.a" \
+  -DPNG_PNG_INCLUDE_DIR="$DEBUG/libpng" \
+  -DDCMTK_WITH_OPENJPEG:BOOL=ON \
+  -DJPEG_INCLUDE_DIR="$DEBUG/libjpeg/include" \
+  -DJPEG_LIBRARY_DEBUG="$DEBUG/libjpeg/lib/libjpeg.a" \
+  -DOpenJPEG_DIR="$DEBUG/libjpeg" \
+  -DDCMTK_WITH_TIFF:BOOL=ON \
+  -DTIFF_INCLUDE_DIR="$DEBUG/libtiff/include" \
+  -DTIFF_LIBRARY_DEBUG="$DEBUG/libtiff/lib/libtiff.a" && \
+  polytracker build cmake --build . -j$((`nproc`+1))
+
+# # instrument dcmdump https://support.dcmtk.org/docs/mod_dcmdata.html (others could be dcm2json, dcm2pdf, dcm2xml, dcmconv, dcmrle, dcmdrle, dcmgpdir, dump2dcm, img2dcm, pdf2dcm, stl2dcm, xml2dcm)
+RUN polytracker extract-bc lib/libdcmdata.a -o libdcmdata.bc && \
+  polytracker extract-bc bin/dcmdump -o dcmdump.bc && \
+  polytracker extract-bc lib/libofstd.a -o libofstd.bc && \
+  polytracker instrument-cflog dcmdump.bc && \
+  polytracker instrument-cflog libdcmdata.bc && \
+  polytracker instrument-cflog libofstd.bc && \
+  llvm-link --only-needed -o dcmdump_linked.bc dcmdump.bc libofstd.bc libdcmdata.bc "$DEBUG/libpng/libpng.bc" "$DEBUG/zlib/libz.bc" "$DEBUG/libjpeg/libjpeg.bc" "$DEBUG/libtiff/libtiff.bc" && \
+  polytracker instrument-bc --taint --ftrace dcmdump_linked.bc -o instrumented.bc && \
+  polytracker lower-bc instrumented.bc -t dcmdump -o dcmdump.instrumented
+
