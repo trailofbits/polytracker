@@ -1,12 +1,10 @@
 #!/usr/bin/python
 
-from argparse import ArgumentParser
 from functools import partialmethod
 import json
-from oi import OutputInputMapping
-from os import rename
+from .oi import OutputInputMapping
 from pathlib import Path
-from polytracker import PolyTrackerTrace, taint_dag
+from polytracker import taint_dag
 from polytracker.mapping import InputOutputMapping
 import subprocess
 from sys import stdin
@@ -17,83 +15,6 @@ import cxxfilt
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 OUTPUT_COLUMN_WIDTH = 40
-
-parser = ArgumentParser(
-    prog="compare_tdags",
-    description="Compares TDAGs",
-)
-parser.add_argument(
-    "-a",
-    "--build_a",
-    type=Path,
-    help="Path to the first binary build to compare (should be the same software as build b, just built with different options)",
-)
-parser.add_argument(
-    "-ta",
-    "--tdag_a",
-    type=Path,
-    help="Path to the first TDAG (A) trace to compare",
-)
-parser.add_argument(
-    "-fa",
-    "--function_id_json_a",
-    type=Path,
-    help="Path to functionid.json function trace for TDAG A (created by polytracker's cflog pass)",
-)
-parser.add_argument(
-    "-b",
-    "--build_b",
-    type=Path,
-    help="Path to the second binary build to compare (should be the same software as build a, just built with different options)",
-)
-parser.add_argument(
-    "-tb",
-    "--tdag_b",
-    type=Path,
-    help="Path to the second TDAG (B) trace to compare (created by polytracker's cflog pass)",
-)
-parser.add_argument(
-    "-fb",
-    "--function_id_json_b",
-    type=Path,
-    help="Path to functionid.json function trace for TDAG B",
-)
-parser.add_argument(
-    "-e",
-    "--execute",
-    type=str,
-    nargs="+",
-    help="command line arguments (including input) to run for each candidate build, for example `<executable_passed_with -a or -b> -i image.j2k -o image.pgm` would require `-i image.j2k -o image.pgm`",
-)
-parser.add_argument(
-    "--cflog",
-    action="store_true",
-    help="Compare Control Flow Logs (requires -a and -b)",
-)
-parser.add_argument(
-    "--inout",
-    action="store_true",
-    help="Compare Input-Output mapping (requires -a and -b)",
-)
-parser.add_argument(
-    "--outin",
-    action="store_true",
-    help="Compare Output-Input mapping (requires -a and -b)",
-)
-parser.add_argument(
-    "--runtrace", action="store_true", help="Compare runtrace (requires -a and -b)"
-)
-parser.add_argument(
-    "--inputsused",
-    action="store_true",
-    help="Compare inputs used (requires -a and -b)",
-)
-parser.add_argument(
-    "--enumdiff",
-    action="store_true",
-    help="Enumerate differences (kind of) (requires -a and -b)",
-)
-args = parser.parse_args()
 
 
 def run_binary(
@@ -179,22 +100,48 @@ def node_equals(n1, n2):
     return True
 
 
-def input_offsets(tdag):
-    """Figure out where each node comes from in the input, and squash labels that descend from the same input offset(s) iff they are duplicates."""
-    offsets = {}
-    for input_label in tdag.input_labels():
-        nodes = tdag.decode_node(input_label)
-        offset = nodes.offset
-        if offset in offsets:
-            offsets[offset].append(nodes)
-        else:
-            offsets[offset] = [nodes]
+def input_set(first_label: int, tdag) -> Set[int]:
+    q = [first_label]
+    ret = set()
+    seen = set()
+    while q:
+        label = q.pop()
+        if label in seen:
+            continue
+        seen.add(label)
 
-    # Squash multiple labels at same offset if they are equal
-    for offset, nodes in offsets.items():
-        if all(node_equals(node, nodes[0]) for node in nodes):
-            offsets[offset] = nodes[:1]
-    return offsets
+        n = tdag.decode_node(label)
+        if isinstance(n, taint_dag.TDSourceNode):
+            ret.add(n)
+        elif isinstance(n, taint_dag.TDUnionNode):
+            q.append(n.left)
+            q.append(n.right)
+        else:
+            for lbl in range(n.first, n.last + 1):
+                q.append(lbl)
+
+    return ret
+
+
+def input_offsets(tdag, first_taint_label: int = -1):
+    """Figure out where the entry's taint label comes from in the input. To avoid the need to return multiple results, squash labels that descend from the same input offset(s) iff they are duplicates."""
+    if first_taint_label != -1:
+        return sorted(map(lambda n: n.offset, input_set(first_taint_label, tdag)))
+    else:
+        offsets = {}
+        for input_label in tdag.input_labels():
+            nodes = tdag.decode_node(input_label)
+            offset = nodes.offset
+            if offset in offsets:
+                offsets[offset].append(nodes)
+            else:
+                offsets[offset] = [nodes]
+
+        # Squash multiple labels at same offset if they are equal
+        for offset, nodes in offsets.items():
+            if all(node_equals(node, nodes[0]) for node in nodes):
+                offsets[offset] = nodes[:1]
+        return offsets
 
 
 def get_cflog_entries(tdag: Path, function_id_path: Path) -> list[tuple]:
@@ -202,10 +149,21 @@ def get_cflog_entries(tdag: Path, function_id_path: Path) -> list[tuple]:
     with open(function_id_path) as function_id_json:
         functions_list = json.load(function_id_json)
     cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
-    cflog.function_id_mapping(list(map(cxxfilt.demangle, functions_list)))
+
+    demangled_functions_list = []
+    for function in functions_list:
+        try:
+            demangled_functions_list.append(cxxfilt.demangle(function))
+        except cxxfilt.InvalidName as e:
+            print(
+                f"Unable to demangle the function name '{function}' since cxx.InvalidName was raised, but attempting to continue..."
+            )
+            demangled_functions_list.append(function)
+    cflog.function_id_mapping(demangled_functions_list)
+
     return list(
         map(
-            lambda entry: (input_offsets(entry.label, tdag), entry.callstack),
+            lambda entry: (input_offsets(tdag, entry.label), entry.callstack),
             filter(
                 lambda maybe_tainted_event: isinstance(
                     maybe_tainted_event, taint_dag.TDTaintedControlFlowEvent
@@ -225,7 +183,16 @@ def print_cols(dbg, release, additional=""):
     )
 
 
-def show_cflog(tdag: Path, function_id_path: Path):
+def show_cflog(tdag: Path, function_id_path: Path, cavities=False):
+    if cavities:
+        file_cavities = InputOutputMapping(tdag).file_cavities()
+        print("...FILE CAVITIES...")
+        for c in file_cavities.items():
+            print(f"{c[0]}")
+            for cav_byte in c[1]:
+                print(f"\t{cav_byte}")
+
+    print("...CONTROL FLOW LOG...")
     cflog = get_cflog_entries(tdag, function_id_path)
 
     for entry in range(0, len(cflog)):
@@ -300,11 +267,24 @@ def compare_cflog(
     return
 
 
-def compare_run_trace(tdag_a, tdag_b):
+def compare_run_trace(tdag_a, tdag_b, cavities=False):
+    if cavities:
+        mapping_a = InputOutputMapping(tdag_a).file_cavities()
+        mapping_b = InputOutputMapping(tdag_b).file_cavities()
+        symmetric_diff = set(mapping_a.items()).symmetric_difference(
+            set(mapping_b.items())
+        )
+        print("...CAVITY SYMMETRIC DIFFERENCE...")
+        for cavity in symmetric_diff:
+            print(f"{cavity[0]}")
+            for ct in cavity[1]:
+                print(f"\t{ct}")
+
+    print("...EVENTS SYMMETRIC DIFFERENCE...")
     for eventA, idxA, eventB, idxB in zip(
-        tdag_a.events,
+        tdag_a.events(),
         range(0, len(tdag_a.events)),
-        tdag_b.events,
+        tdag_b.events(),
         range(0, len(tdag_b.events)),
     ):
         fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
@@ -341,40 +321,3 @@ def compare_inputs_used(dbg_tdfile, rel_tdfile):
     inputs_dbg = set(x[1] for x in dbg_mapping)
     inputs_rel = set(x[1] for x in rel_mapping)
     print(f"Input diffs: {sorted(inputs_rel-inputs_dbg)}")
-
-
-if __name__ == "__main__":
-    if args.execute:
-        print(f"Running '{args.execute}' for {args.build_a} and {args.build_b}")
-        runner(args.build_a, args.build_b, args.execute)
-    elif args.tdag_a and args.tdag_b:
-        print(f"Comparing {args.tdag_a} and {args.tdag_b}")
-        traceA = PolyTrackerTrace.load(args.tdag_a)
-        traceB = PolyTrackerTrace.load(args.tdag_b)
-
-        if args.cflog:
-            print("Control flow log comparison...")
-            compare_cflog(
-                tdagA=traceA.tdfile,
-                tdagB=traceB.tdfile,
-                function_id_pathA=args.function_id_json_a,
-                function_id_pathB=args.function_id_json_b,
-            )
-
-        if args.runtrace:
-            print("Run trace comparison...")
-            compare_run_trace(traceA.tdfile, traceB.tdfile)
-
-        if args.inputsused:
-            print("Inputs comparison...")
-            compare_inputs_used(traceA.tdfile, traceB.tdfile)
-
-        if args.enumdiff:
-            print("Enum diff...")
-            enum_diff(traceA.tdfile, traceB.tdfile)
-    elif args.tdag_a and args.function_id_json_a and args.cflog:
-        print("Mapping and showing single control flow log...")
-        show_cflog(args.tdag_a, args.function_id_json_a)
-    else:
-        print("Error: Need to provide either -a and -b, or --locate")
-        parser.print_help()
