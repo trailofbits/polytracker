@@ -18,7 +18,7 @@ tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 OUTPUT_COLUMN_WIDTH = 40
 
 
-class TdagComparator:
+class Runner:
     def run_binary(
         self, binary_path: Path, arguments: list[str], tstamp: float, instrumented=True
     ):
@@ -92,6 +92,8 @@ class TdagComparator:
             f.write(f"{nameB}-stdout(utf-8): {runB.stdout.decode('utf-8')}\n--------\n")
             f.write(f"{nameB}-stderr(utf-8): {runB.stderr.decode('utf-8')}\n--------\n")
 
+
+class TdagComparator:
     def node_equals(self, n1, n2):
         """Polytracker TDAG node comparator."""
         if type(n1) is not type(n2):

@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from polytracker import PolyTrackerTrace
-from comparator import TdagComparator
+from polytracker import PolyTrackerTrace, TDProgramTrace
+from examples.analysis.tracing_paper.analysis import Runner, TdagComparator
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -95,14 +95,14 @@ if __name__ == "__main__":
 
     if args.execute:
         print(f"Running '{args.execute}' for {args.build_a} and {args.build_b}")
-        comparator.runner(args.build_a, args.build_b, args.execute)
+        runner = Runner()
+        runner.runner(args.build_a, args.build_b, args.execute)
     elif args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}")
-        traceA = PolyTrackerTrace.load(args.tdag_a)
-        traceB = PolyTrackerTrace.load(args.tdag_b)
+        traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
+        traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
 
         if args.cflog:
-            print("Control flow log comparison...")
             comparator.compare_cflog(
                 tdagA=traceA.tdfile,
                 tdagB=traceB.tdfile,
@@ -113,20 +113,19 @@ if __name__ == "__main__":
             )
 
         if args.runtrace:
-            print("Run trace comparison...")
             comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
         if args.inputsused:
-            print("Inputs comparison...")
             comparator.compare_inputs_used(traceA.tdfile, traceB.tdfile)
 
         if args.enumdiff:
-            print("Enum diff...")
             comparator.enum_diff(traceA.tdfile, traceB.tdfile)
     elif args.tdag_a and args.function_id_json_a and args.cflog:
-        print("Mapping and showing single control flow log...")
-        traceA = PolyTrackerTrace.load(args.tdag_a)
-        comparator.show_cflog(traceA.tdfile, args.function_id_json_a, args.cavities)
+        print("Mapping and showing a single control flow log...")
+        trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
+        comparator.show_cflog(trace.tdfile, args.function_id_json_a, args.cavities)
     else:
-        print("Error: Need to provide either -a and -b, or --locate")
+        print(
+            "Error: Need to provide one or two tdags, and corresponding Polytracker-generated function list(s)"
+        )
         parser.print_help()
