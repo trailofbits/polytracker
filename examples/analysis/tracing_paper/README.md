@@ -4,6 +4,37 @@ Copy or pass through this directory into your Polytracker container in order to 
 # Inputs
 Input files for the software you are testing are required.
 
+## NITF test inputs
+`hackathonFive-nitf.zip` contains many malformed as well as correctly formed NITF files from various standards versions.
+
+## DCM test inputs
+Many test imagesets are available from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images. Most of the ones available over FTP are downloadable for free if you connect as a guest user.
+
+Honourable mention: https://github.com/robyoung/dicom-test-files/tree/master/data also has a bunch of test images from different sources.
+
+todo(kaoudis): add remainder of known publicly available resources here.
+
+## JPEG test inputs
+### [CVE-2021-3575](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575)
+On the following crafted poc file:
+https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz
+
+```
+$ opj_decompress -i poc.j2k -o poc.j2k.png
+```
+See also:
+- https://github.com/uclouvain/openjpeg/issues/1347
+- https://github.com/uclouvain/openjpeg/pull/1362
+
+### JPEG2000 benchmark images
+linked in https://www.fastcompression.com/benchmarks/benchmarks-j2k.htm
+
+## PNG test inputs
+todo
+
+## TIFF test inputs
+todo
+
 # Example 1
 Build the NITF parser Nitro (located in polytracker/examples/analysis/ubet/Dockerfile.nitro):
 ```
