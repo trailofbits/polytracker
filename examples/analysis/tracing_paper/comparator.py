@@ -255,16 +255,19 @@ class TdagComparator:
         function_id_pathA: Path,
         function_id_pathB: Path,
         cavities=False,
+        verbose=False,
     ):
-        """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names, walk through them and see what does not match. This matches up control flow log entries from each tdag."""
+        """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag."""
         cflogA = self.get_cflog_entries(tdagA, function_id_pathA)
         if cavities:
             interleavedA = self.interleave_file_cavities(tdagA, cflogA)
+            print("Using interleaved cavities and TDAG A...")
             cflogA = interleavedA
 
         cflogB = self.get_cflog_entries(tdagB, function_id_pathB)
         if cavities:
             interleavedB = self.interleave_file_cavities(tdagB, cflogB)
+            print("Using interleaved cavities and TDAG B...")
             cflogB = interleavedB
 
         lenA = len(cflogA)
@@ -276,31 +279,41 @@ class TdagComparator:
             entryA = cflogA[idxA] if idxA < lenA else None
             entryB = cflogB[idxB] if idxB < lenB else None
 
+            if not verbose:
+                # structure of entry: tuple(bytes: [label1, label2, ...], callstack: [entry1, entry2, ...])
+                # get last entry of callstack - it's often enough detail.
+                # can refactor or comment this out if full callstack wanted.
+                if entryA[1][-1] != None:
+                    callA = entryA[1][-1]
+                else:
+                    callA = entryA[1]
+                if entryB[1][-1] != None:
+                    callB = entryB[1][-1]
+                else:
+                    callB = entryB[1]
+            else:
+                callA = entryA[1]
+                callB = entryB[1]
+
             if entryA is None:
-                printable = (
-                    f"A: <none>, \t\tB: {str(entryB[0])}, \t[...{str(entryB[1][-1])}]"
-                )
+                printable = f"A: <none>, \t\tB: {str(entryB[0])}, \t[...{callB}]"
                 self.print_cols("", str(printable), "")
                 idxB += 1
                 continue
 
             if entryB is None:
-                printable = (
-                    f"A: {str(entryA[0])}, \t[...{str(entryA[1][-1])}], \t\tB: <none>"
-                )
+                printable = f"A: {str(entryA[0])}, \t[...{callA}], \t\tB: <none>"
                 self.print_cols(str(entryA), "", "")
                 idxA += 1
                 continue
 
-            callstackA = str(entryA[1][-1])
-            callstackB = str(entryB[1][-1])
-
+            # same bytes were processed in the two runs by different functionality
             if entryA[0] == entryB[0]:
                 self.print_cols(
                     str(entryA[0]),
                     str(entryB[0]),
-                    f" !!! A: [...{callstackA}] != B: [...{callstackB}]"
-                    if callstackA != callstackB
+                    f" !!! A: [...{entryA}] != B: [...{callB}]"
+                    if callA != callB
                     else "",
                 )
                 idxA += 1
@@ -322,10 +335,10 @@ class TdagComparator:
                     stepsB += 1
 
                 if stepsA < stepsB:
-                    self.print_cols(str(entryA[0]), "", callstackA)
+                    self.print_cols(str(entryA[0]), "", callA)
                     idxA += 1
                 else:
-                    self.print_cols("", str(entryB[0]), callstackB)
+                    self.print_cols("", str(entryB[0]), callB)
                     idxB += 1
 
         return

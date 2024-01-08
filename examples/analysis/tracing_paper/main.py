@@ -83,6 +83,11 @@ parser.add_argument(
     help="Contextualize the input trace with blind spots (dont-care bytes)",
     action="store_true",
 )
+parser.add_argument(
+    "--verbose",
+    help="Provide the full callstack when comparing cflog traces",
+    action="store_true",
+)
 
 if __name__ == "__main__":
     comparator = TdagComparator()
@@ -103,6 +108,8 @@ if __name__ == "__main__":
                 tdagB=traceB.tdfile,
                 function_id_pathA=args.function_id_json_a,
                 function_id_pathB=args.function_id_json_b,
+                cavities=args.cavities,
+                verbose=args.verbose,
             )
 
         if args.runtrace:
