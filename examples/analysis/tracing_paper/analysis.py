@@ -15,7 +15,6 @@ import cxxfilt
 from queue import Queue
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
-OUTPUT_COLUMN_WIDTH = 40
 
 
 class Runner:
@@ -190,6 +189,7 @@ class TdagComparator:
         )
 
     def print_cols(self, dbg, release="", additional=""):
+        OUTPUT_COLUMN_WIDTH = 40
         print(
             (dbg.ljust(OUTPUT_COLUMN_WIDTH))
             + release.ljust(OUTPUT_COLUMN_WIDTH)
