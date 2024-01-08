@@ -2,7 +2,7 @@ import pytest
 from polytracker import PolyTrackerTrace, taint_dag
 import polytracker
 from pathlib import Path
-from ..comparator import TdagComparator
+from ..analysis import TdagComparator
 from json import load
 
 
@@ -19,7 +19,7 @@ class TestCompareTdags:
     def get_functionid_json(self, json_path):
         return load(json_path)
 
-    def test__sorted_input_offsets(self, tdfile, comparator):
+    def test_sorted_input_offsets(self, tdfile, comparator):
         cflog = tdfile._get_section(taint_dag.TDControlFlowLogSection)
 
         for control_flow_event in cflog:
