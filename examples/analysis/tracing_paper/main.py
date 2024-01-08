@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from polytracker import PolyTrackerTrace, taint_dag
-from .compare_tdags import *
+from polytracker import PolyTrackerTrace
+from comparator import TdagComparator
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -83,12 +83,14 @@ parser.add_argument(
     help="Contextualize the input trace with blind spots (dont-care bytes)",
     action="store_true",
 )
-args = parser.parse_args()
 
 if __name__ == "__main__":
+    comparator = TdagComparator()
+    args = parser.parse_args()
+
     if args.execute:
         print(f"Running '{args.execute}' for {args.build_a} and {args.build_b}")
-        runner(args.build_a, args.build_b, args.execute)
+        comparator.runner(args.build_a, args.build_b, args.execute)
     elif args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}")
         traceA = PolyTrackerTrace.load(args.tdag_a)
@@ -96,7 +98,7 @@ if __name__ == "__main__":
 
         if args.cflog:
             print("Control flow log comparison...")
-            compare_cflog(
+            comparator.compare_cflog(
                 tdagA=traceA.tdfile,
                 tdagB=traceB.tdfile,
                 function_id_pathA=args.function_id_json_a,
@@ -105,19 +107,19 @@ if __name__ == "__main__":
 
         if args.runtrace:
             print("Run trace comparison...")
-            compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
+            comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
         if args.inputsused:
             print("Inputs comparison...")
-            compare_inputs_used(traceA.tdfile, traceB.tdfile)
+            comparator.compare_inputs_used(traceA.tdfile, traceB.tdfile)
 
         if args.enumdiff:
             print("Enum diff...")
-            enum_diff(traceA.tdfile, traceB.tdfile)
+            comparator.enum_diff(traceA.tdfile, traceB.tdfile)
     elif args.tdag_a and args.function_id_json_a and args.cflog:
         print("Mapping and showing single control flow log...")
         traceA = PolyTrackerTrace.load(args.tdag_a)
-        show_cflog(traceA.tdfile, args.function_id_json_a, args.cavities)
+        comparator.show_cflog(traceA.tdfile, args.function_id_json_a, args.cavities)
     else:
         print("Error: Need to provide either -a and -b, or --locate")
         parser.print_help()
