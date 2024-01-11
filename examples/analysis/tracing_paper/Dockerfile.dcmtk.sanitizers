@@ -1,0 +1,147 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /dcmtk
+
+# get core dump
+RUN ulimit -S -c unlimited
+
+#ftp'd from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images
+COPY imgdisplay_testcases.zip "./imgdisplay_testcases.zip"
+
+# need 2 clean copies so we can have opt and unopt builds
+# following cmake build type convention:
+# 1. Release: `-O3 -DNDEBUG`
+# 2. Debug: `-O0 -g`
+ENV DEBUG=/dcmtk/debug
+
+# dcmtk install instructions: https://support.dcmtk.org/docs/file_install.html
+
+RUN apt-get update && \
+    apt-get install -y gettext wget vim ripgrep unzip gdb git cmake clang-12 build-essential python3-dev python3-pip ninja-build golang file && \
+    pip3 install pytest blight && \
+    # dcmtk #
+    wget https://support.dcmtk.org/redmine/attachments/download/184/dcmtk-3.6.7.tar.gz && \
+    tar xvf dcmtk-3.6.7.tar.gz && \
+    cp -r dcmtk-3.6.7 debug && \
+    # libpng #
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz && \
+    cp -r libpng-1.6.39 debug/libpng && \
+    # zlib #
+    wget https://zlib.net/current/zlib.tar.gz && \
+    tar xvf zlib.tar.gz && \
+    cp -r zlib-1.3 debug/zlib && \
+    # libjpeg (v9e) #
+    wget https://ijg.org/files/jpegsrc.v9e.tar.gz && \
+    tar xvf jpegsrc.v9e.tar.gz && \
+    cp -r jpeg-9e debug/libjpeg && \
+    # libtiff #
+    wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
+    tar xvf tiff-4.3.0.tar.gz && \
+    cp -r tiff-4.3.0 debug/libtiff
+
+# Install symlinks to clang and llvm bitcode tools
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
+    update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10 && \
+    update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
+    update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-12 10 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+ENV ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
+# build debug version of zlib
+WORKDIR "$DEBUG/zlib"
+RUN \
+  CFLAGS="-O0 -g -Wall -fno-omit-frame-pointer" \
+  CPPFLAGS="-O0 -g -Wall -fno-omit-frame-pointer" \
+  CC=clang \
+  CXX=clang++ \
+  ./configure && \
+  make -j$((`nproc`+1))
+
+# build debug version of libjpeg
+WORKDIR "$DEBUG/libjpeg"
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CC=clang \
+  ./configure \
+    --enable-shared \
+    --disable-static \
+    --prefix="$DEBUG/libjpeg" \
+    --exec-prefix="$DEBUG/libjpeg" && \
+    make -j$((`nproc`+1)) && \
+    make install
+
+# build debug version of libtiff
+WORKDIR "$DEBUG/libtiff"
+RUN \
+  DIR_GZLIB="$DEBUG/zlib" \
+  DIR_JPEGLIB="$DEBUG/libjpeg" \
+  DIRS_LIBINC="$DEBUG/zlib $DEBUG/libjpeg" \
+  DSOSUF="a" \
+  CC=clang \
+  CXX=clang++ \
+  CPPFLAGS="-I$DEBUG/zlib/include -I$DEBUG/libjpeg/include"\
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CXXFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  LDFLAGS="-L$DEBUG/zlib/lib -L$DEBUG/libjpeg/lib -lpthread" \
+  ./configure \
+    --enable-shared \
+    --disable-static \
+    --prefix="$DEBUG/libtiff" \
+    --exec-prefix="$DEBUG/libtiff" && \
+  make -j$((`nproc`+1)) && \
+  make install
+
+# build release version of libpng linking our built zlib
+WORKDIR "$DEBUG/libpng"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CPPFLAGS="-I$DEBUG/zlib/include -O0 -g -fno-omit-frame-pointer" \
+  LDFLAGS="-L$DEBUG/zlib/lib" \
+  CC=clang \
+  make -j$((`nproc`+1))
+
+# build debug version of dcmtk linking our built dependencies
+WORKDIR "$DEBUG/build"
+ENV DCMDICTPATH="$DEBUG/dcmdata/data/dicom.dic"
+RUN cmake -S .. -B . \
+  -DCMAKE_BUILD_TYPE:STRING=Debug \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -O0 -g" \
+  -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -O0 -g" \
+  -DCMAKE_EXE_LINKER_FLAGS=" \
+    -L$DEBUG/zlib/lib \
+    -L$DEBUG/libpng/lib \
+    -L$DEBUG/libjpeg/lib \
+    -L$DEBUG/libtiff/lib \
+    -lstdc++ \
+    -lpthread" \
+  -DBUILD_APPS:BOOL=ON \
+  -DBUILD_SHARED_LIBS:BOOL=OFF \
+  -DDCMTK_DEFAULT_DICT:STRING=builtin \
+  -DDCMTK_USE_DCMDICTPATH:BOOL=OFF \
+  -DDCMTK_ENABLE_CHARSET_CONVERSION:STRING=oficonv \
+  -DDCMTK_ENABLE_MANPAGES:BOOL=OFF \
+  -DDCMTK_WITH_ICU:BOOL=OFF \
+  -DDCMTK_WITH_STDLIBC_ICONV:BOOL=OFF \
+  -DZLIB_INCLUDE_DIR="$DEBUG/zlib" \
+  -DZLIB_LIBRARY_DEBUG="$DEBUG/zlib/libz.so" \
+  -DDCMTK_WITH_PNG:BOOL=ON \
+  -DPNG_LIBRARY_DEBUG="$DEBUG/libpng/libpng16.so" \
+  -DPNG_PNG_INCLUDE_DIR="$DEBUG/libpng" \
+  -DDCMTK_WITH_OPENJPEG:BOOL=ON \
+  -DJPEG_INCLUDE_DIR="$DEBUG/libjpeg/include" \
+  -DJPEG_LIBRARY_DEBUG="$DEBUG/libjpeg/lib/libjpeg.so" \
+  -DOpenJPEG_DIR="$DEBUG/libjpeg" \
+  -DDCMTK_WITH_TIFF:BOOL=ON \
+  -DTIFF_INCLUDE_DIR="$DEBUG/libtiff/include" \
+  -DTIFF_LIBRARY_DEBUG="$DEBUG/libtiff/lib/libtiff.so" && \
+  cmake --build . -j$((`nproc`+1))
