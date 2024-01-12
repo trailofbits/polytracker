@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace
-from examples.analysis.tracing_paper.analysis import Runner, TdagComparator
+from examples.analysis.tracing_paper.analysis import Analysis
+from examples.analysis.tracing_paper.runner import Runner
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -90,7 +91,7 @@ parser.add_argument(
 )
 
 if __name__ == "__main__":
-    comparator = TdagComparator()
+    comparator = Analysis()
     args = parser.parse_args()
 
     if args.execute:
