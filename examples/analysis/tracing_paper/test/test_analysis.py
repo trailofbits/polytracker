@@ -6,7 +6,7 @@ from ..analysis import Analysis
 from json import load
 
 
-class TestCompareTdags:
+class TestAnalysis:
     comparator = Analysis()
 
     @pytest.fixture

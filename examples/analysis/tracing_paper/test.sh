@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # Just a simple working example. If you need to reproduce or run tests, pass
 # through this folder into a container and obtain tdags in the container.
