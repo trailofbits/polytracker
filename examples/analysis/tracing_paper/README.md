@@ -72,4 +72,3 @@ One TDAG:
 Two TDAGs (differential comparison):
 - Control flow log `--cflog`
 - Control flow log, with cavities (blind spots) `--cflog --cavities`
--
