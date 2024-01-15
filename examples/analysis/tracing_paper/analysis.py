@@ -33,21 +33,22 @@ class Analysis:
         assert isinstance(n1, taint_dag.TDUntaintedNode)
         return True
 
-    def input_offsets(self, tdag: TDFile) -> Dict[int, List[int]]:
-        """Return an organized set of tdag labels by input byte offset. To avoid the need to return multiple results, squash labels that descend from the same input offset(s) iff they are duplicates."""
-        offsets: Dict[int, List] = {}
+    def input_offsets(self, tdag: TDFile) -> Dict[int, List[taint_dag.TDNode]]:
+        """Return the full organized set of tdag labels by input byte offset. Squashes labels that descend from the same input offset(s) iff they are duplicates."""
+        offsets: Dict[int, List[taint_dag.TDNode]] = {}
         for input_label in tdag.input_labels():
-            nodes = tdag.decode_node(input_label)
-            offset = nodes.offset
+            tdnode: taint_dag.TDNode = tdag.decode_node(input_label)
+            offset: int = tdnode.offset
+
             if offset in offsets:
-                offsets[offset].append(nodes)
+                offsets[offset].append(tdnode)
             else:
-                offsets[offset] = [nodes]
+                offsets[offset] = [tdnode]
 
         # Squash multiple labels at same offset if they are equal
-        for offset, nodes in offsets.items():
-            if all(self.node_equals(node, nodes[0]) for node in nodes):
-                offsets[offset] = nodes[:1]
+        for offset, tdnode in offsets.items():
+            if all(self.node_equals(node, tdnode[0]) for node in tdnode):
+                offsets[offset] = tdnode[:1]
         return offsets
 
     def ancestor_input_set(

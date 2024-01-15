@@ -67,18 +67,20 @@ class TestAnalysis:
         assert not self.analysis.node_equals(range1, untainted1)
         assert self.analysis.node_equals(untainted1, untainted1)
 
-    # def test_input_offsets(self, tdProgramTrace: TDProgramTrace):
-    #     cflog = tdProgramTrace.tdfile._get_section(taint_dag.TDControlFlowLogSection)
-    #     all_tdfile_input_labels: List[int] = tdProgramTrace.tdfile.input_labels()
+    def test_input_offsets(self, tdProgramTrace: TDProgramTrace):
+        cflog = tdProgramTrace.tdfile._get_section(taint_dag.TDControlFlowLogSection)
 
-    #     for cf_event in cflog:
-    #         if isinstance(cf_event, taint_dag.TDTaintedControlFlowEvent):
-    #             computed_offsets: Dict[int, List] = self.analysis.input_offsets(
-    #                 tdProgramTrace.tdfile
-    #             )
-    #             assert len(computed_offsets) > 0
-    #             for label in computed_offsets.items():
-    #                 assert label[0] in all_tdfile_input_labels
+        for cf_event in cflog:
+            if isinstance(cf_event, taint_dag.TDTaintedControlFlowEvent):
+                computed_offsets: Dict[
+                    int, List[taint_dag.TDNode]
+                ] = self.analysis.input_offsets(tdProgramTrace.tdfile)
+                assert len(computed_offsets) >= 1
+
+                for offset, node_set in computed_offsets.items():
+                    assert offset in list(map(lambda node: node.offset, node_set))
+                    # should be no duplicates
+                    assert len(node_set) == len(set(node_set))
 
     def test_ancestor_input_set(self, tdProgramTrace: TDProgramTrace):
         input_set: Set[taint_dag.TDNode] = self.analysis.ancestor_input_set(
@@ -86,20 +88,20 @@ class TestAnalysis:
         )
         assert tdProgramTrace.tdfile.label_count > len(input_set)
 
-        input_labels_from_tdag = tdProgramTrace.tdfile.input_labels()
+        tdfile_input_offsets: List[int] = list(tdProgramTrace.tdfile.input_labels())
 
         node: taint_dag.TDNode
         for node in input_set:
             assert isinstance(node, taint_dag.TDSourceNode)
             # each should have been in the source section
-            assert node.offset in input_labels_from_tdag
+            assert node.offset in tdfile_input_offsets
 
     def test_sorted_ancestor_offsets(self, tdProgramTrace: TDProgramTrace):
         cflog = tdProgramTrace.tdfile._get_section(taint_dag.TDControlFlowLogSection)
 
         for cf_event in cflog:
             if isinstance(cf_event, taint_dag.TDTaintedControlFlowEvent):
-                sorted_offsets = self.analysis.sorted_ancestor_offsets(
+                sorted_offsets: List[int] = self.analysis.sorted_ancestor_offsets(
                     cf_event.label, tdProgramTrace.tdfile
                 )
                 # each cflog entry label should map to at least one ancestor input byte label / offset
