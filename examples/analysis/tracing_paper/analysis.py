@@ -223,11 +223,11 @@ class Analysis:
                 # structure of entry: tuple(bytes: [label1, label2, ...], callstack: [entry1, entry2, ...])
                 # get last entry of callstack - it's often enough detail.
                 # can refactor or comment this out if full callstack wanted.
-                if entryA[1][-1] != None:
+                if entryA[1] is not None:
                     callA = entryA[1][-1]
                 else:
                     callA = entryA[1]
-                if entryB[1][-1] != None:
+                if entryB[1] is not None:
                     callB = entryB[1][-1]
                 else:
                     callB = entryB[1]
