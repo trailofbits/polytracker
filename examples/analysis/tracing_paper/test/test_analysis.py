@@ -1,7 +1,7 @@
 from ..analysis import Analysis
 from json import load
 from pathlib import Path
-from polytracker import PolyTrackerTrace, TDProgramTrace, taint_dag
+from polytracker import InputOutputMapping, PolyTrackerTrace, TDProgramTrace, taint_dag
 import pytest
 from typing import Dict, List, Set, Tuple
 
@@ -107,8 +107,24 @@ class TestAnalysis:
                 # each cflog entry label should map to at least one ancestor input byte label / offset
                 assert len(sorted_offsets) >= 1
 
-    def test_interleave_file_cavities(self, tdProgramTrace: TDProgramTrace):
-        pass
+    def test_interleave_file_cavities(self, tdProgramTrace, functionid_json):
+        cflog = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
+
+        interleaved = self.analysis.interleave_file_cavities(
+            tdProgramTrace.tdfile, cflog
+        )
+        assert len(interleaved) > len(cflog)
+        byte_side_entries = list(map(lambda entry: entry[0], interleaved))
+
+        file_cavities_raw = InputOutputMapping(tdProgramTrace.tdfile).file_cavities()
+        for file_name in file_cavities_raw:
+            cavities = map(
+                lambda byte_set: f"CAVITY [{byte_set[0]}, {byte_set[1]})",
+                file_cavities_raw[file_name],
+            )
+            for cavity in cavities:
+                # ensure we didn't drop the last few accidentally even if they are "off the end" of the cflog ie end of input file unused
+                assert cavity in byte_side_entries
 
     def test_get_cflog_entries(self, tdProgramTrace, functionid_json):
         entries = self.analysis.get_cflog_entries(
