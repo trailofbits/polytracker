@@ -116,8 +116,15 @@ class TestAnalysis:
         )
 
         for entry in entries:
-            assert entry[0] in tdProgramTrace.tdfile.input_labels()
+            assert len(entry[0]) >= 1
+
+            for byte_offset in entry[0]:
+                assert byte_offset >= 0
+
             assert len(entry[1]) >= 1
+
+            for callstack_entry in entry[1]:
+                assert type(callstack_entry) == str
 
     def test_compare_cflog(
         self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
