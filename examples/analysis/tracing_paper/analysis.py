@@ -4,20 +4,18 @@ from functools import partialmethod
 import json
 from .oi import OutputInputMapping
 from pathlib import Path
-from polytracker import taint_dag
-from polytracker.mapping import CavityType, InputOutputMapping, OffsetType
-import subprocess
+from polytracker import taint_dag, TDFile
+from polytracker.mapping import CavityType, InputOutputMapping
 from sys import stdin
 from tqdm import tqdm
-from typing import List, Set
+from typing import Dict, List, Set, Tuple
 import cxxfilt
-from queue import Queue
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
 class Analysis:
-    def node_equals(self, n1, n2):
+    def node_equals(self, n1: taint_dag.TDNode, n2: taint_dag.TDNode) -> bool:
         """Polytracker TDAG node comparator."""
         if type(n1) is not type(n2):
             return False
@@ -35,32 +33,9 @@ class Analysis:
         assert isinstance(n1, taint_dag.TDUntaintedNode)
         return True
 
-    def input_set(self, first_label: int, tdag) -> Set[int]:
-        """Get the full set of input byte offsets, starting with `first_label` by default."""
-        q = [first_label]
-        input_set = set()
-        seen = set()
-        while q:
-            label = q.pop()
-            if label in seen:
-                continue
-            seen.add(label)
-
-            node = tdag.decode_node(label)
-            if isinstance(node, taint_dag.TDSourceNode):
-                input_set.add(node)
-            elif isinstance(node, taint_dag.TDUnionNode):
-                q.append(node.left)
-                q.append(node.right)
-            else:
-                for union_label_number in range(node.first, node.last + 1):
-                    q.append(union_label_number)
-
-        return input_set
-
-    def input_offsets(self, tdag):
+    def input_offsets(self, tdag: TDFile) -> Dict[int, List[int]]:
         """Return an organized set of tdag labels by input byte offset. To avoid the need to return multiple results, squash labels that descend from the same input offset(s) iff they are duplicates."""
-        offsets = {}
+        offsets: Dict[int, List] = {}
         for input_label in tdag.input_labels():
             nodes = tdag.decode_node(input_label)
             offset = nodes.offset
@@ -75,16 +50,42 @@ class Analysis:
                 offsets[offset] = nodes[:1]
         return offsets
 
-    def sorted_input_offsets(
-        self, first_taint_label: int, tdag
-    ) -> list[tuple[int, list]]:
-        """Return an organized set of tdag labels by input byte offset."""
+    def ancestor_input_set(
+        self, first_label: int, tdag: TDFile
+    ) -> Set[taint_dag.TDNode]:
+        """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
+        q: List[int] = [first_label]
+        input_set: Set[taint_dag.TDNode] = set()
+        seen_labels: Set[int] = set()
+        while q:
+            label = q.pop()
+            if label in seen_labels:
+                continue
+            seen_labels.add(label)
+
+            node: taint_dag.TDNode = tdag.decode_node(label)
+            if isinstance(node, taint_dag.TDSourceNode):
+                input_set.add(node)
+            elif isinstance(node, taint_dag.TDUnionNode):
+                q.append(node.left)
+                q.append(node.right)
+            elif isinstance(node, taint_dag.TDRangeNode):
+                for range_label_number in range(node.first, node.last + 1):
+                    q.append(range_label_number)
+
+        return input_set
+
+    def sorted_ancestor_offsets(self, label: int, tdag: TDFile) -> List[int]:
+        """Returns the subset of source offsets (integer input byte labels), in sorted order, that directly taint `label` by way of traversing the taint forest from the starting point of `label`."""
         return sorted(
-            map(lambda node: node.offset, self.input_set(first_taint_label, tdag))
+            map(
+                lambda node: node.offset,
+                self.ancestor_input_set(label, tdag),
+            )
         )
 
     def get_cflog_entries(
-        self, tdag, function_id_path: Path, cavities=False
+        self, tdag: TDFile, function_id_path: Path, cavities=False
     ) -> list[tuple]:
         """Maps the function ID JSON to the TDAG control flow log."""
         with open(function_id_path) as function_id_json:
@@ -97,17 +98,25 @@ class Analysis:
                 demangled_functions_list.append(cxxfilt.demangle(function))
             except cxxfilt.InvalidName:
                 print(
-                    f"Unable to demangle the function name '{function}' since cxx.InvalidName was raised, but attempting to continue..."
+                    f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue without demangling that function name anyway..."
                 )
                 demangled_functions_list.append(function)
 
         cflog.function_id_mapping(demangled_functions_list)
 
+        # each cflog entry has a callstack and a label
         return list(
             map(
-                lambda e: (self.sorted_input_offsets(e.label, tdag), e.callstack),
+                lambda event: (
+                    self.sorted_ancestor_offsets(event.label, tdag),
+                    event.callstack,
+                ),
                 filter(
-                    lambda e: isinstance(e, taint_dag.TDTaintedControlFlowEvent), cflog
+                    # cflog also contains function entries and exits
+                    lambda cflog_event: isinstance(
+                        cflog_event, taint_dag.TDTaintedControlFlowEvent
+                    ),
+                    cflog,
                 ),
             )
         )
@@ -120,7 +129,7 @@ class Analysis:
             + additional
         )
 
-    def interleave_file_cavities(self, tdag, cflog: list[tuple]) -> list[tuple]:
+    def interleave_file_cavities(self, tdag: TDFile, cflog: list[tuple]) -> list[tuple]:
         """Put each cavity before the most relevant cflog entry. If any cavities remain, put them on the end of the interleaved list."""
         cavity_byte_sets: List[CavityType]
         file_cavities = InputOutputMapping(tdag).file_cavities()
@@ -160,7 +169,7 @@ class Analysis:
 
         return ret
 
-    def show_cflog(self, tdag: Path, function_id_path: Path, cavities=False):
+    def show_cflog(self, tdag: TDFile, function_id_path: Path, cavities=False):
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
         cflog: list[tuple] = self.get_cflog_entries(tdag, function_id_path)
 
@@ -176,8 +185,8 @@ class Analysis:
 
     def compare_cflog(
         self,
-        tdagA: Path,
-        tdagB: Path,
+        tdagA: TDFile,
+        tdagB: TDFile,
         function_id_pathA: Path,
         function_id_pathB: Path,
         cavities=False,
@@ -269,7 +278,7 @@ class Analysis:
 
         return
 
-    def compare_run_trace(self, tdag_a, tdag_b, cavities=False):
+    def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
         if cavities:
             mapping_a = InputOutputMapping(tdag_a).file_cavities()
             mapping_b = InputOutputMapping(tdag_b).file_cavities()
@@ -293,7 +302,7 @@ class Analysis:
             fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
             print(f"A: [{idxA}] {eventA} {fnA}, B: [{idxB}] {eventB} {fnB}")
 
-    def enum_diff(self, dbg_tdfile, rel_tdfile):
+    def enum_diff(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
         offset_dbg = self.input_offsets(dbg_tdfile)
         offset_rel = self.input_offsets(rel_tdfile)
 
@@ -315,7 +324,7 @@ class Analysis:
 
             i += 1
 
-    def compare_inputs_used(self, dbg_tdfile, rel_tdfile):
+    def compare_inputs_used(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
         dbg_mapping = OutputInputMapping(dbg_tdfile).mapping()
         rel_mapping = OutputInputMapping(rel_tdfile).mapping()
         inputs_dbg = set(x[1] for x in dbg_mapping)
