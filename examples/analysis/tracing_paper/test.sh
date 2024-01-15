@@ -9,7 +9,7 @@
 # The functionid.json from a given binary compilation will always match with
 # all tdags recorded using that binary build!
 
-pytest -s test/test_analysis.py \
+python -m pytest -s test/test_analysis.py \
 	--tdag ../ubet/output/Debug.tdag \
 	--tdag2 ../ubet/output/Release.tdag \
 	--json ../ubet/output/debug_fid.json \
