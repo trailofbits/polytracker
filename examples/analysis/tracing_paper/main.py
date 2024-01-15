@@ -1,8 +1,9 @@
 from argparse import ArgumentParser
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace
-from examples.analysis.tracing_paper.analysis import Analysis
-from examples.analysis.tracing_paper.runner import Runner
+from analysis import Analysis
+from runner import Runner
+from json import load
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -99,16 +100,23 @@ if __name__ == "__main__":
         runner = Runner()
         runner.runner(args.build_a, args.build_b, args.execute)
     elif args.tdag_a and args.tdag_b:
-        print(f"Comparing {args.tdag_a} and {args.tdag_b}")
+        print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo")
+
         traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
         traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
 
-        if args.cflog:
+        if args.cflog and args.function_id_json_a and args.function_id_json_b:
+            with open(args.function_id_json_a) as jsonA:
+                functions_list_a = load(jsonA)
+
+            with open(args.function_id_json_b) as jsonB:
+                functions_list_b = load(jsonB)
+
             comparator.compare_cflog(
                 tdagA=traceA.tdfile,
                 tdagB=traceB.tdfile,
-                function_id_pathA=args.function_id_json_a,
-                function_id_pathB=args.function_id_json_b,
+                functions_list_A=functions_list_a,
+                functions_list_B=functions_list_b,
                 cavities=args.cavities,
                 verbose=args.verbose,
             )
@@ -122,9 +130,15 @@ if __name__ == "__main__":
         if args.enumdiff:
             comparator.enum_diff(traceA.tdfile, traceB.tdfile)
     elif args.tdag_a and args.function_id_json_a and args.cflog:
-        print("Mapping and showing a single control flow log...")
+        print(f"Mapping and showing the control flow log of '{args.tdag_a}'...")
         trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
-        comparator.show_cflog(trace.tdfile, args.function_id_json_a, args.cavities)
+
+        with open(args.function_id_json_a) as function_id_json:
+            functions_list = load(function_id_json)
+
+        comparator.show_cflog(
+            trace.tdfile, function_id_json, args.cavities, args.verbose
+        )
     else:
         print(
             "Error: Need to provide one or two tdags, and corresponding Polytracker-generated function list(s)"

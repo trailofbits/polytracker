@@ -14,8 +14,8 @@ class TestAnalysis:
         return PolyTrackerTrace.load(tdag)
 
     @pytest.fixture
-    def functionid_json(self, json: Path):
-        return load(json)
+    def functionid_json(self, json):
+        return load(Path(json).open())
 
     @pytest.fixture
     def tdProgramTrace2(self, tdag2) -> TDProgramTrace:
@@ -24,8 +24,8 @@ class TestAnalysis:
         return PolyTrackerTrace.load(tdag2)
 
     @pytest.fixture
-    def functionid_json2(self, json2: Path):
-        return load(json2)
+    def functionid_json2(self, json2):
+        return load(Path(json2).open())
 
     def test_node_equals(self):
         source1 = taint_dag.TDSourceNode(0, 23, True)
@@ -107,11 +107,17 @@ class TestAnalysis:
                 # each cflog entry label should map to at least one ancestor input byte label / offset
                 assert len(sorted_offsets) >= 1
 
-    def test_get_cflog_entries(self, tdProgramTrace: TDProgramTrace):
-        pass
-
     def test_interleave_file_cavities(self, tdProgramTrace: TDProgramTrace):
         pass
+
+    def test_get_cflog_entries(self, tdProgramTrace, functionid_json):
+        entries = self.analysis.get_cflog_entries(
+            tdProgramTrace.tdfile, functionid_json
+        )
+
+        for entry in entries:
+            assert entry[0] in tdProgramTrace.tdfile.input_labels()
+            assert len(entry[1]) >= 1
 
     def test_compare_cflog(
         self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace

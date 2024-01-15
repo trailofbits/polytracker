@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 from functools import partialmethod
-import json
-from .oi import OutputInputMapping
+from oi import OutputInputMapping
 from pathlib import Path
 from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
@@ -86,11 +85,9 @@ class Analysis:
         )
 
     def get_cflog_entries(
-        self, tdag: TDFile, function_id_path: Path, cavities=False
-    ) -> list[tuple]:
+        self, tdag: TDFile, functions_list, verbose=False
+    ) -> List[tuple]:
         """Maps the function ID JSON to the TDAG control flow log."""
-        with open(function_id_path) as function_id_json:
-            functions_list = json.load(function_id_json)
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
 
         demangled_functions_list = []
@@ -98,9 +95,10 @@ class Analysis:
             try:
                 demangled_functions_list.append(cxxfilt.demangle(function))
             except cxxfilt.InvalidName:
-                print(
-                    f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue without demangling that function name anyway..."
-                )
+                if verbose:
+                    print(
+                        f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue without demangling that function name anyway..."
+                    )
                 demangled_functions_list.append(function)
 
         cflog.function_id_mapping(demangled_functions_list)
@@ -130,14 +128,17 @@ class Analysis:
             + additional
         )
 
-    def interleave_file_cavities(self, tdag: TDFile, cflog: list[tuple]) -> list[tuple]:
+    def interleave_file_cavities(
+        self, tdag: TDFile, cflog: list[tuple], verbose=False
+    ) -> list[tuple]:
         """Put each cavity before the most relevant cflog entry. If any cavities remain, put them on the end of the interleaved list."""
         cavity_byte_sets: List[CavityType]
         file_cavities = InputOutputMapping(tdag).file_cavities()
         for input_file_name in file_cavities:
-            print(
-                f"Unused byte sections were observed from within instrumented program run on input '{input_file_name}';\n they will be interleaved in the below control flow log output..."
-            )
+            if verbose:
+                print(
+                    f"Unused byte sections were observed from within instrumented program run on input '{input_file_name}';\n they will be interleaved in the below control flow log output..."
+                )
             cavity_byte_sets = file_cavities[input_file_name]
             break
 
@@ -170,12 +171,14 @@ class Analysis:
 
         return ret
 
-    def show_cflog(self, tdag: TDFile, function_id_path: Path, cavities=False):
+    def show_cflog(
+        self, tdag: TDFile, function_id_json, cavities=False, verbose=False
+    ) -> None:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
-        cflog: list[tuple] = self.get_cflog_entries(tdag, function_id_path)
+        cflog: list[tuple] = self.get_cflog_entries(tdag, function_id_json, verbose)
 
         if cavities:
-            interleaved = self.interleave_file_cavities(tdag, cflog)
+            interleaved = self.interleave_file_cavities(tdag, cflog, verbose)
             for entry in interleaved:
                 # entry structure = tuple(label, list(callstackEntry, ...))
                 # show only the last function entry in the callstack
@@ -188,19 +191,19 @@ class Analysis:
         self,
         tdagA: TDFile,
         tdagB: TDFile,
-        function_id_pathA: Path,
-        function_id_pathB: Path,
+        functions_list_A,
+        functions_list_B,
         cavities=False,
         verbose=False,
     ):
         """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag."""
-        cflogA = self.get_cflog_entries(tdagA, function_id_pathA)
+        cflogA = self.get_cflog_entries(tdagA, functions_list_A)
         if cavities:
             interleavedA = self.interleave_file_cavities(tdagA, cflogA)
             print("Using interleaved cavities and TDAG A...")
             cflogA = interleavedA
 
-        cflogB = self.get_cflog_entries(tdagB, function_id_pathB)
+        cflogB = self.get_cflog_entries(tdagB, functions_list_B)
         if cavities:
             interleavedB = self.interleave_file_cavities(tdagB, cflogB)
             print("Using interleaved cavities and TDAG B...")
@@ -211,6 +214,7 @@ class Analysis:
         idxA = 0
         idxB = 0
 
+        print("OK, comparing awaaaay")
         while idxA < lenA or idxB < lenB:
             entryA = cflogA[idxA] if idxA < lenA else None
             entryB = cflogB[idxB] if idxB < lenB else None
