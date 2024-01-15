@@ -86,7 +86,7 @@ class Analysis:
 
     def get_cflog_entries(
         self, tdag: TDFile, functions_list, verbose=False
-    ) -> List[tuple]:
+    ) -> List[Tuple[List[int], List[str]]]:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
 
