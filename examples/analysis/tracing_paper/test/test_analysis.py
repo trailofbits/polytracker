@@ -127,6 +127,7 @@ class TestAnalysis:
                 assert cavity in byte_side_entries
 
     def test_get_cflog_entries(self, tdProgramTrace, functionid_json):
+        """LHS should be List[str | int]: a list of byte offsets, or an exclusive/inclusive cavity range. RHS should be List[str]: the callstack."""
         entries = self.analysis.get_cflog_entries(
             tdProgramTrace.tdfile, functionid_json
         )
@@ -141,6 +142,28 @@ class TestAnalysis:
 
             for callstack_entry in entry[1]:
                 assert type(callstack_entry) == str
+
+    def test_stringify_list(self):
+        l1 = self.analysis.stringify_list(None)
+        assert l1 == ""
+
+        l2 = self.analysis.stringify_list([1])
+        assert l2 == "[1]"
+
+        l3 = self.analysis.stringify_list(["f()", "g(int *i)"])
+        assert l3 == "['f()', 'g(int *i)']"
+
+        l4 = self.analysis.stringify_list([45, 46, 51])
+        assert l4 == "[45, 46, 51]"
+
+        l5 = self.analysis.stringify_list(["whatAGreatFn(...)"])
+        assert l5 == "['whatAGreatFn(...)']"
+
+        l6 = self.analysis.stringify_list("")
+        assert l6 == ""
+
+        l7 = self.analysis.stringify_list([""])
+        assert l7 == ""
 
     def test_compare_cflog(
         self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace

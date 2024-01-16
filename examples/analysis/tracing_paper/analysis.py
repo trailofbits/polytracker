@@ -7,7 +7,7 @@ from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
 from sys import stdin
 from tqdm import tqdm
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 import cxxfilt
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
@@ -120,17 +120,53 @@ class Analysis:
             )
         )
 
-    def print_cols(self, dbg, release="", additional=""):
-        OUTPUT_COLUMN_WIDTH = 40
+    def stringify_list(self, list) -> str:
+        """Turns a list of byte offsets or a callstack into a printable string."""
+        if list is None or len(list) == 0:
+            return ""
+        else:
+            return str(list)
+
+    def print_cols(
+        self,
+        offsets_A=None,
+        callstack_A=None,
+        callstack_B=None,
+        offsets_B=None,
+    ) -> None:
+        # format:  bytesA   callstackA    callstackB  bytesB
+        # ---------------------------------------------------
+        # example: [2,3,4]  f(int foo) != f(int foo)  [5,6,7]
+        # ---------------------------------------------------
+        # example: [2,3,4]  f(int foo) !=
+        # ---------------------------------------------------
+        # example:                     != f(int foo)  [5,6,7]
+        # ---------------------------------------------------
+        # example: [2,3,4]                            [2,3,4]
+
+        fn: str = ""
+        if callstack_A != callstack_B:
+            fn = "{:<40} !!! != !!! {:>40}".format(
+                self.stringify_list(callstack_A), self.stringify_list(callstack_B)
+            )
+        else:
+            fn = self.stringify_list(callstack_A)
+
+        horizontal_separator: str = "-" * (90)
+        print(horizontal_separator)
+
         print(
-            (dbg.ljust(OUTPUT_COLUMN_WIDTH))
-            + release.ljust(OUTPUT_COLUMN_WIDTH)
-            + additional
+            "| {:<15} | {:^100} | {:>15} |".format(
+                self.stringify_list(offsets_A), fn, self.stringify_list(offsets_B)
+            )
         )
 
     def interleave_file_cavities(
-        self, tdag: TDFile, cflog: list[tuple], verbose=False
-    ) -> list[tuple]:
+        self,
+        tdag: TDFile,
+        cflog: list[tuple],
+        verbose=False,
+    ) -> List[Tuple[List[str], List[str]]]:
         """Put each cavity before the most relevant cflog entry. If any cavities remain, put them on the end of the interleaved list."""
         cavity_byte_sets: List[CavityType]
         file_cavities = InputOutputMapping(tdag).file_cavities()
@@ -182,10 +218,10 @@ class Analysis:
             for entry in interleaved:
                 # entry structure = tuple(label, list(callstackEntry, ...))
                 # show only the last function entry in the callstack
-                self.print_cols(str(entry[0]), entry[1][-1])
+                self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
         else:
             for entry in cflog:
-                self.print_cols(str(entry[0]), entry[1][-1])
+                self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
 
     def compare_cflog(
         self,
@@ -195,18 +231,20 @@ class Analysis:
         functions_list_B,
         cavities=False,
         verbose=False,
-    ):
-        """Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag."""
+    ) -> List[Tuple[str, str, str, str]]:
+        """Creates a printable differential between two tdag+function ID list pairs. Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff structure."""
         cflogA = self.get_cflog_entries(tdagA, functions_list_A)
         if cavities:
             interleavedA = self.interleave_file_cavities(tdagA, cflogA)
-            print("Using interleaved cavities and TDAG A...")
+            if verbose:
+                print("Using interleaved cavities and TDAG A...")
             cflogA = interleavedA
 
         cflogB = self.get_cflog_entries(tdagB, functions_list_B)
         if cavities:
             interleavedB = self.interleave_file_cavities(tdagB, cflogB)
-            print("Using interleaved cavities and TDAG B...")
+            if verbose:
+                print("Using interleaved cavities and TDAG B...")
             cflogB = interleavedB
 
         lenA = len(cflogA)
@@ -214,47 +252,62 @@ class Analysis:
         idxA = 0
         idxB = 0
 
-        print("OK, comparing awaaaay")
+        # offsetsA, callstackA, callstackB, offsetsB
+        trace_diff: List[Tuple[str, str, str, str]] = []
+
         while idxA < lenA or idxB < lenB:
             entryA = cflogA[idxA] if idxA < lenA else None
             entryB = cflogB[idxB] if idxB < lenB else None
 
             if not verbose:
-                # structure of entry: tuple(bytes: [label1, label2, ...], callstack: [entry1, entry2, ...])
-                # get last entry of callstack - it's often enough detail.
-                # can refactor or comment this out if full callstack wanted.
-                if entryA[1] is not None:
+                # gets only last entry of callstack in non-verbose mode - it's often enough detail.
+                if entryA is not None and len(entryA[1]) > 0:
                     callA = entryA[1][-1]
                 else:
-                    callA = entryA[1]
-                if entryB[1] is not None:
+                    callA = None
+
+                if entryB is not None and len(entryB[1]) > 0:
                     callB = entryB[1][-1]
                 else:
-                    callB = entryB[1]
+                    callB = None
+
             else:
                 callA = entryA[1]
                 callB = entryB[1]
 
             if entryA is None:
-                printable = f"A: <none>, \t\tB: {str(entryB[0])}, \t[...{callB}]"
-                self.print_cols("", str(printable), "")
+                trace_diff.append(
+                    (
+                        None,
+                        None,
+                        callB,
+                        entryB[0],
+                    )
+                )
                 idxB += 1
                 continue
 
             if entryB is None:
-                printable = f"A: {str(entryA[0])}, \t[...{callA}], \t\tB: <none>"
-                self.print_cols(str(entryA), "", "")
+                trace_diff.append(
+                    (
+                        entryA[0],
+                        callA,
+                        None,
+                        None,
+                    )
+                )
                 idxA += 1
                 continue
 
             # same bytes were processed in the two runs by different functionality
             if entryA[0] == entryB[0]:
-                self.print_cols(
-                    str(entryA[0]),
-                    str(entryB[0]),
-                    f" !!! A: [...{entryA}] != B: [...{callB}]"
-                    if callA != callB
-                    else "",
+                trace_diff.append(
+                    (
+                        entryA[0],
+                        callA,
+                        callB,
+                        entryB[0],
+                    )
                 )
                 idxA += 1
                 idxB += 1
@@ -275,13 +328,51 @@ class Analysis:
                     stepsB += 1
 
                 if stepsA < stepsB:
-                    self.print_cols(str(entryA[0]), "", callA)
+                    # bytesA, callA, callB, bytesB
+                    trace_diff.append(
+                        (
+                            entryA[0],
+                            callA,
+                            None,
+                            None,
+                        )
+                    )
                     idxA += 1
                 else:
-                    self.print_cols("", str(entryB[0]), callB)
+                    # bytesA, callA, callB, bytesB
+                    trace_diff.append(
+                        (
+                            None,
+                            None,
+                            callB,
+                            entryB[0],
+                        )
+                    )
                     idxB += 1
 
-        return
+        return trace_diff
+
+    def show_cflog_diff(
+        self,
+        tdagA: TDFile,
+        tdagB: TDFile,
+        functions_list_A,
+        functions_list_B,
+        cavities: bool = False,
+        verbose: bool = False,
+    ) -> None:
+        """Print the aligned differential."""
+        diff: List[Tuple[str, str, str, str]] = self.compare_cflog(
+            tdagA, tdagB, functions_list_A, functions_list_B, cavities, verbose
+        )
+
+        for entry in diff:
+            self.print_cols(
+                offsets_A=entry[0],
+                callstack_A=entry[1],
+                callstack_B=entry[2],
+                offsets_B=entry[3],
+            )
 
     def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
         if cavities:

@@ -100,7 +100,7 @@ if __name__ == "__main__":
         runner = Runner()
         runner.runner(args.build_a, args.build_b, args.execute)
     elif args.tdag_a and args.tdag_b:
-        print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo")
+        print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo 🚀")
 
         traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
         traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
             with open(args.function_id_json_b) as jsonB:
                 functions_list_b = load(jsonB)
 
-            comparator.compare_cflog(
+            comparator.show_cflog_diff(
                 tdagA=traceA.tdfile,
                 tdagB=traceB.tdfile,
                 functions_list_A=functions_list_a,
