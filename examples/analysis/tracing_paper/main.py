@@ -9,12 +9,6 @@ parser = ArgumentParser(
     description="Compares TDAGs",
 )
 parser.add_argument(
-    "-a",
-    "--build_a",
-    type=Path,
-    help="Path to the first binary build to compare (should be the same software as build b, just built with different options)",
-)
-parser.add_argument(
     "-ta",
     "--tdag_a",
     type=Path,
@@ -25,12 +19,6 @@ parser.add_argument(
     "--function_id_json_a",
     type=Path,
     help="Path to functionid.json function trace for TDAG A (created by polytracker's cflog pass)",
-)
-parser.add_argument(
-    "-b",
-    "--build_b",
-    type=Path,
-    help="Path to the second binary build to compare (should be the same software as build a, just built with different options)",
 )
 parser.add_argument(
     "-tb",
