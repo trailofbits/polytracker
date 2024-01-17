@@ -2,15 +2,80 @@
 
 from functools import partialmethod
 from oi import OutputInputMapping
-from pathlib import Path
+from typing import Dict, Iterable, List, Set, Tuple
+
+import cxxfilt
+from graphtage import IntegerNode, ListNode, StringNode
+from graphtage.dataclasses import DataClassNode
+from tqdm import tqdm
+
 from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
-from sys import stdin
-from tqdm import tqdm
-from typing import Any, Dict, List, Set, Tuple
-import cxxfilt
+
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
+
+class CFLogEntry(DataClassNode):
+    input_bytes_node: ListNode
+    callstack_node: ListNode
+
+    def __init__(self, input_bytes: Iterable[int], callstack: Iterable[str]):
+        self.input_bytes: Tuple[int, ...] = tuple(input_bytes)
+        self.callstack: Tuple[str, ...] = tuple(callstack)
+        super().__init__(
+            input_bytes_node=ListNode((IntegerNode(i) for i in self.input_bytes)),
+            callstack_node=ListNode((StringNode(c) for c in self.callstack))
+        )
+
+    def __hash__(self):
+        return hash((self.input_bytes, self.callstack))
+
+    def __eq__(self, other):
+        return isinstance(other, CFLogEntry) and other.input_bytes == self.input_bytes \
+            and other.callstack == self.callstack
+
+    def __len__(self):
+        return 2
+
+    def __getitem__(self, item):
+        if item == 0 or item == -2:
+            return self.input_bytes
+        elif item == 1 or item == -1:
+            return self.callstack
+        else:
+            raise IndexError(item)
+
+    def __iter__(self):
+        yield self.input_bytes
+        yield self.callstack
+
+    def __str__(self):
+        return f"{', '.join(map(str, self.input_bytes))} -> {', '.join(self.callstack)}"
+
+
+class CFLog(ListNode[CFLogEntry]):
+    def __init__(self, entries: Iterable[CFLogEntry]):
+        self.entries: Tuple[CFLogEntry, ...] = tuple(entries)
+        super().__init__(self.entries)
+
+    def __hash__(self):
+        return hash(self.entries)
+
+    def __eq__(self, other):
+        return isinstance(other, CFLog) and self.entries == other.entries
+
+    def __getitem__(self, item):
+        return self.entries[item]
+
+    def __len__(self):
+        return len(self.entries)
+
+    def __iter__(self):
+        yield from self.entries
+
+    def __str__(self):
+        return "\n".join(map(str, self.entries))
 
 
 class Analysis:
@@ -86,7 +151,7 @@ class Analysis:
 
     def get_cflog_entries(
         self, tdag: TDFile, functions_list, verbose=False
-    ) -> List[Tuple[List[int], List[str]]]:
+    ) -> CFLog:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
 
@@ -105,14 +170,14 @@ class Analysis:
         cflog.function_id_mapping(demangled_functions_list)
 
         # each cflog entry has a callstack and a label
-        return [
-            (
+        return CFLog((
+            CFLogEntry(
                 self.sorted_ancestor_offsets(event.label, tdag),
                 event.callstack,
             )
             for event in cflog
             if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
-        ]
+        ))
 
     def stringify_list(self, list) -> str:
         """Turns a list of byte offsets or a callstack into a printable string."""
@@ -205,7 +270,7 @@ class Analysis:
         self, tdag: TDFile, function_id_json, cavities=False, verbose=False
     ) -> None:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
-        cflog: list[tuple] = self.get_cflog_entries(tdag, function_id_json, verbose)
+        cflog: CFLog = self.get_cflog_entries(tdag, function_id_json, verbose)
 
         if cavities:
             interleaved = self.interleave_file_cavities(tdag, cflog, verbose)
@@ -219,22 +284,28 @@ class Analysis:
 
     def get_differential_entries(
         self,
-        cflogA,
-        cflogB,
+        from_cflog: CFLog,
+        to_cflog: CFLog,
         verbose=False,
     ) -> List[Tuple[str, str, str, str]]:
-        """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff structure."""
-        lenA: int = len(cflogA)
-        lenB: int = len(cflogB)
-        idxA: int = 0
-        idxB: int = 0
+        """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
+        tdag with the separately recorded demangled function names in callstack format, walk through them and see what
+        does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
+        structure."""
+        diff = from_cflog.diff(to_cflog)
+        breakpoint()
+        print(diff)
+        len_from: int = len(from_cflog)
+        len_to: int = len(to_cflog)
+        idx_from: int = 0
+        idx_to: int = 0
 
         # offsetsA, callstackA, callstackB, offsetsB
         trace_diff: List[Tuple[str, str, str, str]] = []
 
-        while idxA < lenA or idxB < lenB:
-            entryA = cflogA[idxA] if idxA < lenA else None
-            entryB = cflogB[idxB] if idxB < lenB else None
+        while idx_from < len_from or idx_to < len_to:
+            entryA = from_cflog[idx_from] if idx_from < len_from else None
+            entryB = to_cflog[idx_to] if idx_to < len_to else None
 
             if not verbose:
                 # gets only last entry of callstack in non-verbose mode - it's often enough detail.
@@ -261,7 +332,7 @@ class Analysis:
                         entryB[0],
                     )
                 )
-                idxB += 1
+                idx_to += 1
                 continue
 
             if entryB is None:
@@ -273,7 +344,7 @@ class Analysis:
                         None,
                     )
                 )
-                idxA += 1
+                idx_from += 1
                 continue
 
             # same bytes were processed in the two runs by different functionality
@@ -286,21 +357,21 @@ class Analysis:
                         entryB[0],
                     )
                 )
-                idxA += 1
-                idxB += 1
+                idx_from += 1
+                idx_to += 1
             else:
                 # check if we should be stepping A or B cflogs
                 # depending on shortest path
                 stepsA = 0
                 stepsB = 0
 
-                while idxA + stepsA < lenA:
-                    if cflogA[idxA + stepsA][0] == entryB[0]:
+                while idx_from + stepsA < len_from:
+                    if from_cflog[idx_from + stepsA][0] == entryB[0]:
                         break
                     stepsA += 1
 
-                while idxB + stepsB < lenB:
-                    if cflogB[idxB + stepsB][0] == entryA[0]:
+                while idx_to + stepsB < len_to:
+                    if to_cflog[idx_to + stepsB][0] == entryA[0]:
                         break
                     stepsB += 1
 
@@ -314,7 +385,7 @@ class Analysis:
                             None,
                         )
                     )
-                    idxA += 1
+                    idx_from += 1
                 else:
                     # bytesA, callA, callB, bytesB
                     trace_diff.append(
@@ -325,7 +396,7 @@ class Analysis:
                             entryB[0],
                         )
                     )
-                    idxB += 1
+                    idx_to += 1
 
         return trace_diff
 
