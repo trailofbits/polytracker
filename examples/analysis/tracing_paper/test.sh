@@ -1,4 +1,6 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
+
+set -e
 
 # Just a simple working example. If you need to reproduce or run tests, pass
 # through this folder into a container and obtain tdags in the container.
@@ -9,7 +11,7 @@
 # The functionid.json from a given binary compilation will always match with
 # all tdags recorded using that binary build!
 
-python -m pytest -s test/test_analysis.py \
+python3 -m pytest -s test/test_analysis.py \
 	--tdag ../ubet/output/Debug.tdag \
 	--tdag2 ../ubet/output/Release.tdag \
 	--json ../ubet/output/debug_fid.json \
