@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace
 from analysis import Analysis
-from runner import Runner
 from json import load
 
 parser = ArgumentParser(
@@ -46,35 +45,8 @@ parser.add_argument(
     help="Path to functionid.json function trace for TDAG B",
 )
 parser.add_argument(
-    "-e",
-    "--execute",
-    type=str,
-    nargs="+",
-    help="command line arguments (including input) to run for each candidate build, for example `<executable_passed_with -a or -b> -i image.j2k -o image.pgm` would require `-i image.j2k -o image.pgm`",
-)
-parser.add_argument(
-    "--inout",
-    action="store_true",
-    help="Compare Input-Output mapping (requires -a and -b)",
-)
-parser.add_argument(
-    "--outin",
-    action="store_true",
-    help="Compare Output-Input mapping (requires -a and -b)",
-)
-parser.add_argument(
     "--runtrace", action="store_true", help="Compare runtrace (requires -a and -b)"
 )
-# parser.add_argument(
-#     "--inputsused",
-#     action="store_true",
-#     help="Compare inputs used (requires -a and -b)",
-# )
-# parser.add_argument(
-#     "--enumdiff",
-#     action="store_true",
-#     help="Enumerate differences (kind of) (requires -a and -b)",
-# )
 parser.add_argument(
     "--cavities",
     help="Contextualize the input trace with blind spots (dont-care bytes)",
@@ -90,11 +62,7 @@ if __name__ == "__main__":
     comparator = Analysis()
     args = parser.parse_args()
 
-    if args.execute:
-        print(f"Running '{args.execute}' for {args.build_a} and {args.build_b}")
-        runner = Runner()
-        runner.runner(args.build_a, args.build_b, args.execute)
-    elif args.tdag_a and args.tdag_b:
+    if args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo 🚀")
 
         traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
