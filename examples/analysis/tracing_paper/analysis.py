@@ -97,28 +97,22 @@ class Analysis:
             except cxxfilt.InvalidName:
                 if verbose:
                     print(
-                        f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue without demangling that function name anyway..."
+                        f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue "
+                        f"without demangling that function name anyway..."
                     )
                 demangled_functions_list.append(function)
 
         cflog.function_id_mapping(demangled_functions_list)
 
         # each cflog entry has a callstack and a label
-        return list(
-            map(
-                lambda event: (
-                    self.sorted_ancestor_offsets(event.label, tdag),
-                    event.callstack,
-                ),
-                filter(
-                    # cflog also contains function entries and exits
-                    lambda cflog_event: isinstance(
-                        cflog_event, taint_dag.TDTaintedControlFlowEvent
-                    ),
-                    cflog,
-                ),
+        return [
+            (
+                self.sorted_ancestor_offsets(event.label, tdag),
+                event.callstack,
             )
-        )
+            for event in cflog
+            if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
+        ]
 
     def stringify_list(self, list) -> str:
         """Turns a list of byte offsets or a callstack into a printable string."""
