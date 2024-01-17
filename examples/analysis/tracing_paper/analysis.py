@@ -5,8 +5,9 @@ from oi import OutputInputMapping
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import IntegerNode, ListNode, StringNode
+from graphtage import GraphtageFormatter, ListNode, StringNode
 from graphtage.dataclasses import DataClassNode
+import graphtage.printer as printer_module
 from tqdm import tqdm
 
 from polytracker import taint_dag, TDFile
@@ -286,15 +287,20 @@ class Analysis:
         self,
         from_cflog: CFLog,
         to_cflog: CFLog,
-        verbose=False,
+        use_graphtage: bool = True,
+        verbose: bool = False,
     ) -> List[Tuple[str, str, str, str]]:
         """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
         tdag with the separately recorded demangled function names in callstack format, walk through them and see what
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
         structure."""
-        diff = from_cflog.diff(to_cflog)
-        breakpoint()
-        print(diff)
+        if use_graphtage:
+            diff = from_cflog.diff(to_cflog)
+            with printer_module.DEFAULT_PRINTER as printer:
+                GraphtageFormatter.DEFAULT_INSTANCE.print(printer, diff)
+            raise NotImplementedError("TODO: convert the diff to the return value")
+            return
+
         len_from: int = len(from_cflog)
         len_to: int = len(to_cflog)
         idx_from: int = 0
