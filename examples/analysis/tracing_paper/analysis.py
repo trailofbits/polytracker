@@ -135,14 +135,14 @@ class Analysis:
         offsets_B=None,
     ) -> None:
         # format:  bytesA   callstackA    callstackB  bytesB
-        # ---------------------------------------------------
-        # example: [2,3,4]  f(int foo) != f(int foo)  [5,6,7]
-        # ---------------------------------------------------
-        # example: [2,3,4]  f(int foo) !=
-        # ---------------------------------------------------
-        # example:                     != f(int foo)  [5,6,7]
-        # ---------------------------------------------------
-        # example: [2,3,4]                            [2,3,4]
+        # -----------------------------------------------------
+        # example: [2,3,4] | f(int foo) != f(int foo) | [5,6,7]
+        # -----------------------------------------------------
+        # example: [2,3,4] | f(int foo) !=
+        # -----------------------------------------------------
+        # example:         |            != f(int foo) | [5,6,7]
+        # -----------------------------------------------------
+        # example: [2,3,4] |             f()          | [2,3,4]
 
         fn: str = ""
         if callstack_A != callstack_B:
@@ -223,34 +223,17 @@ class Analysis:
             for entry in cflog:
                 self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
 
-    def compare_cflog(
+    def get_differential_entries(
         self,
-        tdagA: TDFile,
-        tdagB: TDFile,
-        functions_list_A,
-        functions_list_B,
-        cavities=False,
+        cflogA,
+        cflogB,
         verbose=False,
     ) -> List[Tuple[str, str, str, str]]:
-        """Creates a printable differential between two tdag+function ID list pairs. Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff structure."""
-        cflogA = self.get_cflog_entries(tdagA, functions_list_A)
-        if cavities:
-            interleavedA = self.interleave_file_cavities(tdagA, cflogA)
-            if verbose:
-                print("Using interleaved cavities and TDAG A...")
-            cflogA = interleavedA
-
-        cflogB = self.get_cflog_entries(tdagB, functions_list_B)
-        if cavities:
-            interleavedB = self.interleave_file_cavities(tdagB, cflogB)
-            if verbose:
-                print("Using interleaved cavities and TDAG B...")
-            cflogB = interleavedB
-
-        lenA = len(cflogA)
-        lenB = len(cflogB)
-        idxA = 0
-        idxB = 0
+        """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each tdag with the separately recorded demangled function names in callstack format, walk through them and see what does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff structure."""
+        lenA: int = len(cflogA)
+        lenB: int = len(cflogB)
+        idxA: int = 0
+        idxB: int = 0
 
         # offsetsA, callstackA, callstackB, offsetsB
         trace_diff: List[Tuple[str, str, str, str]] = []
@@ -361,9 +344,23 @@ class Analysis:
         cavities: bool = False,
         verbose: bool = False,
     ) -> None:
-        """Print the aligned differential."""
-        diff: List[Tuple[str, str, str, str]] = self.compare_cflog(
-            tdagA, tdagB, functions_list_A, functions_list_B, cavities, verbose
+        """Build and print the aligned differential."""
+        cflogA = self.get_cflog_entries(tdagA, functions_list_A)
+        if cavities:
+            interleavedA = self.interleave_file_cavities(tdagA, cflogA)
+            if verbose:
+                print("Using interleaved cavities and TDAG A...")
+            cflogA = interleavedA
+
+        cflogB = self.get_cflog_entries(tdagB, functions_list_B)
+        if cavities:
+            interleavedB = self.interleave_file_cavities(tdagB, cflogB)
+            if verbose:
+                print("Using interleaved cavities and TDAG B...")
+            cflogB = interleavedB
+
+        diff: List[Tuple[str, str, str, str]] = self.get_differential_entries(
+            cflogA, cflogB, verbose
         )
 
         for entry in diff:

@@ -163,12 +163,36 @@ class TestAnalysis:
         assert l6 == ""
 
         l7 = self.analysis.stringify_list([""])
-        assert l7 == ""
+        assert l7 == "['']"
 
-    def test_compare_cflog(
-        self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
+    def test_get_differential_entries(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        tdProgramTrace2: TDProgramTrace,
+        functionid_json,
+        functionid_json2,
     ):
-        pass
+        cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
+        cflogB = self.analysis.get_cflog_entries(
+            tdProgramTrace2.tdfile, functionid_json2
+        )
+        differential = self.analysis.get_differential_entries(cflogA, cflogB)
+        assert len(differential) >= len(cflogA)
+        assert len(differential) >= len(cflogB)
+
+        computed_cflogA_aligned_offsets = [entry[0] for entry in differential]
+        computed_cflogA_callstacks = [entry[1] for entry in differential]
+        for entry in cflogA:
+            assert entry[0] in computed_cflogA_aligned_offsets
+            if entry[1] is not None and len(entry[1]) > 0:
+                assert entry[1][-1] in computed_cflogA_callstacks
+
+        computed_cflogB_aligned_offsets = [entry[3] for entry in differential]
+        computed_cflogB_callstacks = [entry[2] for entry in differential]
+        for entry in cflogB:
+            assert entry[0] in computed_cflogB_aligned_offsets
+            if entry[1] is not None and len(entry[1]) > 0:
+                assert entry[1][-1] in computed_cflogB_callstacks
 
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
         pass
