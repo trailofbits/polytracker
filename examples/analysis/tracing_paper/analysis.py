@@ -1,12 +1,10 @@
 #!/usr/bin/python
 
 from functools import partialmethod
-from oi import OutputInputMapping
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import GraphtageFormatter, ListNode, StringNode
-from graphtage.dataclasses import DataClassNode
+from graphtage import GraphtageFormatter, IntegerNode, ListNode, StringNode, dataclasses
 import graphtage.printer as printer_module
 from tqdm import tqdm
 
@@ -17,7 +15,7 @@ from polytracker.mapping import CavityType, InputOutputMapping
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-class CFLogEntry(DataClassNode):
+class CFLogEntry(dataclasses.DataClassNode):
     input_bytes_node: ListNode
     callstack_node: ListNode
 
@@ -26,15 +24,18 @@ class CFLogEntry(DataClassNode):
         self.callstack: Tuple[str, ...] = tuple(callstack)
         super().__init__(
             input_bytes_node=ListNode((IntegerNode(i) for i in self.input_bytes)),
-            callstack_node=ListNode((StringNode(c) for c in self.callstack))
+            callstack_node=ListNode((StringNode(c) for c in self.callstack)),
         )
 
     def __hash__(self):
         return hash((self.input_bytes, self.callstack))
 
     def __eq__(self, other):
-        return isinstance(other, CFLogEntry) and other.input_bytes == self.input_bytes \
+        return (
+            isinstance(other, CFLogEntry)
+            and other.input_bytes == self.input_bytes
             and other.callstack == self.callstack
+        )
 
     def __len__(self):
         return 2
@@ -150,9 +151,7 @@ class Analysis:
             )
         )
 
-    def get_cflog_entries(
-        self, tdag: TDFile, functions_list, verbose=False
-    ) -> CFLog:
+    def get_cflog_entries(self, tdag: TDFile, functions_list, verbose=False) -> CFLog:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
 
@@ -171,14 +170,16 @@ class Analysis:
         cflog.function_id_mapping(demangled_functions_list)
 
         # each cflog entry has a callstack and a label
-        return CFLog((
-            CFLogEntry(
-                self.sorted_ancestor_offsets(event.label, tdag),
-                event.callstack,
+        return CFLog(
+            (
+                CFLogEntry(
+                    self.sorted_ancestor_offsets(event.label, tdag),
+                    event.callstack,
+                )
+                for event in cflog
+                if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
             )
-            for event in cflog
-            if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
-        ))
+        )
 
     def stringify_list(self, list) -> str:
         """Turns a list of byte offsets or a callstack into a printable string."""
