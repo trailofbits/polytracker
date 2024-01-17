@@ -53,11 +53,6 @@ parser.add_argument(
     help="command line arguments (including input) to run for each candidate build, for example `<executable_passed_with -a or -b> -i image.j2k -o image.pgm` would require `-i image.j2k -o image.pgm`",
 )
 parser.add_argument(
-    "--cflog",
-    action="store_true",
-    help="Compare Control Flow Logs (requires -a and -b)",
-)
-parser.add_argument(
     "--inout",
     action="store_true",
     help="Compare Input-Output mapping (requires -a and -b)",
@@ -70,16 +65,16 @@ parser.add_argument(
 parser.add_argument(
     "--runtrace", action="store_true", help="Compare runtrace (requires -a and -b)"
 )
-parser.add_argument(
-    "--inputsused",
-    action="store_true",
-    help="Compare inputs used (requires -a and -b)",
-)
-parser.add_argument(
-    "--enumdiff",
-    action="store_true",
-    help="Enumerate differences (kind of) (requires -a and -b)",
-)
+# parser.add_argument(
+#     "--inputsused",
+#     action="store_true",
+#     help="Compare inputs used (requires -a and -b)",
+# )
+# parser.add_argument(
+#     "--enumdiff",
+#     action="store_true",
+#     help="Enumerate differences (kind of) (requires -a and -b)",
+# )
 parser.add_argument(
     "--cavities",
     help="Contextualize the input trace with blind spots (dont-care bytes)",
@@ -105,7 +100,7 @@ if __name__ == "__main__":
         traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
         traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
 
-        if args.cflog and args.function_id_json_a and args.function_id_json_b:
+        if args.function_id_json_a and args.function_id_json_b and not args.runtrace:
             with open(args.function_id_json_a) as jsonA:
                 functions_list_a = load(jsonA)
 
@@ -124,12 +119,12 @@ if __name__ == "__main__":
         if args.runtrace:
             comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
-        if args.inputsused:
-            comparator.compare_inputs_used(traceA.tdfile, traceB.tdfile)
+        # if args.inputsused:
+        #     comparator.compare_inputs_used(traceA.tdfile, traceB.tdfile)
 
-        if args.enumdiff:
-            comparator.enum_diff(traceA.tdfile, traceB.tdfile)
-    elif args.tdag_a and args.function_id_json_a and args.cflog:
+        # if args.enumdiff:
+        #     comparator.enum_diff(traceA.tdfile, traceB.tdfile)
+    elif args.tdag_a and args.function_id_json_a:
         print(f"Mapping and showing the control flow log of '{args.tdag_a}'...")
         trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
 
