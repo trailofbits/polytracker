@@ -194,6 +194,33 @@ class TestAnalysis:
             if entry[1] is not None and len(entry[1]) > 0:
                 assert entry[1][-1] in computed_cflogB_callstacks
 
+        interleaved_cflog_A = self.analysis.interleave_file_cavities(
+            tdProgramTrace.tdfile, cflogA
+        )
+        interleaved_cflog_B = self.analysis.interleave_file_cavities(
+            tdProgramTrace2.tdfile, cflogB
+        )
+        cavitatious_differential = self.analysis.get_differential_entries(
+            interleaved_cflog_A, interleaved_cflog_B
+        )
+        assert len(cavitatious_differential) > len(differential)
+
+        cflog_A_offsets_plus_cavities = [entry[0] for entry in cavitatious_differential]
+        cflog_A_callstacks_plus_cavities = [
+            entry[1] for entry in cavitatious_differential
+        ]
+        for entry in interleaved_cflog_A:
+            assert entry[0] in cflog_A_offsets_plus_cavities
+            if entry[1] is not None and len(entry[1]) > 0:
+                assert entry[1][-1] in cflog_A_callstacks_plus_cavities
+
+        cflog_B_offsets_plus_cavities = [entry[3] for entry in cavitatious_differential]
+        cflog_B_callstacks_plus_cavs = [entry[2] for entry in cavitatious_differential]
+        for entry in interleaved_cflog_B:
+            assert entry[0] in cflog_B_offsets_plus_cavities
+            if entry[1] is not None and len(entry[1]) > 0:
+                assert entry[1][-1] in cflog_B_callstacks_plus_cavs
+
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
         pass
 
