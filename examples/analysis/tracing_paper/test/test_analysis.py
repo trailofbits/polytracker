@@ -181,12 +181,13 @@ class TestAnalysis:
         assert len(differential) >= len(cflogB)
 
         for entry in differential:
+            # TODO: test when we SHOULD step
             if entry[0] != entry[3]:
-                # if bytes don't match up, we stepped things so they "match" earlier
+                # if bytes don't match up, we stepped things so they "match", earlier
                 assert entry[0] is None or entry[3] is None
             if entry[1] != entry[2]:
                 # if callstack doesn't match, bytes should still match,
-                # or we stepped
+                # or we previously stepped
                 assert entry[0] == entry[3] or entry[0] is None or entry[3] is None
 
         computed_cflogA_aligned_offsets = [entry[0] for entry in differential]
@@ -247,6 +248,7 @@ class TestAnalysis:
         tdProgramTrace: TDProgramTrace,
         functionid_json,
     ):
+        """Ensure we are internally consistent."""
         cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
         cflogB = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
         assert len(cflogA) == len(cflogB)
@@ -259,7 +261,9 @@ class TestAnalysis:
         assert len(differential) >= len(cflogA)
 
         for entry in differential:
+            # byte sets are the same
             assert entry[0] == entry[3]
+            # call stacks are the same
             assert entry[1] == entry[2]
 
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
