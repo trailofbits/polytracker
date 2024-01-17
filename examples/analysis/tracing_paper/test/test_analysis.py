@@ -180,6 +180,15 @@ class TestAnalysis:
         assert len(differential) >= len(cflogA)
         assert len(differential) >= len(cflogB)
 
+        for entry in differential:
+            if entry[0] != entry[3]:
+                # if bytes don't match up, we stepped things so they "match" earlier
+                assert entry[0] is None or entry[3] is None
+            if entry[1] != entry[2]:
+                # if callstack doesn't match, bytes should still match,
+                # or we stepped
+                assert entry[0] == entry[3] or entry[0] is None or entry[3] is None
+
         computed_cflogA_aligned_offsets = [entry[0] for entry in differential]
         computed_cflogA_callstacks = [entry[1] for entry in differential]
         for entry in cflogA:
@@ -194,6 +203,18 @@ class TestAnalysis:
             if entry[1] is not None and len(entry[1]) > 0:
                 assert entry[1][-1] in computed_cflogB_callstacks
 
+    def test_interleaved_differential(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        tdProgramTrace2: TDProgramTrace,
+        functionid_json,
+        functionid_json2,
+    ):
+        cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
+        cflogB = self.analysis.get_cflog_entries(
+            tdProgramTrace2.tdfile, functionid_json2
+        )
+        differential = self.analysis.get_differential_entries(cflogA, cflogB)
         interleaved_cflog_A = self.analysis.interleave_file_cavities(
             tdProgramTrace.tdfile, cflogA
         )
@@ -221,15 +242,35 @@ class TestAnalysis:
             if entry[1] is not None and len(entry[1]) > 0:
                 assert entry[1][-1] in cflog_B_callstacks_plus_cavs
 
+    def test_same_comparison_differential(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        functionid_json,
+    ):
+        cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
+        cflogB = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
+        assert len(cflogA) == len(cflogB)
+
+        for entryA, entryB in zip(cflogA, cflogB):
+            assert entryA[0] == entryB[0]
+            assert entryA[1] == entryB[1]
+
+        differential = self.analysis.get_differential_entries(cflogA, cflogB)
+        assert len(differential) >= len(cflogA)
+
+        for entry in differential:
+            assert entry[0] == entry[3]
+            assert entry[1] == entry[2]
+
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
         pass
 
-    def test_compare_enum_diff(
-        self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    ):
-        pass
+    # def test_compare_enum_diff(
+    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
+    # ):
+    #     pass
 
-    def test_compare_inputs_used(
-        self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    ):
-        pass
+    # def test_compare_inputs_used(
+    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
+    # ):
+    #     pass
