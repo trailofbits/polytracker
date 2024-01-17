@@ -114,7 +114,7 @@ class TestAnalysis:
             tdProgramTrace.tdfile, cflog
         )
         assert len(interleaved) > len(cflog)
-        byte_side_entries = list(map(lambda entry: entry[0], interleaved))
+        byte_side_entries = list(map(lambda entry: entry.input_bytes, interleaved))
 
         file_cavities_raw = InputOutputMapping(tdProgramTrace.tdfile).file_cavities()
         for file_name in file_cavities_raw:
@@ -133,14 +133,14 @@ class TestAnalysis:
         )
 
         for entry in entries:
-            assert len(entry[0]) >= 1
+            assert len(entry.input_bytes) >= 1
 
-            for byte_offset in entry[0]:
+            for byte_offset in entry.input_bytes:
                 assert byte_offset >= 0
 
-            assert len(entry[1]) >= 1
+            assert len(entry.callstack) >= 1
 
-            for callstack_entry in entry[1]:
+            for callstack_entry in entry.callstack:
                 assert type(callstack_entry) == str
 
     def test_stringify_list(self):
@@ -193,16 +193,16 @@ class TestAnalysis:
         computed_cflogA_aligned_offsets = [entry[0] for entry in differential]
         computed_cflogA_callstacks = [entry[1] for entry in differential]
         for entry in cflogA:
-            assert entry[0] in computed_cflogA_aligned_offsets
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in computed_cflogA_callstacks
+            assert entry.input_bytes in computed_cflogA_aligned_offsets
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in computed_cflogA_callstacks
 
         computed_cflogB_aligned_offsets = [entry[3] for entry in differential]
         computed_cflogB_callstacks = [entry[2] for entry in differential]
         for entry in cflogB:
-            assert entry[0] in computed_cflogB_aligned_offsets
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in computed_cflogB_callstacks
+            assert entry.input_bytes in computed_cflogB_aligned_offsets
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in computed_cflogB_callstacks
 
     def test_interleaved_differential(
         self,
@@ -254,8 +254,8 @@ class TestAnalysis:
         assert len(cflogA) == len(cflogB)
 
         for entryA, entryB in zip(cflogA, cflogB):
-            assert entryA[0] == entryB[0]
-            assert entryA[1] == entryB[1]
+            assert entryA.input_bytes == entryB.input_bytes
+            assert entryA.callstack == entryB.callstack
 
         differential = self.analysis.get_differential_entries(cflogA, cflogB)
         assert len(differential) >= len(cflogA)
@@ -268,13 +268,3 @@ class TestAnalysis:
 
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
         pass
-
-    # def test_compare_enum_diff(
-    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    # ):
-    #     pass
-
-    # def test_compare_inputs_used(
-    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    # ):
-    #     pass
