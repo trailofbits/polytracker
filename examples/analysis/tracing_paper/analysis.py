@@ -466,32 +466,3 @@ class Analysis:
             fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
             fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
             print(f"A: [{idxA}] {eventA} {fnA}, B: [{idxB}] {eventB} {fnB}")
-
-    # def enum_diff(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
-    #     offset_dbg = self.input_offsets(dbg_tdfile)
-    #     offset_rel = self.input_offsets(rel_tdfile)
-
-    #     i = 0
-    #     maxl = max(offset_dbg, key=int)
-    #     maxr = max(offset_rel, key=int)
-    #     maxtot = max(maxl, maxr)
-    #     while i <= maxtot:
-    #         if i in offset_dbg and i not in offset_rel:
-    #             print(f"Only DBG: {offset_dbg[i]}")
-    #         elif i in offset_rel and i not in offset_dbg:
-    #             print(f"Only REL: {offset_rel[i]}")
-    #         elif i in offset_dbg and i in offset_rel:
-    #             if len(offset_dbg[i]) == 1 and len(offset_rel[i]) == 1:
-    #                 if not self.node_equals(offset_dbg[i][0], offset_rel[i][0]):
-    #                     print(f"DBG {offset_dbg[i][0]} - REL {offset_rel[i][0]}")
-    #             elif offset_dbg[i] != offset_rel[i]:
-    #                 print(f"ED (count): DBG {offset_dbg[i]} - REL {offset_rel[i]}")
-
-    #         i += 1
-
-    # def compare_inputs_used(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
-    #     dbg_mapping = OutputInputMapping(dbg_tdfile).mapping()
-    #     rel_mapping = OutputInputMapping(rel_tdfile).mapping()
-    #     inputs_dbg = set(x[1] for x in dbg_mapping)
-    #     inputs_rel = set(x[1] for x in rel_mapping)
-    #     print(f"Input diffs: {sorted(inputs_rel-inputs_dbg)}")
