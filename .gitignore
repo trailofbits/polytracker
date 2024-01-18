@@ -17,3 +17,4 @@ __pycache__
 polytracker.egg-info
 /polytracker.egg-info
 compile_commands.json
+*.json
