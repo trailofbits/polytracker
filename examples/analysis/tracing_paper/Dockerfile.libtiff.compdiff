@@ -1,0 +1,46 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Runs CompDiff, from ASPLOS '23
+# `Finding Unstable Code via Compiler-Driven Differential Testing`
+# https://shao-hua-li.github.io/files/2023-ASPLOS-CompDiff.pdf
+
+# as per https://github.com/shao-hua-li/CompDiff/blob/main/preinstall.sh
+# with some small hacks to make stuffs "just work"
+WORKDIR /libtiff
+RUN apt-get update && \
+    apt-get install -y \
+      git \
+      software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get install -y \
+      gcc-11 \
+      g++-11 \
+      libssl-dev \
+      gcc-11-plugin-dev \
+      libc++-dev \
+      libc++abi-dev \
+      libtool \
+      autotools-dev \
+      automake \
+      wget \
+      jq \
+      python3-dev \
+      make && \
+    ln -s /usr/bin/gcc-11 /usr/bin/gcc && \
+    ln -s /usr/bin/g++-11 /usr/bin/g++ && \
+    git clone https://github.com/shao-hua-li/CompDiff.git
+
+WORKDIR /libtiff/CompDiff
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 13 && \
+    ln -s /usr/bin/clang-13 /usr/bin/clang && \
+    ln -s /usr/bin/clang++-13 /usr/bin/clang++ && \
+    chmod +x diff-build.sh && \
+    ./diff-build.sh && \
+    chmod +x diff-instrument.sh && \
+    ./diff-instrument.sh examples/libtiff/build.sh
+
+# ENTRYPOINT [ "./aflpp/afl-fuzz", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "-M", "-i", "@@", "out.file"]
