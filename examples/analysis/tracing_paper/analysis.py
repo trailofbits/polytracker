@@ -5,7 +5,7 @@ from oi import OutputInputMapping
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import GraphtageFormatter, ListNode, StringNode
+from graphtage import GraphtageFormatter, IntegerNode, ListNode, StringNode
 from graphtage.dataclasses import DataClassNode
 import graphtage.printer as printer_module
 from tqdm import tqdm
@@ -22,12 +22,14 @@ class CFLogEntry(DataClassNode):
     callstack_node: ListNode
 
     def __init__(self, input_bytes: Iterable[int], callstack: Iterable[str]):
-        self.input_bytes: Tuple[int, ...] = tuple(input_bytes)
-        self.callstack: Tuple[str, ...] = tuple(callstack)
+        input_bytes = tuple(input_bytes)
+        callstack = tuple(callstack)
         super().__init__(
-            input_bytes_node=ListNode((IntegerNode(i) for i in self.input_bytes)),
-            callstack_node=ListNode((StringNode(c) for c in self.callstack))
+            input_bytes_node=ListNode((IntegerNode(i) for i in input_bytes)),
+            callstack_node=ListNode((StringNode(c) for c in callstack))
         )
+        self.input_bytes: Tuple[int, ...] = input_bytes
+        self.callstack: Tuple[str, ...] = callstack
 
     def __hash__(self):
         return hash((self.input_bytes, self.callstack))
@@ -47,9 +49,9 @@ class CFLogEntry(DataClassNode):
         else:
             raise IndexError(item)
 
-    def __iter__(self):
-        yield self.input_bytes
-        yield self.callstack
+    # def __iter__(self):
+    #     yield self.input_bytes
+    #     yield self.callstack
 
     def __str__(self):
         return f"{', '.join(map(str, self.input_bytes))} -> {', '.join(self.callstack)}"
@@ -57,8 +59,9 @@ class CFLogEntry(DataClassNode):
 
 class CFLog(ListNode[CFLogEntry]):
     def __init__(self, entries: Iterable[CFLogEntry]):
-        self.entries: Tuple[CFLogEntry, ...] = tuple(entries)
-        super().__init__(self.entries)
+        entries = tuple(entries)
+        super().__init__(entries)
+        self.entries: Tuple[CFLogEntry, ...] = entries
 
     def __hash__(self):
         return hash(self.entries)
@@ -431,7 +434,7 @@ class Analysis:
             cflogB = interleavedB
 
         diff: List[Tuple[str, str, str, str]] = self.get_differential_entries(
-            cflogA, cflogB, verbose
+            cflogA, cflogB, use_graphtage=True, verbose=verbose
         )
 
         for entry in diff:
