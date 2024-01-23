@@ -114,7 +114,7 @@ class TestAnalysis:
             tdProgramTrace.tdfile, cflog
         )
         assert len(interleaved) > len(cflog)
-        byte_side_entries = list(map(lambda entry: entry[0], interleaved))
+        byte_side_entries = list(map(lambda entry: entry.input_bytes, interleaved))
 
         file_cavities_raw = InputOutputMapping(tdProgramTrace.tdfile).file_cavities()
         for file_name in file_cavities_raw:
@@ -133,14 +133,14 @@ class TestAnalysis:
         )
 
         for entry in entries:
-            assert len(entry[0]) >= 1
+            assert len(entry.input_bytes) >= 1
 
-            for byte_offset in entry[0]:
+            for byte_offset in entry.input_bytes:
                 assert byte_offset >= 0
 
-            assert len(entry[1]) >= 1
+            assert len(entry.callstack) >= 1
 
-            for callstack_entry in entry[1]:
+            for callstack_entry in entry.callstack:
                 assert type(callstack_entry) == str
 
     def test_stringify_list(self):
@@ -181,27 +181,28 @@ class TestAnalysis:
         assert len(differential) >= len(cflogB)
 
         for entry in differential:
+            # TODO: test when we SHOULD step
             if entry[0] != entry[3]:
-                # if bytes don't match up, we stepped things so they "match" earlier
+                # if bytes don't match up, we stepped things so they "match", earlier
                 assert entry[0] is None or entry[3] is None
             if entry[1] != entry[2]:
                 # if callstack doesn't match, bytes should still match,
-                # or we stepped
+                # or we previously stepped
                 assert entry[0] == entry[3] or entry[0] is None or entry[3] is None
 
         computed_cflogA_aligned_offsets = [entry[0] for entry in differential]
         computed_cflogA_callstacks = [entry[1] for entry in differential]
         for entry in cflogA:
-            assert entry[0] in computed_cflogA_aligned_offsets
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in computed_cflogA_callstacks
+            assert entry.input_bytes in computed_cflogA_aligned_offsets
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in computed_cflogA_callstacks
 
         computed_cflogB_aligned_offsets = [entry[3] for entry in differential]
         computed_cflogB_callstacks = [entry[2] for entry in differential]
         for entry in cflogB:
-            assert entry[0] in computed_cflogB_aligned_offsets
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in computed_cflogB_callstacks
+            assert entry.input_bytes in computed_cflogB_aligned_offsets
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in computed_cflogB_callstacks
 
     def test_interleaved_differential(
         self,
@@ -247,30 +248,23 @@ class TestAnalysis:
         tdProgramTrace: TDProgramTrace,
         functionid_json,
     ):
+        """Ensure we are internally consistent."""
         cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
         cflogB = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
         assert len(cflogA) == len(cflogB)
 
         for entryA, entryB in zip(cflogA, cflogB):
-            assert entryA[0] == entryB[0]
-            assert entryA[1] == entryB[1]
+            assert entryA.input_bytes == entryB.input_bytes
+            assert entryA.callstack == entryB.callstack
 
         differential = self.analysis.get_differential_entries(cflogA, cflogB)
         assert len(differential) >= len(cflogA)
 
         for entry in differential:
+            # byte sets are the same
             assert entry[0] == entry[3]
+            # call stacks are the same
             assert entry[1] == entry[2]
 
     def test_compare_run_trace(self, tdProgramTrace: TDProgramTrace):
         pass
-
-    # def test_compare_enum_diff(
-    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    # ):
-    #     pass
-
-    # def test_compare_inputs_used(
-    #     self, tdProgramTrace: TDProgramTrace, tdProgramTrace2: TDProgramTrace
-    # ):
-    #     pass

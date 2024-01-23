@@ -1,12 +1,10 @@
 #!/usr/bin/python
 
 from functools import partialmethod
-from oi import OutputInputMapping
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import GraphtageFormatter, IntegerNode, ListNode, StringNode
-from graphtage.dataclasses import DataClassNode
+from graphtage import dataclasses, GraphtageFormatter, IntegerNode, ListNode, StringNode
 import graphtage.printer as printer_module
 from tqdm import tqdm
 
@@ -17,7 +15,7 @@ from polytracker.mapping import CavityType, InputOutputMapping
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
 
-class CFLogEntry(DataClassNode):
+class CFLogEntry(dataclasses.DataClassNode):
     input_bytes_node: ListNode
     callstack_node: ListNode
 
@@ -35,8 +33,11 @@ class CFLogEntry(DataClassNode):
         return hash((self.input_bytes, self.callstack))
 
     def __eq__(self, other):
-        return isinstance(other, CFLogEntry) and other.input_bytes == self.input_bytes \
+        return (
+            isinstance(other, CFLogEntry)
+            and other.input_bytes == self.input_bytes
             and other.callstack == self.callstack
+        )
 
     def __len__(self):
         return 2
@@ -153,9 +154,7 @@ class Analysis:
             )
         )
 
-    def get_cflog_entries(
-        self, tdag: TDFile, functions_list, verbose=False
-    ) -> CFLog:
+    def get_cflog_entries(self, tdag: TDFile, functions_list, verbose=False) -> CFLog:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
 
@@ -174,14 +173,16 @@ class Analysis:
         cflog.function_id_mapping(demangled_functions_list)
 
         # each cflog entry has a callstack and a label
-        return CFLog((
-            CFLogEntry(
-                self.sorted_ancestor_offsets(event.label, tdag),
-                event.callstack,
+        return CFLog(
+            (
+                CFLogEntry(
+                    self.sorted_ancestor_offsets(event.label, tdag),
+                    event.callstack,
+                )
+                for event in cflog
+                if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
             )
-            for event in cflog
-            if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
-        ))
+        )
 
     def stringify_list(self, list) -> str:
         """Turns a list of byte offsets or a callstack into a printable string."""
@@ -468,32 +469,3 @@ class Analysis:
             fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
             fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
             print(f"A: [{idxA}] {eventA} {fnA}, B: [{idxB}] {eventB} {fnB}")
-
-    # def enum_diff(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
-    #     offset_dbg = self.input_offsets(dbg_tdfile)
-    #     offset_rel = self.input_offsets(rel_tdfile)
-
-    #     i = 0
-    #     maxl = max(offset_dbg, key=int)
-    #     maxr = max(offset_rel, key=int)
-    #     maxtot = max(maxl, maxr)
-    #     while i <= maxtot:
-    #         if i in offset_dbg and i not in offset_rel:
-    #             print(f"Only DBG: {offset_dbg[i]}")
-    #         elif i in offset_rel and i not in offset_dbg:
-    #             print(f"Only REL: {offset_rel[i]}")
-    #         elif i in offset_dbg and i in offset_rel:
-    #             if len(offset_dbg[i]) == 1 and len(offset_rel[i]) == 1:
-    #                 if not self.node_equals(offset_dbg[i][0], offset_rel[i][0]):
-    #                     print(f"DBG {offset_dbg[i][0]} - REL {offset_rel[i][0]}")
-    #             elif offset_dbg[i] != offset_rel[i]:
-    #                 print(f"ED (count): DBG {offset_dbg[i]} - REL {offset_rel[i]}")
-
-    #         i += 1
-
-    # def compare_inputs_used(self, dbg_tdfile: TDFile, rel_tdfile: TDFile):
-    #     dbg_mapping = OutputInputMapping(dbg_tdfile).mapping()
-    #     rel_mapping = OutputInputMapping(rel_tdfile).mapping()
-    #     inputs_dbg = set(x[1] for x in dbg_mapping)
-    #     inputs_rel = set(x[1] for x in rel_mapping)
-    #     print(f"Input diffs: {sorted(inputs_rel-inputs_dbg)}")
