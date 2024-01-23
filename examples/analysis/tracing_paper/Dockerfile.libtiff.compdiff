@@ -32,6 +32,9 @@ RUN apt-get update && \
     ln -s /usr/bin/g++-11 /usr/bin/g++ && \
     git clone https://github.com/shao-hua-li/CompDiff.git
 
+ENV AFL_TRY_AFFINITY=1
+ENV AFL_DEBUG_CHILD=1
+
 WORKDIR /libtiff/CompDiff
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
@@ -43,4 +46,6 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x diff-instrument.sh && \
     ./diff-instrument.sh examples/libtiff/build.sh
 
-# ENTRYPOINT [ "./aflpp/afl-fuzz", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "-M", "-i", "@@", "out.file"]
+# fixed the libtiff binary command from README.md
+# this works: $ ./aflpp/afl-fuzz -y 10 -i examples/libtiff/seeds -o examples/libtiff/findings -Y "out.file" -- ./examples/libtiff/bin/tiffcp @@ out.file
+ENTRYPOINT [ "./aflpp/afl-fuzz", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
