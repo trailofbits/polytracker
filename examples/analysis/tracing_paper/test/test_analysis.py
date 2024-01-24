@@ -232,16 +232,16 @@ class TestAnalysis:
             entry[1] for entry in cavitatious_differential
         ]
         for entry in interleaved_cflog_A:
-            assert entry[0] in cflog_A_offsets_plus_cavities
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in cflog_A_callstacks_plus_cavities
+            assert entry.input_bytes in cflog_A_offsets_plus_cavities
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in cflog_A_callstacks_plus_cavities
 
         cflog_B_offsets_plus_cavities = [entry[3] for entry in cavitatious_differential]
         cflog_B_callstacks_plus_cavs = [entry[2] for entry in cavitatious_differential]
         for entry in interleaved_cflog_B:
-            assert entry[0] in cflog_B_offsets_plus_cavities
-            if entry[1] is not None and len(entry[1]) > 0:
-                assert entry[1][-1] in cflog_B_callstacks_plus_cavs
+            assert entry.input_bytes in cflog_B_offsets_plus_cavities
+            if entry.callstack is not None and len(entry.callstack) > 0:
+                assert entry.callstack[-1] in cflog_B_callstacks_plus_cavs
 
     def test_same_comparison_differential(
         self,
