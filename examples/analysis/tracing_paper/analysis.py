@@ -4,7 +4,7 @@ from functools import partialmethod
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import dataclasses, GraphtageFormatter, IntegerNode, ListNode, StringNode
+from graphtage import dataclasses, GraphtageFormatter, IntegerNode, LeafNode, ListNode, Match, Replace, StringNode
 import graphtage.printer as printer_module
 from tqdm import tqdm
 
@@ -13,6 +13,18 @@ from polytracker.mapping import CavityType, InputOutputMapping
 
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+
+
+class CallStackEntry(LeafNode):
+    def __init__(self, func: str):
+        super().__init__(func)
+        self.func: str = func
+
+    def edits(self, node):
+        if isinstance(node, LeafNode) and node.object == self.object:
+            return Match(self, node, 0)
+        else:
+            return Replace(self, node)
 
 
 class CFLogEntry(dataclasses.DataClassNode):
@@ -24,7 +36,7 @@ class CFLogEntry(dataclasses.DataClassNode):
         callstack = tuple(callstack)
         super().__init__(
             input_bytes_node=ListNode((IntegerNode(i) for i in input_bytes)),
-            callstack_node=ListNode((StringNode(c) for c in callstack))
+            callstack_node=ListNode((CallStackEntry(c) for c in callstack))
         )
         self.input_bytes: Tuple[int, ...] = input_bytes
         self.callstack: Tuple[str, ...] = callstack
