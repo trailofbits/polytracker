@@ -4,8 +4,11 @@ from functools import partialmethod
 from typing import Dict, Iterable, List, Set, Tuple
 
 import cxxfilt
-from graphtage import dataclasses, GraphtageFormatter, IntegerNode, LeafNode, ListNode, Match, Replace, StringNode
+from graphtage import (
+    dataclasses, GraphtageFormatter, Insert, IntegerNode, LeafNode, ListNode, Match, Remove, Replace, StringNode
+)
 import graphtage.printer as printer_module
+from graphtage.sequences import SequenceEdit
 from tqdm import tqdm
 
 from polytracker import taint_dag, TDFile
@@ -201,7 +204,7 @@ class Analysis:
         if list is None or len(list) == 0:
             return ""
         else:
-            return str(list)
+            return ", ".join(map(str, list))
 
     def print_cols(
         self,
@@ -221,12 +224,19 @@ class Analysis:
         # example: [2,3,4] |             f()          | [2,3,4]
 
         fn: str = ""
-        if callstack_A != callstack_B:
-            fn = "{:<40} !!! != !!! {:>40}".format(
-                self.stringify_list(callstack_A), self.stringify_list(callstack_B)
-            )
-        else:
+        if not callstack_A and not callstack_B:
+            fn = "UNKNOWN CALLSTACK"
+        elif not callstack_B:
             fn = self.stringify_list(callstack_A)
+        elif not callstack_A:
+            fn = self.stringify_list(callstack_B)
+        else:
+            func_A = callstack_A[-1]
+            func_B = callstack_B[-1]
+            if func_A == func_B:
+                return f"…, {func_A}"
+            else:
+                return f"…, {func_A} !!! != !!! …, {func_B}"
 
         horizontal_separator: str = "-" * (90)
         print(horizontal_separator)
@@ -305,16 +315,45 @@ class Analysis:
         to_cflog: CFLog,
         use_graphtage: bool = True,
         verbose: bool = False,
-    ) -> List[Tuple[str, str, str, str]]:
+    ) -> Iterable[Tuple[Iterable[int], Iterable[str], Iterable[str], Iterable[int]]]:
         """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
         tdag with the separately recorded demangled function names in callstack format, walk through them and see what
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
         structure."""
         if use_graphtage:
             diff = from_cflog.diff(to_cflog)
-            with printer_module.DEFAULT_PRINTER as printer:
-                GraphtageFormatter.DEFAULT_INSTANCE.print(printer, diff)
-            raise NotImplementedError("TODO: convert the diff to the return value")
+            if diff.edit is None:
+                print("Both cflogs are identical!")
+                return
+            elif not isinstance(diff.edit, SequenceEdit):
+                raise ValueError(f"Unexpected edit type: {diff.edit!r}")
+            for edit in diff.edit.edits():
+                assert isinstance(edit.from_node, CFLogEntry)
+                to_yield: List[Tuple[Optional[CFLogEntry], Optional[CFLogEntry]]] = []
+                if isinstance(edit, Match):
+                    assert isinstance(edit.to_node, CFLogEntry)
+                    to_yield.append((edit.from_node, edit.to_node))
+                elif isinstance(edit, Replace):
+                    to_yield.append((edit.from_node, None))
+                    to_yield.append((None, edit.to_node))
+                elif isinstance(edit, Insert):
+                    to_yield.append((None, edit.from_node))
+                elif isinstance(edit, Remove):
+                    to_yield.append((edit.from_node, None))
+                elif isinstance(edit, dataclasses.DataClassEdit):
+                    assert isinstance(edit.from_node, CFLogEntry)
+                    assert isinstance(edit.to_node, CFLogEntry)
+                    to_yield.append((edit.from_node, edit.to_node))
+                else:
+                    raise NotImplementedError(repr(edit))
+                for from_node, to_node in to_yield:
+                    assert from_node is not None or to_node is not None
+                    if from_node is None:
+                        yield (), (), to_node.callstack, to_node.input_bytes
+                    elif to_node is None:
+                        yield from_node.input_bytes, from_node.callstack, (), ()
+                    else:
+                        yield from_node.input_bytes, from_node.callstack, to_node.callstack, to_node.input_bytes
             return
 
         len_from: int = len(from_cflog)
@@ -446,9 +485,9 @@ class Analysis:
                 print("Using interleaved cavities and TDAG B...")
             cflogB = interleavedB
 
-        diff: List[Tuple[str, str, str, str]] = self.get_differential_entries(
+        diff: List[Tuple[str, str, str, str]] = list(self.get_differential_entries(
             cflogA, cflogB, use_graphtage=True, verbose=verbose
-        )
+        ))
 
         for entry in diff:
             self.print_cols(
