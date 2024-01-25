@@ -9,6 +9,9 @@ from graphtage import (
 )
 import graphtage.printer as printer_module
 from graphtage.sequences import SequenceEdit
+from rich.console import Console
+from rich.table import Table
+from rich.text import Text
 from tqdm import tqdm
 
 from polytracker import taint_dag, TDFile
@@ -485,17 +488,32 @@ class Analysis:
                 print("Using interleaved cavities and TDAG B...")
             cflogB = interleavedB
 
-        diff: List[Tuple[str, str, str, str]] = list(self.get_differential_entries(
-            cflogA, cflogB, use_graphtage=True, verbose=verbose
-        ))
+        table = Table(title="Trace Differentials", show_lines=True, width=132)
+        table.add_column(Text("Trace A Input Bytes", style="blue"), justify="right", no_wrap=False)
+        table.add_column(Text("Callstack", style="magenta"), justify="center", no_wrap=False)
+        table.add_column(Text("Trace B Input Bytes", style="blue"), justify="left", no_wrap=False)
 
-        for entry in diff:
-            self.print_cols(
-                offsets_A=entry[0],
-                callstack_A=entry[1],
-                callstack_B=entry[2],
-                offsets_B=entry[3],
-            )
+        for from_bytes, from_callstack, to_callstack, to_bytes in self.get_differential_entries(
+            cflogA, cflogB, use_graphtage=True, verbose=verbose
+        ):
+            if not from_callstack and not to_callstack:
+                callstack = Text("Unknown Callstack", style="italic red")
+            elif not from_callstack:
+                callstack = "[gray],[/gray] ".join(f"[magenta]{c}[/magenta]" for c in to_callstack)
+            elif not to_callstack:
+                callstack = "[gray],[/gray] ".join(f"[magenta]{c}[/magenta]" for c in from_callstack)
+            else:
+                from_func = from_callstack[-1]
+                to_func = to_callstack[-1]
+                if from_func == to_func:
+                    callstack = f"[gray]…,[/gray] [magenta]{from_func}[/magenta]"
+                else:
+                    callstack = (f"[gray]…,[/gray] [magenta]{from_func}[/magenta] [red]!=[/red] [gray]…,[/gray] "
+                                 f"[magenta]{to_func}[/magenta]")
+            from_bytes_text = f"[gray],[/gray]".join(f"[blue]{b}[/blue]" for b in from_bytes)
+            to_bytes_text = f"[gray],[/gray]".join(f"[blue]{b}[/blue]" for b in to_bytes)
+            table.add_row(from_bytes_text, callstack, to_bytes_text)
+        Console().print(table)
 
     def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
         if cavities:
