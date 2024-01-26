@@ -32,8 +32,8 @@ RUN apt-get update && \
     cp -r libpng-1.6.39 release/libpng && \
     cp -r libpng-1.6.39 debug/libpng && \
     # zlib #
-    wget https://zlib.net/current/zlib.tar.gz && \
-    tar xvf zlib.tar.gz && \
+    wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+    tar xvf zlib-1.3.tar.gz && \
     cp -r zlib-1.3 release/zlib && \
     cp -r zlib-1.3 debug/zlib && \
     # libjpeg (v9e) #
