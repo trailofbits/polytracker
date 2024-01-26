@@ -48,4 +48,4 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 
 # fixed the libtiff binary command from README.md
 # this works: $ ./aflpp/afl-fuzz -y 10 -i examples/libtiff/seeds -o examples/libtiff/findings -Y "out.file" -- ./examples/libtiff/bin/tiffcp @@ out.file
-ENTRYPOINT [ "./aflpp/afl-fuzz", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
+ENTRYPOINT [ "./aflpp/afl-fuzz", "-D", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
