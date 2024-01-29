@@ -11,27 +11,26 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /libtiff
 RUN apt-get update && \
     apt-get install -y \
-      git \
       software-properties-common && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     apt-get install -y \
       gcc-11 \
-      g++-11 \
-      libssl-dev \
+      g++-11 && \
+    ln -s /usr/bin/gcc-11 /usr/bin/gcc && \
+    ln -s /usr/bin/g++-11 /usr/bin/g++ && \
+    apt-get install -y \
       gcc-11-plugin-dev \
       libc++-dev \
       libc++abi-dev \
+      libssl-dev \
+      git \
       libtool \
+      cmake \
       gettext \
-      autotools-dev \
-      automake \
       wget \
       jq \
       tar \
-      python3-dev \
-      make && \
-    ln -s /usr/bin/gcc-11 /usr/bin/gcc && \
-    ln -s /usr/bin/g++-11 /usr/bin/g++ && \
+      python3-dev && \
     git clone https://github.com/shao-hua-li/CompDiff.git
 
 ENV AFL_TRY_AFFINITY=1
@@ -59,9 +58,10 @@ WORKDIR /libtiff/CompDiff/examples/libtiff
 RUN wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
   tar xvf zlib-1.3.tar.gz && \
   cd zlib-1.3 && \
-  CFLAGS="-O3 -DNDEBUG" CPPFLAGS="-O3 -DNDEBUG" ./configure && \
+  ./configure && \
   make libz.a -j$((`nproc`+1))
 
+# The following should result in TEN of the builds in build_libtiff.sh, via diff-instrument.sh.
 COPY build_libtiff.sh /libtiff/CompDiff/examples/libtiff
 ENV BINDIR="/libtiff/CompDiff/examples/libtiff/bin"
 ENV TIFFSRC="/libtiff/CompDiff/examples/libtiff/src"
@@ -69,11 +69,10 @@ RUN wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
     tar xvf tiff-4.3.0.tar.gz && \
     mkdir -p "$BINDIR" && \
     chmod +x build_libtiff.sh
-
 WORKDIR /libtiff/CompDiff/
 RUN chmod +x diff-instrument.sh && ./diff-instrument.sh examples/libtiff/build_libtiff.sh
 
 # fixed the libtiff binary command from README.md
 # this works: $ ./aflpp/afl-fuzz -y 10 -i examples/libtiff/seeds -o examples/libtiff/findings -Y "out.file" -- ./examples/libtiff/bin/tiffcp @@ out.file
 # tried for 3d with -D to build a corpus of seeds, then for 3d without -D since compdiff didn't use deterministic strategies
-ENTRYPOINT [ "./aflpp/afl-fuzz", "-D", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
+# ENTRYPOINT [ "./aflpp/afl-fuzz", "-D", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
