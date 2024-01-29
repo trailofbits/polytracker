@@ -28,7 +28,7 @@ cd "$SRC" && \
 
 # Step 3, link the target binary out to $BINDIR for afl++
 if [ -z ${DIFF_ID} ]; then
-    ln -sf "$SRC/tools/tiffcp" "$BINDIR/tiffcp"
+    ln -sf "$SRC/bin/tiffcp" "$BINDIR/tiffcp"
 else
-    ln -sf "$SRC/tools/tiffcp" "$BINDIR/tiffcp-$DIFF_ID"
+    ln -sf "$SRC/bin/tiffcp" "$BINDIR/tiffcp-$DIFF_ID"
 fi

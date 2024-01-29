@@ -61,7 +61,7 @@ RUN wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
   ./configure && \
   make libz.a -j$((`nproc`+1))
 
-# The following should result in TEN of the builds in build_libtiff.sh, via diff-instrument.sh.
+# The following should result in TEN of the builds in build_libtiff.sh, via diff-instrument.sh. The diffs will happen between these.
 COPY build_libtiff.sh /libtiff/CompDiff/examples/libtiff
 ENV BINDIR="/libtiff/CompDiff/examples/libtiff/bin"
 ENV TIFFSRC="/libtiff/CompDiff/examples/libtiff/src"
