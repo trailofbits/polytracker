@@ -45,10 +45,7 @@ RUN apt-get update && \
     wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
     tar xvf tiff-4.3.0.tar.gz && \
     cp -r tiff-4.3.0 release/libtiff && \
-    cp -r tiff-4.3.0 debug/libtiff && \
-    # libtiff also wants a local blight-install ;-;
-    cp /usr/local/bin/blight-install release/libtiff && \
-    cp /usr/local/bin/blight-install debug/libtiff
+    cp -r tiff-4.3.0 debug/libtiff
 
 # build release version of zlib
 WORKDIR "$RELEASE/zlib"
@@ -72,26 +69,20 @@ RUN \
     polytracker build make -j$((`nproc`+1)) && \
     polytracker build make install
 
-# build release version of libtiff
+# build release version of libtiff linking our built archives
+# libtiff `` install `` makes the headers available :(
 WORKDIR "$RELEASE/libtiff"
 RUN \
-  DIR_GZLIB="$RELEASE/zlib" \
-  DIR_JPEGLIB="$RELEASE/libjpeg" \
-  DIRS_LIBINC="$RELEASE/zlib $RELEASE/libjpeg" \
-  DSOSUF="a" \
-  CC=blight-cc \
-  CXX=blight-c++ \
-  CPPFLAGS="-I$RELEASE/zlib/include -I$RELEASE/libjpeg/include"\
-  CFLAGS="-O3 -DNDEBUG" \
-  CXXFLAGS="-O3 -DNDEBUG" \
-  LDFLAGS="-L$RELEASE/zlib/lib -L$RELEASE/libjpeg/lib -lpthread" \
-  polytracker build ./configure \
-    --enable-static \
-    --disable-shared \
-    --prefix="$RELEASE/libtiff" \
-    --exec-prefix="$RELEASE/libtiff" && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker build make install
+  polytracker build cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$RELEASE/libtiff" \
+    -DZLIB_LIBRARY="$RELEASE/zlib/libz.a" \
+    -DJPEG_LIBRARY="$RELEASE/libjpeg/lib/libjpeg.a" \
+    -DCMAKE_C_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" && \
+  polytracker build cmake --build build -j$((`nproc`+1)) && \
+  polytracker build cmake --build build --target install
 
 # build release version of libpng linking our built zlib
 WORKDIR "$RELEASE/libpng"
@@ -136,9 +127,9 @@ RUN polytracker build cmake -S .. -B . \
   -DDCMTK_WITH_TIFF:BOOL=ON \
   -DTIFF_INCLUDE_DIR="$RELEASE/libtiff/include" \
   -DTIFF_LIBRARY_RELEASE="$RELEASE/libtiff/lib/libtiff.a" && \
-  polytracker build cmake --build . -j$((`nproc`+1))
+polytracker build cmake --build . -j$((`nproc`+1))
 
-# # instrument dcmdump https://support.dcmtk.org/docs/mod_dcmdata.html (others could be dcm2json, dcm2pdf, dcm2xml, dcmconv, dcmrle, dcmdrle, dcmgpdir, dump2dcm, img2dcm, pdf2dcm, stl2dcm, xml2dcm)
+# instrument dcmdump https://support.dcmtk.org/docs/mod_dcmdata.html (others could be dcm2json, dcm2pdf, dcm2xml, dcmconv, dcmrle, dcmdrle, dcmgpdir, dump2dcm, img2dcm, pdf2dcm, stl2dcm, xml2dcm)
 RUN polytracker instrument-targets --ftrace --taint --cflog dcmdump
 
 # build debug version of zlib
@@ -166,23 +157,16 @@ RUN \
 # build debug version of libtiff
 WORKDIR "$DEBUG/libtiff"
 RUN \
-  DIR_GZLIB="$DEBUG/zlib" \
-  DIR_JPEGLIB="$DEBUG/libjpeg" \
-  DIRS_LIBINC="$DEBUG/zlib $DEBUG/libjpeg" \
-  DSOSUF="a" \
-  CC=blight-cc \
-  CXX=blight-c++ \
-  CPPFLAGS="-I$DEBUG/zlib/include -I$DEBUG/libjpeg/include"\
-  CFLAGS="-O0 -g" \
-  CXXFLAGS="-O0 -g" \
-  LDFLAGS="-L$DEBUG/zlib/lib -L$DEBUG/libjpeg/lib -lpthread" \
-  polytracker build ./configure \
-    --enable-static \
-    --disable-shared \
-    --prefix="$DEBUG/libtiff" \
-    --exec-prefix="$DEBUG/libtiff" && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker build make install
+  polytracker build cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$DEBUG/libtiff" \
+    -DZLIB_LIBRARY="$DEBUG/zlib/libz.a" \
+    -DJPEG_LIBRARY="$DEBUG/libjpeg/lib/libjpeg.a" \
+    -DCMAKE_C_FLAGS="-O0 -g" \
+    -DCMAKE_CXX_FLAGS="-O0 -g" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" && \
+  polytracker build cmake --build build -j$((`nproc`+1)) && \
+  polytracker build cmake --build build --target install
 
 # build release version of libpng linking our built zlib
 WORKDIR "$DEBUG/libpng"
