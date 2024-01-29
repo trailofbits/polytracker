@@ -36,6 +36,7 @@ RUN apt-get update && \
 
 ENV AFL_TRY_AFFINITY=1
 ENV AFL_DEBUG_CHILD=1
+ENV AFL_AUTORESUME=1
 
 WORKDIR /libtiff/CompDiff
 RUN wget https://apt.llvm.org/llvm.sh && \
