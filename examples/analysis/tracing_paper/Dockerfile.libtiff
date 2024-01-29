@@ -16,16 +16,20 @@ RUN apt-get update && \
       gettext \
       wget \
       libtool && \
+    # zlib 1.3 - need to build this dep locally as archive so
+    # polytracker works, since there is a shared object zlib in the
+    # ambient ubuntu environment that the cmake libtiff build picks
+    # up otherwise. if other dependencies are needed, follow the
+    # zlib pattern! #
+    wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+    tar xvf zlib-1.3.tar.gz && \
+    cp -r zlib-1.3 release/zlib && \
+    cp -r zlib-1.3 debug/zlib && \
     # libtiff 4.3.0, as fuzzed in compdiff #
     wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
     tar xvf tiff-4.3.0.tar.gz && \
     cp -r tiff-4.3.0 release && \
-    cp -r tiff-4.3.0 debug && \
-    # zlib 1.3 #
-    wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
-    tar xvf zlib-1.3.tar.gz && \
-    cp -r zlib-1.3 release/zlib && \
-    cp -r zlib-1.3 debug/zlib
+    cp -r tiff-4.3.0 debug
 
 # build release version of zlib
 WORKDIR "$RELEASE/zlib"
@@ -57,7 +61,7 @@ RUN \
   polytracker build ./configure && \
   polytracker build make libz.a -j$((`nproc`+1))
 
-  # build release version of libtiff
+# build and instrument release version of libtiff
 WORKDIR "$DEBUG"
 RUN \
   polytracker build cmake -S . -B build  \
