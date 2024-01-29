@@ -15,6 +15,12 @@ RUN apt-get update && \
       software-properties-common && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
     apt-get install -y \
+      zlib1g-dev \
+      libjpeg-dev \
+      libdeflate-dev \
+      libjbig-dev \
+      liblerc-dev \
+      libzstd-dev \
       gcc-11 \
       g++-11 \
       libssl-dev \
@@ -40,12 +46,22 @@ RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
     ./llvm.sh 13 && \
     ln -s /usr/bin/clang-13 /usr/bin/clang && \
-    ln -s /usr/bin/clang++-13 /usr/bin/clang++ && \
-    chmod +x diff-build.sh && \
-    ./diff-build.sh && \
+    ln -s /usr/bin/clang++-13 /usr/bin/clang++
+
+# performs the same functionality as diff-build.sh
+WORKDIR /libtiff/CompDiff/aflpp
+RUN CC=clang make source-only && \
+    CC=CLANG make -C utils/aflpp_driver
+WORKDIR /libtiff/CompDiff/compilers
+RUN source build.sh
+
+WORKDIR /libtiff/CompDiff
+COPY build_libtiff.sh /libtiff/CompDiff/
+RUN chmod +x build_libtiff.sh && \
     chmod +x diff-instrument.sh && \
-    ./diff-instrument.sh examples/libtiff/build.sh
+    ./diff-instrument.sh build_libtiff.sh
 
 # fixed the libtiff binary command from README.md
 # this works: $ ./aflpp/afl-fuzz -y 10 -i examples/libtiff/seeds -o examples/libtiff/findings -Y "out.file" -- ./examples/libtiff/bin/tiffcp @@ out.file
+# tried for 3d with -D to build a corpus of seeds, then for 3d without -D since compdiff didn't use deterministic strategies
 ENTRYPOINT [ "./aflpp/afl-fuzz", "-D", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]
