@@ -1,32 +1,33 @@
 #!/usr/bin/env bash
 
-# Step 0, prepare the location and name of the sourcecode
-BASEDIR="$(dirname $(realpath "$1"))/src/libtiff" # where the source code locates
-BINDIR="$(dirname $(realpath "$1"))/bin"      # where the fuzzing binary locates, typically is a symbolic link, see Step3
-if [ -z ${DIFF_ID} ]; then
-    BASEDIR+="-fuzz"
-else
-    BASEDIR+="-${DIFF_ID}"
-fi
-rm -rf ${BASEDIR}
+PATH_BASE="/libtiff/CompDiff/examples/libtiff"
 
-# Step 1, prepare the target sourcecode.
-# If you don't have public accessible URL for your target, you can just use `cp` to make a copy.
-wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
-    tar xvf tiff-4.3.0.tar.gz && \
-    cp -r tiff-4.3.0 ${BASEDIR}
+# Step 0, prepare the location and name of the sourcecode
+if [ -z ${DIFF_ID} ]; then
+    SRC="$TIFFSRC/build-fuzz"
+else
+    SRC="$TIFFSRC/build-$DIFF_ID"
+fi
+mkdir -p "$SRC"
+
+# Step 1, prepare a clean copy of the target sourcecode for build.
+# This step and onward assume this script is run from Dockerfile.libtiff.compdiff.
+cp -r "$PATH_BASE/tiff-4.3.0" "$SRC"
 
 # Step 2, compile the target
-cd ${BASEDIR}
-# TODO make this same as what is used for polytracker?
+cd "$SRC" && \
+  build cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$SRC" \
+    -DZLIB_LIBRARY="$PATH_BASE/zlib-1.3/libz.a" \
+    -DCMAKE_C_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" && \
+  cmake --build build -j$((`nproc`+1))
 
-# Step 3, link the target binary
-# It is important to guarantee that binaries compiled from
-# diff-cc-* can be found in the same location with the fuzz target.
-# todo(kaoudis) this https://github.com/shao-hua-li/CompDiff/blob/main/examples/libtiff/build.sh#L29C1-L34C3 seems to just be making soft symlinks to the same thing????????? why? maybe this is supposed to link to the different builds?
-mkdir -p ${BINDIR}
+# Step 3, link the target binary out to $BINDIR for afl++
 if [ -z ${DIFF_ID} ]; then
-    ln -sf ${BASEDIR}/tools/tiffcp ${BINDIR}/tiffcp
+    ln -sf "$SRC/tools/tiffcp" "$BINDIR/tiffcp"
 else
-    ln -sf ${BASEDIR}/tools/tiffcp ${BINDIR}/tiffcp-${DIFF_ID}
+    ln -sf "$SRC/tools/tiffcp" "$BINDIR/tiffcp-$DIFF_ID"
 fi
