@@ -18,6 +18,7 @@ RUN apt-get update && \
     autopoint \
     gettext \
     libtool \
+    liblzma-dev \
     wget \
     vim ripgrep && \
   # imagemagick #
@@ -29,7 +30,22 @@ RUN apt-get update && \
   wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
   tar xvf zlib-1.3.tar.gz && \
   cp -r zlib-1.3 release/zlib && \
-  cp -r zlib-1.3 debug/zlib
+  cp -r zlib-1.3 debug/zlib && \
+  # libjpeg (v9e) #
+  wget https://ijg.org/files/jpegsrc.v9e.tar.gz && \
+  tar xvf jpegsrc.v9e.tar.gz && \
+  cp -r jpeg-9e release/libjpeg && \
+  cp -r jpeg-9e debug/libjpeg && \
+  # libpng #
+  wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+  tar xvf libpng-1.6.39.tar.xz && \
+  cp -r libpng-1.6.39 release/libpng && \
+  cp -r libpng-1.6.39 debug/libpng && \
+  # libtiff #
+  wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
+  tar xvf tiff-4.3.0.tar.gz && \
+  cp -r tiff-4.3.0 release/libtiff && \
+  cp -r tiff-4.3.0 debug/libtiff
 
 # build release version of zlib
 WORKDIR "$RELEASE/zlib"
@@ -39,8 +55,45 @@ RUN \
   polytracker build ./configure && \
   polytracker build make libz.a -j$((`nproc`+1))
 
+# build release version of libjpeg
+WORKDIR "$RELEASE/libjpeg"
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O3 -DNDEBUG" \
+  CC=blight-cc \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$RELEASE/libjpeg" \
+    --exec-prefix="$RELEASE/libjpeg" && \
+    polytracker build make -j$((`nproc`+1)) && \
+    polytracker build make install
+
+# build release version of libpng linking our built zlib
+WORKDIR "$RELEASE/libpng"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O3 -DNDEBUG" \
+  CPPFLAGS="-I$RELEASE/zlib/include -O3 -DNDEBUG" \
+  LDFLAGS="-L$RELEASE/zlib" \
+  CC=blight-cc \
+  polytracker build make libpng.a -j$((`nproc`+1))
+
+# build release version of libtiff linking our built archives
+WORKDIR "$RELEASE/libtiff"
+RUN \
+  polytracker build cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$RELEASE/libtiff" \
+    -DZLIB_LIBRARY="$RELEASE/zlib/libz.a" \
+    -DJPEG_LIBRARY="$RELEASE/libjpeg/lib/libjpeg.a" \
+    -DCMAKE_C_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_CXX_FLAGS="-O3 -DNDEBUG" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" && \
+  polytracker build cmake --build build -j$((`nproc`+1)) && \
+  polytracker build cmake --build build --target install
+
 # build release version of imagemagick
-    # MAGICK_LIBS="-lstdc++ -l:libz.a -lm -lpthread -lgomp -lxml2" \
 WORKDIR "$RELEASE"
 RUN polytracker build ./configure \
     --enable-static \
@@ -54,10 +107,86 @@ RUN polytracker build ./configure \
     --with-frozenpaths \
     --prefix="$RELEASE" \
     PKG_CONFIG="" \
-    LDFLAGS="-L$RELEASE/zlib" \
-    CFLAGS="-I$RELEASE/zlib" \
-    CPPFLAGS="-I$RELEASE/zlib" \
-    LIBS="-lstdc++ -l:libz.a -lgomp -lxml2" \
-    ZLIB_LIBS="-l:libz.a"
+    LDFLAGS="-L$RELEASE/zlib -L$RELEASE/libjpeg/lib -L$RELEASE/libpng -L$RELEASE/libtiff/lib" \
+    CFLAGS="-O3 -DNDEBUG" \
+    CPPFLAGS="-O3 -DNDEBUG" \
+    LIBS="-lstdc++ -l:libz.a -l:libjpeg.a -l:libpng.a -l:libtiff.a -lgomp -lxml2 -llzma" \
+    ZLIB_LIBS="-l:libz.a" \
+    JPEG_LIBS="-l:libjpeg.a" \
+    PNG_LIBS="-l:libpng.a" \
+    LZMA_LIBS="-llzma" \
+    TIFF_LIBS="-l:libtiff.a"
+RUN polytracker build make -j$((`nproc`+1))
+RUN polytracker instrument-targets --ftrace --taint --cflog magick
+
+# build debug version of zlib
+WORKDIR "$DEBUG/zlib"
+RUN \
+  CFLAGS="-O0 -g" \
+  CPPFLAGS="-O0 -g" \
+  polytracker build ./configure && \
+  polytracker build make libz.a -j$((`nproc`+1))
+
+# build debug version of libjpeg
+WORKDIR "$DEBUG/libjpeg"
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O0 -g" \
+  CC=blight-cc \
+  polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="$DEBUG/libjpeg" \
+    --exec-prefix="$DEBUG/libjpeg" && \
+    polytracker build make -j$((`nproc`+1)) && \
+    polytracker build make install
+
+# build debug version of libpng linking our built zlib
+WORKDIR "$DEBUG/libpng"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O0 -g" \
+  CPPFLAGS="-I$DEBUG/zlib/include -O0 -g" \
+  LDFLAGS="-L$DEBUG/zlib" \
+  CC=blight-cc \
+  polytracker build make libpng.a -j$((`nproc`+1))
+
+# build debug version of libtiff linking our built archives
+WORKDIR "$DEBUG/libtiff"
+RUN \
+  polytracker build cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="$DEBUG/libtiff" \
+    -DZLIB_LIBRARY="$DEBUG/zlib/libz.a" \
+    -DJPEG_LIBRARY="$DEBUG/libjpeg/lib/libjpeg.a" \
+    -DCMAKE_C_FLAGS="-O0 -g" \
+    -DCMAKE_CXX_FLAGS="-O0 -g" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++" && \
+  polytracker build cmake --build build -j$((`nproc`+1)) && \
+  polytracker build cmake --build build --target install
+
+# build debug version of imagemagick
+WORKDIR "$DEBUG"
+RUN polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --without-magick-plus-plus \
+    --without-x \
+    --disable-silent-rules \
+    --without-lcms \
+    --without-perl \
+    --disable-installed \
+    --with-frozenpaths \
+    --prefix="$DEBUG" \
+    PKG_CONFIG="" \
+    LDFLAGS="-L$DEBUG/zlib -L$DEBUG/libjpeg/lib -L$DEBUG/libpng -L$DEBUG/libtiff/lib" \
+    CFLAGS="-O0 -g" \
+    CPPFLAGS="-O0 -g" \
+    LIBS="-lstdc++ -l:libz.a -l:libjpeg.a -l:libpng.a -l:libtiff.a -lgomp -lxml2 -llzma" \
+    ZLIB_LIBS="-l:libz.a" \
+    JPEG_LIBS="-l:libjpeg.a" \
+    PNG_LIBS="-l:libpng.a" \
+    LZMA_LIBS="-llzma" \
+    TIFF_LIBS="-l:libtiff.a"
 RUN polytracker build make -j$((`nproc`+1))
 RUN polytracker instrument-targets --ftrace --taint --cflog magick
