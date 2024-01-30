@@ -1,0 +1,63 @@
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /polytracker/imagemagick
+
+ENV RELEASE=/polytracker/imagemagick/release
+ENV DEBUG=/polytracker/imagemagick/debug
+
+# We use dependency versions that are noted as compliant with the
+# unix imagemagick build instructions:
+# https://github.com/ImageMagick/ImageMagick/blob/7.1.0-23/Install-unix.txt
+# https://www.imagemagick.org/script/advanced-linux-installation.php
+
+RUN apt-get update && \
+  apt-get install -y \
+    autoconf \
+    autopoint \
+    gettext \
+    libtool \
+    wget \
+    vim ripgrep && \
+  # imagemagick #
+  wget https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.0-23.tar.gz && \
+  tar xvf 7.1.0-23.tar.gz && \
+  cp -r ImageMagick-7.1.0-23 release && \
+  cp -r ImageMagick-7.1.0-23 debug && \
+  # zlib #
+  wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+  tar xvf zlib-1.3.tar.gz && \
+  cp -r zlib-1.3 release/zlib && \
+  cp -r zlib-1.3 debug/zlib
+
+# build release version of zlib
+WORKDIR "$RELEASE/zlib"
+RUN \
+  CFLAGS="-O3 -DNDEBUG" \
+  CPPFLAGS="-O3 -DNDEBUG" \
+  polytracker build ./configure && \
+  polytracker build make libz.a -j$((`nproc`+1))
+
+# build release version of imagemagick
+    # MAGICK_LIBS="-lstdc++ -l:libz.a -lm -lpthread -lgomp -lxml2" \
+WORKDIR "$RELEASE"
+RUN polytracker build ./configure \
+    --enable-static \
+    --disable-shared \
+    --without-magick-plus-plus \
+    --without-x \
+    --disable-silent-rules \
+    --without-lcms \
+    --without-perl \
+    --disable-installed \
+    --with-frozenpaths \
+    --prefix="$RELEASE" \
+    PKG_CONFIG="" \
+    LDFLAGS="-L$RELEASE/zlib" \
+    CFLAGS="-I$RELEASE/zlib" \
+    CPPFLAGS="-I$RELEASE/zlib" \
+    LIBS="-lstdc++ -l:libz.a -lgomp -lxml2" \
+    ZLIB_LIBS="-l:libz.a"
+RUN polytracker build make -j$((`nproc`+1))
+RUN polytracker instrument-targets --ftrace --taint --cflog magick

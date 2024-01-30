@@ -17,10 +17,11 @@ COPY imgdisplay_testcases.zip "./imgdisplay_testcases.zip"
 ENV RELEASE=/polytracker/dcmtk/release
 ENV DEBUG=/polytracker/dcmtk/debug
 
+# We use dependency versions that are all noted as compliant with the
 # dcmtk install instructions: https://support.dcmtk.org/docs/file_install.html
-
+# debug packages: vim ripgrep gdb
 RUN apt-get update && \
-    apt-get install -y gettext wget vim ripgrep unzip gdb && \
+    apt-get install -y gettext wget unzip && \
     # dcmtk #
     wget https://support.dcmtk.org/redmine/attachments/download/184/dcmtk-3.6.7.tar.gz && \
     tar xvf dcmtk-3.6.7.tar.gz && \
