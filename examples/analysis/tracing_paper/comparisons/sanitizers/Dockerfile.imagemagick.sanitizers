@@ -1,0 +1,137 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /
+
+# We use dependency versions that are noted as compliant with the
+# unix imagemagick build instructions:
+# https://github.com/ImageMagick/ImageMagick/blob/7.1.0-23/Install-unix.txt
+# https://www.imagemagick.org/script/advanced-linux-installation.php
+# We instrument with asan and ubsan following https://clang.llvm.org/docs/AddressSanitizer.html#usage
+
+RUN apt-get update && \
+  apt-get install -y \
+    autoconf \
+    autopoint \
+    clang-12 \
+    cmake \
+    gettext \
+    git \
+    golang \
+    liblzma-dev \
+    libtool \
+    libxml2-dev \
+    python3-dev \
+    unzip \
+    wget && \
+  # imagemagick #
+  wget https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.0-23.tar.gz && \
+  tar xvf 7.1.0-23.tar.gz && \
+  cp -r ImageMagick-7.1.0-23 imagemagick
+
+WORKDIR /imagemagick
+  # zlib #
+RUN  wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+  tar xvf zlib-1.3.tar.gz && \
+  cp -r zlib-1.3 zlib && \
+  # libjpeg (v9e) #
+  wget https://ijg.org/files/jpegsrc.v9e.tar.gz && \
+  tar xvf jpegsrc.v9e.tar.gz && \
+  cp -r jpeg-9e libjpeg && \
+  # libpng #
+  wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+  tar xvf libpng-1.6.39.tar.xz && \
+  cp -r libpng-1.6.39 libpng && \
+  # libtiff #
+  wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
+  tar xvf tiff-4.3.0.tar.gz && \
+  cp -r tiff-4.3.0 libtiff
+
+# Install symlinks to clang and llvm bitcode tools
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
+    update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10 && \
+    update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
+    update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-12 10 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+ENV ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
+# build debug version of zlib
+WORKDIR /imagemagick/zlib
+RUN \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CPPFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CC=clang \
+  CXX=clang++ \
+  ./configure && \
+  make libz.a -j$((`nproc`+1))
+
+# build debug version of libjpeg
+WORKDIR /imagemagick/libjpeg
+RUN \
+  AR_FLAGS="crs" \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CC=clang \
+  ./configure \
+    --enable-static \
+    --disable-shared \
+    --prefix="/imagemagick/libjpeg" \
+    --exec-prefix="/imagemagick/libjpeg" && \
+    make -j$((`nproc`+1)) && \
+    make install
+
+# build debug version of libpng linking our built zlib
+WORKDIR /imagemagick/libpng
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CPPFLAGS="-I/imagemagick/zlib/include -O0 -g -fno-omit-frame-pointer" \
+  LDFLAGS="-L/imagemagick/zlib" \
+  CC=clang \
+  make libpng.a -j$((`nproc`+1))
+
+# build debug version of libtiff linking our built archives
+WORKDIR /imagemagick/libtiff
+RUN \
+  cmake -S . -B build  \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DCMAKE_INSTALL_PREFIX="/imagemagick/libtiff" \
+    -DZLIB_LIBRARY="/imagemagick/zlib/libz.a" \
+    -DJPEG_LIBRARY="/imagemagick/libjpeg/lib/libjpeg.a" \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_C_FLAGS="-O0 -g -fno-omit-frame-pointer" \
+    -DCMAKE_CXX_FLAGS="-O0 -g -fno-omit-frame-pointer" \
+    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++ -lpthread" && \
+  cmake --build build -j$((`nproc`+1)) && \
+  cmake --build build --target install
+
+# build debug version of imagemagick
+WORKDIR /imagemagick
+RUN ./configure \
+    --enable-static \
+    --disable-shared \
+    --without-magick-plus-plus \
+    --without-x \
+    --disable-silent-rules \
+    --without-lcms \
+    --without-perl \
+    --disable-installed \
+    --with-frozenpaths \
+    --prefix="/imagemagick" \
+    PKG_CONFIG="" \
+    LDFLAGS="-L/imagemagick/zlib -L/imagemagick/libjpeg/lib -L/imagemagick/libpng -L/imagemagick/libtiff/lib" \
+    CC=clang \
+    CXX=clang++ \
+    CFLAGS="-O0 -g -fno-omit-frame-pointer -fsanitize=address,undefined" \
+    CPPFLAGS="-O0 -g -fno-omit-frame-pointer -fsanitize=address,undefined" \
+    LIBS="-lstdc++ -l:libz.a -l:libjpeg.a -l:libpng.a -l:libtiff.a -lgomp -lxml2 -llzma" \
+    ZLIB_LIBS="-l:libz.a" \
+    JPEG_LIBS="-l:libjpeg.a" \
+    PNG_LIBS="-l:libpng.a" \
+    LZMA_LIBS="-llzma" \
+    TIFF_LIBS="-l:libtiff.a" && \
+  make -j$((`nproc`+1))
