@@ -8,7 +8,7 @@ WORKDIR /
 # unix imagemagick build instructions:
 # https://github.com/ImageMagick/ImageMagick/blob/7.1.0-23/Install-unix.txt
 # https://www.imagemagick.org/script/advanced-linux-installation.php
-# We instrument with asan and ubsan following https://clang.llvm.org/docs/AddressSanitizer.html#usage
+# We instrument with asan and ubsan following https://clang.llvm.org/docs/AddressSanitizer.html#usage (dynamic linking required, etc)
 
 RUN apt-get update && \
   apt-get install -y \
@@ -28,25 +28,23 @@ RUN apt-get update && \
   # imagemagick #
   wget https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.0-23.tar.gz && \
   tar xvf 7.1.0-23.tar.gz && \
-  cp -r ImageMagick-7.1.0-23 imagemagick
-
-WORKDIR /imagemagick
+  mv ImageMagick-7.1.0-23 imagemagick && \
   # zlib #
-RUN  wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+  wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
   tar xvf zlib-1.3.tar.gz && \
-  cp -r zlib-1.3 zlib && \
+  mv zlib-1.3 /imagemagick/zlib && \
   # libjpeg (v9e) #
   wget https://ijg.org/files/jpegsrc.v9e.tar.gz && \
   tar xvf jpegsrc.v9e.tar.gz && \
-  cp -r jpeg-9e libjpeg && \
+  mv jpeg-9e /imagemagick/libjpeg && \
   # libpng #
   wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
   tar xvf libpng-1.6.39.tar.xz && \
-  cp -r libpng-1.6.39 libpng && \
+  mv libpng-1.6.39 /imagemagick/libpng && \
   # libtiff #
   wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
   tar xvf tiff-4.3.0.tar.gz && \
-  cp -r tiff-4.3.0 libtiff
+  mv tiff-4.3.0 /imagemagick/libtiff
 
 # Install symlinks to clang and llvm bitcode tools
 RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
@@ -67,7 +65,7 @@ RUN \
   CC=clang \
   CXX=clang++ \
   ./configure && \
-  make libz.a -j$((`nproc`+1))
+  make -j$((`nproc`+1))
 
 # build debug version of libjpeg
 WORKDIR /imagemagick/libjpeg
@@ -76,8 +74,8 @@ RUN \
   CFLAGS="-O0 -g -fno-omit-frame-pointer" \
   CC=clang \
   ./configure \
-    --enable-static \
-    --disable-shared \
+    --enable-shared \
+    --disable-static \
     --prefix="/imagemagick/libjpeg" \
     --exec-prefix="/imagemagick/libjpeg" && \
     make -j$((`nproc`+1)) && \
@@ -91,29 +89,33 @@ RUN \
   CPPFLAGS="-I/imagemagick/zlib/include -O0 -g -fno-omit-frame-pointer" \
   LDFLAGS="-L/imagemagick/zlib" \
   CC=clang \
-  make libpng.a -j$((`nproc`+1))
+  make -j$((`nproc`+1))
 
 # build debug version of libtiff linking our built archives
 WORKDIR /imagemagick/libtiff
 RUN \
-  cmake -S . -B build  \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DCMAKE_INSTALL_PREFIX="/imagemagick/libtiff" \
-    -DZLIB_LIBRARY="/imagemagick/zlib/libz.a" \
-    -DJPEG_LIBRARY="/imagemagick/libjpeg/lib/libjpeg.a" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_C_FLAGS="-O0 -g -fno-omit-frame-pointer" \
-    -DCMAKE_CXX_FLAGS="-O0 -g -fno-omit-frame-pointer" \
-    -DCMAKE_EXE_LINKER_FLAGS="-lstdc++ -lpthread" && \
-  cmake --build build -j$((`nproc`+1)) && \
-  cmake --build build --target install
+  DIR_GZLIB="/imagemagick/zlib" \
+  DIR_JPEGLIB="/imagemagick/libjpeg" \
+  DIRS_LIBINC="/imagemagick/zlib /imagemagick/libjpeg" \
+  CC=clang \
+  CXX=clang++ \
+  CPPFLAGS="-I/imagemagick/zlib -I/imagemagick/libjpeg/include"\
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CXXFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  LDFLAGS="-L/imagemagick/zlib -L/imagemagick/libjpeg/lib -lpthread" \
+  ./configure \
+    --enable-shared \
+    --disable-static \
+    --prefix="/imagemagick/libtiff" \
+    --exec-prefix="/imagemagick/libtiff" && \
+  make -j$((`nproc`+1)) && \
+  make install
 
 # build debug version of imagemagick
 WORKDIR /imagemagick
 RUN ./configure \
-    --enable-static \
-    --disable-shared \
+    --disable-static \
+    --enable-shared \
     --without-magick-plus-plus \
     --without-x \
     --disable-silent-rules \
@@ -123,15 +125,11 @@ RUN ./configure \
     --with-frozenpaths \
     --prefix="/imagemagick" \
     PKG_CONFIG="" \
-    LDFLAGS="-L/imagemagick/zlib -L/imagemagick/libjpeg/lib -L/imagemagick/libpng -L/imagemagick/libtiff/lib" \
+    LD_LIBRARY_PATH="/imagemagick/zlib:/imagemagick/libjpeg/lib:/imagemagick/libpng:/imagemagick/libtiff/lib:$LD_LIBRARY_PATH" \
+    LDFLAGS="-L/imagemagick/zlib -L/imagemagick/libjpeg/lib -L/imagemagick/libpng -L/imagemagick/libtiff/lib -fPIC" \
     CC=clang \
     CXX=clang++ \
-    CFLAGS="-O0 -g -fno-omit-frame-pointer -fsanitize=address,undefined" \
-    CPPFLAGS="-O0 -g -fno-omit-frame-pointer -fsanitize=address,undefined" \
-    LIBS="-lstdc++ -l:libz.a -l:libjpeg.a -l:libpng.a -l:libtiff.a -lgomp -lxml2 -llzma" \
-    ZLIB_LIBS="-l:libz.a" \
-    JPEG_LIBS="-l:libjpeg.a" \
-    PNG_LIBS="-l:libpng.a" \
-    LZMA_LIBS="-llzma" \
-    TIFF_LIBS="-l:libtiff.a" && \
+    CFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+    CPPFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+    LIBS="-lz -lpng -ljpeg -ltiff -lgomp -lxml2 -llzma -lstdc++" && \
   make -j$((`nproc`+1))
