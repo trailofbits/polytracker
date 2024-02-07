@@ -26,6 +26,7 @@ RUN apt-get update && \
     liblzma-dev \
     libopenjp2-tools \
     libopenjp2-7-dev \
+    libpng-dev \
     libssl-dev \
     libtiff-dev \
     libtool \
@@ -33,44 +34,13 @@ RUN apt-get update && \
     libwebp-dev \
     libwmf-dev \
     libzstd-dev \
-    nettle-dev \
+    libzip-dev \
     wget \
     zlib1g-dev \
     vim ripgrep && \
   # imagemagick #
-  git clone --depth=1 -b 6.9.4-0 https://github.com/ImageMagick/ImageMagick6.git && \
-  # libpng has no static version in the ubuntu pkg libpng-dev #
-  wget https://download.imagemagick.org/archive/delegates/libpng-1.6.31.tar.gz && \
-  tar xvf libpng-1.6.31.tar.gz && \
-  cp -r libpng-1.6.31 "$RELEASE/libpng" && \
-  # libzip also has no static version on ubuntu or debian :[ #
-  wget https://libzip.org/download/libzip-1.10.1.tar.gz && \
-  tar xvf libzip-1.10.1.tar.gz && \
-  cp -r libzip-1.10.1 "$RELEASE/libzip"
+  git clone --depth=1 -b 6.9.4-0 https://github.com/ImageMagick/ImageMagick6.git
 
-WORKDIR "$RELEASE/libpng"
-RUN cp scripts/makefile.linux Makefile
-RUN \
-  CPPFLAGS="-I/usr/include" \
-  LDFLAGS="-L/usr/lib/x86_64-linux-gnu -l:libz.a" \
-  CC=blight-cc \
-  polytracker build make libpng.a -j$((`nproc`+1)) && \
-  polytracker build make install
-
-WORKDIR "$RELEASE/libzip/build"
-RUN \
-  polytracker build cmake -S .. -B . \
-    -DBUILD_SHARED_LIBS=OFF \
-    -DCMAKE_INSTALL_PREFIX="/usr/local" \
-    -DBZIP2_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/libbz2.a" \
-    -DLIBLZMA_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/liblzma.a" \
-    -DZLIB_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/libz.a" \
-    -Dzstd_SHARED_LIBRARY=OFF \
-    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/lib/x86_64-linux-gnu -l:libbz2.a -l:liblzma.a -l:libz.a" && \
-  polytracker build make -j$((`nproc`+1)) && \
-  polytracker build make install
-
-ENV LLVM_SYMBOLIZER_PATH=llvm-symbolizer-12
 WORKDIR "$RELEASE"
 RUN polytracker build ./configure \
     --enable-static \
@@ -79,29 +49,8 @@ RUN polytracker build ./configure \
     --without-lcms \
     --without-perl \
     --prefix="$RELEASE" \
-    --exec-prefix="$RELEASE" \
-    LDFLAGS="-L/usr/lib/x86_64-linux-gnu -L/usr/local/lib" \
-    CPPFLAGS="-I/usr/include -I/usr/local/include"
+    --exec-prefix="$RELEASE"
 
 RUN polytracker build make -j$((`nproc`+1))
-  # PTHREAD_CFLAGS="" \
-  # THREAD_LIBS="" \
-  # PTHREAD_LIBS="" \
-  # THREAD_CFLAGS="" \
-  # MAGICK_DEP_LIBS="-L/usr/lib/x86_64-linux-gnu -L/usr/local/lib -ljbig -ltiff -lfreetype -ljpeg -lpng16 -ldjvulibre -l:libwebpmux.a -l:libwebpdemux.a -l:libwebp.a -llzma -lbz2 -lopenjp2 -lxml2 -l:libz.a -lzstd -ssl -lcrypto -lzip -lm -lpthread" \
-  # MAGICK_LIBS="-L/usr/lib/x86_64-linux-gnu -L/usr/local/lib -ljbig -ltiff -lfreetype -ljpeg -lpng16 -ldjvulibre -l:libwebpmux.a -l:libwebpdemux.a -l:libwebp.a -llzma -lbz2 -lopenjp2 -lxml2 -l:libz.a -lzstd -ssl -lcrypto -lzip -lm -lpthread" \
-  # WEBP_LIBS="-l:libwebp.a" \
-  # pkg_cv_WEBP_LIBS="-l:libwebp.a" \
-  # pkg_cv_WEBPMUX_LIBS="-l:libwebp.a" \
-  # WEBPMUX_LIBS="-l:libwebp.a"
-  # BZLIB_LIBS="-L/usr/lib/x86_64-linux-gnu -Wl,--start-group -lbz2 -llzma -l:libz.a -Wl,--end-group" \
-  # FREETYPE_LIBS="-L/usr/lib/x86_64-linux-gnu -Wl,--start-group -l:libfreetype.a -lbrotlicommon -lbrotlidec -lbrotlienc -Wl,--end-group" \
-  # LZMA_LIBS="-L/usr/lib/x86_64-linux-gnu -llzma" \
-  # PNG_LIBS="-L/usr/lib/x86_64-linux-gnu -L/usr/local/lib -Wl,--start-group -l:libpng16.a -l:libz.a -Wl,--end-group" \
-  # TIFF_LIBS="-L/usr/lib/x86_64-linux-gnu -Wl,--start-group -llzma -lbz2 -l:libz.a -lzstd -l:libtiff.a -Wl,--end-group" \
-  # WEBPMUX_LIBS="-L/usr/lib/x86_64-linux-gnu -Wl,--start-group -lwebpmux -lwebpdemux -lwebp -Wl,--end-group" \
-  # WEBP_LIBS="-L/usr/lib/x86_64-linux-gnu -lwebp" \
-  # ZIP_LIBS="-L/usr/lib/x86_64-linux-gnu -L/usr/local/lib -Wl,--start-group -llzma -l:libz.a -lzstd -ssl -lcrypto -lzip -Wl,--end-group" \
-  # ZLIB_LIBS="-L/usr/lib/x86_64-linux-gnu -l:libz.a"
 
 RUN polytracker instrument-targets --ftrace --taint --cflog convert
