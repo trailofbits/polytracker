@@ -1,1 +1,2 @@
 graphtage>=0.3.1
+rich>=13.7.0
