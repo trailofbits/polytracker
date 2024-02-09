@@ -12,6 +12,7 @@ from typing import (
     cast,
 )
 
+from argparse import BooleanOptionalAction
 from enum import Enum
 from pathlib import Path
 from mmap import mmap, PROT_READ
@@ -118,6 +119,8 @@ class TDLabelSection:
 
     Interprets the stored taint nodes section in a TDAG file.
     Corresponds to Labels in labels.h.
+
+    May be incompatible with use of TDControlFlowLogSection for reading and working with very large trace files. If you are encountering an OOM when trying to build a TDFile, consider turning reading the CFLog or Label section off if you don't need one of these.
     """
 
     def __init__(self, mem, hdr):
@@ -437,7 +440,13 @@ TDSection = Union[
 
 
 class TDFile:
-    def __init__(self, file: BinaryIO) -> None:
+    def __init__(self, file: BinaryIO, labels: bool = True, cflog: bool = True) -> None:
+        """Loads a TDAG file from disk into memory.
+
+        For very large TDAGs, you may run out of memory (i.e., the reading process may be suddenly killed) when trying to load both the labels and cflog sections. In this case, only load the one you need. We default to loading both sections for now, to match previous Polytracker behaviour.
+
+        If both sections are still needed, refactoring the write side of the cflog section to use a more compact format (or refactoring the read here so that less must be paged and read in) would be required.
+        """
         # This needs to be kept in sync with implementation in encoding.cpp
         self.source_taint_bit_shift = 63
         self.affects_control_flow_bit_shift = 62
@@ -460,8 +469,9 @@ class TDFile:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
                 self.sections_by_type[TDSourceSection] = self.sections[-1]
             elif hdr.tag == 2:
-                self.sections.append(TDLabelSection(self.buffer, hdr))
-                self.sections_by_type[TDLabelSection] = self.sections[-1]
+                if labels:
+                    self.sections.append(TDLabelSection(self.buffer, hdr))
+                    self.sections_by_type[TDLabelSection] = self.sections[-1]
             elif hdr.tag == 3:
                 self.sections.append(TDStringSection(self.buffer, hdr))
                 self.sections_by_type[TDStringSection] = self.sections[-1]
@@ -478,11 +488,13 @@ class TDFile:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
                 self.sections_by_type[TDEventsSection] = self.sections[-1]
             elif hdr.tag == 8:
-                self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
-                self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
+                if cflog:
+                    self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
+                    self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
             else:
                 raise NotImplementedError("Unsupported section tag")
-
+            # Need to update the section offset even if we didn't read
+            # a particular section off of disk.
             section_offset += sizeof(TDSectionMeta)
 
         self.raw_nodes: Dict[int, int] = {}
@@ -515,18 +527,27 @@ class TDFile:
             yield name, header
 
     def input_labels(self) -> Iterator[int]:
-        """Enumerates all taint labels that are input labels (source taint)"""
+        """Enumerates all taint sources (input byte offsets). Analogous to the size of the input in bytes that the instrumented program parsed."""
         source_index_section = self.sections_by_type[TDSourceIndexSection]
         assert isinstance(source_index_section, TDSourceIndexSection)
         return source_index_section.enumerate_set_bits()
 
     @property
-    def label_count(self):
+    def label_count(self) -> int:
+        """Enumerates all taint labels. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
         label_section = self.sections_by_type[TDLabelSection]
         assert isinstance(label_section, TDLabelSection)
         return label_section.count()
 
+    @property
+    def cflog_entry_count(self) -> int:
+        """Enumerates all control flow log entries (the count of labels recorded at control flow points). Requires the control flow log section to have been loaded and should throw a KeyError for the TDControlFlowLogSection if it is not available."""
+        cflog_section = self.sections_by_type[TDControlFlowLogSection]
+        assert isinstance(cflog_section, TDControlFlowLogSection)
+        return cflog_section.count()
+
     def read_node(self, label: int) -> int:
+        """Read a node by label. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
         if label in self.raw_nodes:
             return self.raw_nodes[label]
         label_section = self.sections_by_type[TDLabelSection]
@@ -537,6 +558,7 @@ class TDFile:
         return result
 
     def decode_node(self, label: int) -> TDNode:
+        """Fetch a node from either the raw nodes array or the TDLabelSection. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection (from read_node()) if it is not available."""
         # Label zero represents untainted data
         if label == 0:
             return TDUntaintedNode()
@@ -560,6 +582,7 @@ class TDFile:
 
     @property
     def nodes(self) -> Iterator[TDNode]:
+        """Show all nodes in the trace file. Requires the label section to have been loaded and MAY throw a KeyError for the TDLabelSection if it is not available."""
         for label in range(1, self.label_count):
             yield self.decode_node(label)
 
@@ -842,7 +865,7 @@ class TDInfo(Command):
             "--print-taint-nodes",
             "-n",
             action="store_true",
-            help="print taint nodes",
+            help="print taint nodes (warning: not compatible with --cflog)",
         )
 
         parser.add_argument(
@@ -853,16 +876,25 @@ class TDInfo(Command):
         )
 
         parser.add_argument(
-            "--print-control-flow-log",
+            "--cflog",
             "-c",
-            action="store_true",
-            help="print function trace events",
+            action=BooleanOptionalAction,
+            help="True: can show info about control flow log trace events. `--no-cflog` means `polytracker info` will not read in or show info about the control flow log - prevents OOM when working with the label section of a very large trace (defaults to `--no-cflog`).",
+        )
+
+        parser.add_argument(
+            "--labels",
+            "-l",
+            default=True,
+            action=BooleanOptionalAction,
+            help="Can show info about taint labels (defaults to `--labels`). `--no-labels` means `polytracker info` will not read in or show info about the label section - prevents OOM when working with the control flow log section of a very large trace.",
         )
 
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
-            tdfile = TDFile(f)
-            print(f"Number of labels: {tdfile.label_count}")
+            tdfile = TDFile(f, labels=args.labels, cflog=args.cflog)
+            if args.labels:
+                print(f"Number of labels: {tdfile.label_count}")
 
             if args.print_fd_headers:
                 for i, h in enumerate(tdfile.fd_headers):
@@ -878,7 +910,11 @@ class TDInfo(Command):
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
 
-            if args.print_taint_nodes:
+            if args.print_taint_nodes and not args.labels:
+                print(
+                    "Cannot read the full taint label count since did not load the taint label trace. Please try again without setting --labels to False."
+                )
+            elif args.print_taint_nodes:
                 for lbl in range(1, tdfile.label_count):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
@@ -886,7 +922,7 @@ class TDInfo(Command):
                 for e in tdfile.events:
                     print(f"{e}")
 
-            if args.print_control_flow_log:
+            if args.cflog:
                 cflog = tdfile._get_section(TDControlFlowLogSection)
                 assert isinstance(cflog, TDControlFlowLogSection)
                 for obj in cflog:

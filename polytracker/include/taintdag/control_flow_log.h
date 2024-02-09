@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <limits.h>
+
 #include "taintdag/outputfile.h"
 #include "taintdag/section.h"
 #include "taintdag/taint.h"
@@ -41,7 +43,9 @@ struct ControlFlowLog : public SectionBase {
 
   static constexpr uint8_t tag{8};
   static constexpr size_t align_of{1};
-  static constexpr size_t allocation_size{1024 * 1024 * 1024};
+  // allocation_size should be byte aligned!
+  // eg, if 8 GiB max size is wanted, that is 8589934592B
+  static constexpr size_t allocation_size{8589934592};
 
   template <typename OF>
   ControlFlowLog(SectionArg<OF> of) : SectionBase(of.range) {}
