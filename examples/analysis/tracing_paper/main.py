@@ -45,6 +45,10 @@ parser.add_argument(
     help="Provide the full callstack when comparing cflog traces",
     action="store_true",
 )
+parser.add_argument(
+    "--find-divergence", "-d", action="store_true", help="Find the point(s) in the trace where "
+                                                         "divergences occurred"
+)
 
 if __name__ == "__main__":
     comparator = Analysis()
@@ -63,14 +67,23 @@ if __name__ == "__main__":
             with open(args.function_id_json_b) as jsonB:
                 functions_list_b = load(jsonB)
 
-            comparator.show_cflog_diff(
-                tdagA=traceA.tdfile,
-                tdagB=traceB.tdfile,
-                functions_list_A=functions_list_a,
-                functions_list_B=functions_list_b,
-                cavities=args.cavities,
-                verbose=args.verbose,
-            )
+            if args.find_divergence:
+                comparator.find_divergence(
+                    from_tdag=traceA.tdfile,
+                    to_tdag=traceB.tdfile,
+                    from_functions_list=functions_list_a,
+                    to_functions_list=functions_list_b,
+                    verbose=args.verbose
+                )
+            else:
+                comparator.show_cflog_diff(
+                    tdagA=traceA.tdfile,
+                    tdagB=traceB.tdfile,
+                    functions_list_A=functions_list_a,
+                    functions_list_B=functions_list_b,
+                    cavities=args.cavities,
+                    verbose=args.verbose,
+                )
 
         if args.runtrace:
             comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)

@@ -318,7 +318,7 @@ class Analysis:
         to_cflog: CFLog,
         use_graphtage: bool = True,
         verbose: bool = False,
-    ) -> Iterable[Tuple[Iterable[int], Iterable[str], Iterable[str], Iterable[int]]]:
+    ) -> Iterable[Tuple[Tuple[int, ...], Tuple[str, ...], Tuple[str, ...], Tuple[int, ...]]]:
         """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
         tdag with the separately recorded demangled function names in callstack format, walk through them and see what
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
@@ -464,6 +464,42 @@ class Analysis:
 
         return trace_diff
 
+    def find_divergence(
+            self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list, verbose: bool = False
+    ):
+        from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
+        to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
+
+        bytes_operated_from: Set[int] = set()
+        bytes_operated_to: Set[int] = set()
+        trace: List[Tuple[Tuple[Frozenset[int], Tuple[str, ...], Tuple[str, ...], Frozenset[int]]]] = []
+
+        for from_bytes, from_callstack, to_callstack, to_bytes in self.get_differential_entries(
+                from_cflog, to_cflog, use_graphtage=True, verbose=verbose
+        ):
+            from_bytes = frozenset(from_bytes)
+            to_bytes = frozenset(to_bytes)
+            trace.append((from_bytes, from_callstack, to_callstack, to_bytes))
+            bytes_operated_from |= from_bytes
+            bytes_operated_to |= to_bytes
+
+        console = Console()
+
+        def print_differential(trace_name: str, offsets: Iterable[int], callstack: Iterable[str]):
+            console.print(f"[blue]Trace {trace_name}[/blue] operated on input offsets "
+                          f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
+                          f"trace at")
+            for c in callstack:
+                console.print(f"\t[magenta]{c}[/magenta]")
+
+        for from_bytes, from_callstack, to_callstack, to_bytes in trace:
+            if from_bytes == to_bytes:
+                continue
+            if from_bytes - bytes_operated_to:
+                print_differential("A", from_bytes - bytes_operated_to, from_callstack)
+            if to_bytes - bytes_operated_from:
+                print_differential("B", to_bytes - bytes_operated_from, to_callstack)
+
     def show_cflog_diff(
         self,
         tdagA: TDFile,
@@ -471,7 +507,7 @@ class Analysis:
         functions_list_A,
         functions_list_B,
         cavities: bool = False,
-        verbose: bool = False,
+        verbose: bool = False
     ) -> None:
         """Build and print the aligned differential."""
         cflogA = self.get_cflog_entries(tdagA, functions_list_A)
