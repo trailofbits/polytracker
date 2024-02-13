@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /polytracker/libpng
 
 RUN apt-get update && \
-    apt-get install -y wget zlib1g-dev && \
+    apt-get install -y wget zlib1g-dev pip && \
     wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
     tar xvf libpng-1.6.39.tar.xz && \
     mv libpng-1.6.39 release && \
@@ -28,8 +28,8 @@ RUN CPPFLAGS="-O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build make
 RUN polytracker instrument-targets --ftrace --cflog --taint pngtest --ignore-lists libz
 
 # experiment: acropalypse vs manual cropping
-RUN wget https://files.catbox.moe/re3eot.png && \
-    dd if=re3eot.png of=manually_cropped_re3eot.png count=1 bs=697120
+COPY data/re3eot.png /polytracker/libpng/release
+RUN dd if=re3eot.png of=manually_cropped_re3eot.png count=1 bs=697120
     # ./pngtest.instrumented re3eot.png && \
     # mv polytracker.tdag re3eot.tdag && \
     # ./pngtest.instrumented manually_cropped_re3eot.png && \

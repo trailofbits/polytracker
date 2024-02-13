@@ -40,6 +40,10 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
 
     # Apply the id to function mappign
     cflog.function_id_mapping(functionid_mapping)
+    assert cflog.funcmapping is not None
+
+    # once funcmapping is available, the __iter__ method should be functional
+    assert len(list(cflog)) > 0
 
     expected_seq = [
         TDEnterFunctionEvent(["main"]),
@@ -65,5 +69,6 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
     ]
 
     # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
+    assert len(list(cflog)) == len(expected_seq)
     for got, expected in zip(cflog, expected_seq):
         assert got == expected
