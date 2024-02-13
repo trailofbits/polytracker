@@ -1,0 +1,68 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /
+
+# We use dependency versions that are noted as compliant with the
+# unix imagemagick build instructions:
+# https://github.com/ImageMagick/ImageMagick/blob/7.1.0-23/Install-unix.txt
+# https://www.imagemagick.org/script/advanced-linux-installation.php
+# We instrument with asan and ubsan following https://clang.llvm.org/docs/AddressSanitizer.html#usage (dynamic linking required, etc)
+
+RUN apt-get update && \
+  apt-get install -y \
+    autoconf \
+    autopoint \
+    clang-12 \
+    cmake \
+    gettext \
+    git \
+    golang \
+    liblzma-dev \
+    libtool \
+    libxml2-dev \
+    python3-dev \
+    libjpeg-dev \
+    libtiff-dev \
+    libpng-dev \
+    zlib1g-dev \
+    libzip-dev \
+    unzip \
+    wget && \
+  wget https://github.com/ImageMagick/ImageMagick/archive/refs/tags/7.1.0-23.tar.gz && \
+  tar xvf 7.1.0-23.tar.gz && \
+  mv ImageMagick-7.1.0-23 imagemagick
+
+# Install symlinks to clang and llvm bitcode tools
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
+    update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10 && \
+    update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
+    update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-12 10 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+ENV ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
+# build debug version of imagemagick
+WORKDIR /imagemagick
+
+RUN ./configure \
+    --with-utilities \
+    --enable-shared \
+    --disable-static \
+    --without-magick-plus-plus \
+    --without-x \
+    --disable-silent-rules \
+    --without-lcms \
+    --without-perl \
+    --with-frozenpaths \
+    --prefix="/imagemagick" \
+    LDFLAGS="-fPIC" \
+    CC=clang \
+    CXX=clang++ \
+    CFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+    CPPFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+    LIBS="-lz -lpng -ljpeg -ltiff -lgomp -lxml2 -llzma -lstdc++" && \
+  make -j$((`nproc`+1))

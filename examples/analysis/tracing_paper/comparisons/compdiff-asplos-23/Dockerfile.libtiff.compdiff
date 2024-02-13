@@ -1,0 +1,78 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Runs CompDiff, from ASPLOS '23
+# `Finding Unstable Code via Compiler-Driven Differential Testing`
+# https://shao-hua-li.github.io/files/2023-ASPLOS-CompDiff.pdf
+
+# as per https://github.com/shao-hua-li/CompDiff/blob/main/preinstall.sh
+# with some small hacks to make stuffs "just work"
+WORKDIR /libtiff
+RUN apt-get update && \
+    apt-get install -y \
+      software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get install -y \
+      gcc-11 \
+      g++-11 && \
+    ln -s /usr/bin/gcc-11 /usr/bin/gcc && \
+    ln -s /usr/bin/g++-11 /usr/bin/g++ && \
+    apt-get install -y \
+      gcc-11-plugin-dev \
+      libc++-dev \
+      libc++abi-dev \
+      libssl-dev \
+      git \
+      libtool \
+      cmake \
+      gettext \
+      wget \
+      jq \
+      tar \
+      python3-dev && \
+    git clone https://github.com/shao-hua-li/CompDiff.git
+
+ENV AFL_TRY_AFFINITY=1
+ENV AFL_DEBUG_CHILD=1
+ENV AFL_AUTORESUME=1
+
+WORKDIR /libtiff/CompDiff
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 13 && \
+    ln -s /usr/bin/clang-13 /usr/bin/clang && \
+    ln -s /usr/bin/clang++-13 /usr/bin/clang++
+
+# performs the same functionality as diff-build.sh
+WORKDIR /libtiff/CompDiff/aflpp
+RUN CC=clang make source-only && \
+    CC=CLANG make -C utils/aflpp_driver
+WORKDIR /libtiff/CompDiff/compilers
+RUN chmod +x build.sh && ./build.sh
+
+WORKDIR /libtiff/CompDiff/examples/libtiff
+# statically build libz so it can be statically linked when we build
+# libtiff (it is otherwise ambiently in the environment as a .so;
+# c.f. Dockerfile.libtiff in the main project directory).
+RUN wget https://zlib.net/fossils/zlib-1.3.tar.gz && \
+  tar xvf zlib-1.3.tar.gz && \
+  cd zlib-1.3 && \
+  ./configure && \
+  make libz.a -j$((`nproc`+1))
+
+# The following should result in TEN of the builds in build_libtiff.sh, via diff-instrument.sh. The diffs will happen between these.
+COPY build_libtiff.sh /libtiff/CompDiff/examples/libtiff
+ENV BINDIR="/libtiff/CompDiff/examples/libtiff/bin"
+ENV TIFFSRC="/libtiff/CompDiff/examples/libtiff/src"
+RUN wget https://download.osgeo.org/libtiff/tiff-4.3.0.tar.gz && \
+    tar xvf tiff-4.3.0.tar.gz && \
+    mkdir -p "$BINDIR" && \
+    chmod +x build_libtiff.sh
+WORKDIR /libtiff/CompDiff/
+RUN chmod +x diff-instrument.sh && ./diff-instrument.sh examples/libtiff/build_libtiff.sh
+
+# fixed the libtiff binary command from README.md
+# this works: $ ./aflpp/afl-fuzz -y 10 -i examples/libtiff/seeds -o examples/libtiff/findings -Y "out.file" -- ./examples/libtiff/bin/tiffcp @@ out.file
+# tried for 3d with -D to build a corpus of seeds, then for 3d without -D since compdiff didn't use deterministic strategies
+# ENTRYPOINT [ "./aflpp/afl-fuzz", "-D", "-y", "10", "-i", "examples/libtiff/seeds", "-o", "examples/libtiff/findings", "-Y", "out.file", "--", "./examples/libtiff/bin/tiffcp", "@@", "out.file"]

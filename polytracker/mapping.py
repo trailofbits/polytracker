@@ -160,7 +160,10 @@ class MapInputsToOutputs(Command):
 
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
-            print(InputOutputMapping(TDFile(f)).mapping())
+            # to date, only the labels section is needed to compute the mapping
+            # so to speed things up for large tdags, don't read the cflog in!
+            tdfile = TDFile(f, cflog=False)
+            print(InputOutputMapping(tdfile).mapping())
 
 
 def ascii(b: bytes) -> str:
@@ -205,7 +208,10 @@ class FileCavities(Command):
             print(f"input path was: {path}; cavity: {begin},{end}")
 
         with open(args.POLYTRACKER_TF, "rb") as f:
-            cavities = InputOutputMapping(TDFile(f)).file_cavities()
+            # to date, only the labels section is needed to compute cavities
+            # so to speed things up for large tdags, don't read the cflog in!
+            tdfile = TDFile(f, cflog=False)
+            cavities = InputOutputMapping(tdfile).file_cavities()
 
             if not args.print_bytes:
                 for path, cs in cavities.items():
