@@ -49,6 +49,10 @@ parser.add_argument(
     "--find-divergence", "-d", action="store_true", help="Find the point(s) in the trace where "
                                                          "divergences occurred"
 )
+parser.add_argument(
+    "--input-file", "-f", type=Path, default=None, help="Path to the input file used to generate the "
+                                                        "TDAGs (optional)"
+)
 
 if __name__ == "__main__":
     comparator = Analysis()
@@ -73,7 +77,8 @@ if __name__ == "__main__":
                     to_tdag=traceB.tdfile,
                     from_functions_list=functions_list_a,
                     to_functions_list=functions_list_b,
-                    verbose=args.verbose
+                    verbose=args.verbose,
+                    input_file=args.input_file
                 )
             else:
                 comparator.show_cflog_diff(

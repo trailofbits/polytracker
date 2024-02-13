@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
 from functools import partialmethod
-from typing import Dict, Iterable, List, Set, Tuple
+from pathlib import Path
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import cxxfilt
 from graphtage import (
@@ -74,6 +75,72 @@ class CFLogEntry(dataclasses.DataClassNode):
 
     def __str__(self):
         return f"{', '.join(map(str, self.input_bytes))} -> {', '.join(self.callstack)}"
+
+
+def context_string(
+        input_file: Path, all_offsets: Iterable[int], offsets: Set[int], buffer_bytes: int = 5
+) -> Tuple[str, str]:
+    with open(input_file, "rb") as f:
+        context: List[str] = []
+        highlights: List[str] = []
+        escaped_strings = {
+            b"'": "'",
+            b'"': '"',
+            b'\n': 'n',
+            b'\t': 't',
+            b'\r': 'r',
+            b'\b': 'b',
+            b'\0': '0'
+        }
+        byte_sections: List[List[Tuple[int, bool]]] = []
+
+        for offset in sorted(all_offsets):
+            if byte_sections and byte_sections[-1][-1][0] >= offset - buffer_bytes - 1:
+                # it is contiguous
+                while byte_sections[-1][-1][0] < offset - 1:
+                    byte_sections[-1].append((byte_sections[-1][-1][0] + 1, False))
+                while byte_sections[-1][-1][0] >= offset:
+                    byte_sections[-1].pop()
+                byte_sections[-1].append((offset, True))
+            else:
+                new_section = []
+                for byte_before in range(max(0, offset - buffer_bytes), offset):
+                    new_section.append((byte_before, False))
+                new_section.append((offset, True))
+                byte_sections.append(new_section)
+            if buffer_bytes > 0:
+                byte_sections[-1].extend(((b, False) for b in range(offset + 1, offset+buffer_bytes + 1)))
+
+        for i, section in enumerate(byte_sections):
+            if i > 0:
+                context.append("[magenta]…[/magenta]")
+                highlights.append(" ")
+            for offset, is_read in section:
+                f.seek(offset)
+                value_bytes = f.read(1)
+                if value_bytes is None or len(value_bytes) == 0:
+                    continue
+                elif value_bytes[:1] in escaped_strings:
+                    value = f"[orange]\\{escaped_strings[value_bytes[:1]]}[/orange]"
+                    new_bytes = 2
+                elif value_bytes[0] == ord(' '):
+                    value = "␣"
+                    new_bytes = 1
+                elif 32 <= value_bytes[0] <= 126:
+                    value = value_bytes[:1].decode("utf-8")
+                    new_bytes = 1
+                else:
+                    value = f"[orange]0x{value_bytes[0]:02x}[/orange]"
+                    new_bytes = 4
+                if not is_read:
+                    value = f"[dim]{value}[/dim]"
+                context.append(value)
+                if offset in offsets:
+                    assert is_read
+                    highlights.append(f"[red]{'↑' * new_bytes}[/red]")
+                else:
+                    highlights.append(' ' * new_bytes)
+        return ''.join(context), ''.join(highlights)
 
 
 class CFLog(ListNode[CFLogEntry]):
@@ -465,7 +532,8 @@ class Analysis:
         return trace_diff
 
     def find_divergence(
-            self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list, verbose: bool = False
+            self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list, verbose: bool = False,
+            input_file: Optional[Path] = None
     ):
         from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
         to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
@@ -485,10 +553,15 @@ class Analysis:
 
         console = Console()
 
-        def print_differential(trace_name: str, offsets: Iterable[int], callstack: Iterable[str]):
+        def print_differential(trace_name: str, all_offsets: Iterable[int], offsets: Set[int],
+                               callstack: Iterable[str]):
             console.print(f"[blue]Trace {trace_name}[/blue] operated on input offsets "
                           f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
                           f"trace at")
+            if input_file is not None:
+                context, highlights = context_string(input_file, all_offsets, offsets)
+                console.print(f"\tContext: {context}")
+                console.print(f"\t         {highlights}")
             for c in callstack:
                 console.print(f"\t[magenta]{c}[/magenta]")
 
@@ -496,9 +569,9 @@ class Analysis:
             if from_bytes == to_bytes:
                 continue
             if from_bytes - bytes_operated_to:
-                print_differential("A", from_bytes - bytes_operated_to, from_callstack)
+                print_differential("A", from_bytes, from_bytes - bytes_operated_to, from_callstack)
             if to_bytes - bytes_operated_from:
-                print_differential("B", to_bytes - bytes_operated_from, to_callstack)
+                print_differential("B", to_bytes, to_bytes - bytes_operated_from, to_callstack)
 
     def show_cflog_diff(
         self,
