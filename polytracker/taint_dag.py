@@ -197,87 +197,104 @@ class TDControlFlowLogSection:
     Enables enumeration/random access of items
     """
 
-    # NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`.
-    ENTER_FUNCTION = 0
-    LEAVE_FUNCTION = 1
-    TAINTED_CONTROL_FLOW = 2
+    class Event(Enum):
+        """NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`."""
+
+        ENTER_FUNCTION = 0
+        LEAVE_FUNCTION = 1
+        TAINTED_CONTROL_FLOW = 2
 
     def __init__(self, mem, hdr):
         # save references into the main TDAG mmap buffer `mem`, since with
         # very large traced inputs `mem` can get unwieldy and OOMs are possible
         self.cflog_section_start = hdr.offset
-        self.cflog_section_end = hdr.offset + hdr.size
+        self.cflog_section_end = hdr.offset + hdr.size - 1
         self.mem_reference = mem
         # Call function_id_mapping to set funcmapping before use of cflog.
         self.funcmapping = None
 
-    def _decode_varint(self, starting_index):
-        """Decode a uint32_t varint. Increment the global cflog index and update the global value upon return. Called by __iter__. NOTE !resets the iteration index!"""
+    class VarInt:
+        """A dataclass for representing encoded items from the cflog section."""
+
+        value: int
+        index: int
+
+        def __init__(self, value, index):
+            self.value = value
+            self.index = index
+
+        def __repr__(self):
+            return f"value: {self.value}, tdag ending index: {self.index}"
+
+    def _decode_varint(self, starting_index) -> VarInt:
+        """Decode a `uint32_t varint` as defined in `control_flow_log.h`. Increment the global cflog index and update the global value upon return. Most varints require only one iteration before `0x80` (varint end) is seen. Called by `__iter__`. NOTE !resets the iteration index!"""
         shift = 0
-        val = 0
-        final_index = 0
+        decoded_value = 0
         for j in range(starting_index, self.cflog_section_end):
             curr = c_uint8.from_buffer_copy(self.mem_reference, j).value
-            val |= (curr & 0x7F) << shift
-            shift += 7
-            j += 1
-            final_index = j
-            print(f"decode: {val} size (number of iters): {j - starting_index}")
+            decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
-                # bump one more time
-                final_index += 1
-                break
-
-        return val, final_index
+                return TDControlFlowLogSection.VarInt(decoded_value, j + 1)
+            shift += 7
+        raise Exception(
+            "Unable to decode VarInt from TDAG control flow log section; this TDAG may not have been properly written?"
+        )
 
     @staticmethod
     def _align_callstack(target_function_id, callstack):
-        while callstack and callstack[-1] != target_function_id:
-            yield TDLeaveFunctionEvent(callstack[:])
-            print("POP 1 from align")
-            callstack.pop()
+        """Every LeaveFunctionEvent should have its own, correct view
+        into the full callstack. As we return 'up' the stack to the original caller, execution leaves each callee; each callee should have its own view into how we traveled 'down' to it.
+        """
+        if len(callstack) > 0:
+            while callstack and callstack[-1] != target_function_id:
+                yield TDLeaveFunctionEvent(callstack[:])
+                callstack.pop()
 
     def function_id_mapping(self, id_to_name_array):
-        """This method stores an array used to translate from function id to symbolic names. We use a list of function symbols statically obtained at instrumentation time. Generate input to this method using one of polytracker's instrumentation-side cflog options. This is required for __iter__."""
+        """This method stores an array used to translate from function id to symbolic names. Generate input to this method (we use a list of function symbols statically obtained at instrumentation time) using one of polytracker's instrumentation-side cflog options. This is required for __iter__."""
         self.funcmapping = id_to_name_array
 
     def __iter__(self):
-        """The cflog encoding scheme is 1 byte event, <= 5 bytes function id, <= 5 bytes label as defined in control_flow_log.h. Each entry consists of a label and a callstack fetched by function id."""
+        """The cflog encoding scheme is defined in control_flow_log.h. Each entry should consist of a taint label and a callstack by function id."""
         callstack = []
-        for i in range(self.cflog_section_start, self.cflog_section_end):
-            event = c_uint8.from_buffer_copy(self.mem_reference, i).value
-            print(f"event: {event}")
-            i += 1
-            function_id, i = self._decode_varint(i)
-            if self.funcmapping != None:
-                function_id = self.funcmapping[function_id]
-                print(f"mapped to: {function_id}")
-
-            if event == TDControlFlowLogSection.ENTER_FUNCTION:
-                print(f"appending ENTER FUNCTION EVENT: {function_id}")
-                callstack.append(function_id)
-                yield TDEnterFunctionEvent(callstack[:])
-            elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
-                print(f"{event} was a LEAVE FUNCTION EVENT")
-                # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
-                )
-
+        event: TDControlFlowLogSection.Event = None
+        mem_index = self.cflog_section_start
+        for _ in range(self.cflog_section_start, self.cflog_section_end):
+            # do not roll off the end of the section!
+            if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
-                    # todo why the helllllll do we need this
                     yield TDLeaveFunctionEvent(callstack[:])
                     callstack.pop()
-            else:
-                # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
+                break
+            elif event is None:
+                event = TDControlFlowLogSection.Event(
+                    c_uint8.from_buffer_copy(self.mem_reference, mem_index).value
                 )
+                mem_index += 1
+            else:
+                varint = self._decode_varint(mem_index)
+                mem_index = varint.index
+                # hack: sometimes function_id otherwise hasnt been set
+                function_id = varint.value
+                if self.funcmapping is not None:
+                    function_id = self.funcmapping[varint.value]
 
-                label, i = self._decode_varint(i)
-                yield TDTaintedControlFlowEvent(callstack[:], label)
+                if event == TDControlFlowLogSection.Event.ENTER_FUNCTION:
+                    event = None
+                    callstack.append(function_id)
+                    yield TDEnterFunctionEvent(callstack[:])
+                elif event == TDControlFlowLogSection.Event.LEAVE_FUNCTION:
+                    event = None
+                    yield from TDControlFlowLogSection._align_callstack(
+                        function_id, callstack
+                    )
+                else:
+                    varint = self._decode_varint(mem_index)
+                    mem_index = varint.index
+                    event = None
+                    yield TDTaintedControlFlowEvent(callstack[:], varint.value)
 
-        # Drain callstack with artifical TDLeaveFunction events (using a dummy function id that doesn't exist)
+        # Return back to last function called (replaces exit() etc.)
         yield from TDControlFlowLogSection._align_callstack(-1, callstack)
 
 
