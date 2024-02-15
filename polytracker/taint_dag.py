@@ -259,7 +259,7 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for _ in range(self.cflog_section_start, self.cflog_section_end):
+        for idx in range(self.cflog_section_start, self.cflog_section_end):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
@@ -276,7 +276,7 @@ class TDControlFlowLogSection:
                 mem_index = varint.index
                 # hack: sometimes function_id otherwise hasnt been set
                 function_id = varint.value
-                if self.funcmapping is not None:
+                if self.funcmapping is not None and len(self.funcmapping) > 0:
                     function_id = self.funcmapping[varint.value]
 
                 if event == TDControlFlowLogSection.Event.ENTER_FUNCTION:
@@ -637,9 +637,10 @@ class TDTaintOutput(TaintOutput):
 
 
 class TDProgramTrace(ProgramTrace):
-    def __init__(self, file: BinaryIO) -> None:
+    def __init__(self, file: BinaryIO, taint_forest=True) -> None:
         self.tdfile: TDFile = TDFile(file)
-        self.tforest: TDTaintForest = TDTaintForest(self)
+        if taint_forest:
+            self.tforest: TDTaintForest = TDTaintForest(self)
         self._inputs = None
 
     def __contains__(self, uid: int):
@@ -693,9 +694,9 @@ class TDProgramTrace(ProgramTrace):
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace_tdag")
-    def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
+    def load(tdpath: Union[str, Path], taint_forest=True) -> "TDProgramTrace":
         """loads a trace from a .tdag file emitted by an instrumented binary"""
-        return TDProgramTrace(open(tdpath, "rb"))
+        return TDProgramTrace(open(tdpath, "rb"), taint_forest)
 
     @property
     def inputs(self) -> Iterator[Input]:
