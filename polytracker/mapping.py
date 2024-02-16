@@ -52,12 +52,12 @@ class InputOutputMapping:
 
     def mapping(self) -> Dict[FileOffsetType, Set[FileOffsetType]]:
         result: Dict[FileOffsetType, Set[FileOffsetType]] = defaultdict(set)
-        for s in tqdm(list(self.tdfile.sinks)):
-            for _, n in self.dfs_walk(s.label):
+        for sink in tqdm(list(self.tdfile.sinks), unit="sink nodes"):
+            for _, n in self.dfs_walk(sink.label):
                 if isinstance(n, TDSourceNode):
-                    sp = self.tdfile.fd_headers[s.fdidx][0]
+                    sp = self.tdfile.fd_headers[sink.fdidx][0]
                     np = self.tdfile.fd_headers[n.idx][0]
-                    result[(np, n.offset)].add((sp, s.offset))
+                    result[(np, n.offset)].add((sp, sink.offset))
 
         return result
 
@@ -117,8 +117,8 @@ class InputOutputMapping:
         # source nodes and mark any source offset contributing to outputs. If a node affects
         # control flow, it can be disregarded as that would already have spilled into the source
         # node (see above).
-        for s in tqdm(list(self.tdfile.sinks)):
-            sn = self.tdfile.decode_node(s.label)
+        for sink in tqdm(list(self.tdfile.sinks), unit="sink nodes"):
+            sn = self.tdfile.decode_node(sink.label)
             if sn.affects_control_flow:
                 continue
 
@@ -127,7 +127,7 @@ class InputOutputMapping:
             if isinstance(sn, TDSourceNode) and not sn.affects_control_flow:
                 markers[sn.idx][sn.offset] = 1
             else:
-                for lbl, n in self.dfs_walk(s.label, seen):
+                for _, n in self.dfs_walk(sink.label, seen):
                     if isinstance(n, TDSourceNode):
                         markers[n.idx][n.offset] = 1
                     elif n.affects_control_flow:
@@ -162,7 +162,7 @@ class MapInputsToOutputs(Command):
         with open(args.POLYTRACKER_TF, "rb") as f:
             # to date, only the labels section is needed to compute the mapping
             # so to speed things up for large tdags, don't read the cflog in!
-            tdfile = TDFile(f, cflog=False)
+            tdfile = TDFile(f)
             print(InputOutputMapping(tdfile).mapping())
 
 
@@ -208,9 +208,7 @@ class FileCavities(Command):
             print(f"input path was: {path}; cavity: {begin},{end}")
 
         with open(args.POLYTRACKER_TF, "rb") as f:
-            # to date, only the labels section is needed to compute cavities
-            # so to speed things up for large tdags, don't read the cflog in!
-            tdfile = TDFile(f, cflog=False)
+            tdfile = TDFile(f)
             cavities = InputOutputMapping(tdfile).file_cavities()
 
             if not args.print_bytes:
