@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /polytracker/libpng
 
 RUN apt-get update && \
-    apt-get install -y wget zlib1g-dev pip && \
+    apt-get install -y wget pip && \
     wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
     tar xvf libpng-1.6.39.tar.xz && \
     mv libpng-1.6.39 release && \
@@ -21,16 +21,23 @@ RUN polytracker build ./configure --static --prefix="$RELEASE/zlib"
 RUN polytracker build make -j$((`nproc`+1))
 RUN polytracker build make install
 
-# build release version of libpng linking our built zlib - can also use prebuilt linux makefile
 WORKDIR "$RELEASE"
+
+# build release version of libpng linking our built zlib - can also use prebuilt linux makefile
 RUN CPPFLAGS="-I$RELEASE/zlib/include" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build ./configure --disable-shared
 RUN CPPFLAGS="-O3 -DNDEBUG" LDFLAGS="-L$RELEASE/zlib/lib" polytracker build make -j$((`nproc`+1)) pngtest
 RUN polytracker instrument-targets --ftrace --cflog --taint pngtest --ignore-lists libz
 
-# experiment: acropalypse vs manual cropping
-COPY data/re3eot.png /polytracker/libpng/release
-RUN dd if=re3eot.png of=manually_cropped_re3eot.png count=1 bs=697120
-    # ./pngtest.instrumented re3eot.png && \
-    # mv polytracker.tdag re3eot.tdag && \
-    # ./pngtest.instrumented manually_cropped_re3eot.png && \
-    # mv polytracker.tdag manual.tdag
+# experiment: acropalypse vs manual cropping requires re3eot.png
+COPY ["data/re3eot.png", "requirements.txt", "main.py", "oi.py", "analysis.py", "$RELEASE/"]
+RUN dd if=re3eot.png of=manually_cropped_re3eot.png count=1 bs=697120 && \
+    ./pngtest.instrumented re3eot.png && \
+    mv polytracker.tdag re3eot.tdag && \
+    ./pngtest.instrumented manually_cropped_re3eot.png && \
+    mv polytracker.tdag manual.tdag
+# this is going to install torch and a bunch of other gnarly stuff since fickling currently requires it and they havent made it optional yet :/
+RUN pip install -r requirements.txt
+
+# At this point you can run either/both of:
+# $ main.py -fa functionid.json -ta <whichever tdag>
+# $ main.py -fa functionid.json -fb functionid.json -ta re3eot.tdag -tb re3eot.tdag
