@@ -910,8 +910,7 @@ class TDInfo(Command):
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
             tdfile = TDFile(f)
-            if args.labels:
-                print(f"Number of labels: {tdfile.label_count}")
+            print(f"Number of labels: {tdfile.label_count}")
 
             if args.print_fd_headers:
                 for i, h in enumerate(tdfile.fd_headers):
@@ -927,10 +926,6 @@ class TDInfo(Command):
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
 
-            if args.print_taint_nodes and not args.labels:
-                print(
-                    "Cannot read the full taint label count since did not load the taint label trace. Please try again without setting --labels to False."
-                )
             elif args.print_taint_nodes:
                 for lbl in range(1, tdfile.label_count):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
