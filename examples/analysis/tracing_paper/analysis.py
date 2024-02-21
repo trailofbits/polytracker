@@ -2,7 +2,7 @@
 
 from functools import partialmethod
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 import cxxfilt
 from graphtage import (
@@ -535,12 +535,15 @@ class Analysis:
             self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list, verbose: bool = False,
             input_file: Optional[Path] = None
     ):
+        # TODO: Stop considering divergences after one trace crashes/ends
+        # TODO: Also show other bytes read that were also read by the other trace
+
         from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
         to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
 
         bytes_operated_from: Set[int] = set()
         bytes_operated_to: Set[int] = set()
-        trace: List[Tuple[Tuple[Frozenset[int], Tuple[str, ...], Tuple[str, ...], Frozenset[int]]]] = []
+        trace: List[Tuple[Tuple[FrozenSet[int], Tuple[str, ...], Tuple[str, ...], FrozenSet[int]]]] = []
 
         for from_bytes, from_callstack, to_callstack, to_bytes in self.get_differential_entries(
                 from_cflog, to_cflog, use_graphtage=True, verbose=verbose
@@ -562,7 +565,7 @@ class Analysis:
                 context, highlights = context_string(input_file, all_offsets, offsets)
                 console.print(f"\tContext: {context}")
                 console.print(f"\t         {highlights}")
-            for c in callstack:
+            for c in reversed(list(callstack)):
                 console.print(f"\t[magenta]{c}[/magenta]")
 
         for from_bytes, from_callstack, to_callstack, to_bytes in trace:
