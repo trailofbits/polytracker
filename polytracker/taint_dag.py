@@ -115,22 +115,26 @@ class TDStringSection:
 
 
 class TDLabelSection:
-    """TDAG Labels section
+    """TDAG Labels section interprets the stored taint nodes section in a TDAG file. Corresponds to Labels in labels.h.
 
-    Interprets the stored taint nodes section in a TDAG file.
-    Corresponds to Labels in labels.h.
-
-    May be incompatible with use of TDControlFlowLogSection for reading and working with very large trace files. If you are encountering an OOM when trying to build a TDFile, consider turning reading the CFLog or Label section off if you don't need one of these.
+    We need to be careful about our memory usage here since some inputs /
+    instrumented code can cause this section to become very large (GiB) and
+    analysis to therefore become difficult.
     """
 
     def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.label_section_start = hdr.offset
+        self.label_section_end = hdr.offset + hdr.size - 1
+        self.mem_reference = mem
 
-    def read_raw(self, label):
-        return c_uint64.from_buffer_copy(self.section, label * sizeof(c_uint64)).value
+    def read_raw(self, label) -> int:
+        offset: int = self.label_section_start + (label * sizeof(c_int64))
+        return c_uint64.from_buffer_copy(self.mem_reference, offset).value
 
-    def count(self):
-        return len(self.section) // sizeof(c_uint64)
+    def count(self) -> int:
+        return ((self.label_section_end + 1) - self.label_section_start) // sizeof(
+            c_uint64
+        )
 
 
 class TDEnterFunctionEvent:
@@ -194,75 +198,108 @@ class TDControlFlowLogSection:
     """TDAG Control flow log section
 
     Interprets the control flow log section in a TDAG file.
-    Enables enumeration/random access of items
+    Enables enumeration/random access of items.
     """
 
-    # NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`.
-    ENTER_FUNCTION = 0
-    LEAVE_FUNCTION = 1
-    TAINTED_CONTROL_FLOW = 2
+    class Event(Enum):
+        """NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`."""
 
-    @staticmethod
-    def _decode_varint(buffer):
+        ENTER_FUNCTION = 0
+        LEAVE_FUNCTION = 1
+        TAINTED_CONTROL_FLOW = 2
+
+    def __init__(self, mem, hdr):
+        # save references into the main TDAG mmap buffer `mem`, since with
+        # very large traced inputs `mem` can get unwieldy and OOMs are possible
+        self.cflog_section_start = hdr.offset
+        self.cflog_section_end = hdr.offset + hdr.size - 1
+        self.mem_reference = mem
+        # Call function_id_mapping to set funcmapping before use of cflog.
+        self.funcmapping = None
+
+    class VarInt:
+        """A dataclass for representing encoded items from the cflog section."""
+
+        value: int
+        index: int
+
+        def __init__(self, value, index):
+            self.value = value
+            self.index = index
+
+        def __repr__(self):
+            return f"value: {self.value}, tdag ending index: {self.index}"
+
+    def _decode_varint(self, starting_index) -> VarInt:
+        """Decode a `uint32_t varint` as defined in `control_flow_log.h`. Increment the global cflog index and update the global value upon return. Most varints require only one iteration before `0x80` (varint end) is seen. Called by `__iter__`. NOTE !resets the iteration index!"""
         shift = 0
-        val = 0
-        while buffer:
-            curr = c_uint8.from_buffer_copy(buffer, 0).value
-            val |= (curr & 0x7F) << shift
-            shift += 7
-            buffer = buffer[1:]
+        decoded_value = 0
+        for j in range(starting_index, self.cflog_section_end):
+            curr = c_uint8.from_buffer_copy(self.mem_reference, j).value
+            decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
-                break
-
-        return val, buffer
+                return TDControlFlowLogSection.VarInt(decoded_value, j + 1)
+            shift += 7
+        raise Exception(
+            "Unable to decode VarInt from TDAG control flow log section; this TDAG may not have been properly written?"
+        )
 
     @staticmethod
     def _align_callstack(target_function_id, callstack):
-        while callstack and callstack[-1] != target_function_id:
-            yield TDLeaveFunctionEvent(callstack[:])
-            callstack.pop()
-
-    def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        self.funcmapping = None
-
-    def __iter__(self):
-        buffer = self.section
-        callstack = []
-        while buffer:
-            event = c_uint8.from_buffer_copy(buffer, 0).value
-            buffer = buffer[1:]
-            function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
-            if self.funcmapping != None:
-                function_id = self.funcmapping[function_id]
-
-            if event == TDControlFlowLogSection.ENTER_FUNCTION:
-                callstack.append(function_id)
-                yield TDEnterFunctionEvent(callstack[:])
-            elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
-                # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
-                )
-
-                # TODO(hbrodin): If the callstack doesn't contain function_id at all, this will break.
+        """Every LeaveFunctionEvent should have its own, correct view
+        into the full callstack. As we return 'up' the stack to the original caller, execution leaves each callee; each callee should have its own view into how we traveled 'down' to it.
+        """
+        if len(callstack) > 0:
+            while callstack and callstack[-1] != target_function_id:
                 yield TDLeaveFunctionEvent(callstack[:])
                 callstack.pop()
-            else:
-                # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
-                )
-
-                label, buffer = TDControlFlowLogSection._decode_varint(buffer)
-                yield TDTaintedControlFlowEvent(callstack[:], label)
-
-        # Drain callstack with artifical TDLeaveFunction events (using a dummy function id that doesn't exist)
-        yield from TDControlFlowLogSection._align_callstack(-1, callstack)
 
     def function_id_mapping(self, id_to_name_array):
-        """This method stores an array used to translate from function id to symbolic names"""
+        """This method stores an array used to translate from function id to symbolic names. Generate input to this method (we use a list of function symbols statically obtained at instrumentation time) using one of polytracker's instrumentation-side cflog options. This is required for __iter__."""
         self.funcmapping = id_to_name_array
+
+    def __iter__(self):
+        """The cflog encoding scheme is defined in control_flow_log.h. Each entry should consist of a taint label and a callstack by function id."""
+        callstack = []
+        event: TDControlFlowLogSection.Event = None
+        mem_index = self.cflog_section_start
+        for idx in range(self.cflog_section_start, self.cflog_section_end):
+            # do not roll off the end of the section!
+            if mem_index + 1 >= self.cflog_section_end:
+                if len(callstack) > 0:
+                    yield TDLeaveFunctionEvent(callstack[:])
+                    callstack.pop()
+                break
+            elif event is None:
+                event = TDControlFlowLogSection.Event(
+                    c_uint8.from_buffer_copy(self.mem_reference, mem_index).value
+                )
+                mem_index += 1
+            else:
+                varint = self._decode_varint(mem_index)
+                mem_index = varint.index
+                # hack: sometimes function_id otherwise hasnt been set
+                function_id = varint.value
+                if self.funcmapping is not None and len(self.funcmapping) > 0:
+                    function_id = self.funcmapping[varint.value]
+
+                if event == TDControlFlowLogSection.Event.ENTER_FUNCTION:
+                    event = None
+                    callstack.append(function_id)
+                    yield TDEnterFunctionEvent(callstack[:])
+                elif event == TDControlFlowLogSection.Event.LEAVE_FUNCTION:
+                    event = None
+                    yield from TDControlFlowLogSection._align_callstack(
+                        function_id, callstack
+                    )
+                else:
+                    varint = self._decode_varint(mem_index)
+                    mem_index = varint.index
+                    event = None
+                    yield TDTaintedControlFlowEvent(callstack[:], varint.value)
+
+        # Return back to last function called (replaces exit() etc.)
+        yield from TDControlFlowLogSection._align_callstack(-1, callstack)
 
 
 class TDSinkSection:
@@ -440,13 +477,8 @@ TDSection = Union[
 
 
 class TDFile:
-    def __init__(self, file: BinaryIO, labels: bool = True, cflog: bool = True) -> None:
-        """Loads a TDAG file from disk into memory.
-
-        For very large TDAGs, you may run out of memory (i.e., the reading process may be suddenly killed) when trying to load both the labels and cflog sections. In this case, only load the one you need. We default to loading both sections for now, to match previous Polytracker behaviour.
-
-        If both sections are still needed, refactoring the write side of the cflog section to use a more compact format (or refactoring the read here so that less must be paged and read in) would be required.
-        """
+    def __init__(self, file: BinaryIO) -> None:
+        """Loads a TDAG file from disk into memory."""
         # This needs to be kept in sync with implementation in encoding.cpp
         self.source_taint_bit_shift = 63
         self.affects_control_flow_bit_shift = 62
@@ -457,21 +489,21 @@ class TDFile:
         self.source_index_bits = 8
         self.source_offset_mask = (1 << 54) - 1
 
+        # We need to be careful with memory usage for sections expected to be large so they can be analysed without a lot of thrashing of the underlying filesystem and/or OOM.
         self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
         self.sections: List[TDSection] = []
         self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
-        for i in range(0, self.filemeta.section_count):
+        for _ in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
                 self.sections_by_type[TDSourceSection] = self.sections[-1]
             elif hdr.tag == 2:
-                if labels:
-                    self.sections.append(TDLabelSection(self.buffer, hdr))
-                    self.sections_by_type[TDLabelSection] = self.sections[-1]
+                self.sections.append(TDLabelSection(self.buffer, hdr))
+                self.sections_by_type[TDLabelSection] = self.sections[-1]
             elif hdr.tag == 3:
                 self.sections.append(TDStringSection(self.buffer, hdr))
                 self.sections_by_type[TDStringSection] = self.sections[-1]
@@ -488,9 +520,8 @@ class TDFile:
                 self.sections.append(TDEventsSection(self.buffer, hdr))
                 self.sections_by_type[TDEventsSection] = self.sections[-1]
             elif hdr.tag == 8:
-                if cflog:
-                    self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
-                    self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
+                self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
+                self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
             else:
                 raise NotImplementedError("Unsupported section tag")
             # Need to update the section offset even if we didn't read
@@ -538,13 +569,6 @@ class TDFile:
         label_section = self.sections_by_type[TDLabelSection]
         assert isinstance(label_section, TDLabelSection)
         return label_section.count()
-
-    @property
-    def cflog_entry_count(self) -> int:
-        """Enumerates all control flow log entries (the count of labels recorded at control flow points). Requires the control flow log section to have been loaded and should throw a KeyError for the TDControlFlowLogSection if it is not available."""
-        cflog_section = self.sections_by_type[TDControlFlowLogSection]
-        assert isinstance(cflog_section, TDControlFlowLogSection)
-        return cflog_section.count()
 
     def read_node(self, label: int) -> int:
         """Read a node by label. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
@@ -611,9 +635,10 @@ class TDTaintOutput(TaintOutput):
 
 
 class TDProgramTrace(ProgramTrace):
-    def __init__(self, file: BinaryIO) -> None:
+    def __init__(self, file: BinaryIO, taint_forest=True) -> None:
         self.tdfile: TDFile = TDFile(file)
-        self.tforest: TDTaintForest = TDTaintForest(self)
+        if taint_forest:
+            self.tforest: TDTaintForest = TDTaintForest(self)
         self._inputs = None
 
     def __contains__(self, uid: int):
@@ -667,9 +692,9 @@ class TDProgramTrace(ProgramTrace):
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace_tdag")
-    def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
+    def load(tdpath: Union[str, Path], taint_forest=True) -> "TDProgramTrace":
         """loads a trace from a .tdag file emitted by an instrumented binary"""
-        return TDProgramTrace(open(tdpath, "rb"))
+        return TDProgramTrace(open(tdpath, "rb"), taint_forest)
 
     @property
     def inputs(self) -> Iterator[Input]:
@@ -878,23 +903,14 @@ class TDInfo(Command):
         parser.add_argument(
             "--cflog",
             "-c",
-            action=BooleanOptionalAction,
-            help="True: can show info about control flow log trace events. `--no-cflog` means `polytracker info` will not read in or show info about the control flow log - prevents OOM when working with the label section of a very large trace (defaults to `--no-cflog`).",
-        )
-
-        parser.add_argument(
-            "--labels",
-            "-l",
-            default=True,
-            action=BooleanOptionalAction,
-            help="Can show info about taint labels (defaults to `--labels`). `--no-labels` means `polytracker info` will not read in or show info about the label section - prevents OOM when working with the control flow log section of a very large trace.",
+            action="store_true",
+            help="Show info about control flow log trace events.",
         )
 
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
-            tdfile = TDFile(f, labels=args.labels, cflog=args.cflog)
-            if args.labels:
-                print(f"Number of labels: {tdfile.label_count}")
+            tdfile = TDFile(f)
+            print(f"Number of labels: {tdfile.label_count}")
 
             if args.print_fd_headers:
                 for i, h in enumerate(tdfile.fd_headers):
@@ -910,10 +926,6 @@ class TDInfo(Command):
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
 
-            if args.print_taint_nodes and not args.labels:
-                print(
-                    "Cannot read the full taint label count since did not load the taint label trace. Please try again without setting --labels to False."
-                )
             elif args.print_taint_nodes:
                 for lbl in range(1, tdfile.label_count):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")

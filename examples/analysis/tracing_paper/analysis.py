@@ -232,11 +232,11 @@ class Analysis:
 
     def sorted_ancestor_offsets(self, label: int, tdag: TDFile) -> List[int]:
         """Returns the subset of source offsets (integer input byte labels), in sorted order, that directly taint `label` by way of traversing the taint forest from the starting point of `label`."""
+        # TODO: Determine if `self.ancestor_input_set` is naturally sorted and;
+        #       if so, then remove the call to `sorted` and return a generator
         return sorted(
-            map(
-                lambda node: node.offset,
-                self.ancestor_input_set(label, tdag),
-            )
+            node.offset
+            for node in self.ancestor_input_set(label, tdag)
         )
 
     def get_cflog_entries(self, tdag: TDFile, functions_list, verbose=False) -> CFLog:
