@@ -68,6 +68,8 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
         TDLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
     ]
 
+    assert cflog.event_count == 12
+
     # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
     assert len(list(cflog)) == len(expected_seq)
     for got, expected in zip(cflog, expected_seq):
@@ -163,6 +165,8 @@ def test_cf_log_recursive(instrumented_binary: Path, trace_file: Path):
         TDLeaveFunctionEvent(["main", "f1(unsigned char)"]),
         TDLeaveFunctionEvent(["main"]),
     ]
+
+    assert cflog.event_count == 2
 
     assert len(list(cflog)) == len(expected_seq)
     for got, expected in zip(cflog, expected_seq):

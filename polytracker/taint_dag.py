@@ -201,6 +201,10 @@ class TDControlFlowLogSection:
     Enables enumeration/random access of items.
     """
 
+    # The number of TDTaintedControlFlowEvents (exclusive of function entry
+    # and exit events, which are included for framing in analysis)
+    event_count: int
+
     class Event(Enum):
         """NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`."""
 
@@ -216,6 +220,7 @@ class TDControlFlowLogSection:
         self.mem_reference = mem
         # Call function_id_mapping to set funcmapping before use of cflog.
         self.funcmapping = None
+        self.event_count = 0
 
     class VarInt:
         """A dataclass for representing encoded items from the cflog section."""
@@ -263,7 +268,7 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for idx in range(self.cflog_section_start, self.cflog_section_end):
+        for _ in range(self.cflog_section_start, self.cflog_section_end):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
@@ -296,6 +301,7 @@ class TDControlFlowLogSection:
                     varint = self._decode_varint(mem_index)
                     mem_index = varint.index
                     event = None
+                    self.event_count += 1
                     yield TDTaintedControlFlowEvent(callstack[:], varint.value)
 
         # Return back to last function called (replaces exit() etc.)
@@ -937,5 +943,6 @@ class TDInfo(Command):
             if args.cflog:
                 cflog = tdfile._get_section(TDControlFlowLogSection)
                 assert isinstance(cflog, TDControlFlowLogSection)
-                for obj in cflog:
-                    print(f"{obj}")
+                print(f"Number of cflog entries: {cflog.event_count}")
+                # for obj in cflog:
+                #     print(f"{obj}")
