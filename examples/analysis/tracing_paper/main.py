@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace
 from analysis import Analysis
-from json import load
+from json import load as jsonload
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -46,12 +46,17 @@ parser.add_argument(
     action="store_true",
 )
 parser.add_argument(
-    "--find-divergence", "-d", action="store_true", help="Find the point(s) in the trace where "
-                                                         "divergences occurred"
+    "--find-divergence",
+    "-d",
+    action="store_true",
+    help="Find the point(s) in the trace where " "divergences occurred",
 )
 parser.add_argument(
-    "--input-file", "-f", type=Path, default=None, help="Path to the input file used to generate the "
-                                                        "TDAGs (optional)"
+    "--input-file",
+    "-f",
+    type=Path,
+    default=None,
+    help="Path to the input file used to generate the " "TDAGs (optional)",
 )
 
 if __name__ == "__main__":
@@ -61,15 +66,15 @@ if __name__ == "__main__":
     if args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo 🚀")
 
-        traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
-        traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
+        traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
+        traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b, taint_forest=False)
 
         if args.function_id_json_a and args.function_id_json_b and not args.runtrace:
             with open(args.function_id_json_a) as jsonA:
-                functions_list_a = load(jsonA)
+                functions_list_a = jsonload(jsonA)
 
             with open(args.function_id_json_b) as jsonB:
-                functions_list_b = load(jsonB)
+                functions_list_b = jsonload(jsonB)
 
             if args.find_divergence:
                 comparator.find_divergence(
@@ -78,7 +83,7 @@ if __name__ == "__main__":
                     from_functions_list=functions_list_a,
                     to_functions_list=functions_list_b,
                     verbose=args.verbose,
-                    input_file=args.input_file
+                    input_file=args.input_file,
                 )
             else:
                 comparator.show_cflog_diff(
@@ -93,21 +98,15 @@ if __name__ == "__main__":
         if args.runtrace:
             comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
-        # if args.inputsused:
-        #     comparator.compare_inputs_used(traceA.tdfile, traceB.tdfile)
-
-        # if args.enumdiff:
-        #     comparator.enum_diff(traceA.tdfile, traceB.tdfile)
     elif args.tdag_a and args.function_id_json_a:
         print(f"Mapping and showing the control flow log of '{args.tdag_a}'...")
-        trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
+        trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
 
         with open(args.function_id_json_a) as function_id_json:
-            functions_list = load(function_id_json)
-
-        comparator.show_cflog(
-            trace.tdfile, function_id_json, args.cavities, args.verbose
-        )
+            functions_list = jsonload(function_id_json)
+            comparator.show_cflog(
+                trace.tdfile, function_id_json, args.cavities, args.verbose
+            )
     else:
         print(
             "Error: Need to provide one or two tdags, and corresponding Polytracker-generated function list(s)"

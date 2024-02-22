@@ -2,11 +2,20 @@
 
 from functools import partialmethod
 from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import cxxfilt
 from graphtage import (
-    dataclasses, GraphtageFormatter, Insert, IntegerNode, LeafNode, ListNode, Match, Remove, Replace, StringNode
+    dataclasses,
+    GraphtageFormatter,
+    Insert,
+    IntegerNode,
+    LeafNode,
+    ListNode,
+    Match,
+    Remove,
+    Replace,
+    StringNode,
 )
 import graphtage.printer as printer_module
 from graphtage.sequences import SequenceEdit
@@ -43,7 +52,7 @@ class CFLogEntry(dataclasses.DataClassNode):
         callstack = tuple(callstack)
         super().__init__(
             input_bytes_node=ListNode((IntegerNode(i) for i in input_bytes)),
-            callstack_node=ListNode((CallStackEntry(c) for c in callstack))
+            callstack_node=ListNode((CallStackEntry(c) for c in callstack)),
         )
         self.input_bytes: Tuple[int, ...] = input_bytes
         self.callstack: Tuple[str, ...] = callstack
@@ -78,7 +87,10 @@ class CFLogEntry(dataclasses.DataClassNode):
 
 
 def context_string(
-        input_file: Path, all_offsets: Iterable[int], offsets: Set[int], buffer_bytes: int = 5
+    input_file: Path,
+    all_offsets: Iterable[int],
+    offsets: Set[int],
+    buffer_bytes: int = 5,
 ) -> Tuple[str, str]:
     with open(input_file, "rb") as f:
         context: List[str] = []
@@ -86,11 +98,11 @@ def context_string(
         escaped_strings = {
             b"'": "'",
             b'"': '"',
-            b'\n': 'n',
-            b'\t': 't',
-            b'\r': 'r',
-            b'\b': 'b',
-            b'\0': '0'
+            b"\n": "n",
+            b"\t": "t",
+            b"\r": "r",
+            b"\b": "b",
+            b"\0": "0",
         }
         byte_sections: List[List[Tuple[int, bool]]] = []
 
@@ -109,7 +121,9 @@ def context_string(
                 new_section.append((offset, True))
                 byte_sections.append(new_section)
             if buffer_bytes > 0:
-                byte_sections[-1].extend(((b, False) for b in range(offset + 1, offset+buffer_bytes + 1)))
+                byte_sections[-1].extend(
+                    ((b, False) for b in range(offset + 1, offset + buffer_bytes + 1))
+                )
 
         for i, section in enumerate(byte_sections):
             if i > 0:
@@ -123,7 +137,7 @@ def context_string(
                 elif value_bytes[:1] in escaped_strings:
                     value = f"[orange]\\{escaped_strings[value_bytes[:1]]}[/orange]"
                     new_bytes = 2
-                elif value_bytes[0] == ord(' '):
+                elif value_bytes[0] == ord(" "):
                     value = "␣"
                     new_bytes = 1
                 elif 32 <= value_bytes[0] <= 126:
@@ -139,8 +153,8 @@ def context_string(
                     assert is_read
                     highlights.append(f"[red]{'↑' * new_bytes}[/red]")
                 else:
-                    highlights.append(' ' * new_bytes)
-        return ''.join(context), ''.join(highlights)
+                    highlights.append(" " * new_bytes)
+        return "".join(context), "".join(highlights)
 
 
 class CFLog(ListNode[CFLogEntry]):
@@ -369,6 +383,7 @@ class Analysis:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
         cflog: CFLog = self.get_cflog_entries(tdag, function_id_json, verbose)
 
+        print("bang! got the cflog")
         if cavities:
             interleaved = self.interleave_file_cavities(tdag, cflog, verbose)
             for entry in interleaved:
@@ -385,7 +400,9 @@ class Analysis:
         to_cflog: CFLog,
         use_graphtage: bool = True,
         verbose: bool = False,
-    ) -> Iterable[Tuple[Tuple[int, ...], Tuple[str, ...], Tuple[str, ...], Tuple[int, ...]]]:
+    ) -> Iterable[
+        Tuple[Tuple[int, ...], Tuple[str, ...], Tuple[str, ...], Tuple[int, ...]]
+    ]:
         """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
         tdag with the separately recorded demangled function names in callstack format, walk through them and see what
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
@@ -532,21 +549,32 @@ class Analysis:
         return trace_diff
 
     def find_divergence(
-            self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list, verbose: bool = False,
-            input_file: Optional[Path] = None
+        self,
+        from_tdag: TDFile,
+        to_tdag: TDFile,
+        from_functions_list,
+        to_functions_list,
+        verbose: bool = False,
+        input_file: Optional[Path] = None,
     ):
-        # TODO: Stop considering divergences after one trace crashes/ends
-        # TODO: Also show other bytes read that were also read by the other trace
-
         from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
         to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
 
         bytes_operated_from: Set[int] = set()
         bytes_operated_to: Set[int] = set()
-        trace: List[Tuple[Tuple[FrozenSet[int], Tuple[str, ...], Tuple[str, ...], FrozenSet[int]]]] = []
+        trace: List[
+            Tuple[
+                Tuple[Frozenset[int], Tuple[str, ...], Tuple[str, ...], Frozenset[int]]
+            ]
+        ] = []
 
-        for from_bytes, from_callstack, to_callstack, to_bytes in self.get_differential_entries(
-                from_cflog, to_cflog, use_graphtage=True, verbose=verbose
+        for (
+            from_bytes,
+            from_callstack,
+            to_callstack,
+            to_bytes,
+        ) in self.get_differential_entries(
+            from_cflog, to_cflog, use_graphtage=True, verbose=verbose
         ):
             from_bytes = frozenset(from_bytes)
             to_bytes = frozenset(to_bytes)
@@ -556,25 +584,35 @@ class Analysis:
 
         console = Console()
 
-        def print_differential(trace_name: str, all_offsets: Iterable[int], offsets: Set[int],
-                               callstack: Iterable[str]):
-            console.print(f"[blue]Trace {trace_name}[/blue] operated on input offsets "
-                          f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
-                          f"trace at")
+        def print_differential(
+            trace_name: str,
+            all_offsets: Iterable[int],
+            offsets: Set[int],
+            callstack: Iterable[str],
+        ):
+            console.print(
+                f"[blue]Trace {trace_name}[/blue] operated on input offsets "
+                f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
+                f"trace at"
+            )
             if input_file is not None:
                 context, highlights = context_string(input_file, all_offsets, offsets)
                 console.print(f"\tContext: {context}")
                 console.print(f"\t         {highlights}")
-            for c in reversed(list(callstack)):
+            for c in callstack:
                 console.print(f"\t[magenta]{c}[/magenta]")
 
         for from_bytes, from_callstack, to_callstack, to_bytes in trace:
             if from_bytes == to_bytes:
                 continue
             if from_bytes - bytes_operated_to:
-                print_differential("A", from_bytes, from_bytes - bytes_operated_to, from_callstack)
+                print_differential(
+                    "A", from_bytes, from_bytes - bytes_operated_to, from_callstack
+                )
             if to_bytes - bytes_operated_from:
-                print_differential("B", to_bytes, to_bytes - bytes_operated_from, to_callstack)
+                print_differential(
+                    "B", to_bytes, to_bytes - bytes_operated_from, to_callstack
+                )
 
     def show_cflog_diff(
         self,
@@ -583,7 +621,7 @@ class Analysis:
         functions_list_A,
         functions_list_B,
         cavities: bool = False,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         """Build and print the aligned differential."""
         cflogA = self.get_cflog_entries(tdagA, functions_list_A)
@@ -601,29 +639,50 @@ class Analysis:
             cflogB = interleavedB
 
         table = Table(title="Trace Differentials", show_lines=True, width=132)
-        table.add_column(Text("Trace A Input Bytes", style="blue"), justify="right", no_wrap=False)
-        table.add_column(Text("Callstack", style="magenta"), justify="center", no_wrap=False)
-        table.add_column(Text("Trace B Input Bytes", style="blue"), justify="left", no_wrap=False)
+        table.add_column(
+            Text("Trace A Input Bytes", style="blue"), justify="right", no_wrap=False
+        )
+        table.add_column(
+            Text("Callstack", style="magenta"), justify="center", no_wrap=False
+        )
+        table.add_column(
+            Text("Trace B Input Bytes", style="blue"), justify="left", no_wrap=False
+        )
 
-        for from_bytes, from_callstack, to_callstack, to_bytes in self.get_differential_entries(
+        for (
+            from_bytes,
+            from_callstack,
+            to_callstack,
+            to_bytes,
+        ) in self.get_differential_entries(
             cflogA, cflogB, use_graphtage=True, verbose=verbose
         ):
             if not from_callstack and not to_callstack:
                 callstack = Text("Unknown Callstack", style="italic red")
             elif not from_callstack:
-                callstack = "[gray],[/gray] ".join(f"[magenta]{c}[/magenta]" for c in to_callstack)
+                callstack = "[gray],[/gray] ".join(
+                    f"[magenta]{c}[/magenta]" for c in to_callstack
+                )
             elif not to_callstack:
-                callstack = "[gray],[/gray] ".join(f"[magenta]{c}[/magenta]" for c in from_callstack)
+                callstack = "[gray],[/gray] ".join(
+                    f"[magenta]{c}[/magenta]" for c in from_callstack
+                )
             else:
                 from_func = from_callstack[-1]
                 to_func = to_callstack[-1]
                 if from_func == to_func:
                     callstack = f"[gray]…,[/gray] [magenta]{from_func}[/magenta]"
                 else:
-                    callstack = (f"[gray]…,[/gray] [magenta]{from_func}[/magenta] [red]!=[/red] [gray]…,[/gray] "
-                                 f"[magenta]{to_func}[/magenta]")
-            from_bytes_text = f"[gray],[/gray]".join(f"[blue]{b}[/blue]" for b in from_bytes)
-            to_bytes_text = f"[gray],[/gray]".join(f"[blue]{b}[/blue]" for b in to_bytes)
+                    callstack = (
+                        f"[gray]…,[/gray] [magenta]{from_func}[/magenta] [red]!=[/red] [gray]…,[/gray] "
+                        f"[magenta]{to_func}[/magenta]"
+                    )
+            from_bytes_text = f"[gray],[/gray]".join(
+                f"[blue]{b}[/blue]" for b in from_bytes
+            )
+            to_bytes_text = f"[gray],[/gray]".join(
+                f"[blue]{b}[/blue]" for b in to_bytes
+            )
             table.add_row(from_bytes_text, callstack, to_bytes_text)
         Console().print(table)
 
