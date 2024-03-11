@@ -15,6 +15,7 @@ from typing import (
 from argparse import BooleanOptionalAction
 from enum import Enum
 from pathlib import Path
+from lzma import LZMAFile
 from mmap import mmap, PROT_READ
 from ctypes import (
     Structure,
@@ -27,6 +28,8 @@ from ctypes import (
     c_uint16,
     sizeof,
 )
+
+from tqdm import trange
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -44,7 +47,29 @@ from .tracing import (
 )
 
 
-class TDFileMeta(Structure):
+class CompressedTDFile(LZMAFile):
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            self.seek(index.start)
+            return self.read(index.stop - index.start)[::index.step]
+        elif isinstance(index, int):
+            self.seek(index)
+            return self.read(1)
+        else:
+            raise IndexError(f"Invalid index or slice: {index}")
+
+
+class TDStructure(Structure):
+    @classmethod
+    def from_readable_copy(cls, source, offset: int = 0):
+        try:
+            return cls.from_buffer_copy(source, offset)
+        except TypeError:
+            source.seek(offset)
+            return cls.from_buffer_copy(source.read(sizeof(cls)))
+
+
+class TDFileMeta(TDStructure):
     """TDAG File metadata.
 
     File header describing the overall layout of the TDAG file.
@@ -61,7 +86,7 @@ class TDFileMeta(Structure):
         return f"TDFileMeta:\n\ttdag: {self.tdag}\n\tmagic: {self.magic}\n\tsection count: {self.section_count}\n"
 
 
-class TDSectionMeta(Structure):
+class TDSectionMeta(TDStructure):
     """TDAG Section metadata.
 
     Section header describing a particular section in the TDAG file.
@@ -91,7 +116,7 @@ class TDSourceSection:
 
     def enumerate(self):
         for offset in range(0, len(self.mem), sizeof(TDFDHeader)):
-            yield TDFDHeader.from_buffer_copy(self.mem[offset:])
+            yield TDFDHeader.from_readable_copy(self.mem[offset:])
 
 
 class TDStringSection:
@@ -258,12 +283,16 @@ class TDControlFlowLogSection:
         """This method stores an array used to translate from function id to symbolic names. Generate input to this method (we use a list of function symbols statically obtained at instrumentation time) using one of polytracker's instrumentation-side cflog options. This is required for __iter__."""
         self.funcmapping = id_to_name_array
 
+    def __len__(self):
+        return self.cflog_section_end - self.cflog_section_start
+
     def __iter__(self):
         """The cflog encoding scheme is defined in control_flow_log.h. Each entry should consist of a taint label and a callstack by function id."""
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for idx in range(self.cflog_section_start, self.cflog_section_end):
+        for idx in trange(self.cflog_section_start, self.cflog_section_end, desc="reading CF log", unit="entries",
+                          leave=False, delay=2.0):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
@@ -314,7 +343,7 @@ class TDSinkSection:
 
     def enumerate(self):
         for offset in range(0, len(self.section), sizeof(TDSink)):
-            yield TDSink.from_buffer_copy(self.section[offset:])
+            yield TDSink.from_readable_copy(self.section[offset:])
 
 
 class TDBitmapSection:
@@ -363,7 +392,7 @@ class TDFunctionsSection:
 
     def __iter__(self):
         for offset in range(0, len(self.section), sizeof(TDFnHeader)):
-            yield TDFnHeader.from_buffer_copy(self.section, offset)
+            yield TDFnHeader.from_readable_copy(self.section, offset)
 
 
 class TDEventsSection:
@@ -372,10 +401,10 @@ class TDEventsSection:
 
     def __iter__(self):
         for offset in range(0, len(self.section), sizeof(TDEvent)):
-            yield TDEvent.from_buffer_copy(self.section, offset)
+            yield TDEvent.from_readable_copy(self.section, offset)
 
 
-class TDFDHeader(Structure):
+class TDFDHeader(TDStructure):
     """Python representation of the SourceEntry from taint_source.h"""
 
     _fields_ = [
@@ -391,7 +420,7 @@ class TDFDHeader(Structure):
         return self.fd == -1
 
 
-class TDFnHeader(Structure):
+class TDFnHeader(TDStructure):
     _fields_ = [("name_offset", c_uint32)]
 
 
@@ -443,7 +472,7 @@ class TDUntaintedNode(TDNode):
         return f"TDUntaintedNode: {super().__repr__()}"
 
 
-class TDSink(Structure):
+class TDSink(TDStructure):
     """Python representation of the SinkLogEntry from sink.h"""
 
     # _pack_ = 1
@@ -453,7 +482,7 @@ class TDSink(Structure):
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
-class TDEvent(Structure):
+class TDEvent(TDStructure):
     _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
 
     class Kind(Enum):
@@ -489,15 +518,21 @@ class TDFile:
         self.source_index_bits = 8
         self.source_offset_mask = (1 << 54) - 1
 
-        # We need to be careful with memory usage for sections expected to be large so they can be analysed without a lot of thrashing of the underlying filesystem and/or OOM.
-        self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
+        # We need to be careful with memory usage for sections expected to be large so they can be analysed without a
+        # lot of thrashing of the underlying filesystem and/or OOM.
 
-        self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
+        # is this an LZMA compressed TDAG?
+        if hasattr(file, "name") and file.name.endswith(".xz"):
+            self.buffer = CompressedTDFile(file, mode="r")
+        else:
+            self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
+
+        self.filemeta = TDFileMeta.from_readable_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
         self.sections: List[TDSection] = []
         self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
         for _ in range(0, self.filemeta.section_count):
-            hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
+            hdr = TDSectionMeta.from_readable_copy(self.buffer, section_offset)
             if hdr.tag == 1:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
                 self.sections_by_type[TDSourceSection] = self.sections[-1]
@@ -572,13 +607,13 @@ class TDFile:
 
     def read_node(self, label: int) -> int:
         """Read a node by label. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
-        if label in self.raw_nodes:
-            return self.raw_nodes[label]
+        # if label in self.raw_nodes:
+        #     return self.raw_nodes[label]
         label_section = self.sections_by_type[TDLabelSection]
         assert isinstance(label_section, TDLabelSection)
         result = label_section.read_raw(label)
 
-        self.raw_nodes[label] = result
+        # self.raw_nodes[label] = result
         return result
 
     def decode_node(self, label: int) -> TDNode:
@@ -617,7 +652,7 @@ class TDFile:
         yield from sink_section.enumerate()
 
     def read_event(self, offset: int) -> TDEvent:
-        return TDEvent.from_buffer_copy(self.buffer, offset)
+        return TDEvent.from_readable_copy(self.buffer, offset)
 
     @property
     def events(self) -> Iterator[TDEvent]:

@@ -61,8 +61,8 @@ if __name__ == "__main__":
     if args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo 🚀")
 
-        traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a)
-        traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b)
+        traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
+        traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b, taint_forest=False)
 
         if args.function_id_json_a and args.function_id_json_b and not args.runtrace:
             with open(args.function_id_json_a) as jsonA:

@@ -1,8 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 from functools import partialmethod
+import heapq
 from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
+from typing import Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple
 
 import cxxfilt
 from graphtage import (
@@ -39,7 +40,7 @@ class CFLogEntry(dataclasses.DataClassNode):
     callstack_node: ListNode
 
     def __init__(self, input_bytes: Iterable[int], callstack: Iterable[str]):
-        input_bytes = tuple(input_bytes)
+        input_bytes = tuple(sorted(set(input_bytes)))
         callstack = tuple(callstack)
         super().__init__(
             input_bytes_node=ListNode((IntegerNode(i) for i in input_bytes)),
@@ -168,6 +169,88 @@ class CFLog(ListNode[CFLogEntry]):
         return "\n".join(map(str, self.entries))
 
 
+class CachedTDAGTraverser:
+    def __init__(self, tdag: TDFile, max_size: Optional[int] = None):
+        self.tdag: TDFile = tdag
+        self.max_size: Optional[int] = max_size
+        self._cache: Dict[int, FrozenSet[taint_dag.TDSourceNode]] = {}
+        self._age: List[Tuple[int, int]] = []
+        self._insertions: int = 0
+
+    def _cache_add(self, label: int, source_nodes: FrozenSet[taint_dag.TDSourceNode]):
+        if self.max_size is not None:
+            while len(self._cache) > self.max_size:
+                _, oldest_label = heapq.heappop(self._age)
+                del self._cache[oldest_label]
+            self._insertions += 1
+            heapq.heappush(self._age, (self._insertions, label))
+        self._cache[label] = source_nodes
+
+    def __getitem__(self, item: int) -> FrozenSet[taint_dag.TDSourceNode]:
+        stack: List[Tuple[int, int, List[FrozenSet]]] = [(item, -1, [])]
+        cache_hits = 0
+        with tqdm(desc="finding canonical taints", unit="labels", leave=False, delay=2.0, total=1) as t:
+            while True:
+                label, num_parents, ancestor_sets = stack[-1]
+
+                if label in self._cache:
+                    stack.pop()
+                    t.update(1)
+                    cached = self._cache[label]
+                    cache_hits += 1
+                    if not stack:
+                        # we are done
+                        # print(f"Cache hits for {item}: {cache_hits}")
+                        return cached
+                    stack[-1][2].append(cached)
+                    continue
+                elif num_parents == len(ancestor_sets):
+                    ancestors = frozenset.union(*ancestor_sets)
+                    self._cache_add(label, ancestors)
+                    continue
+
+                node: taint_dag.TDNode = self.tdag.decode_node(label)
+                if isinstance(node, taint_dag.TDSourceNode):
+                    self._cache_add(label, frozenset((node,)))
+                    continue
+                elif isinstance(node, taint_dag.TDUnionNode):
+                    if num_parents < 0:
+                        stack[-1] = (label, 2, [])
+                        stack.append((node.left, -1, []))
+                    else:
+                        stack.append((node.right, -1, []))
+                    t.total += 1
+                    t.refresh()
+                elif isinstance(node, taint_dag.TDRangeNode):
+                    if num_parents < 0:
+                        stack[-1] = (label, node.last - node.first + 1, [])
+                    else:
+                        stack.append((node.first + len(ancestor_sets), -1, []))
+                        t.total += 1
+                        t.refresh()
+
+
+def ancestor_input_set(first_label: int, tdag: TDFile) -> Iterator[taint_dag.TDSourceNode]:
+    """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
+    q: List[int] = [first_label]
+    seen_labels: Set[int] = set()
+    while q:
+        label = q.pop()
+        if label in seen_labels:
+            continue
+        seen_labels.add(label)
+
+        node: taint_dag.TDNode = tdag.decode_node(label)
+        if isinstance(node, taint_dag.TDSourceNode):
+            yield node
+        elif isinstance(node, taint_dag.TDUnionNode):
+            q.append(node.right)
+            q.append(node.left)
+        elif isinstance(node, taint_dag.TDRangeNode):
+            for range_label_number in range(node.first, node.last + 1):
+                q.append(range_label_number)
+
+
 class Analysis:
     def node_equals(self, n1: taint_dag.TDNode, n2: taint_dag.TDNode) -> bool:
         """Polytracker TDAG node comparator."""
@@ -205,40 +288,6 @@ class Analysis:
                 offsets[offset] = tdnode[:1]
         return offsets
 
-    def ancestor_input_set(
-        self, first_label: int, tdag: TDFile
-    ) -> Set[taint_dag.TDNode]:
-        """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
-        q: List[int] = [first_label]
-        input_set: Set[taint_dag.TDNode] = set()
-        seen_labels: Set[int] = set()
-        while q:
-            label = q.pop()
-            if label in seen_labels:
-                continue
-            seen_labels.add(label)
-
-            node: taint_dag.TDNode = tdag.decode_node(label)
-            if isinstance(node, taint_dag.TDSourceNode):
-                input_set.add(node)
-            elif isinstance(node, taint_dag.TDUnionNode):
-                q.append(node.left)
-                q.append(node.right)
-            elif isinstance(node, taint_dag.TDRangeNode):
-                for range_label_number in range(node.first, node.last + 1):
-                    q.append(range_label_number)
-
-        return input_set
-
-    def sorted_ancestor_offsets(self, label: int, tdag: TDFile) -> List[int]:
-        """Returns the subset of source offsets (integer input byte labels), in sorted order, that directly taint `label` by way of traversing the taint forest from the starting point of `label`."""
-        # TODO: Determine if `self.ancestor_input_set` is naturally sorted and;
-        #       if so, then remove the call to `sorted` and return a generator
-        return sorted(
-            node.offset
-            for node in self.ancestor_input_set(label, tdag)
-        )
-
     def get_cflog_entries(self, tdag: TDFile, functions_list, verbose=False) -> CFLog:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
@@ -257,14 +306,26 @@ class Analysis:
 
         cflog.function_id_mapping(demangled_functions_list)
 
+        traverser = CachedTDAGTraverser(tdag, max_size=16384)
         # each cflog entry has a callstack and a label
+        entries = []
+        for i, event in enumerate(tqdm(cflog, desc="tracing", leave=False, unit="CFLog Entries", total=len(cflog))):
+            if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
+                continue
+            print(f"{i}/{len(cflog)}")
+            entries.append(CFLogEntry(
+                (n.offset for n in traverser[event.label]),
+                event.callstack,
+            ))
+        return CFLog(entries)
         return CFLog(
             (
                 CFLogEntry(
-                    self.sorted_ancestor_offsets(event.label, tdag),
+                    # (n.offset for n in ancestor_input_set(event.label, tdag)),
+                    (n.offset for n in traverser[event.label]),
                     event.callstack,
                 )
-                for event in cflog
+                for event in tqdm(cflog, desc="tracing", leave=False, unit="CFLog Entries", total=len(cflog))
                 if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
             )
         )
@@ -539,7 +600,9 @@ class Analysis:
         # TODO: Also show other bytes read that were also read by the other trace
 
         from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
+        print("Loaded CFLOG A")
         to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
+        print("Loaded CFLOG B")
 
         bytes_operated_from: Set[int] = set()
         bytes_operated_to: Set[int] = set()
