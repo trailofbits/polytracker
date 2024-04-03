@@ -14,6 +14,8 @@ from typing import (
 
 from argparse import BooleanOptionalAction
 from enum import Enum
+from json import load as jsonload
+from tqdm import tqdm
 from pathlib import Path
 from lzma import LZMAFile
 from mmap import mmap, PROT_READ
@@ -242,20 +244,7 @@ class TDControlFlowLogSection:
         # Call function_id_mapping to set funcmapping before use of cflog.
         self.funcmapping = None
 
-    class VarInt:
-        """A dataclass for representing encoded items from the cflog section."""
-
-        value: int
-        index: int
-
-        def __init__(self, value, index):
-            self.value = value
-            self.index = index
-
-        def __repr__(self):
-            return f"value: {self.value}, tdag ending index: {self.index}"
-
-    def _decode_varint(self, starting_index) -> VarInt:
+    def _decode_varint(self, starting_index) -> Tuple[int, int]:
         """Decode a `uint32_t varint` as defined in `control_flow_log.h`. Increment the global cflog index and update the global value upon return. Most varints require only one iteration before `0x80` (varint end) is seen. Called by `__iter__`. NOTE !resets the iteration index!"""
         shift = 0
         decoded_value = 0
@@ -263,7 +252,7 @@ class TDControlFlowLogSection:
             curr = c_uint8.from_buffer_copy(self.mem_reference, j).value
             decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
-                return TDControlFlowLogSection.VarInt(decoded_value, j + 1)
+                return (decoded_value, j + 1)
             shift += 7
         raise Exception(
             "Unable to decode VarInt from TDAG control flow log section; this TDAG may not have been properly written?"
@@ -291,8 +280,8 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for idx in trange(self.cflog_section_start, self.cflog_section_end, desc="reading CF log", unit="entries",
-                          leave=False, delay=2.0):
+        for _ in trange(self.cflog_section_start, self.cflog_section_end, desc="reading CF log", unit="entries",
+                        leave=False, delay=2.0):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
@@ -306,11 +295,11 @@ class TDControlFlowLogSection:
                 mem_index += 1
             else:
                 varint = self._decode_varint(mem_index)
-                mem_index = varint.index
+                mem_index = varint[1]
                 # hack: sometimes function_id otherwise hasnt been set
-                function_id = varint.value
+                function_id = varint[0]
                 if self.funcmapping is not None and len(self.funcmapping) > 0:
-                    function_id = self.funcmapping[varint.value]
+                    function_id = self.funcmapping[function_id]
 
                 if event == TDControlFlowLogSection.Event.ENTER_FUNCTION:
                     event = None
@@ -323,12 +312,25 @@ class TDControlFlowLogSection:
                     )
                 else:
                     varint = self._decode_varint(mem_index)
-                    mem_index = varint.index
+                    mem_index = varint[1]
                     event = None
-                    yield TDTaintedControlFlowEvent(callstack[:], varint.value)
+                    yield TDTaintedControlFlowEvent(callstack[:], varint[0])
 
         # Return back to last function called (replaces exit() etc.)
         yield from TDControlFlowLogSection._align_callstack(-1, callstack)
+
+    @property
+    def event_count(self) -> int:
+        """If this instance's __iter__ has not yet been used, since we only store indices and a memory buffer reference at initialisation time, there are no events to count yet. Returns the total number of events (we use function entries and exits for framing only right now.)"""
+        counter = 0
+        print(
+            f"Iterating over the cflog to cache the count of tainted control flow events, please be patient..."
+        )
+        # todo(kaoudis): a tqdm progress bar doesn't make this any less annoyingly slow for a large section size right now, but could add it
+        for entry in self:
+            if type(entry) == TDTaintedControlFlowEvent:
+                counter += 1
+        return counter
 
 
 class TDSinkSection:
@@ -942,6 +944,14 @@ class TDInfo(Command):
             help="Show info about control flow log trace events.",
         )
 
+        parser.add_argument(
+            "--function_mapping",
+            "-m",
+            default="functionid.json",
+            type=str,
+            help="path to JSON function mapping file (created statically at instrumentation time; needed for cflog event counting)",
+        )
+
     def run(self, args):
         with open(args.POLYTRACKER_TF, "rb") as f:
             tdfile = TDFile(f)
@@ -972,5 +982,5 @@ class TDInfo(Command):
             if args.cflog:
                 cflog = tdfile._get_section(TDControlFlowLogSection)
                 assert isinstance(cflog, TDControlFlowLogSection)
-                for obj in cflog:
-                    print(f"{obj}")
+                cflog.function_id_mapping(jsonload(Path(args.function_mapping).open()))
+                print(f"Number of cflog entries: {cflog.event_count}")
