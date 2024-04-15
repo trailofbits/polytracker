@@ -280,7 +280,14 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for _ in range(self.cflog_section_start, self.cflog_section_end):
+        for idx in trange(
+            self.cflog_section_start,
+            self.cflog_section_end,
+            desc="reading CF log",
+            unit="entries",
+            leave=False,
+            delay=2.0,
+        ):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
