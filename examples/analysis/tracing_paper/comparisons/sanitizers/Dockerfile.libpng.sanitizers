@@ -1,0 +1,35 @@
+
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com, kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /
+
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz && \
+    mv libpng-1.6.39 libpng && \
+    wget https://zlib.net/current/zlib.tar.gz && \
+    tar xvf zlib.tar.gz && \
+    mv zlib-1.3 libpng/zlib
+
+# build debug version of zlib
+WORKDIR /libpng/zlib
+RUN \
+  CFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CPPFLAGS="-O0 -g -fno-omit-frame-pointer" \
+  CC=clang \
+  CXX=clang++ \
+  ./configure && \
+  make -j$((`nproc`+1))
+
+# build debug version of libpng linking our built zlib
+WORKDIR "$DEBUG"
+RUN cp scripts/makefile.linux Makefile
+RUN \
+  CFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+  CPPFLAGS="-fsanitize=address,undefined -I/libpng/zlib/include -O0 -g -fno-omit-frame-pointer" \
+  LDFLAGS="-L/libpng/zlib" \
+  CC=clang \
+  make -j$((`nproc`+1)) pngtest

@@ -1,0 +1,36 @@
+# Create a separate image with the latest source
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+WORKDIR /
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get -y upgrade && apt-get install -y wget
+RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && \
+    tar xf jpegsrc.v9e.tar.gz
+
+# Install symlinks to clang and llvm bitcode tools
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
+    update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-12 10 && \
+    update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
+    update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-12 10 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
+ENV ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+
+# Now, build the libjpeg image using previously downloaded source
+WORKDIR /jpeg-9e/build
+# Configure build
+
+RUN AR_FLAGS="crs" \
+  CFLAGS="-fsanitize=address,undefined -O0 -g -fno-omit-frame-pointer" \
+  CC=clang \
+  CXX=clang++ \
+  ./configure \
+    --enable-shared \
+    --disable-static \
+    --prefix="/jpeg-9e/libjpeg" \
+    --exec-prefix="/jpeg-9e/libjpeg" && \
+    make -j$((`nproc`+1)) && \
+    make install
