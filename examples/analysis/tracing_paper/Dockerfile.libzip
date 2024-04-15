@@ -1,0 +1,42 @@
+FROM trailofbits/polytracker:latest
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /polytracker/
+
+RUN apt-get update && \
+  apt-get install -y \
+    autoconf \
+    autopoint \
+    gettext \
+    libbz2-dev \
+    libdeflate-dev \
+    liblzma-dev \
+    libtool \
+    libzstd-dev \
+    libssl-dev \
+    nettle-dev \
+    wget \
+    zlib1g-dev \
+    ripgrep && \
+  wget https://libzip.org/download/libzip-1.10.1.tar.gz && \
+  tar xvf libzip-1.10.1.tar.gz && \
+  mv libzip-1.10.1 libzip
+
+WORKDIR /polytracker/libzip/build
+RUN \
+  polytracker build cmake -S .. -B . \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DBUILD_DOC=OFF \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_REGRESS=OFF \
+    -DENABLE_OPENSSL=OFF \
+    -DENABLE_ZSTD=OFF \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="/polytracker/libzip" \
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/lib/x86_64-linux-gnu -lnettle -lm -lpthread -fPIC -lstdc++" \
+    -DLIBLZMA_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/liblzma.a" \
+    -DZLIB_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/libz.a" \
+    -DBZIP2_LIBRARY_RELEASE="/usr/lib/x86_64-linux-gnu/libbz2.a"
+  # && polytracker build make -j$((`nproc`+1))
+  # && polytracker instrument-targets --ftrace --cflog --taint ziptool
