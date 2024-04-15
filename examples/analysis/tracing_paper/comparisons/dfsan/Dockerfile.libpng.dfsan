@@ -1,0 +1,62 @@
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /
+
+RUN apt-get update && \
+    apt-get install -y \
+      autoconf \
+      autotools-dev \
+      build-essential \
+      make \
+      wget \
+      tar \
+      lsb-release \
+      software-properties-common \
+      gnupg \
+      gdb && \
+    wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 17 all && \
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz && \
+    wget https://zlib.net/fossils/zlib-1.2.13.tar.gz && \
+    tar xvf zlib-1.2.13.tar.gz
+
+# current stable llvm / clang branch is v17 as of 2/2024 according to https://apt.llvm.org/
+RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-17 10 && \
+    update-alternatives --install /usr/bin/llvm-link llvm-link /usr/bin/llvm-link-17 10 && \
+    update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-17 10 && \
+    update-alternatives --install /usr/bin/llvm-symbolizer llvm-symbolizer /usr/bin/llvm-symbolizer-17 10 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 10
+
+# build release version of zlib
+WORKDIR /zlib-1.2.13
+RUN \
+    CFLAGS="-g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+    CC=clang \
+    CXXFLAGS="-g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+    CXX=clang++ \
+  ./configure \
+  --static \
+  --prefix="/usr/local"
+RUN make -j$((`nproc`+1)) && make install
+
+WORKDIR /libpng-1.6.39
+RUN \
+    CFLAGS="-g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+    CC=clang \
+    CXXFLAGS="-I/usr/local/include -g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+    CXX=clang++ \
+    LDFLAGS="-L/usr/local/lib" \
+  ./configure --disable-shared --enable-static
+RUN \
+  CFLAGS="-g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+  CC=clang \
+  CXXFLAGS="-I/usr/local/include -g -O0 -fsanitize=dataflow -mllvm -dfsan-track-origins=1" \
+  CXX=clang++ \
+  LDFLAGS="-L/usr/local/lib" \
+  make pngtest && \
+  wget https://files.catbox.moe/re3eot.png
