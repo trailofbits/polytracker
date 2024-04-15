@@ -53,7 +53,7 @@ class CompressedTDFile(LZMAFile):
     def __getitem__(self, index):
         if isinstance(index, slice):
             self.seek(index.start)
-            return self.read(index.stop - index.start)[::index.step]
+            return self.read(index.stop - index.start)[:: index.step]
         elif isinstance(index, int):
             self.seek(index)
             return self.read(1)
@@ -280,8 +280,7 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for _ in trange(self.cflog_section_start, self.cflog_section_end, desc="reading CF log", unit="entries",
-                        leave=False, delay=2.0):
+        for _ in range(self.cflog_section_start, self.cflog_section_end):
             # do not roll off the end of the section!
             if mem_index + 1 >= self.cflog_section_end:
                 if len(callstack) > 0:
@@ -327,7 +326,7 @@ class TDControlFlowLogSection:
             f"Iterating over the cflog to cache the count of tainted control flow events, please be patient..."
         )
         # todo(kaoudis): a tqdm progress bar doesn't make this any less annoyingly slow for a large section size right now, but could add it
-        for entry in self:
+        for entry in tqdm(self, unit="entries"):
             if type(entry) == TDTaintedControlFlowEvent:
                 counter += 1
         return counter
