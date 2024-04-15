@@ -1,41 +1,27 @@
 # Tracing Paper
 Copy or pass through this directory into your Polytracker container in order to use it in the environment where the software you are testing and tracing can be instrumented and run.
 
+# Analyses
+One TDAG:
+- Control flow log `--cflog`
+- Control flow log, with cavities (blind spots) `--cflog --cavities`
+
+Two TDAGs (differential comparison):
+- Control flow log `--cflog`
+- Control flow log, with cavities (blind spots) `--cflog --cavities`
+- Show only divergence point(s) between control flow logs `--find-divergence`
+
 # Inputs
 Input files for the software you are testing are required.
+
+# Example: Nitro
+
+See also: ../nitf and ../ubet for earlier iterations on this work that explore different aspects of NITF processing and the Nitro parser.
 
 ## NITF test inputs
 `hackathonFive-nitf.zip` contains many malformed as well as correctly formed NITF files from various standards versions.
 
-## DCM test inputs
-Many test imagesets are available from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images. Most of the ones available over FTP are downloadable for free if you connect as a guest user.
-
-Honourable mention: https://github.com/robyoung/dicom-test-files/tree/master/data also has a bunch of test images from different sources.
-
-todo(kaoudis): add remainder of known publicly available resources here.
-
-## JPEG test inputs
-### [CVE-2021-3575](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575)
-On the following crafted poc file:
-https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz
-
-```
-$ opj_decompress -i poc.j2k -o poc.j2k.png
-```
-See also:
-- https://github.com/uclouvain/openjpeg/issues/1347
-- https://github.com/uclouvain/openjpeg/pull/1362
-
-### JPEG2000 benchmark images
-linked in https://www.fastcompression.com/benchmarks/benchmarks-j2k.htm
-
-## PNG test inputs
-todo
-
-## TIFF test inputs
-todo
-
-# Example 1
+## Experiment setup
 Build the NITF parser Nitro (located in polytracker/examples/analysis/ubet/Dockerfile.nitro):
 ```
 $ cd polytracker/examples/analysis/ubet/
@@ -61,14 +47,39 @@ root@879751ac6196:/polytracker/the_klondike/nitro/build/release# ./nitro_trackRe
 $ python ../../../analysis/tracing_paper/main.py -ta polytracker.tdag -fa functionid.json -tb ../debug/polytracker.tdag -fb ../debug/functionid.json --cflog --cavities
 ```
 
-# Example 2
-todo
+# Example: libpng
+See [acropalypse_reproduction.md](./acropalypse_reproduction.md).
 
-# Available Analyses
-One TDAG:
-- Control flow log `--cflog`
-- Control flow log, with cavities (blind spots) `--cflog --cavities`
+## PNG test inputs
+We are using the acropalypse bug (c.f. [acropalypse_reproduction.md](./acropalypse_reproduction.md)). The test file for it is re3eot.png as used in https://blog.trailofbits.com/2023/03/30/acropalypse-polytracker-blind-spots/
 
-Two TDAGs (differential comparison):
-- Control flow log `--cflog`
-- Control flow log, with cavities (blind spots) `--cflog --cavities`
+See the acropalypse markdown file as well as Dockerfile.libpng for setting up and running png experiments.
+
+# Example: dcmtk
+
+## DCM test inputs
+Many test imagesets are available from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images. Most of the ones available over FTP are downloadable for free if you connect as a guest user.
+
+Honourable mention: https://github.com/robyoung/dicom-test-files/tree/master/data also has a bunch of test images from different sources.
+
+todo(kaoudis): add remainder of known publicly available resources here.
+
+# Example: jpeg
+
+## JPEG test inputs
+### [CVE-2021-3575](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575)
+On the following crafted poc file:
+https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz
+
+```
+$ opj_decompress -i poc.j2k -o poc.j2k.png
+```
+See also:
+- https://github.com/uclouvain/openjpeg/issues/1347
+- https://github.com/uclouvain/openjpeg/pull/1362
+
+## JPEG2000 benchmark images
+linked in https://www.fastcompression.com/benchmarks/benchmarks-j2k.htm
+
+# Example: http
+todo?
