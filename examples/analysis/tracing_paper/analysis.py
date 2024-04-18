@@ -45,8 +45,11 @@ class CallStackEntry(LeafNode):
 
 
 class CFLogEntry(dataclasses.DataClassNode):
+    """Represents a single entry in the TDAG CFLOG (control flow log) section."""
+
     input_bytes_node: ListNode
     callstack_node: ListNode
+    is_cavity: bool
 
     def __init__(self, input_bytes: Iterable[int], callstack: Iterable[str]):
         input_bytes = tuple(sorted(set(input_bytes)))
@@ -57,15 +60,22 @@ class CFLogEntry(dataclasses.DataClassNode):
         )
         self.input_bytes: Tuple[int, ...] = input_bytes
         self.callstack: Tuple[str, ...] = callstack
+        self.is_cavity = False
+
+    @classmethod
+    def cavity(cls, input_bytes: Iterable[int]):
+        """A cavity has no callstack, since a cavity is a set of input bytes that was not operated on"""
+        return cls(input_bytes, callstack=())
 
     def __hash__(self):
-        return hash((self.input_bytes, self.callstack))
+        return hash((self.input_bytes, self.callstack, self.is_cavity))
 
     def __eq__(self, other):
         return (
             isinstance(other, CFLogEntry)
             and other.input_bytes == self.input_bytes
             and other.callstack == self.callstack
+            and other.is_cavity == self.is_cavity
         )
 
     def __len__(self):
@@ -203,7 +213,13 @@ class CachedTDAGTraverser:
     def __getitem__(self, item: int) -> FrozenSet[taint_dag.TDSourceNode]:
         stack: List[Tuple[int, int, List[FrozenSet]]] = [(item, -1, [])]
         cache_hits = 0
-        with tqdm(desc="finding canonical taints", unit="labels", leave=False, delay=2.0, total=1) as t:
+        with tqdm(
+            desc="finding canonical taints",
+            unit="labels",
+            leave=False,
+            delay=2.0,
+            total=1,
+        ) as t:
             while True:
                 label, num_parents, ancestor_sets = stack[-1]
 
@@ -244,25 +260,27 @@ class CachedTDAGTraverser:
                         t.refresh()
 
 
-def ancestor_input_set(first_label: int, tdag: TDFile) -> Iterator[taint_dag.TDSourceNode]:
-    """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
-    q: List[int] = [first_label]
-    seen_labels: Set[int] = set()
-    while q:
-        label = q.pop()
-        if label in seen_labels:
-            continue
-        seen_labels.add(label)
+# def ancestor_input_set(
+#     first_label: int, tdag: TDFile
+# ) -> Iterator[taint_dag.TDSourceNode]:
+#     """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
+#     q: List[int] = [first_label]
+#     seen_labels: Set[int] = set()
+#     while q:
+#         label = q.pop()
+#         if label in seen_labels:
+#             continue
+#         seen_labels.add(label)
 
-        node: taint_dag.TDNode = tdag.decode_node(label)
-        if isinstance(node, taint_dag.TDSourceNode):
-            yield node
-        elif isinstance(node, taint_dag.TDUnionNode):
-            q.append(node.right)
-            q.append(node.left)
-        elif isinstance(node, taint_dag.TDRangeNode):
-            for range_label_number in range(node.first, node.last + 1):
-                q.append(range_label_number)
+#         node: taint_dag.TDNode = tdag.decode_node(label)
+#         if isinstance(node, taint_dag.TDSourceNode):
+#             yield node
+#         elif isinstance(node, taint_dag.TDUnionNode):
+#             q.append(node.right)
+#             q.append(node.left)
+#         elif isinstance(node, taint_dag.TDRangeNode):
+#             for range_label_number in range(node.first, node.last + 1):
+#                 q.append(range_label_number)
 
 
 class Analysis:
@@ -323,15 +341,25 @@ class Analysis:
         traverser = CachedTDAGTraverser(tdag, max_size=16384)
         # each cflog entry has a callstack and a label
         entries = []
-        for i, event in enumerate(tqdm(cflog, desc="tracing", leave=False, unit="CFLog Entries", total=len(cflog))):
+        for i, event in enumerate(
+            tqdm(
+                cflog,
+                desc="tracing",
+                leave=False,
+                unit="CFLog Entries",
+                total=len(cflog),
+            )
+        ):
             if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
                 continue
-            print(f"{i}/{len(cflog)}")
-            entries.append(CFLogEntry(
-                (n.offset for n in traverser[event.label]),
-                event.callstack,
-            ))
-        return CFLog(entries)
+            # print(f"{i}/{len(cflog)}")
+            entries.append(
+                CFLogEntry(
+                    (n.offset for n in traverser[event.label]),
+                    event.callstack,
+                )
+            )
+        # return CFLog(entries)
         return CFLog(
             (
                 CFLogEntry(
@@ -339,7 +367,13 @@ class Analysis:
                     (n.offset for n in traverser[event.label]),
                     event.callstack,
                 )
-                for event in tqdm(cflog, desc="tracing", leave=False, unit="CFLog Entries", total=len(cflog))
+                for event in tqdm(
+                    cflog,
+                    desc="tracing",
+                    leave=False,
+                    unit="CFLog Entries",
+                    total=len(cflog),
+                )
                 if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
             )
         )
@@ -395,9 +429,9 @@ class Analysis:
     def interleave_file_cavities(
         self,
         tdag: TDFile,
-        cflog: list[tuple],
+        cflog_entries: Tuple[CFLogEntry, ...],
         verbose=False,
-    ) -> List[Tuple[List[str], List[str]]]:
+    ) -> Tuple[CFLogEntry, ...]:
         """Put each cavity before the most relevant cflog entry. If any cavities remain, put them on the end of the interleaved list."""
         cavity_byte_sets: List[CavityType]
         file_cavities = InputOutputMapping(tdag).file_cavities()
@@ -406,37 +440,31 @@ class Analysis:
                 print(
                     f"Unused byte sections were observed from within instrumented program run on input '{input_file_name}';\n they will be interleaved in the below control flow log output..."
                 )
-            cavity_byte_sets = file_cavities[input_file_name]
+            cavity_byte_sets: List[CavityType] = file_cavities[input_file_name]
+            # there should be only one valid path since we traced a single input
             break
 
-        ret: list[tuple] = []
-        for prev, entry in zip([None] + cflog[:-1], cflog):
+        interleaved_output: Tuple[CFLogEntry, ...] = []
+        for previous_cflog_entry, cflog_entry in zip(
+            () + cflog_entries[:-1], cflog_entries
+        ):
             # put each cavity before the most relevant cflog entry
             byte_set: CavityType
             for byte_set in cavity_byte_sets:
-                if prev is not None and (
-                    prev[0][-1] <= int(byte_set[0])
-                    and prev[0][-1] <= int(byte_set[-1])
-                    and entry[0][0] >= int(byte_set[-1])
+                if previous_cflog_entry is not None and (
+                    previous_cflog_entry.input_bytes[-1] <= int(byte_set[0])
+                    and previous_cflog_entry.input_bytes[-1] <= int(byte_set[-1])
+                    and cflog_entry.input_bytes[0] >= int(byte_set[-1])
                 ):
-                    ret.append(
-                        (
-                            f"CAVITY [{byte_set[0]}, {byte_set[1]})",
-                            ["!!UNUSED RANGE (blind spot)!!"],
-                        )
-                    )
+                    interleaved_output += CFLogEntry.cavity(byte_set)
+                    print(f"{interleaved_output[-1]}")
                     cavity_byte_sets.remove(byte_set)
-            ret.append(entry)
+            interleaved_output += cflog_entry
 
         for remainder_set in cavity_byte_sets:
-            ret.append(
-                (
-                    f"CAVITY [{remainder_set[0]}, {remainder_set[1]})",
-                    ["!!UNUSED RANGE (blind spot)!!"],
-                )
-            )
+            interleaved_output += CFLogEntry.cavity(remainder_set)
 
-        return ret
+        return interleaved_output
 
     def show_cflog(
         self, tdag: TDFile, function_id_json, cavities=False, verbose=False
@@ -455,20 +483,76 @@ class Analysis:
             for entry in cflog:
                 self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
 
-    def get_differential_entries(
+    def get_lookahead_only_diff_entries(
         self,
-        from_cflog: CFLog,
-        to_cflog: CFLog,
-        use_graphtage: bool = True,
-        verbose: bool = False,
-    ) -> Iterable[
-        Tuple[Tuple[int, ...], Tuple[str, ...], Tuple[str, ...], Tuple[int, ...]]
-    ]:
+        from_cflog_entries: Tuple[CFLogEntry, ...],
+        to_cflog_entries: Tuple[CFLogEntry, ...],
+    ) -> Iterable[Tuple[CFLogEntry, CFLogEntry]]:
+        """This is a refactored version of the original ubet implementation, sans graphtage. This means it only compares traces in the forward direction, not the backward direction."""
+        len_from: int = len(from_cflog_entries)
+        len_to: int = len(to_cflog_entries)
+        idx_from: int = 0
+        idx_to: int = 0
+
+        # offsetsA, callstackA, callstackB, offsetsB
+        while idx_from < len_from or idx_to < len_to:
+            # pad the end of the shorter cflog with Nones if needed
+            from_entry = from_cflog_entries[idx_from] if idx_from < len_from else None
+            to_entry = to_cflog_entries[idx_to] if idx_to < len_to else None
+
+            if from_entry is None:
+                idx_to += 1
+                yield (None, to_entry)
+
+            elif to_entry is None:
+                idx_from += 1
+                yield (from_entry, None)
+
+            # same bytes were processed in the two runs by different functionality
+            elif from_entry.input_bytes == to_entry.input_bytes:
+                idx_from += 1
+                idx_to += 1
+                yield (from_entry, to_entry)
+            else:
+                # check if we should be stepping A or B cflogs
+                # depending on shortest path
+                stepsA = 0
+                stepsB = 0
+
+                while idx_from + stepsA < len_from:
+                    if (
+                        from_cflog_entries[idx_from + stepsA].input_bytes
+                        == to_entry.input_bytes
+                    ):
+                        break
+                    stepsA += 1
+
+                while idx_to + stepsB < len_to:
+                    if (
+                        to_cflog_entries[idx_to + stepsB].input_bytes
+                        == from_entry.input_bytes
+                    ):
+                        break
+                    stepsB += 1
+
+                if stepsA < stepsB and from_entry is not None:
+                    idx_from += 1
+                    yield (from_entry, None)
+                elif to_entry is not None:
+                    idx_to += 1
+                    yield (None, to_entry)
+        return
+
+    def get_differential_entries(
+        self, from_cflog: CFLog, to_cflog: CFLog, use_graphtage: bool = True
+    ) -> Iterable[Tuple[CFLogEntry, CFLogEntry]]:
         """Creates a printable differential between two cflogs. Once we have annotated the control flow log for each
         tdag with the separately recorded demangled function names in callstack format, walk through them and see what
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
         structure."""
-        if use_graphtage:
+        if not use_graphtage:
+            self.get_lookahead_only_diff_entries(from_cflog.entries, to_cflog.entries)
+        else:
             diff = from_cflog.diff(to_cflog)
             if diff.edit is None:
                 print("Both cflogs are identical!")
@@ -502,112 +586,7 @@ class Analysis:
                         yield from_node.input_bytes, from_node.callstack, (), ()
                     else:
                         yield from_node.input_bytes, from_node.callstack, to_node.callstack, to_node.input_bytes
-            return
-
-        len_from: int = len(from_cflog)
-        len_to: int = len(to_cflog)
-        idx_from: int = 0
-        idx_to: int = 0
-
-        # offsetsA, callstackA, callstackB, offsetsB
-        trace_diff: List[Tuple[str, str, str, str]] = []
-
-        while idx_from < len_from or idx_to < len_to:
-            entryA = from_cflog[idx_from] if idx_from < len_from else None
-            entryB = to_cflog[idx_to] if idx_to < len_to else None
-
-            if not verbose:
-                # show only last entry of callstack in non-verbose mode - it's often enough detail.
-                if entryA is not None and len(entryA[1]) > 0:
-                    callstackA = entryA[1][-1]
-                else:
-                    callstackA = None
-
-                if entryB is not None and len(entryB[1]) > 0:
-                    callstackB = entryB[1][-1]
-                else:
-                    callstackB = None
-
-            else:
-                callstackA = entryA[1]
-                callstackB = entryB[1]
-
-            if entryA is None:
-                trace_diff.append(
-                    (
-                        None,
-                        None,
-                        callstackB,
-                        entryB[0],
-                    )
-                )
-                idx_to += 1
-                continue
-
-            if entryB is None:
-                trace_diff.append(
-                    (
-                        entryA[0],
-                        callstackA,
-                        None,
-                        None,
-                    )
-                )
-                idx_from += 1
-                continue
-
-            # same bytes were processed in the two runs by different functionality
-            if entryA[0] == entryB[0]:
-                trace_diff.append(
-                    (
-                        entryA[0],
-                        callstackA,
-                        callstackB,
-                        entryB[0],
-                    )
-                )
-                idx_from += 1
-                idx_to += 1
-            else:
-                # check if we should be stepping A or B cflogs
-                # depending on shortest path
-                stepsA = 0
-                stepsB = 0
-
-                while idx_from + stepsA < len_from:
-                    if from_cflog[idx_from + stepsA][0] == entryB[0]:
-                        break
-                    stepsA += 1
-
-                while idx_to + stepsB < len_to:
-                    if to_cflog[idx_to + stepsB][0] == entryA[0]:
-                        break
-                    stepsB += 1
-
-                if stepsA < stepsB:
-                    # bytesA, callA, callB, bytesB
-                    trace_diff.append(
-                        (
-                            entryA[0],
-                            callstackA,
-                            None,
-                            None,
-                        )
-                    )
-                    idx_from += 1
-                else:
-                    # bytesA, callA, callB, bytesB
-                    trace_diff.append(
-                        (
-                            None,
-                            None,
-                            callstackB,
-                            entryB[0],
-                        )
-                    )
-                    idx_to += 1
-
-        return trace_diff
+        return
 
     def find_divergence(
         self,
@@ -631,19 +610,21 @@ class Analysis:
             ]
         ] = []
 
-        for (
-            from_bytes,
-            from_callstack,
-            to_callstack,
-            to_bytes,
-        ) in self.get_differential_entries(
-            from_cflog, to_cflog, use_graphtage=True, verbose=verbose
+        for from_node, to_node in self.get_differential_entries(
+            from_cflog, to_cflog, use_graphtage=True
         ):
-            from_bytes = frozenset(from_bytes)
-            to_bytes = frozenset(to_bytes)
-            trace.append((from_bytes, from_callstack, to_callstack, to_bytes))
-            bytes_operated_from |= from_bytes
-            bytes_operated_to |= to_bytes
+            from_node.input_bytes = frozenset(from_node.input_bytes)
+            to_node.input_bytes = frozenset(to_node.input_bytes)
+            trace.append(
+                (
+                    from_node.input_bytes,
+                    from_node.callstack,
+                    to_node.callstack,
+                    to_node.input_bytes,
+                )
+            )
+            bytes_operated_from |= from_node.input_bytes
+            bytes_operated_to |= to_node.input_bytes
 
         console = Console()
 
@@ -687,19 +668,23 @@ class Analysis:
         verbose: bool = False,
     ) -> None:
         """Build and print the aligned differential."""
-        cflogA = self.get_cflog_entries(tdagA, functions_list_A)
+        cflogA: CFLog = self.get_cflog_entries(tdagA, functions_list_A)
         if cavities:
-            interleavedA = self.interleave_file_cavities(tdagA, cflogA)
+            interleavedA = self.interleave_file_cavities(
+                tdag=tdagA, cflog_entries=cflogA.entries
+            )
             if verbose:
                 print("Using interleaved cavities and TDAG A...")
-            cflogA = interleavedA
+            cflogA.entries = interleavedA
 
-        cflogB = self.get_cflog_entries(tdagB, functions_list_B)
+        cflogB: CFLog = self.get_cflog_entries(tdagB, functions_list_B)
         if cavities:
-            interleavedB = self.interleave_file_cavities(tdagB, cflogB)
+            interleavedB = self.interleave_file_cavities(
+                tdag=tdagB, cflog_entries=cflogB.entries
+            )
             if verbose:
                 print("Using interleaved cavities and TDAG B...")
-            cflogB = interleavedB
+            cflogB.entries = interleavedB
 
         table = Table(title="Trace Differentials", show_lines=True, width=132)
         table.add_column(
@@ -712,27 +697,22 @@ class Analysis:
             Text("Trace B Input Bytes", style="blue"), justify="left", no_wrap=False
         )
 
-        for (
-            from_bytes,
-            from_callstack,
-            to_callstack,
-            to_bytes,
-        ) in self.get_differential_entries(
-            cflogA, cflogB, use_graphtage=True, verbose=verbose
+        for from_node, to_node in self.get_differential_entries(
+            cflogA, cflogB, use_graphtage=True
         ):
-            if not from_callstack and not to_callstack:
+            if not from_node.callstack and not to_node.callstack:
                 callstack = Text("Unknown Callstack", style="italic red")
-            elif not from_callstack:
+            elif not from_node.callstack:
                 callstack = "[gray],[/gray] ".join(
-                    f"[magenta]{c}[/magenta]" for c in to_callstack
+                    f"[magenta]{c}[/magenta]" for c in to_node.callstack
                 )
-            elif not to_callstack:
+            elif not to_node.callstack:
                 callstack = "[gray],[/gray] ".join(
-                    f"[magenta]{c}[/magenta]" for c in from_callstack
+                    f"[magenta]{c}[/magenta]" for c in from_node.callstack
                 )
             else:
-                from_func = from_callstack[-1]
-                to_func = to_callstack[-1]
+                from_func = from_node.callstack[-1]
+                to_func = to_node.callstack[-1]
                 if from_func == to_func:
                     callstack = f"[gray]…,[/gray] [magenta]{from_func}[/magenta]"
                 else:
@@ -741,10 +721,10 @@ class Analysis:
                         f"[magenta]{to_func}[/magenta]"
                     )
             from_bytes_text = f"[gray],[/gray]".join(
-                f"[blue]{b}[/blue]" for b in from_bytes
+                f"[blue]{b}[/blue]" for b in from_node.input_bytes
             )
             to_bytes_text = f"[gray],[/gray]".join(
-                f"[blue]{b}[/blue]" for b in to_bytes
+                f"[blue]{b}[/blue]" for b in to_node.input_bytes
             )
             table.add_row(from_bytes_text, callstack, to_bytes_text)
         Console().print(table)
