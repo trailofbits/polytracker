@@ -240,6 +240,7 @@ class TDControlFlowLogSection:
         # very large traced inputs `mem` can get unwieldy and OOMs are possible
         self.cflog_section_start = hdr.offset
         self.cflog_section_end = hdr.offset + hdr.size - 1
+        # todo(kaoudis) if the passed in memory is an xz-compressed file, __iter__() will fail with TypeError: a bytes-like object is required, not 'CompressedTDFile'
         self.mem_reference = mem
         # Call function_id_mapping to set funcmapping before use of cflog.
         self.funcmapping = None
@@ -280,7 +281,7 @@ class TDControlFlowLogSection:
         callstack = []
         event: TDControlFlowLogSection.Event = None
         mem_index = self.cflog_section_start
-        for idx in trange(
+        for _ in trange(
             self.cflog_section_start,
             self.cflog_section_end,
             desc="reading CF log",
