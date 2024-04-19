@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from ..analysis import Analysis, CachedTDAGTraverser, CFLog, CFLogEntry
 from json import load
 from pathlib import Path
@@ -201,6 +203,8 @@ class TestAnalysis:
         functionid_json,
         functionid_json2,
     ):
+        print("Warning: this test is very slow; expect to see some progress bars")
+
         cflogA: CFLog = self.analysis.get_cflog_entries(
             tdProgramTrace.tdfile, functionid_json
         )
@@ -216,45 +220,12 @@ class TestAnalysis:
             cflogA, cflogB, use_graphtage=True
         )
 
-        for wo_graph, w_graph in zip(diff_without_graphtage, diff_with_graphtage):
-            assert wo_graph[0] == w_graph[0]
-            assert wo_graph[1] == w_graph[1]
+        # graphtage matches BOTH in the forward and backward directions;
+        # note that our algorithm from the ubet paper only matched forward
+        assert len(tuple(diff_without_graphtage)) <= len(tuple(diff_with_graphtage))
 
-    # def test_get_differential_entries_verbose(
-    #     self,
-    #     tdProgramTrace: TDProgramTrace,
-    #     tdProgramTrace2: TDProgramTrace,
-    #     functionid_json,
-    #     functionid_json2,
-    # ):
-    #     pass
-
-    # def test_get_differential_entries_with_graphtage(
-    #     self,
-    #     tdProgramTrace: TDProgramTrace,
-    #     tdProgramTrace2: TDProgramTrace,
-    #     functionid_json,
-    #     functionid_json2,
-    # ):
-    #     """Since graphtage adds lookbehind, the graphtage entryset should be always bigger or equal!"""
-    #     cflogA = self.analysis.get_cflog_entries(tdProgramTrace.tdfile, functionid_json)
-    #     cflogB = self.analysis.get_cflog_entries(
-    #         tdProgramTrace2.tdfile, functionid_json2
-    #     )
-    #     lookahead_only_differential = tuple(
-    #         self.analysis.get_differential_entries(
-    #             cflogA, cflogB, use_graphtage=False, verbose=True
-    #         )
-    #     )
-    #     assert len(lookahead_only_differential) >= len(cflogA.entries)
-    #     assert len(lookahead_only_differential) >= len(cflogB.entries)
-
-    #     differential_with_graphtage = tuple(
-    #         self.analysis.get_differential_entries(cflogA, cflogB, verbose=True)
-    #     )
-
-    #     for entry in lookahead_only_differential:
-    #         assert entry in differential_with_graphtage
+        for wo_graph in diff_without_graphtage:
+            assert wo_graph in diff_with_graphtage
 
     # def test_interleaved_differential(
     #     self,
