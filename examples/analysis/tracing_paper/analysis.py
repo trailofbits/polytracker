@@ -553,39 +553,33 @@ class Analysis:
         if not use_graphtage:
             self.get_lookahead_only_diff_entries(from_cflog.entries, to_cflog.entries)
         else:
+            print("yo")
             diff = from_cflog.diff(to_cflog)
+            print("blorp")
             if diff.edit is None:
                 print("Both cflogs are identical!")
                 return
             elif not isinstance(diff.edit, SequenceEdit):
                 raise ValueError(f"Unexpected edit type: {diff.edit!r}")
             for edit in diff.edit.edits():
+                print(edit)
                 assert isinstance(edit.from_node, CFLogEntry)
-                to_yield: List[Tuple[Optional[CFLogEntry], Optional[CFLogEntry]]] = []
                 if isinstance(edit, Match):
                     assert isinstance(edit.to_node, CFLogEntry)
-                    to_yield.append((edit.from_node, edit.to_node))
+                    yield (edit.from_node, edit.to_node)
                 elif isinstance(edit, Replace):
-                    to_yield.append((edit.from_node, None))
-                    to_yield.append((None, edit.to_node))
+                    yield (edit.from_node, None)
+                    yield (None, edit.to_node)
                 elif isinstance(edit, Insert):
-                    to_yield.append((None, edit.from_node))
+                    yield (None, edit.from_node)
                 elif isinstance(edit, Remove):
-                    to_yield.append((edit.from_node, None))
+                    yield (edit.from_node, None)
                 elif isinstance(edit, dataclasses.DataClassEdit):
                     assert isinstance(edit.from_node, CFLogEntry)
                     assert isinstance(edit.to_node, CFLogEntry)
-                    to_yield.append((edit.from_node, edit.to_node))
+                    yield (edit.from_node, edit.to_node)
                 else:
                     raise NotImplementedError(repr(edit))
-                for from_node, to_node in to_yield:
-                    assert from_node is not None or to_node is not None
-                    if from_node is None:
-                        yield (), (), to_node.callstack, to_node.input_bytes
-                    elif to_node is None:
-                        yield from_node.input_bytes, from_node.callstack, (), ()
-                    else:
-                        yield from_node.input_bytes, from_node.callstack, to_node.callstack, to_node.input_bytes
         return
 
     def find_divergence(
