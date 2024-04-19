@@ -25,29 +25,18 @@ Other approaches to binary diffing or patch diffing can rely on pattern matching
 We can't do more complex pattern matching over two full TDAGs because a) we don't know what pattern we are looking for, other than "these things are not alike, probably roughly in the area of a particular function(s) or in a CFG involving a particular function(s)", and b) even if we knew roughly what pattern we were looking for, this would be extremely expensive (graphtage needs the whole of both strings in memory to match them; we have examples where two whole tdags do not fit in memory; would take forever to complete even if we had a machine with hardware allowing such a computation).
 
 ## Windowing
-Graphtage operates both forward and backward, so we don't need to worry about intentionally going backward or forward *within* a window. Execution traces (ergo, diffs between them) are always in "time order".
+If we work forward in time (the direction of each trace) to obtain each window, windowing the traces from end to start, we will either eventually encounter at least one divergence between traces, or we will come all the way to the end of at least one trace.
 
-If we work backward in time to obtain each window, windowing the traces from end to start, we will either eventually encounter at least one divergence between traces, or we will encounter no divergences and come all the way to the beginning of the trace.
-
-If we work backward (window by window) from where we know a divergence resulted from a program trace halting early, or significantly differing from its comparison-side for more than, say, a single function (several functions differed; different conditionals seemed to be hit) to the beginning of the program, we should "rewind" through the guards and other function changes between accepting improperly formed input, and the ultimate consequences of accepting that input.
+If we work forward (window by window) from the start of the program to where the divergence becomes really apparent (in the case of, say, a buffer overflow, where the overflow occurs), we should iterate through the guards and other function changes between accepting improperly formed input, and the ultimate consequences of accepting that input.
 
 If we encounter no divergences in our updated (patched) version run on the PoC from the known-vulnerable version without the patch, we can assume the vulnerability is fully unaddressed by the patch.
 
 ### Example
-Comparing [ a, b, c, d, e, f, z, s, t, u ] <-> [ a, b, c, d, e, f, z, g, h, i ] we would save the compared window in execution-order (meaning this window would go into the last slot, instead of the first) into our diff result: [ , u <-> i] and continue. The next iteration would give us
-[ , t <-> h, u <-> i ], the one after that [ , s <-> g, t <-> h, u <-> i ], and so on. This enables us to, in the best case, stop when we hit the window z <-> z (or for more precision/confidence, we could continue for one more window just to be sure, since f <-> f also matches up exactly). Then, we know the origin of the divergence is within the window s <-> g, meaning relevant changes are likely to start there.
-
-### Example
-Comparing [ d, e, f, g, h ] and [ d, e, f, g, h ], we would go all the way to d <-> d in the worst case.
+Comparing [ a, b, c, d, e, f, z, s, t, u ] <-> [ a, b, c, d, e, f, z, g, h, i ] we would save the first different compared window in trace-order into our diff result: [s <-> g, ] and continue. The next iteration would give us
+[ s <-> g, t <-> h, ], and so on. Then, we know the origin of the divergence is within the window s <-> g, meaning relevant changes from the patched software version are likely to start there.
 
 ## Precision
-With the addition of a "precision" value that sets the number of windows that are allowed to match fully before we stop comparing windows to see if there are divergences, we could roughly tune how much extra work we have to do per comparison. If we encounter any divergence, we add the window to our set of windows that will eventually become the diff:
-
-### Example
-Assume we start with precision=1. Comparing [ a, b, c, d, s, f, g, h ] and [ a, b, c, d, e, f, g, h ] we would see h <-> h and drop that window, g <-> g and drop that window, f <-> f and drop that window, but would add s <-> e into our diff [ ,  s <-> e ]. We would stop comparing when we see d <-> d (or, with greater precision say p=2, we would stop comparing once we see both d <-> d and c <-> c).
-
-### Example
-Assume we start with precision=1 again. Comparing [ f, a, b, c, d ] and [ a, b, c, d ] if we have too low precision would count these traces equal before getting to f <-> ''. If we had no arbitrary stop-precision value set, or if it were the case that p>=5, we'd make it all the way to f <-> ''.
+With the addition of a "precision" value that sets the number of windows that are allowed to match fully before we stop comparing windows to see if there are divergences, we could roughly tune how much extra work we have to do per comparison. If we encounter any divergence, we add the window to our set of windows that will eventually become the diff.
 
 ### What goes in a window?
 Graphtage needs the full contents of the two sides A and B that it will compare in memory in order to be able to work, so we need to be able to load the labels and cflog parts we need (or any other redesigned data structure) window by window for both traces A and B. This means breaking up our computational work of constructing each trace control flow log, so that we only ever create and operate over window-sized things thus don't OOM.
@@ -71,5 +60,8 @@ If we use the Python `resource` module or similar to cap used process memory (so
 #### Slightly less contrived example
 Say we first use `psutil`'s `virtual_memory` statistics to figure out the total available system memory. To be on the safe side, following the rule in the previous example where we used 70% of available memory for our data, let's say we take `((psutil.virtual_memory().available * .7) * .7) / 4` as a reasonable starting point for a window size for either the cflog, or for the labels section. We're taking 70% of everything on the system available now, then taking 70% of that. This should give us enough overhead both to do other tasks on the system, and to do the processing we need to do of these big data structures.
 
+### Parallelizing operations over windows
+Windowing also opens up the possibility of parallelization. We could operate over several smaller windows at the same time and then save their results in trace execution order. One strategy could be to correspondingly tune window sizing by the number of parallel operations requested, keeping in mind the needed increase in computational power.
+
 ## Other applications
-This idea could also be (and historically was) extended to comparing variations of the same algorithm (such as different program versions produced by turning on and off command line flags), but there is a point at which such comparisons start to lose value (all divergences) because our representation is so granular. Comparing program variations in the presence of undefined behavior helped that undefined behavior become more visible.
+This idea could also be (and historically was) extended to comparing variations of the same algorithm (such as different program versions produced by turning on and off command line flags), but there is a point in program version difference at which such comparisons start to lose value (for example, when comparing two totally differently implemented programs even if they implement the same algorithm, it becomes unclear why there are divergences, and there are a great many divergences rather than a few) because our representation is so granular. Comparing program variations in the presence of undefined behavior helped that undefined behavior become more visible.
