@@ -1,6 +1,9 @@
 # Tracing Paper
 Copy or pass through this directory into your Polytracker container in order to use it in the environment where the software you are testing and tracing can be instrumented and run.
 
+# Requirements
+Graphtage (a dependency of our analysis code) is incompatible with Python < 3.10. You will get weird slots / inheritance errors if you try with any Python < 3.10. Everything works well with 3.11.1. 
+
 # Analyses
 One TDAG:
 - Control flow log `--cflog`
