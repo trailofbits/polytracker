@@ -18,8 +18,10 @@ from graphtage import (
     Replace,
     StringNode,
 )
+import functools
 import graphtage.printer as printer_module
 from graphtage.sequences import SequenceEdit
+import itertools
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -63,9 +65,9 @@ class CFLogEntry(dataclasses.DataClassNode):
         self.is_cavity = False
 
     @classmethod
-    def cavity(cls, input_bytes: Iterable[int]):
+    def cavity(self, input_bytes: CavityType):
         """A cavity has no callstack, since a cavity is a set of input bytes that was not operated on"""
-        return cls(input_bytes, callstack=())
+        return self(input_bytes, callstack=())
 
     def __hash__(self):
         return hash((self.input_bytes, self.callstack, self.is_cavity))
@@ -260,123 +262,97 @@ class CachedTDAGTraverser:
                         t.refresh()
 
 
-# def ancestor_input_set(
-#     first_label: int, tdag: TDFile
-# ) -> Iterator[taint_dag.TDSourceNode]:
-#     """Returns the subset of source nodes that directly taint `first_label` by way of traversing the taint forest from the starting point of `first_label`."""
-#     q: List[int] = [first_label]
-#     seen_labels: Set[int] = set()
-#     while q:
-#         label = q.pop()
-#         if label in seen_labels:
-#             continue
-#         seen_labels.add(label)
-
-#         node: taint_dag.TDNode = tdag.decode_node(label)
-#         if isinstance(node, taint_dag.TDSourceNode):
-#             yield node
-#         elif isinstance(node, taint_dag.TDUnionNode):
-#             q.append(node.right)
-#             q.append(node.left)
-#         elif isinstance(node, taint_dag.TDRangeNode):
-#             for range_label_number in range(node.first, node.last + 1):
-#                 q.append(range_label_number)
-
-
 class Analysis:
-    def node_equals(self, n1: taint_dag.TDNode, n2: taint_dag.TDNode) -> bool:
-        """Polytracker TDAG node comparator."""
-        if type(n1) is not type(n2):
-            return False
+    def get_cflog(self, tdag: TDFile, functions_list, with_cavities=False) -> CFLog:
+        """A placeholder for now: returns the entire CFLog, though we will
+        eventually want to experiment with different window types (sliding vs
+        fixed, size of window, etc.)"""
+        return CFLog(self._get_cflog_entries(tdag, functions_list, with_cavities))
 
-        if n1.affects_control_flow != n2.affects_control_flow:
-            return False
+    def _get_cavities(self, tdag: TDFile) -> List[CFLogEntry]:
+        """Builds the Input/Output mapping for the tdag so that we can figure
+        out which input offsets were never operated on (are cavities). Like
+        with the CFLog computations, this can be expensive if the tdag is very
+        large."""
+        file_cavities = InputOutputMapping(tdag).file_cavities()
+        cavs: List[CFLogEntry] = []
+        for input_file_name in file_cavities:
+            # there should be one valid input path since we traced one input
+            for cavity in file_cavities[input_file_name]:
+                cavs.append(CFLogEntry.cavity(cavity))
+            break
+        return cavs
 
-        if isinstance(n1, taint_dag.TDSourceNode):
-            return n1.idx == n2.idx and n1.offset == n2.offset
-        elif isinstance(n1, taint_dag.TDUnionNode):
-            return n1.left == n2.left and n1.right == n2.right
-        elif isinstance(n1, taint_dag.TDRangeNode):
-            return n1.first == n2.first and n1.last == n2.last
-
-        assert isinstance(n1, taint_dag.TDUntaintedNode)
-        return True
-
-    def input_offsets(self, tdag: TDFile) -> Dict[int, List[taint_dag.TDNode]]:
-        """Return the full organized set of tdag labels by input byte offset. Squashes labels that descend from the same input offset(s) iff they are duplicates."""
-        offsets: Dict[int, List[taint_dag.TDNode]] = {}
-        for input_label in tdag.input_labels():
-            tdnode: taint_dag.TDNode = tdag.decode_node(input_label)
-            offset: int = tdnode.offset
-
-            if offset in offsets:
-                offsets[offset].append(tdnode)
-            else:
-                offsets[offset] = [tdnode]
-
-        # Squash multiple labels at same offset if they are equal
-        for offset, tdnode in offsets.items():
-            if all(self.node_equals(node, tdnode[0]) for node in tdnode):
-                offsets[offset] = tdnode[:1]
-        return offsets
-
-    def get_cflog_entries(self, tdag: TDFile, functions_list, verbose=False) -> CFLog:
-        """Maps the function ID JSON to the TDAG control flow log."""
-        cflog = tdag._get_section(taint_dag.TDControlFlowLogSection)
-
-        demangled_functions_list = []
+    def _demangle_function_ids(self, functions_list) -> List[str]:
+        demangled_functions_list: List[str] = []
         for function in functions_list:
             try:
                 demangled_functions_list.append(cxxfilt.demangle(function))
             except cxxfilt.InvalidName:
-                if verbose:
-                    print(
-                        f"Unable to demangle '{function}' since cxx.InvalidName was raised; attempting to continue "
-                        f"without demangling that function name anyway..."
-                    )
+                # if we can't demangle it, just keep the opaque name
                 demangled_functions_list.append(function)
+        return demangled_functions_list
 
-        cflog.function_id_mapping(demangled_functions_list)
-
+    def _get_cflog_entries(
+        self, tdag: TDFile, functions_list, with_cavities=False
+    ) -> Iterable[CFLogEntry]:
+        """Maps the function ID JSON to the TDAG control flow log."""
+        cflog_tdag_section = tdag._get_section(taint_dag.TDControlFlowLogSection)
+        cflog_tdag_section.function_id_mapping(
+            self._demangle_function_ids(functions_list)
+        )
+        cflog_size = len(cflog_tdag_section)
         traverser = CachedTDAGTraverser(tdag, max_size=16384)
+
         # each cflog entry has a callstack and a label
-        entries = []
-        for i, event in enumerate(
-            tqdm(
-                cflog,
+        if not with_cavities:
+            for event in tqdm(
+                cflog_tdag_section,
                 desc="tracing",
                 leave=False,
                 unit="CFLog Entries",
-                total=len(cflog),
-            )
-        ):
-            if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
-                continue
-            # print(f"{i}/{len(cflog)}")
-            entries.append(
-                CFLogEntry(
+                total=cflog_size,
+            ):
+                if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
+                    continue
+                yield CFLogEntry(
                     (n.offset for n in traverser[event.label]),
                     event.callstack,
                 )
-            )
-        # return CFLog(entries)
-        return CFLog(
-            (
-                CFLogEntry(
-                    # (n.offset for n in ancestor_input_set(event.label, tdag)),
-                    (n.offset for n in traverser[event.label]),
+            return
+        else:
+            cavities: List[CFLogEntry] = self._get_cavities(tdag)
+
+            for event in tqdm(
+                cflog_tdag_section,
+                desc="tracing",
+                leave=False,
+                unit="CFLog entries interleaved with cavities",
+                total=cflog_size,
+            ):
+                if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
+                    continue
+
+                input_bytes: List[int] = [n.offset for n in traverser[event.label]]
+
+                # put the cavity in front of the first cflog entry containing a
+                # greater than or equal input byte offset
+                if cavities[0].input_bytes[-1] <= input_bytes[0]:
+                    yield cavities[0]
+                    cavities.pop(0)
+
+                yield CFLogEntry(
+                    input_bytes,
                     event.callstack,
                 )
-                for event in tqdm(
-                    cflog,
-                    desc="tracing",
-                    leave=False,
-                    unit="CFLog Entries",
-                    total=len(cflog),
-                )
-                if isinstance(event, taint_dag.TDTaintedControlFlowEvent)
-            )
-        )
+
+            # there may still be cavity entries left after there are no
+            # more tainted control flow events!
+            if len(cavities) > 0:
+                for cavity in cavities:
+                    yield cavity
+
+            return
 
     def stringify_list(self, list) -> str:
         """Turns a list of byte offsets or a callstack into a printable string."""
@@ -426,62 +402,16 @@ class Analysis:
             )
         )
 
-    def interleave_file_cavities(
+    def show_cflog(
         self,
         tdag: TDFile,
-        cflog_entries: Tuple[CFLogEntry, ...],
-        verbose=False,
-    ) -> Tuple[CFLogEntry, ...]:
-        """Put each cavity before the most relevant cflog entry. If any cavities remain, put them on the end of the interleaved list."""
-        cavity_byte_sets: List[CavityType]
-        file_cavities = InputOutputMapping(tdag).file_cavities()
-        for input_file_name in file_cavities:
-            if verbose:
-                print(
-                    f"Unused byte sections were observed from within instrumented program run on input '{input_file_name}';\n they will be interleaved in the below control flow log output..."
-                )
-            cavity_byte_sets: List[CavityType] = file_cavities[input_file_name]
-            # there should be only one valid path since we traced a single input
-            break
-
-        interleaved_output: Tuple[CFLogEntry, ...] = []
-        for previous_cflog_entry, cflog_entry in zip(
-            () + cflog_entries[:-1], cflog_entries
-        ):
-            # put each cavity before the most relevant cflog entry
-            byte_set: CavityType
-            for byte_set in cavity_byte_sets:
-                if previous_cflog_entry is not None and (
-                    previous_cflog_entry.input_bytes[-1] <= int(byte_set[0])
-                    and previous_cflog_entry.input_bytes[-1] <= int(byte_set[-1])
-                    and cflog_entry.input_bytes[0] >= int(byte_set[-1])
-                ):
-                    interleaved_output += CFLogEntry.cavity(byte_set)
-                    print(f"{interleaved_output[-1]}")
-                    cavity_byte_sets.remove(byte_set)
-            interleaved_output += cflog_entry
-
-        for remainder_set in cavity_byte_sets:
-            interleaved_output += CFLogEntry.cavity(remainder_set)
-
-        return interleaved_output
-
-    def show_cflog(
-        self, tdag: TDFile, function_id_json, cavities=False, verbose=False
+        function_id_json,
+        cavities=False,
     ) -> None:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
-        cflog: CFLog = self.get_cflog_entries(tdag, function_id_json, verbose)
-
-        print("bang! got the cflog")
-        if cavities:
-            interleaved = self.interleave_file_cavities(tdag, cflog, verbose)
-            for entry in interleaved:
-                # entry structure = tuple(label, list(callstackEntry, ...))
-                # show only the last function entry in the callstack
-                self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
-        else:
-            for entry in cflog:
-                self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
+        cflog: CFLog = self.get_cflog(tdag, function_id_json, with_cavities=cavities)
+        for entry in cflog:
+            self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
 
     def get_lookahead_only_diff_entries(
         self,
@@ -551,18 +481,16 @@ class Analysis:
         does not match. This matches up control flow log entries from each tdag. Return the matched-up, printable diff
         structure."""
         if not use_graphtage:
+            # todo(kaoudis): once no longer needed, remove lookahead only
             self.get_lookahead_only_diff_entries(from_cflog.entries, to_cflog.entries)
         else:
-            print("yo")
             diff = from_cflog.diff(to_cflog)
-            print("blorp")
             if diff.edit is None:
                 print("Both cflogs are identical!")
                 return
             elif not isinstance(diff.edit, SequenceEdit):
                 raise ValueError(f"Unexpected edit type: {diff.edit!r}")
             for edit in diff.edit.edits():
-                print(edit)
                 assert isinstance(edit.from_node, CFLogEntry)
                 if isinstance(edit, Match):
                     assert isinstance(edit.to_node, CFLogEntry)
@@ -588,12 +516,11 @@ class Analysis:
         to_tdag: TDFile,
         from_functions_list,
         to_functions_list,
-        verbose: bool = False,
         input_file: Optional[Path] = None,
     ):
-        from_cflog = self.get_cflog_entries(from_tdag, from_functions_list)
+        from_cflog = self.get_cflog(from_tdag, from_functions_list)
         print("Loaded CFLOG A")
-        to_cflog = self.get_cflog_entries(to_tdag, to_functions_list)
+        to_cflog = self.get_cflog(to_tdag, to_functions_list)
         print("Loaded CFLOG B")
 
         bytes_operated_from: Set[int] = set()
@@ -659,26 +586,10 @@ class Analysis:
         functions_list_A,
         functions_list_B,
         cavities: bool = False,
-        verbose: bool = False,
     ) -> None:
         """Build and print the aligned differential."""
-        cflogA: CFLog = self.get_cflog_entries(tdagA, functions_list_A)
-        if cavities:
-            interleavedA = self.interleave_file_cavities(
-                tdag=tdagA, cflog_entries=cflogA.entries
-            )
-            if verbose:
-                print("Using interleaved cavities and TDAG A...")
-            cflogA.entries = interleavedA
-
-        cflogB: CFLog = self.get_cflog_entries(tdagB, functions_list_B)
-        if cavities:
-            interleavedB = self.interleave_file_cavities(
-                tdag=tdagB, cflog_entries=cflogB.entries
-            )
-            if verbose:
-                print("Using interleaved cavities and TDAG B...")
-            cflogB.entries = interleavedB
+        cflogA: CFLog = self.get_cflog(tdagA, functions_list_A, with_cavities=cavities)
+        cflogB: CFLog = self.get_cflog(tdagB, functions_list_B, with_cavities=cavities)
 
         table = Table(title="Trace Differentials", show_lines=True, width=132)
         table.add_column(
