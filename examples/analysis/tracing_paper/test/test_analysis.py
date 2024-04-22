@@ -51,6 +51,18 @@ class TestAnalysis:
             tdProgramTrace.tdfile, functionid_json, with_cavities=True
         )
 
+        for prev, entry in zip(() + cflog.entries[:-1], cflog.entries):
+            assert entry is not None
+            if prev is not None and prev.callstack is None:
+                assert prev.input_bytes[-1] <= entry.input_bytes[0]
+                assert prev.input_bytes[-1] <= entry.input_bytes[-1]
+
+        for entry, next in zip(cflog.entries, cflog.entries[1:] + ()):
+            assert entry is not None
+            if next is not None and entry.callstack is None:
+                assert entry.input_bytes[-1] <= next.input_bytes[0]
+                assert entry.input_bytes[-1] <= next.input_bytes[-1]
+
         cflog_no_cavities: CFLog = self.analysis.get_cflog(
             tdProgramTrace.tdfile, functionid_json, with_cavities=False
         )

@@ -336,10 +336,18 @@ class Analysis:
                 input_bytes: List[int] = [n.offset for n in traverser[event.label]]
 
                 # put the cavity in front of the first cflog entry containing a
-                # greater than or equal input byte offset
-                if cavities[0].input_bytes[-1] <= input_bytes[0]:
-                    yield cavities[0]
-                    cavities.pop(0)
+                # greater than or equal input LAST byte offset (could also use
+                # itertools.takewhile, but I think that might be slower lol)
+                for cavity in cavities:
+                    if (
+                        cavity.input_bytes[-1] <= input_bytes[0]
+                        and cavity.input_bytes[-1] <= input_bytes[-1]
+                    ):
+                        yield cavity
+                        cavities.pop(0)
+                    else:
+                        # take as many cavities as should come before the current cflog entry
+                        break
 
                 yield CFLogEntry(
                     input_bytes,
