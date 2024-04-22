@@ -72,6 +72,7 @@ class TestAnalysis:
         file_cavities_raw = InputOutputMapping(tdProgramTrace.tdfile).file_cavities()
         for file_path in file_cavities_raw:
             cavities = file_cavities_raw[file_path]
+            assert len(cavities) > 0
             for byte_set in cavities:
                 # ensure we didn't drop the last few accidentally even if they are "off the end" of the cflog ie end of input file unused
                 assert CFLogEntry.cavity(byte_set) in cflog
