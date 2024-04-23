@@ -17,7 +17,7 @@ if [ "$python_version" -lt "310" ]; then
 	exit 1
 fi
 
-python3 -m pytest -s test/test_analysis.py \
+python3 -m pytest -s test/ \
 	--tdag ../ubet/output/Debug.tdag \
 	--tdag2 ../ubet/output/Release.tdag \
 	--json ../ubet/output/debug_fid.json \

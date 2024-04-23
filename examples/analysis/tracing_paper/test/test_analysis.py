@@ -19,7 +19,8 @@ class TestAnalysis:
 
     @pytest.fixture
     def functionid_json(self, json):
-        return load(Path(json).open())
+        with open(Path(json)) as json_file:
+            return load(json_file)
 
     @pytest.fixture
     def tdProgramTrace2(self, tdag2) -> TDProgramTrace:
@@ -29,7 +30,8 @@ class TestAnalysis:
 
     @pytest.fixture
     def functionid_json2(self, json2):
-        return load(Path(json2).open())
+        with open(Path(json2)) as json_file:
+            return load(json_file)
 
     def test_get_cflog(self, tdProgramTrace, functionid_json):
         cflog: CFLog = self.analysis.get_cflog(tdProgramTrace.tdfile, functionid_json)
