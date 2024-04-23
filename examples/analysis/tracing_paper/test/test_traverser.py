@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 from ..traverser import CachingTDAGTraverser
-from json import load
-from pathlib import Path
 from polytracker import PolyTrackerTrace, TDFile, taint_dag
 import pytest
 
@@ -23,7 +21,7 @@ class TestTraverser:
             assert cflog_entry.label in traverser._cache
 
     def test_cache_sizing(self, tdfile):
-        max_size = 5
+        max_size = 5  # a nice small number; not appropriate for actual usage
         traverser = CachingTDAGTraverser(tdfile, max_size)
         cflog_tdag_section = tdfile._get_section(taint_dag.TDControlFlowLogSection)
 
