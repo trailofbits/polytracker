@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 
-from functools import partialmethod
-import heapq
-from pathlib import Path
-from typing import Dict, FrozenSet, Iterable, Iterator, List, Optional, Set, Tuple
-
 import cxxfilt
+import functools
 from graphtage import (
     dataclasses,
     GraphtageFormatter,
@@ -18,20 +14,20 @@ from graphtage import (
     Replace,
     StringNode,
 )
-import functools
 import graphtage.printer as printer_module
 from graphtage.sequences import SequenceEdit
-import itertools
+import heapq
+from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 from tqdm import tqdm
+from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
 
-
-tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
+from .traverser import CachingTDAGTraverser
 
 
 class CallStackEntry(LeafNode):
@@ -62,11 +58,14 @@ class CFLogEntry(dataclasses.DataClassNode):
         )
         self.input_bytes: Tuple[int, ...] = input_bytes
         self.callstack: Tuple[str, ...] = callstack
-        self.is_cavity = False
+        if len(callstack) > 0:
+            self.is_cavity = False
+        else:
+            self.is_cavity = True
 
     @classmethod
     def cavity(self, input_bytes: CavityType):
-        """A cavity has no callstack, since a cavity is a set of input bytes that was not operated on"""
+        """A cavity has no callstack, since a cavity is a set of input bytes that was not operated on."""
         return self(input_bytes, callstack=())
 
     def __hash__(self):
@@ -195,74 +194,9 @@ class CFLog(ListNode[CFLogEntry]):
         return "\n".join(map(str, self.entries))
 
 
-class CachedTDAGTraverser:
-    def __init__(self, tdag: TDFile, max_size: Optional[int] = None):
-        self.tdag: TDFile = tdag
-        self.max_size: Optional[int] = max_size
-        self._cache: Dict[int, FrozenSet[taint_dag.TDSourceNode]] = {}
-        self._age: List[Tuple[int, int]] = []
-        self._insertions: int = 0
-
-    def _cache_add(self, label: int, source_nodes: FrozenSet[taint_dag.TDSourceNode]):
-        if self.max_size is not None:
-            while len(self._cache) > self.max_size:
-                _, oldest_label = heapq.heappop(self._age)
-                del self._cache[oldest_label]
-            self._insertions += 1
-            heapq.heappush(self._age, (self._insertions, label))
-        self._cache[label] = source_nodes
-
-    def __getitem__(self, item: int) -> FrozenSet[taint_dag.TDSourceNode]:
-        stack: List[Tuple[int, int, List[FrozenSet]]] = [(item, -1, [])]
-        cache_hits = 0
-        with tqdm(
-            desc="finding canonical taints",
-            unit="labels",
-            leave=False,
-            delay=2.0,
-            total=1,
-        ) as t:
-            while True:
-                label, num_parents, ancestor_sets = stack[-1]
-
-                if label in self._cache:
-                    stack.pop()
-                    t.update(1)
-                    cached = self._cache[label]
-                    cache_hits += 1
-                    if not stack:
-                        # we are done
-                        # print(f"Cache hits for {item}: {cache_hits}")
-                        return cached
-                    stack[-1][2].append(cached)
-                    continue
-                elif num_parents == len(ancestor_sets):
-                    ancestors = frozenset.union(*ancestor_sets)
-                    self._cache_add(label, ancestors)
-                    continue
-
-                node: taint_dag.TDNode = self.tdag.decode_node(label)
-                if isinstance(node, taint_dag.TDSourceNode):
-                    self._cache_add(label, frozenset((node,)))
-                    continue
-                elif isinstance(node, taint_dag.TDUnionNode):
-                    if num_parents < 0:
-                        stack[-1] = (label, 2, [])
-                        stack.append((node.left, -1, []))
-                    else:
-                        stack.append((node.right, -1, []))
-                    t.total += 1
-                    t.refresh()
-                elif isinstance(node, taint_dag.TDRangeNode):
-                    if num_parents < 0:
-                        stack[-1] = (label, node.last - node.first + 1, [])
-                    else:
-                        stack.append((node.first + len(ancestor_sets), -1, []))
-                        t.total += 1
-                        t.refresh()
-
-
 class Analysis:
+    console = Console()
+
     def get_cflog(self, tdag: TDFile, functions_list, with_cavities=False) -> CFLog:
         """A placeholder for now: returns the entire CFLog, though we will
         eventually want to experiment with different window types (sliding vs
@@ -284,6 +218,7 @@ class Analysis:
         return cavs
 
     def _demangle_function_ids(self, functions_list) -> List[str]:
+        """Builds the list of function ID waypoints (places we set LLVM instrumentation that will correspond to particular labels)."""
         demangled_functions_list: List[str] = []
         for function in functions_list:
             try:
@@ -302,7 +237,7 @@ class Analysis:
             self._demangle_function_ids(functions_list)
         )
         cflog_size = len(cflog_tdag_section)
-        traverser = CachedTDAGTraverser(tdag, max_size=16384)
+        tdag_traverser = CachingTDAGTraverser(tdag, max_size=16384)
 
         # each cflog entry has a callstack and a label
         if not with_cavities:
@@ -316,7 +251,7 @@ class Analysis:
                 if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
                     continue
                 yield CFLogEntry(
-                    (n.offset for n in traverser[event.label]),
+                    (n.offset for n in tdag_traverser[event.label]),
                     event.callstack,
                 )
             return
@@ -333,7 +268,7 @@ class Analysis:
                 if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
                     continue
 
-                input_bytes: List[int] = [n.offset for n in traverser[event.label]]
+                input_bytes: List[int] = [n.offset for n in tdag_traverser[event.label]]
 
                 # put the cavity in front of the first cflog entry containing a
                 # greater than or equal input LAST byte offset (could also use
@@ -362,64 +297,30 @@ class Analysis:
 
             return
 
-    def stringify_list(self, list) -> str:
-        """Turns a list of byte offsets or a callstack into a printable string."""
-        if list is None or len(list) == 0:
-            return ""
-        else:
-            return ", ".join(map(str, list))
-
-    def print_cols(
-        self,
-        offsets_A=None,
-        callstack_A=None,
-        callstack_B=None,
-        offsets_B=None,
-    ) -> None:
-        # format:  bytesA   callstackA    callstackB  bytesB
-        # -----------------------------------------------------
-        # example: [2,3,4] | f(int foo) != f(int foo) | [5,6,7]
-        # -----------------------------------------------------
-        # example: [2,3,4] | f(int foo) !=
-        # -----------------------------------------------------
-        # example:         |            != f(int foo) | [5,6,7]
-        # -----------------------------------------------------
-        # example: [2,3,4] |             f()          | [2,3,4]
-
-        fn: str = ""
-        if not callstack_A and not callstack_B:
-            fn = "UNKNOWN CALLSTACK"
-        elif not callstack_B:
-            fn = self.stringify_list(callstack_A)
-        elif not callstack_A:
-            fn = self.stringify_list(callstack_B)
-        else:
-            func_A = callstack_A[-1]
-            func_B = callstack_B[-1]
-            if func_A == func_B:
-                return f"…, {func_A}"
-            else:
-                return f"…, {func_A} !!! != !!! …, {func_B}"
-
-        horizontal_separator: str = "-" * (90)
-        print(horizontal_separator)
-
-        print(
-            "| {:<15} | {:^100} | {:>15} |".format(
-                self.stringify_list(offsets_A), fn, self.stringify_list(offsets_B)
-            )
-        )
-
     def show_cflog(
         self,
         tdag: TDFile,
         function_id_json,
+        input_file_name: str,
         cavities=False,
     ) -> None:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
         cflog: CFLog = self.get_cflog(tdag, function_id_json, with_cavities=cavities)
+
+        if input_file_name:
+            self.console.print(
+                f"[green]Control Flow Log from the TDAG '{input_file_name}'[/green]"
+            )
+
+        self.console.print(
+            f"[blue]Number of labels: {tdag.label_count()}; \n"
+            f"Number of cflog entries: {tdag._get_section(taint_dag.TDControlFlowLogSection).event_count}[/blue]"
+        )
         for entry in cflog:
             self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
+            self.console.print(
+                f"\t[magenta]{entry.input_bytes}\t{entry.callstack}[/magenta]"
+            )
 
     def get_lookahead_only_diff_entries(
         self,
@@ -493,7 +394,7 @@ class Analysis:
             self.get_lookahead_only_diff_entries(from_cflog.entries, to_cflog.entries)
         else:
             diff = from_cflog.diff(to_cflog)
-            if diff.edit is None:
+            if diff.edit is None or isinstance(diff.edit, Match):
                 print("Both cflogs are identical!")
                 return
             elif not isinstance(diff.edit, SequenceEdit):
@@ -518,14 +419,52 @@ class Analysis:
                     raise NotImplementedError(repr(edit))
         return
 
-    def find_divergence(
+    def _print_differential(
         self,
-        from_tdag: TDFile,
-        to_tdag: TDFile,
-        from_functions_list,
-        to_functions_list,
+        trace_name: str,
+        all_offsets: Iterable[int],
+        offsets: Set[int],
+        callstack: Iterable[str],
         input_file: Optional[Path] = None,
     ):
+        self.console.print(
+            f"[blue]Trace {trace_name}[/blue] operated on input offsets "
+            f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
+            f"trace at"
+        )
+        if input_file is not None:
+            context, highlights = context_string(input_file, all_offsets, offsets)
+            self.console.print(f"\tContext: {context}")
+            self.console.print(f"\t         {highlights}")
+        for c in callstack:
+            self.console.print(f"\t[magenta]{c}[/magenta]")
+
+    def show_divergence(
+        self, trace, bytes_operated_from, bytes_operated_to, input_file
+    ) -> None:
+        for from_bytes, from_callstack, to_callstack, to_bytes in trace:
+            if from_bytes == to_bytes:
+                continue
+            if from_bytes - bytes_operated_to:
+                self._print_differential(
+                    "A",
+                    from_bytes,
+                    from_bytes - bytes_operated_to,
+                    from_callstack,
+                    input_file,
+                )
+            if to_bytes - bytes_operated_from:
+                self._print_differential(
+                    "B",
+                    to_bytes,
+                    to_bytes - bytes_operated_from,
+                    to_callstack,
+                    input_file,
+                )
+
+    def find_divergence(
+        self, from_tdag: TDFile, to_tdag: TDFile, from_functions_list, to_functions_list
+    ) -> Tuple:
         from_cflog = self.get_cflog(from_tdag, from_functions_list)
         print("Loaded CFLOG A")
         to_cflog = self.get_cflog(to_tdag, to_functions_list)
@@ -535,7 +474,7 @@ class Analysis:
         bytes_operated_to: Set[int] = set()
         trace: List[
             Tuple[
-                Tuple[Frozenset[int], Tuple[str, ...], Tuple[str, ...], Frozenset[int]]
+                Tuple[FrozenSet[int], Tuple[str, ...], Tuple[str, ...], FrozenSet[int]]
             ]
         ] = []
 
@@ -554,38 +493,7 @@ class Analysis:
             )
             bytes_operated_from |= from_node.input_bytes
             bytes_operated_to |= to_node.input_bytes
-
-        console = Console()
-
-        def print_differential(
-            trace_name: str,
-            all_offsets: Iterable[int],
-            offsets: Set[int],
-            callstack: Iterable[str],
-        ):
-            console.print(
-                f"[blue]Trace {trace_name}[/blue] operated on input offsets "
-                f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
-                f"trace at"
-            )
-            if input_file is not None:
-                context, highlights = context_string(input_file, all_offsets, offsets)
-                console.print(f"\tContext: {context}")
-                console.print(f"\t         {highlights}")
-            for c in callstack:
-                console.print(f"\t[magenta]{c}[/magenta]")
-
-        for from_bytes, from_callstack, to_callstack, to_bytes in trace:
-            if from_bytes == to_bytes:
-                continue
-            if from_bytes - bytes_operated_to:
-                print_differential(
-                    "A", from_bytes, from_bytes - bytes_operated_to, from_callstack
-                )
-            if to_bytes - bytes_operated_from:
-                print_differential(
-                    "B", to_bytes, to_bytes - bytes_operated_from, to_callstack
-                )
+        return (trace, bytes_operated_from, bytes_operated_to)
 
     def show_cflog_diff(
         self,
@@ -640,7 +548,7 @@ class Analysis:
                 f"[blue]{b}[/blue]" for b in to_node.input_bytes
             )
             table.add_row(from_bytes_text, callstack, to_bytes_text)
-        Console().print(table)
+        self.console.print(table)
 
     def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
         if cavities:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from ..analysis import Analysis, CachedTDAGTraverser, CFLog, CFLogEntry
+from ..analysis import Analysis, CachingTDAGTraverser, CFLog, CFLogEntry
 from json import load
 from pathlib import Path
-from polytracker import PolyTrackerTrace, TDProgramTrace, taint_dag
+from polytracker import PolyTrackerTrace, TDProgramTrace, TDFile, taint_dag
 from polytracker.mapping import InputOutputMapping
 
 import pytest
@@ -77,28 +77,6 @@ class TestAnalysis:
                 # ensure we didn't drop the last few accidentally even if they are "off the end" of the cflog ie end of input file unused
                 assert CFLogEntry.cavity(byte_set) in cflog
 
-    def test_stringify_list(self):
-        l1 = self.analysis.stringify_list(None)
-        assert l1 == ""
-
-        l2 = self.analysis.stringify_list([1])
-        assert l2 == "1"
-
-        l3 = self.analysis.stringify_list(["f()", "g(int *i)"])
-        assert l3 == "f(), g(int *i)"
-
-        l4 = self.analysis.stringify_list([45, 46, 51])
-        assert l4 == "45, 46, 51"
-
-        l5 = self.analysis.stringify_list(["whatAGreatFn(...)"])
-        assert l5 == "whatAGreatFn(...)"
-
-        l6 = self.analysis.stringify_list("")
-        assert l6 == ""
-
-        l7 = self.analysis.stringify_list([""])
-        assert l7 == ""
-
     def test_get_lookahead_only_differential_entries(
         self,
         tdProgramTrace: TDProgramTrace,
@@ -134,107 +112,87 @@ class TestAnalysis:
             else:
                 assert type(entry[0]) == type(None) or type(entry[1]) == type(None)
 
-    # def test_get_differential_entries(
-    #     self,
-    #     tdProgramTrace: TDProgramTrace,
-    #     tdProgramTrace2: TDProgramTrace,
-    #     functionid_json,
-    #     functionid_json2,
-    # ):
-    #     print("Warning: this test is very slow; expect to see some progress bars")
+    @pytest.mark.skip(
+        reason="This test on a well provisioned DO VM currently takes over 12 hours to complete with two NITF tdags (where lookahead-only analysis completed in a couple minutes)"
+    )
+    def test_get_differential_entries(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        tdProgramTrace2: TDProgramTrace,
+        functionid_json,
+        functionid_json2,
+    ):
+        print(
+            "Warning: test_get_differential_entries is very slow since we load two whole TDAGs into Graphtage; expect to see some progress bars"
+        )
 
-    #     cflogA: CFLog = self.analysis.get_cflog(
-    #         tdProgramTrace.tdfile, functionid_json
-    #     )
-    #     cflogB: CFLog = self.analysis.get_cflog(
-    #         tdProgramTrace2.tdfile, functionid_json2
-    #     )
+        cflogA: CFLog = self.analysis.get_cflog(tdProgramTrace.tdfile, functionid_json)
+        cflogB: CFLog = self.analysis.get_cflog(
+            tdProgramTrace2.tdfile, functionid_json2
+        )
 
-    #     diff_without_graphtage: Iterable = self.analysis.get_differential_entries(
-    #         cflogA, cflogB, use_graphtage=False
-    #     )
+        diff_without_graphtage: Iterable = self.analysis.get_differential_entries(
+            cflogA, cflogB, use_graphtage=False
+        )
 
-    #     diff_with_graphtage: Iterable = self.analysis.get_differential_entries(
-    #         cflogA, cflogB, use_graphtage=True
-    #     )
+        diff_with_graphtage: Iterable = self.analysis.get_differential_entries(
+            cflogA, cflogB, use_graphtage=True
+        )
 
-    #     # graphtage matches BOTH in the forward and backward directions;
-    #     # note that our algorithm from the ubet paper only matched forward
-    #     assert len(tuple(diff_without_graphtage)) <= len(tuple(diff_with_graphtage))
+        # graphtage matches BOTH in the forward and backward directions;
+        # note that our algorithm from the ubet paper only matched forward
+        assert len(tuple(diff_without_graphtage)) <= len(tuple(diff_with_graphtage))
 
-    #     for wo_graph in diff_without_graphtage:
-    #         assert wo_graph in diff_with_graphtage
+        for wo_graph_entry in diff_without_graphtage:
+            assert wo_graph_entry in diff_with_graphtage
 
-    # def test_interleaved_differential(
-    #     self,
-    #     tdProgramTrace: TDProgramTrace,
-    #     tdProgramTrace2: TDProgramTrace,
-    #     functionid_json,
-    #     functionid_json2,
-    # ):
-    #     cflogA = self.analysis.get_cflog(
-    #         tdProgramTrace.tdfile, functionid_json
-    #     )
-    #     cflogB = self.analysis.get_cflog(
-    #         tdProgramTrace2.tdfile, functionid_json2
-    #     )
-    #     differential: Iterable = tuple(
-    #         self.analysis.get_differential_entries(cflogA, cflogB, use_graphtage=False)
-    #     )
-    #     interleaved_cflog_A: CFLog = self.analysis.interleave_file_cavities(
-    #         tdProgramTrace.tdfile, cflogA
-    #     )
-    #     interleaved_cflog_B: CFLog = self.analysis.interleave_file_cavities(
-    #         tdProgramTrace2.tdfile, cflogB
-    #     )
-    #     cavitatious_differential: Iterable = tuple(
-    #         self.analysis.get_differential_entries(
-    #             interleaved_cflog_A, interleaved_cflog_B, use_graphtage=False
-    #         )
-    #     )
-    #     assert len(cavitatious_differential) >= len(differential)
+    def test_same_equality(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        tdProgramTrace2: TDProgramTrace,
+        functionid_json,
+        functionid_json2,
+    ):
 
-    # cflog_A_offsets_plus_cavities = [entry[0] for entry in cavitatious_differential]
-    # cflog_A_callstacks_plus_cavities = [
-    #     entry[1] for entry in cavitatious_differential
-    # ]
-    # for entry in interleaved_cflog_A:
-    #     assert entry.input_bytes in cflog_A_offsets_plus_cavities
-    #     if entry.callstack is not None and len(entry.callstack) > 0:
-    #         assert entry.callstack[-1] in cflog_A_callstacks_plus_cavities
+        cflogA: CFLog = self.analysis.get_cflog(tdProgramTrace.tdfile, functionid_json)
+        cflogB: CFLog = self.analysis.get_cflog(
+            tdProgramTrace2.tdfile, functionid_json2
+        )
 
-    # cflog_B_offsets_plus_cavities = [entry[3] for entry in cavitatious_differential]
-    # cflog_B_callstacks_plus_cavs = [entry[2] for entry in cavitatious_differential]
-    # for entry in interleaved_cflog_B:
-    #     assert entry.input_bytes in cflog_B_offsets_plus_cavities
-    #     if entry.callstack is not None and len(entry.callstack) > 0:
-    #         assert entry.callstack[-1] in cflog_B_callstacks_plus_cavs
+        # for each of our test tdags, check that diffing the tdag against itself produces no differences
+        diffA: Iterable = self.analysis.get_differential_entries(
+            cflogA, cflogA, use_graphtage=True
+        )
 
-    # def test_same_comparison_differential(
-    #     self,
-    #     tdProgramTrace: TDProgramTrace,
-    #     functionid_json,
-    # ):
-    #     """Ensure we are internally consistent."""
-    #     cflogA: Tuple[CFLogEntry, ...] = self.analysis.get_cflog(
-    #         tdProgramTrace.tdfile, functionid_json
-    #     ).entries
-    #     cflogB: Tuple[CFLogEntry, ...] = self.analysis.get_cflog(
-    #         tdProgramTrace.tdfile, functionid_json
-    #     ).entries
-    #     assert len(cflogA) == len(cflogB)
+        for entry in diffA:
+            assert entry[0] == entry[1]
 
-    #     for entryA, entryB in zip(cflogA, cflogB):
-    #         assert len(entryA.input_bytes) == len(entryB.input_bytes)
-    #         assert entryA.input_bytes == entryB.input_bytes
-    #         assert len(entryA.callstack) == len(entryB.callstack)
-    #         assert entryA.callstack == entryB.callstack
+        diffB: Iterable = self.analysis.get_differential_entries(
+            cflogB, cflogB, use_graphtage=True
+        )
 
-    #     differential = self.analysis.get_differential_entries(cflogA, cflogB)
-    #     # assert len(differential) >= len(cflogA)
+        for entry in diffB:
+            assert entry[0] == entry[1]
 
-    #     for entry in differential:
-    #         # byte sets are the same
-    #         assert entry[0] == entry[3]
-    #         # call stacks are the same
-    #         assert entry[1] == entry[2]
+    @pytest.mark.skip(
+        reason="This test on a well provisioned DO VM currently takes over 12 hours to complete with two NITF tdags (where lookahead-only analysis completed in a couple minutes)"
+    )
+    def test_find_divergence(
+        self,
+        tdProgramTrace: TDProgramTrace,
+        tdProgramTrace2: TDProgramTrace,
+        functionid_json,
+        functionid_json2,
+    ):
+        trace, bytes_operated_from, bytes_operated_to = self.analysis.find_divergence(
+            from_tdag=tdProgramTrace.tdfile,
+            to_tdag=tdProgramTrace2.tdfile,
+            from_functions_list=functionid_json,
+            to_functions_list=functionid_json2,
+        )
+
+        assert len(bytes_operated_from) > 0
+        assert len(bytes_operated_to) > 0
+
+        for diff_entry in trace:
+            assert diff_entry[1] != diff_entry[2]

@@ -37,22 +37,17 @@ parser.add_argument(
 )
 parser.add_argument(
     "--cavities",
-    help="Contextualize the input trace with blind spots (dont-care bytes)",
+    help="Contextualize input trace(s) with blind spots (dont-care bytes)",
     action="store_true",
 )
 parser.add_argument(
-    "--verbose",
-    help="Provide the full callstack when comparing cflog traces",
-    action="store_true",
-)
-parser.add_argument(
-    "--find-divergence",
+    "--find_divergence",
     "-d",
     action="store_true",
     help="Find the point(s) in the trace where " "divergences occurred",
 )
 parser.add_argument(
-    "--input-file",
+    "--input_file",
     "-f",
     type=Path,
     default=None,
@@ -77,13 +72,17 @@ if __name__ == "__main__":
                 functions_list_b = jsonload(jsonB)
 
             if args.find_divergence:
-                comparator.find_divergence(
-                    from_tdag=traceA.tdfile,
-                    to_tdag=traceB.tdfile,
-                    from_functions_list=functions_list_a,
-                    to_functions_list=functions_list_b,
-                    verbose=args.verbose,
-                    input_file=args.input_file,
+                trace, bytes_operated_from, bytes_operated_to = (
+                    comparator.find_divergence(
+                        from_tdag=traceA.tdfile,
+                        to_tdag=traceB.tdfile,
+                        from_functions_list=functions_list_a,
+                        to_functions_list=functions_list_b,
+                    )
+                )
+
+                comparator.show_divergence(
+                    trace, bytes_operated_from, bytes_operated_to, args.input_file
                 )
             else:
                 comparator.show_cflog_diff(
@@ -92,20 +91,27 @@ if __name__ == "__main__":
                     functions_list_A=functions_list_a,
                     functions_list_B=functions_list_b,
                     cavities=args.cavities,
-                    verbose=args.verbose,
                 )
 
         if args.runtrace:
             comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
     elif args.tdag_a and args.function_id_json_a:
-        print(f"Mapping and showing the control flow log of '{args.tdag_a}'...")
+        print(f"Loading '{args.tdag_a}'...")
         trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
+
+        if args.input_file:
+            input_file = f"{str(args.tdag_a)} <- {args.input_file}"
+        else:
+            input_file = str(args.tdag_a)
 
         with open(args.function_id_json_a) as function_id_json:
             functions_list = jsonload(function_id_json)
             comparator.show_cflog(
-                trace.tdfile, function_id_json, args.cavities, args.verbose
+                tdag=trace.tdfile,
+                function_id_json=function_id_json,
+                input_file_name=input_file,
+                cavities=args.cavities,
             )
     else:
         print(
