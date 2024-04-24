@@ -21,13 +21,14 @@ from pathlib import Path
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
+import tracemalloc
 from tqdm import tqdm
 from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
 
-from .traverser import CachingTDAGTraverser
+import traverser
 
 
 class CallStackEntry(LeafNode):
@@ -233,18 +234,17 @@ class Analysis:
     ) -> Iterable[CFLogEntry]:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog_tdag_section = tdag._get_section(taint_dag.TDControlFlowLogSection)
-        cflog_tdag_section.function_id_mapping(
-            self._demangle_function_ids(functions_list)
-        )
+        function_name_list: List[str] = self._demangle_function_ids(functions_list)
+        cflog_tdag_section.function_id_mapping(function_name_list)
         cflog_size = len(cflog_tdag_section)
-        tdag_traverser = CachingTDAGTraverser(tdag, max_size=16384)
+        tdag_traverser = traverser.CachingTDAGTraverser(tdag, max_size=16384)
 
         # each cflog entry has a callstack and a label
         if not with_cavities:
             for event in tqdm(
                 cflog_tdag_section,
                 desc="tracing",
-                leave=False,
+                leave=True,
                 unit="CFLog Entries",
                 total=cflog_size,
             ):
@@ -260,9 +260,9 @@ class Analysis:
 
             for event in tqdm(
                 cflog_tdag_section,
-                desc="tracing",
-                leave=False,
-                unit="CFLog entries interleaved with cavities",
+                desc="Tracing CFlog",
+                leave=True,
+                unit="Entries",
                 total=cflog_size,
             ):
                 if not isinstance(event, taint_dag.TDTaintedControlFlowEvent):
@@ -304,23 +304,20 @@ class Analysis:
         input_file_name: str,
         cavities=False,
     ) -> None:
-        """Show the control-flow log mapped to relevant input bytes, for a single tdag."""
-        cflog: CFLog = self.get_cflog(tdag, function_id_json, with_cavities=cavities)
-
-        if input_file_name:
-            self.console.print(
-                f"[green]Control Flow Log from the TDAG '{input_file_name}'[/green]"
-            )
-
+        """Show the control-flow log mapped to relevant input bytes, for a single tdag. Since we're building and showing the full control-flow log, this method requires both the tdag and the corresponding static function ID json recorded during traced program instrumentation. This method creates a CFLog dataclass, but does not load that dataclass and its contents into Graphtage, since we aren't diffing."""
         self.console.print(
-            f"[blue]Number of labels: {tdag.label_count()}; \n"
-            f"Number of cflog entries: {tdag._get_section(taint_dag.TDControlFlowLogSection).event_count}[/blue]"
+            f"[magenta]{input_file_name}[/magenta]: [green]{tdag.label_count}[/green] labels; [green]{tdag._get_section(taint_dag.TDControlFlowLogSection).event_count}[/green] control flow log entries"
         )
-        for entry in cflog:
-            self.print_cols(offsets_A=entry[0], callstack_A=entry[1][-1])
+        cflog_entries: Iterable[CFLogEntry] = self._get_cflog_entries(
+            tdag, function_id_json, with_cavities=cavities
+        )
+
+        for entry in cflog_entries:
             self.console.print(
-                f"\t[magenta]{entry.input_bytes}\t{entry.callstack}[/magenta]"
+                f"\t{entry.input_bytes} -> [grey]{entry.callstack[-1]}[/grey]"
             )
+
+        return
 
     def get_lookahead_only_diff_entries(
         self,
@@ -550,26 +547,26 @@ class Analysis:
             table.add_row(from_bytes_text, callstack, to_bytes_text)
         self.console.print(table)
 
-    def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
-        if cavities:
-            mapping_a = InputOutputMapping(tdag_a).file_cavities()
-            mapping_b = InputOutputMapping(tdag_b).file_cavities()
-            symmetric_diff = set(mapping_a.items()).symmetric_difference(
-                set(mapping_b.items())
-            )
-            print("...CAVITY SYMMETRIC DIFFERENCE...")
-            for cavity in symmetric_diff:
-                print(f"{cavity[0]}")
-                for ct in cavity[1]:
-                    print(f"\t{ct}")
+    # def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
+    #     if cavities:
+    #         mapping_a = InputOutputMapping(tdag_a).file_cavities()
+    #         mapping_b = InputOutputMapping(tdag_b).file_cavities()
+    #         symmetric_diff = set(mapping_a.items()).symmetric_difference(
+    #             set(mapping_b.items())
+    #         )
+    #         print("...CAVITY SYMMETRIC DIFFERENCE...")
+    #         for cavity in symmetric_diff:
+    #             print(f"{cavity[0]}")
+    #             for ct in cavity[1]:
+    #                 print(f"\t{ct}")
 
-        print("...EVENTS SYMMETRIC DIFFERENCE...")
-        for eventA, idxA, eventB, idxB in zip(
-            tdag_a.events(),
-            range(0, len(tdag_a.events)),
-            tdag_b.events(),
-            range(0, len(tdag_b.events)),
-        ):
-            fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
-            fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
-            print(f"A: [{idxA}] {eventA} {fnA}, B: [{idxB}] {eventB} {fnB}")
+    #     print("...EVENTS SYMMETRIC DIFFERENCE...")
+    #     for eventA, idxA, eventB, idxB in zip(
+    #         tdag_a.events(),
+    #         range(0, len(tdag_a.events)),
+    #         tdag_b.events(),
+    #         range(0, len(tdag_b.events)),
+    #     ):
+    #         fnA = cxxfilt.demangle(tdag_a.fn_headers[eventA.fnidx][0])
+    #         fnB = cxxfilt.demangle(tdag_b.fn_headers[eventB.fnidx][0])
+    #         print(f"A: [{idxA}] {eventA} {fnA}, B: [{idxB}] {eventB} {fnB}")
