@@ -14,6 +14,7 @@ from typing import (
 
 from argparse import BooleanOptionalAction
 from enum import Enum
+import functools
 from json import load as jsonload
 from tqdm import tqdm
 from pathlib import Path
@@ -158,6 +159,7 @@ class TDLabelSection:
         offset: int = self.label_section_start + (label * sizeof(c_int64))
         return c_uint64.from_buffer_copy(self.mem_reference, offset).value
 
+    @functools.cached_property
     def count(self) -> int:
         return ((self.label_section_end + 1) - self.label_section_start) // sizeof(
             c_uint64
@@ -326,7 +328,7 @@ class TDControlFlowLogSection:
         # Return back to last function called (replaces exit() etc.)
         yield from TDControlFlowLogSection._align_callstack(-1, callstack)
 
-    @property
+    @functools.cached_property
     def event_count(self) -> int:
         """If this instance's __iter__ has not yet been used, since we only store indices and a memory buffer reference at initialisation time, there are no events to count yet. Returns the total number of events (we use function entries and exits for framing only right now.)"""
         counter = 0
@@ -607,12 +609,12 @@ class TDFile:
         assert isinstance(source_index_section, TDSourceIndexSection)
         return source_index_section.enumerate_set_bits()
 
-    @property
+    @functools.cached_property
     def label_count(self) -> int:
         """Enumerates all taint labels. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
         label_section = self.sections_by_type[TDLabelSection]
         assert isinstance(label_section, TDLabelSection)
-        return label_section.count()
+        return label_section.count
 
     def read_node(self, label: int) -> int:
         """Read a node by label. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
