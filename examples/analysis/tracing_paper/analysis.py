@@ -234,8 +234,9 @@ class Analysis:
     ) -> Iterable[CFLogEntry]:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog_tdag_section = tdag._get_section(taint_dag.TDControlFlowLogSection)
-        function_name_list: List[str] = self._demangle_function_ids(functions_list)
-        cflog_tdag_section.function_id_mapping(function_name_list)
+        cflog_tdag_section.function_id_mapping(
+            self._demangle_function_ids(functions_list)
+        )
         cflog_size = len(cflog_tdag_section)
         tdag_traverser = traverser.CachingTDAGTraverser(tdag, max_size=16384)
 

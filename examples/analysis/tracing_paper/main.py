@@ -61,6 +61,9 @@ parser.add_argument(
     help="Use TQDM's descriptive progress bars (this can conflict with showing a cflog, diff, or divergences, so sometimes we want to turn it off)",
     action="store_true",
 )
+parser.add_argument(
+    "--memory", "-m", help="Show top level tracemalloc statistics", action="store_true"
+)
 
 if __name__ == "__main__":
     tracemalloc.start()
@@ -84,7 +87,10 @@ if __name__ == "__main__":
                 functions_list_b = jsonload(jsonB)
 
             if args.find_divergence:
-                snapshot1 = tracemalloc.take_snapshot()
+
+                if args.memory:
+                    snapshot1 = tracemalloc.take_snapshot()
+
                 trace, bytes_operated_from, bytes_operated_to = (
                     comparator.find_divergence(
                         from_tdag=traceA.tdfile,
@@ -93,22 +99,26 @@ if __name__ == "__main__":
                         to_functions_list=functions_list_b,
                     )
                 )
-                snapshot2 = tracemalloc.take_snapshot()
 
-                print("[ FIND DIVERGENCES : tracemalloc ]")
-                for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
-                    print(stat)
+                if args.memory:
+                    snapshot2 = tracemalloc.take_snapshot()
+                    print("[ FIND DIVERGENCES : tracemalloc ]")
+                    for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
+                        print(stat)
 
                 comparator.show_divergence(
                     trace, bytes_operated_from, bytes_operated_to, args.input_file
                 )
 
-                snapshot3 = tracemalloc.take_snapshot()
-                print("[ SHOW DIVERGENCES : tracemalloc ]")
-                for stat in snapshot3.compare_to(snapshot2, "lineno")[:20]:
-                    print(stat)
+                if args.memory:
+                    snapshot3 = tracemalloc.take_snapshot()
+                    print("[ SHOW DIVERGENCES : tracemalloc ]")
+                    for stat in snapshot3.compare_to(snapshot2, "lineno")[:20]:
+                        print(stat)
             else:
-                snapshot1 = tracemalloc.take_snapshot()
+                if args.memory:
+                    snapshot1 = tracemalloc.take_snapshot()
+
                 comparator.show_cflog_diff(
                     tdagA=traceA.tdfile,
                     tdagB=traceB.tdfile,
@@ -116,16 +126,21 @@ if __name__ == "__main__":
                     functions_list_B=functions_list_b,
                     cavities=args.cavities,
                 )
-                snapshot2 = tracemalloc.take_snapshot()
-                print("[ COMPUTE AND SHOW CFLOG DIFF : tracemalloc ]")
-                for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
-                    print(stat)
+
+                if args.memory:
+                    snapshot2 = tracemalloc.take_snapshot()
+                    print("[ COMPUTE AND SHOW CFLOG DIFF : tracemalloc ]")
+                    for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
+                        print(stat)
 
         # if args.runtrace:
         #     comparator.compare_run_trace(traceA.tdfile, traceB.tdfile, args.cavities)
 
     elif args.tdag_a and args.function_id_json_a:
-        snapshot1 = tracemalloc.take_snapshot()
+
+        if args.memory:
+            snapshot1 = tracemalloc.take_snapshot()
+
         trace: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
 
         if args.input_file:
@@ -133,10 +148,11 @@ if __name__ == "__main__":
         else:
             input_file = str(args.tdag_a)
 
-        snapshot2 = tracemalloc.take_snapshot()
-        print("[ LOAD A SINGLE CFLOG : tracemalloc ]")
-        for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
-            print(stat)
+        if args.memory:
+            snapshot2 = tracemalloc.take_snapshot()
+            print("[ LOAD A SINGLE CFLOG : tracemalloc ]")
+            for stat in snapshot2.compare_to(snapshot1, "lineno")[:20]:
+                print(stat)
 
         with open(args.function_id_json_a) as json_file:
             functions_list = jsonload(json_file)
@@ -147,10 +163,12 @@ if __name__ == "__main__":
             input_file_name=input_file,
             cavities=args.cavities,
         )
-        snapshot3 = tracemalloc.take_snapshot()
-        print("[ SHOW A SINGLE CFLOG : tracemalloc ]")
-        for stat in snapshot3.compare_to(snapshot2, "lineno")[:20]:
-            print(stat)
+
+        if args.memory:
+            snapshot3 = tracemalloc.take_snapshot()
+            print("[ SHOW A SINGLE CFLOG : tracemalloc ]")
+            for stat in snapshot3.compare_to(snapshot2, "lineno")[:20]:
+                print(stat)
     else:
         print(
             "Error: Need to provide one or two tdags, and corresponding Polytracker-generated function list(s)"
