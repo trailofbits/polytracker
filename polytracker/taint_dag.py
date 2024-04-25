@@ -115,10 +115,13 @@ class TDSourceSection:
     """
 
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.mem = mem[hdr.offset : hdr.offset + hdr.size]
 
     def enumerate(self):
-        for offset in range(0, len(self.mem), sizeof(TDFDHeader)):
+        for offset in range(0, self.len, sizeof(TDFDHeader)):
             yield TDFDHeader.from_readable_copy(self.mem[offset:])
 
 
@@ -130,12 +133,15 @@ class TDStringSection:
     """
 
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
         self.align = hdr.align
 
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) >= offset + sizeof(c_uint16) + n
+        assert self.len >= offset + sizeof(c_uint16) + n
         return str(
             self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
@@ -274,7 +280,7 @@ class TDControlFlowLogSection:
         self.funcmapping = id_to_name_array
 
     def __len__(self):
-        return self.section_end - self.section_start
+        return self.len
 
     def __iter__(self):
         """The cflog encoding scheme is defined in control_flow_log.h. Each entry should consist of a taint label and a callstack by function id."""
@@ -333,7 +339,6 @@ class TDControlFlowLogSection:
         print(
             f"Iterating over the cflog to cache the count of tainted control flow events, please be patient..."
         )
-        # todo(kaoudis): a tqdm progress bar doesn't make this any less annoyingly slow for a large section size right now, but could add it
         for entry in tqdm(self, unit="entries"):
             if type(entry) == TDTaintedControlFlowEvent:
                 counter += 1
@@ -348,10 +353,13 @@ class TDSinkSection:
     """
 
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def enumerate(self):
-        for offset in range(0, len(self.section), sizeof(TDSink)):
+        for offset in range(0, self.len, sizeof(TDSink)):
             yield TDSink.from_readable_copy(self.section[offset:])
 
 
@@ -364,8 +372,11 @@ class TDBitmapSection:
     """
 
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        assert len(self.section) % 8 == 0  # Multiple of uint64_t
+        assert self.len % 8 == 0  # Multiple of uint64_t
 
     def enumerate_set_bits(self):
         """Enumerates all bits that are set
@@ -373,7 +384,7 @@ class TDBitmapSection:
         The index of each bit that is set will be yielded.
         """
         index = 0
-        for offset in range(0, len(self.section), sizeof(c_uint64)):
+        for offset in range(0, self.len, sizeof(c_uint64)):
             bucket = c_uint64.from_buffer_copy(self.section, offset).value
             if bucket == 0:
                 index += 64  # No bits set, just advance the bit index
@@ -397,19 +408,25 @@ class TDSourceIndexSection(TDBitmapSection):
 
 class TDFunctionsSection:
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDFnHeader)):
+        for offset in range(0, self.len, sizeof(TDFnHeader)):
             yield TDFnHeader.from_readable_copy(self.section, offset)
 
 
 class TDEventsSection:
     def __init__(self, mem, hdr):
+        self.section_start = hdr.offset
+        self.section_end = self.section_start + hdr.size - 1
+        self.len = hdr.size
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDEvent)):
+        for offset in range(0, self.len, sizeof(TDEvent)):
             yield TDEvent.from_readable_copy(self.section, offset)
 
 
