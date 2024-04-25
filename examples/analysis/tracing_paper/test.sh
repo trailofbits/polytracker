@@ -17,8 +17,12 @@ if [ "$python_version" -lt "310" ]; then
 	exit 1
 fi
 
-python3 -m pytest -s test/ \
+# these files can be obtained from building the Nitro Dockerfile and running it
+# on U_2001E.NTF (I think that is the filename).
+# While testing against one of the original ubet examples has been helping me
+# think about things continuously, any divergent TDAG pair will do.
+python3 -m pytest -rP test/ \
 	--tdag ../ubet/output/Debug.tdag \
 	--tdag2 ../ubet/output/Release.tdag \
-	--json ../ubet/output/debug_fid.json \
-	--json2 ../ubet/output/release_fid.json
+	--json ../ubet/output/demangled_debug_fid.json \
+	--json2 ../ubet/output/demangled_release_fid.json
