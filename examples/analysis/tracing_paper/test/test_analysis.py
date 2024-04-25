@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 
-from ..analysis import Analysis, CachingTDAGTraverser, CFLog, CFLogEntry
+from ..analysis import Analysis, CFLog, CFLogEntry
+from functools import partialmethod
 from json import load
+from os import environ
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace, TDFile, taint_dag
 from polytracker.mapping import InputOutputMapping
+from tqdm import tqdm
 
 import pytest
 from typing import Dict, Iterable, List, Set, Tuple
 
 
 class TestAnalysis:
+    # tqdm can be noisy and we want test output
+    environ["TQDM_DISABLE"] = "1"
+    tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
     analysis = Analysis()
 
     @pytest.fixture

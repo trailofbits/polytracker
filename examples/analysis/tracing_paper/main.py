@@ -1,11 +1,14 @@
+from analysis import Analysis
 from argparse import ArgumentParser
+import cxxfilt
 from functools import partialmethod
+import json
+from os import environ
 from pathlib import Path
 from polytracker import PolyTrackerTrace, TDProgramTrace
-from analysis import Analysis
-from json import load as jsonload
 from tqdm import tqdm
 import tracemalloc
+from typing import List
 
 parser = ArgumentParser(
     prog="compare_tdags",
@@ -21,7 +24,7 @@ parser.add_argument(
     "-fa",
     "--function_id_json_a",
     type=Path,
-    help="Path to functionid.json function trace for TDAG A (created by polytracker's cflog pass)",
+    help="Path to DEMANGLED functionid.json function trace for TDAG A (created by polytracker's cflog pass, and previously demangled with --demangle)",
 )
 parser.add_argument(
     "-tb",
@@ -33,7 +36,7 @@ parser.add_argument(
     "-fb",
     "--function_id_json_b",
     type=Path,
-    help="Path to functionid.json function trace for TDAG B",
+    help="Path to the DEMANGLED functionid.json function trace for TDAG (use --demangle to get readable names from the recorded LLVM symbols)",
 )
 # parser.add_argument(
 #     "--runtrace", action="store_true", help="Compare runtrace (requires -a and -b)"
@@ -57,12 +60,22 @@ parser.add_argument(
     help="Path to the input file used to generate the " "TDAGs (optional)",
 )
 parser.add_argument(
+    "--demangle",
+    "-dm",
+    type=Path,
+    default=None,
+    help="Accepts a static functionid.json set of symbols produced during software instrumentation, writes out the demangled version of the file to demangled_functionid.json in the local working directory",
+)
+parser.add_argument(
     "--verbose",
-    help="Use TQDM's descriptive progress bars (this can conflict with showing a cflog, diff, or divergences, so sometimes we want to turn it off)",
+    help="Use TQDM's descriptive progress bars (this can conflict with showing a cflog, diff, or divergences, so sometimes we want to turn it off). May not silence TQDM usage in dependencies like Graphtage.",
     action="store_true",
 )
 parser.add_argument(
-    "--memory", "-m", help="Show top level tracemalloc statistics", action="store_true"
+    "--memory",
+    "-m",
+    help="Show top level tracemalloc statistics (do not use at the same time as --timing as they will conflict)",
+    action="store_true",
 )
 
 if __name__ == "__main__":
@@ -71,20 +84,46 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.verbose:
+        environ["TQDM_DISABLE"] = "1"
         tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
-    if args.tdag_a and args.tdag_b:
+    if args.demangle:
+        # you can also use llvm-cxxfile to demangle the function lists
+        print(f"Demangling {args.demangle}...")
+        with open(args.demangle) as jsonA:
+            functions_list = json.load(jsonA)
+        demangled_functions_list: List[str] = []
+        for function in functions_list:
+            try:
+                demangled_functions_list.append(cxxfilt.demangle(function))
+            except cxxfilt.InvalidName:
+                # if we can't demangle it, just keep the opaque name
+                demangled_functions_list.append(function)
+        output_name = f"demangled_{Path(args.demangle).name}"
+        if not Path.exists(Path(output_name)):
+            with open(output_name, "w") as output:
+                to_write = json.dumps(demangled_functions_list)
+                output.write(to_write)
+            print(
+                f"Wrote demangled symbols to {output_name} in the current working directory! Bye!"
+            )
+        else:
+            print(
+                f"Oh no! There's already a file called {output_name} in the working directory; please rename or move that and try again..."
+            )
+        exit
+    elif args.tdag_a and args.tdag_b:
         print(f"Comparing {args.tdag_a} and {args.tdag_b}, here we gooooo 🚀")
 
         traceA: TDProgramTrace = PolyTrackerTrace.load(args.tdag_a, taint_forest=False)
         traceB: TDProgramTrace = PolyTrackerTrace.load(args.tdag_b, taint_forest=False)
 
-        if args.function_id_json_a and args.function_id_json_b and not args.runtrace:
+        if args.function_id_json_a and args.function_id_json_b:
             with open(args.function_id_json_a) as jsonA:
-                functions_list_a = jsonload(jsonA)
+                functions_list_a = json.load(jsonA)
 
             with open(args.function_id_json_b) as jsonB:
-                functions_list_b = jsonload(jsonB)
+                functions_list_b = json.load(jsonB)
 
             if args.find_divergence:
 
@@ -155,7 +194,7 @@ if __name__ == "__main__":
                 print(stat)
 
         with open(args.function_id_json_a) as json_file:
-            functions_list = jsonload(json_file)
+            functions_list = json.load(json_file)
 
         comparator.show_cflog(
             tdag=trace.tdfile,

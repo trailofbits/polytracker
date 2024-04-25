@@ -218,7 +218,7 @@ class Analysis:
             break
         return cavs
 
-    def _demangle_function_ids(self, functions_list) -> List[str]:
+    def demangle_function_ids(self, functions_list) -> List[str]:
         """Builds the list of function ID waypoints (places we set LLVM instrumentation that will correspond to particular labels)."""
         demangled_functions_list: List[str] = []
         for function in functions_list:
@@ -234,9 +234,7 @@ class Analysis:
     ) -> Iterable[CFLogEntry]:
         """Maps the function ID JSON to the TDAG control flow log."""
         cflog_tdag_section = tdag._get_section(taint_dag.TDControlFlowLogSection)
-        cflog_tdag_section.function_id_mapping(
-            self._demangle_function_ids(functions_list)
-        )
+        cflog_tdag_section.function_id_mapping(functions_list)
         cflog_size = len(cflog_tdag_section)
         tdag_traverser = traverser.CachingTDAGTraverser(tdag, max_size=16384)
 
