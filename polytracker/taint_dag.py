@@ -551,7 +551,7 @@ class TDFile:
         if hasattr(file, "name") and file.name.endswith(".xz"):
             self.buffer = CompressedTDFile(file, mode="r")
         else:
-            self.buffer = mmap(file.fileno(), 0, prot=PROT_READ)
+            self.buffer = memoryview(mmap(file.fileno(), 0, prot=PROT_READ))
 
         self.filemeta = TDFileMeta.from_readable_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
