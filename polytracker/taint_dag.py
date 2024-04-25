@@ -151,19 +151,18 @@ class TDLabelSection:
     """
 
     def __init__(self, mem, hdr):
-        self.label_section_start = hdr.offset
-        self.label_section_end = hdr.offset + hdr.size - 1
+        self.section_start = hdr.offset
+        self.section_end = hdr.offset + hdr.size - 1
+        self.len = hdr.size
         self.mem_reference = mem
 
     def read_raw(self, label) -> int:
-        offset: int = self.label_section_start + (label * sizeof(c_int64))
+        offset: int = self.section_start + (label * sizeof(c_int64))
         return c_uint64.from_buffer_copy(self.mem_reference, offset).value
 
     @functools.cached_property
     def count(self) -> int:
-        return ((self.label_section_end + 1) - self.label_section_start) // sizeof(
-            c_uint64
-        )
+        return self.len // sizeof(c_uint64)
 
 
 class TDEnterFunctionEvent:
@@ -238,10 +237,9 @@ class TDControlFlowLogSection:
         TAINTED_CONTROL_FLOW = 2
 
     def __init__(self, mem, hdr):
-        # save references into the main TDAG mmap buffer `mem`, since with
-        # very large traced inputs `mem` can get unwieldy and OOMs are possible
-        self.cflog_section_start = hdr.offset
-        self.cflog_section_end = hdr.offset + hdr.size - 1
+        self.section_start = hdr.offset
+        self.section_end = hdr.offset + hdr.size - 1
+        self.len = hdr.size
         # todo(kaoudis) if the passed in memory is an xz-compressed file, __iter__() will fail with TypeError: a bytes-like object is required, not 'CompressedTDFile'
         self.mem_reference = mem
         # Call function_id_mapping to set funcmapping before use of cflog.
@@ -251,7 +249,7 @@ class TDControlFlowLogSection:
         """Decode a `uint32_t varint` as defined in `control_flow_log.h`. Increment the global cflog index and update the global value upon return. Most varints require only one iteration before `0x80` (varint end) is seen. Called by `__iter__`. NOTE !resets the iteration index!"""
         shift = 0
         decoded_value = 0
-        for j in range(starting_index, self.cflog_section_end):
+        for j in range(starting_index, self.section_end):
             curr = c_uint8.from_buffer_copy(self.mem_reference, j).value
             decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
@@ -276,23 +274,23 @@ class TDControlFlowLogSection:
         self.funcmapping = id_to_name_array
 
     def __len__(self):
-        return self.cflog_section_end - self.cflog_section_start
+        return self.section_end - self.section_start
 
     def __iter__(self):
         """The cflog encoding scheme is defined in control_flow_log.h. Each entry should consist of a taint label and a callstack by function id."""
         callstack = []
         event: TDControlFlowLogSection.Event = None
-        mem_index = self.cflog_section_start
+        mem_index = self.section_start
         for _ in trange(
-            self.cflog_section_start,
-            self.cflog_section_end,
+            self.section_start,
+            self.section_end,
             desc="reading CF log",
             unit="entries",
             leave=False,
             delay=2.0,
         ):
             # do not roll off the end of the section!
-            if mem_index + 1 >= self.cflog_section_end:
+            if mem_index + 1 >= self.section_end:
                 if len(callstack) > 0:
                     yield TDLeaveFunctionEvent(callstack[:])
                     callstack.pop()
