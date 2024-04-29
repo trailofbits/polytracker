@@ -28,7 +28,7 @@ from typing import Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 from polytracker import taint_dag, TDFile
 from polytracker.mapping import CavityType, InputOutputMapping
 
-import traverser
+from .traverser import CachingTDAGTraverser
 
 
 class CallStackEntry(LeafNode):
@@ -196,7 +196,7 @@ class CFLog(ListNode[CFLogEntry]):
 
 
 class Analysis:
-    console = Console()
+    _console = Console()
 
     def get_cflog(self, tdag: TDFile, functions_list, with_cavities=False) -> CFLog:
         """A placeholder for now: returns the entire CFLog, though we will
@@ -236,7 +236,7 @@ class Analysis:
         cflog_tdag_section = tdag._get_section(taint_dag.TDControlFlowLogSection)
         cflog_tdag_section.function_id_mapping(functions_list)
         cflog_size = len(cflog_tdag_section)
-        tdag_traverser = traverser.CachingTDAGTraverser(tdag, max_size=16384)
+        tdag_traverser = CachingTDAGTraverser(tdag, max_size=16384)
 
         # each cflog entry has a callstack and a label
         if not with_cavities:
@@ -304,7 +304,7 @@ class Analysis:
         cavities=False,
     ) -> None:
         """Show the control-flow log mapped to relevant input bytes, for a single tdag. Since we're building and showing the full control-flow log, this method requires both the tdag and the corresponding static function ID json recorded during traced program instrumentation. This method creates a CFLog dataclass, but does not load that dataclass and its contents into Graphtage, since we aren't diffing."""
-        self.console.print(
+        self._console.print(
             f"[magenta]{input_file_name}[/magenta]: [green]{tdag.label_count}[/green] labels; [green]{tdag._get_section(taint_dag.TDControlFlowLogSection).event_count}[/green] control flow log entries"
         )
         cflog_entries: Iterable[CFLogEntry] = self._get_cflog_entries(
@@ -312,7 +312,7 @@ class Analysis:
         )
 
         for entry in cflog_entries:
-            self.console.print(
+            self._console.print(
                 f"\t{entry.input_bytes} -> [grey]{entry.callstack[-1]}[/grey]"
             )
 
@@ -423,17 +423,17 @@ class Analysis:
         callstack: Iterable[str],
         input_file: Optional[Path] = None,
     ):
-        self.console.print(
+        self._console.print(
             f"[blue]Trace {trace_name}[/blue] operated on input offsets "
             f"{'[gray],[/gray] '.join(map(str, offsets))} that were never operated on by the other "
             f"trace at"
         )
         if input_file is not None:
             context, highlights = context_string(input_file, all_offsets, offsets)
-            self.console.print(f"\tContext: {context}")
-            self.console.print(f"\t         {highlights}")
+            self._console.print(f"\tContext: {context}")
+            self._console.print(f"\t         {highlights}")
         for c in callstack:
-            self.console.print(f"\t[magenta]{c}[/magenta]")
+            self._console.print(f"\t[magenta]{c}[/magenta]")
 
     def show_divergence(
         self, trace, bytes_operated_from, bytes_operated_to, input_file
@@ -544,9 +544,10 @@ class Analysis:
                 f"[blue]{b}[/blue]" for b in to_node.input_bytes
             )
             table.add_row(from_bytes_text, callstack, to_bytes_text)
-        self.console.print(table)
+        self._console.print(table)
 
-    # def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile, cavities=False):
+    # def compare_run_trace(self, tdag_a: TDFile, tdag_b: TDFile,
+    # cavities=False):
     #     if cavities:
     #         mapping_a = InputOutputMapping(tdag_a).file_cavities()
     #         mapping_b = InputOutputMapping(tdag_b).file_cavities()
