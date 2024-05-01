@@ -138,7 +138,7 @@ class TDStringSection:
 
     def read_string(self, offset):
         index: int = self.section_start + offset
-        n = c_uint16.from_buffer_copy(self.mem[index:]).value
+        n: int = ctypes_cast(self.mem[index : index + sizeof(c_uint16)].tobytes(), POINTER(c_uint16)).contents.value
         assert self.section_start + self.len >= index + sizeof(c_uint16) + n
         return str(
             self.mem[index + sizeof(c_uint16) : index + sizeof(c_uint16) + n],
@@ -160,8 +160,9 @@ class TDLabelSection:
         self.mem = mem
 
     def read_raw(self, label) -> int:
-        offset: int = self.section_start + (label * sizeof(c_int64))
-        return c_uint64.from_buffer_copy(self.mem, offset).value
+        offset: int = self.section_start + (label * sizeof(c_uint64))
+
+        return ctypes_cast(self.mem[offset: offset + sizeof(c_uint64)].tobytes(), POINTER(c_uint64)).contents.value
 
     @functools.cached_property
     def count(self) -> int:
@@ -253,7 +254,7 @@ class TDControlFlowLogSection:
         shift = 0
         decoded_value = 0
         for j in range(starting_index, self.section_end):
-            curr = c_uint8.from_buffer_copy(self.mem, j).value
+            curr = ctypes_cast(self.mem[j: j + sizeof(c_uint8)].tobytes(), POINTER(c_uint8)).contents.value
             decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
                 return (decoded_value, j + 1)
@@ -300,7 +301,7 @@ class TDControlFlowLogSection:
                 break
             elif event is None:
                 event = TDControlFlowLogSection.Event(
-                    c_uint8.from_buffer_copy(self.mem, mem_index).value
+                    ctypes_cast(self.mem[mem_index: mem_index + sizeof(c_uint8)].tobytes(), POINTER(c_uint8)).contents.value
                 )
                 mem_index += 1
             else:
@@ -351,7 +352,6 @@ class TDSinkSection:
 
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
         self.mem = mem
 
@@ -370,7 +370,6 @@ class TDBitmapSection:
 
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
         self.mem = mem
         assert self.len % 8 == 0  # Multiple of uint64_t
@@ -382,7 +381,7 @@ class TDBitmapSection:
         """
         index = 0
         for offset in range(self.section_start, self.section_start + self.len, sizeof(c_uint64)):
-            bucket = c_uint64.from_buffer_copy(self.mem, offset).value
+            bucket: int = ctypes_cast(self.mem[offset : offset + sizeof(c_uint64)].tobytes(), POINTER(c_uint64)).contents.value
             if bucket == 0:
                 index += 64  # No bits set, just advance the bit index
             else:
@@ -406,7 +405,6 @@ class TDSourceIndexSection(TDBitmapSection):
 class TDFunctionsSection:
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
         self.mem = mem
 
@@ -418,7 +416,6 @@ class TDFunctionsSection:
 class TDEventsSection:
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
         self.mem = mem
 
