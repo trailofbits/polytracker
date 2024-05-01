@@ -111,7 +111,7 @@ class TDSourceSection:
     """TDAG Taint Sources section.
 
     Interprets the Taint Sources section in a TDAG file.
-    Corresponds to Sources in sources.h.
+    Corresponds to SourceEntry in taint_source.h.
     """
 
     def __init__(self, mem, hdr):
@@ -234,7 +234,7 @@ class TDControlFlowLogSection:
     """
 
     class Event(Enum):
-        """NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`."""
+        """NOTE: MUST correspond to the members in the `ControlFlowLog::EventType` in `control_flog_log.h`."""
 
         ENTER_FUNCTION = 0
         LEAVE_FUNCTION = 1
@@ -421,10 +421,12 @@ class TDEventsSection:
 
     def __iter__(self):
         for offset in range(self.section_start, self.section_start + self.len, sizeof(TDEvent)):
-            yield TDEvent.from_readable_copy(self.mem, offset)
+            yield ctypes_cast(self.mem[offset : offset + sizeof(TDEvent)].tobytes(), POINTER(TDEvent)).contents
 
     def read_raw(self, offset: int):
-        return TDEvent.from_readable_copy(self.mem, offset)
+        index = self.section_start + offset
+        raw_event = ctypes_cast(self.mem[index : index + sizeof(TDEvent)].tobytes(), POINTER(TDEvent)).contents
+        return raw_event
 
 
 class TDFDHeader(TDStructure):
