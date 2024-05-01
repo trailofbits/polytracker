@@ -1,3 +1,25 @@
+from enum import Enum
+import functools
+from json import load as jsonload
+from lzma import LZMAFile
+from pathlib import Path
+from mmap import mmap, PROT_READ
+from ctypes import (
+    cast as ctypes_cast,
+    Structure,
+    c_char,
+    c_int64,
+    c_uint64,
+    c_int32,
+    c_uint32,
+    c_uint8,
+    c_uint16,
+    POINTER,
+    sizeof,
+)
+
+from tqdm import tqdm, trange
+
 from typing import (
     BinaryIO,
     Union,
@@ -11,28 +33,6 @@ from typing import (
     Type,
     cast,
 )
-
-from argparse import BooleanOptionalAction
-from enum import Enum
-import functools
-from json import load as jsonload
-from tqdm import tqdm
-from pathlib import Path
-from lzma import LZMAFile
-from mmap import mmap, PROT_READ
-from ctypes import (
-    Structure,
-    c_char,
-    c_int64,
-    c_uint64,
-    c_int32,
-    c_uint32,
-    c_uint8,
-    c_uint16,
-    sizeof,
-)
-
-from tqdm import trange
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -116,12 +116,11 @@ class TDSourceSection:
 
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.mem = mem[hdr.offset : hdr.offset + hdr.size]
+        self.mem = mem
 
     def enumerate(self):
-        for offset in range(0, self.len, sizeof(TDFDHeader)):
+        for offset in range(self.section_start, self.section_start + self.len, sizeof(TDFDHeader)):
             yield TDFDHeader.from_readable_copy(self.mem[offset:])
 
 
@@ -134,16 +133,15 @@ class TDStringSection:
 
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        self.align = hdr.align
+        self.mem = mem
 
     def read_string(self, offset):
-        n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert self.len >= offset + sizeof(c_uint16) + n
+        index: int = self.section_start + offset
+        n = c_uint16.from_buffer_copy(self.mem[index:]).value
+        assert self.section_start + self.len >= index + sizeof(c_uint16) + n
         return str(
-            self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
+            self.mem[index + sizeof(c_uint16) : index + sizeof(c_uint16) + n],
             "utf-8",
         )
 
@@ -158,13 +156,12 @@ class TDLabelSection:
 
     def __init__(self, mem, hdr):
         self.section_start = hdr.offset
-        self.section_end = hdr.offset + hdr.size - 1
         self.len = hdr.size
-        self.mem_reference = mem
+        self.mem = mem
 
     def read_raw(self, label) -> int:
         offset: int = self.section_start + (label * sizeof(c_int64))
-        return c_uint64.from_buffer_copy(self.mem_reference, offset).value
+        return c_uint64.from_buffer_copy(self.mem, offset).value
 
     @functools.cached_property
     def count(self) -> int:
@@ -247,7 +244,7 @@ class TDControlFlowLogSection:
         self.section_end = hdr.offset + hdr.size - 1
         self.len = hdr.size
         # todo(kaoudis) if the passed in memory is an xz-compressed file, __iter__() will fail with TypeError: a bytes-like object is required, not 'CompressedTDFile'
-        self.mem_reference = mem
+        self.mem = mem
         # Call function_id_mapping to set funcmapping before use of cflog.
         self.funcmapping = None
 
@@ -256,7 +253,7 @@ class TDControlFlowLogSection:
         shift = 0
         decoded_value = 0
         for j in range(starting_index, self.section_end):
-            curr = c_uint8.from_buffer_copy(self.mem_reference, j).value
+            curr = c_uint8.from_buffer_copy(self.mem, j).value
             decoded_value |= (curr & 0x7F) << shift
             if curr & 0x80 == 0:
                 return (decoded_value, j + 1)
@@ -303,7 +300,7 @@ class TDControlFlowLogSection:
                 break
             elif event is None:
                 event = TDControlFlowLogSection.Event(
-                    c_uint8.from_buffer_copy(self.mem_reference, mem_index).value
+                    c_uint8.from_buffer_copy(self.mem, mem_index).value
                 )
                 mem_index += 1
             else:
@@ -356,11 +353,11 @@ class TDSinkSection:
         self.section_start = hdr.offset
         self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.mem = mem
 
     def enumerate(self):
-        for offset in range(0, self.len, sizeof(TDSink)):
-            yield TDSink.from_readable_copy(self.section[offset:])
+        for offset in range(self.section_start, self.section_start + self.len, sizeof(TDSink)):
+            yield TDSink.from_readable_copy(self.mem[offset:])
 
 
 class TDBitmapSection:
@@ -375,7 +372,7 @@ class TDBitmapSection:
         self.section_start = hdr.offset
         self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.mem = mem
         assert self.len % 8 == 0  # Multiple of uint64_t
 
     def enumerate_set_bits(self):
@@ -384,8 +381,8 @@ class TDBitmapSection:
         The index of each bit that is set will be yielded.
         """
         index = 0
-        for offset in range(0, self.len, sizeof(c_uint64)):
-            bucket = c_uint64.from_buffer_copy(self.section, offset).value
+        for offset in range(self.section_start, self.section_start + self.len, sizeof(c_uint64)):
+            bucket = c_uint64.from_buffer_copy(self.mem, offset).value
             if bucket == 0:
                 index += 64  # No bits set, just advance the bit index
             else:
@@ -411,11 +408,11 @@ class TDFunctionsSection:
         self.section_start = hdr.offset
         self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.mem = mem
 
     def __iter__(self):
-        for offset in range(0, self.len, sizeof(TDFnHeader)):
-            yield TDFnHeader.from_readable_copy(self.section, offset)
+        for offset in range(self.section_start, self.section_start + self.len, sizeof(TDFnHeader)):
+            yield TDFnHeader.from_readable_copy(self.mem, offset)
 
 
 class TDEventsSection:
@@ -423,14 +420,14 @@ class TDEventsSection:
         self.section_start = hdr.offset
         self.section_end = self.section_start + hdr.size - 1
         self.len = hdr.size
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.mem = mem
 
     def __iter__(self):
-        for offset in range(0, self.len, sizeof(TDEvent)):
-            yield TDEvent.from_readable_copy(self.section, offset)
+        for offset in range(self.section_start, self.section_start + self.len, sizeof(TDEvent)):
+            yield TDEvent.from_readable_copy(self.mem, offset)
 
     def read_raw(self, offset: int):
-        return TDEvent.from_readable_copy(self.buffer, offset)
+        return TDEvent.from_readable_copy(self.mem, offset)
 
 
 class TDFDHeader(TDStructure):
@@ -551,10 +548,10 @@ class TDFile:
         # lot of thrashing of the underlying filesystem and/or OOM.
 
         # is this an LZMA compressed TDAG?
-        if hasattr(file, "name") and file.name.endswith(".xz"):
-            self.buffer = CompressedTDFile(file, mode="r")
-        else:
-            self.buffer = memoryview(mmap(file.fileno(), 0, prot=PROT_READ))
+        # if hasattr(file, "name") and file.name.endswith(".xz"):
+        #     self.buffer = CompressedTDFile(file, mode="r")
+        # else:
+        self.buffer = memoryview(mmap(file.fileno(), 0, prot=PROT_READ))
 
         self.filemeta = TDFileMeta.from_readable_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
