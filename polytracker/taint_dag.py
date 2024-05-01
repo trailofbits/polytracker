@@ -429,6 +429,9 @@ class TDEventsSection:
         for offset in range(0, self.len, sizeof(TDEvent)):
             yield TDEvent.from_readable_copy(self.section, offset)
 
+    def read_raw(self, offset: int):
+        return TDEvent.from_readable_copy(self.buffer, offset)
+
 
 class TDFDHeader(TDStructure):
     """Python representation of the SourceEntry from taint_source.h"""
@@ -589,7 +592,6 @@ class TDFile:
             # a particular section off of disk.
             section_offset += sizeof(TDSectionMeta)
 
-        self.raw_nodes: Dict[int, int] = {}
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
@@ -633,17 +635,14 @@ class TDFile:
 
     def read_node(self, label: int) -> int:
         """Read a node by label. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection if it is not available."""
-        # if label in self.raw_nodes:
-        #     return self.raw_nodes[label]
         label_section = self.sections_by_type[TDLabelSection]
         assert isinstance(label_section, TDLabelSection)
         result = label_section.read_raw(label)
 
-        # self.raw_nodes[label] = result
         return result
 
     def decode_node(self, label: int) -> TDNode:
-        """Fetch a node from either the raw nodes array or the TDLabelSection. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection (from read_node()) if it is not available."""
+        """Fetch a node from the TDLabelSection. Requires the label section to have been loaded and should throw a KeyError for the TDLabelSection (from read_node()) if it is not available."""
         # Label zero represents untainted data
         if label == 0:
             return TDUntaintedNode()
@@ -678,7 +677,9 @@ class TDFile:
         yield from sink_section.enumerate()
 
     def read_event(self, offset: int) -> TDEvent:
-        return TDEvent.from_readable_copy(self.buffer, offset)
+        events_section = self.sections_by_type[TDEventsSection]
+        assert isinstance(events_section, TDEventsSection)
+        return events_section.read_raw(offset)
 
     @property
     def events(self) -> Iterator[TDEvent]:
