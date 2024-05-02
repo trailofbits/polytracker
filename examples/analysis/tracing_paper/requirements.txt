@@ -1,3 +1,4 @@
 graphtage>=0.3.1
 rich>=13.7.0
 fickling>=0.1.3
+matplotlib>=3.8.4
