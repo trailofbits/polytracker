@@ -36,7 +36,7 @@ RUN dd if=re3eot.png of=manually_cropped_re3eot.png count=1 bs=697120 && \
     ./pngtest.instrumented manually_cropped_re3eot.png && \
     mv polytracker.tdag manual.tdag
 # this is going to install torch and a bunch of other gnarly stuff since fickling currently requires it and they havent made it optional yet :/
-RUN pip install -r requirements.txt
+# RUN pip install -r requirements.txt
 
 # At this point you can run either/both of:
 # $ main.py -fa functionid.json -ta <whichever tdag>
