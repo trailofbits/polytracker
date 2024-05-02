@@ -7,7 +7,8 @@ WORKDIR /polytracker/dcmtk
 # get core dump
 # RUN ulimit -S -c unlimited
 
-#ftp'd from https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images
+# c.f. https://support.dcmtk.org/redmine/projects/dcmtk/wiki/DICOM_Images
+# IHE MESA CPI test cases: from ftp://dicom.offis.de/pub/dicom/offis/software/mesa_cpi/, release_2002/imgdisplay_testcases.zip
 COPY imgdisplay_testcases.zip "./imgdisplay_testcases.zip"
 
 # need 2 clean copies so we can have opt and unopt builds
