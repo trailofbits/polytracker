@@ -5,10 +5,12 @@ WORKDIR /polytracker/the_klondike/
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get -y upgrade && apt-get install -y wget
-RUN wget http://jpegclub.org/reference/wp-content/uploads/2022/01/jpegsrc.v9e.tar.gz && \
-    tar xf jpegsrc.v9e.tar.gz
+RUN wget https://www.ijg.org/files/jpegsrc.v9e.tar.gz && \
+    wget https://www.ijg.org/files/jpegsrc.v9d.tar. && \
+    tar xf jpegsrc.v9e.tar.gz && \
+    tar xf jpegsrc.v9d.tar.gz
 
-# Now, build the libjpeg image using previously downloaded source
+# libjpeg-9e
 WORKDIR /polytracker/the_klondike/jpeg-9e/build
 # Configure build
 RUN LDFLAGS="-static" CFLAGS="-g -O3" CC=clang CXX=clang++ ../configure
@@ -18,4 +20,16 @@ RUN polytracker extract-bc djpeg -o djpeg.bc
 RUN polytracker instrument-cflog djpeg.bc
 RUN polytracker opt-bc djpeg.bc -o djpeg_opt.bc
 RUN polytracker instrument-bc --taint --ftrace djpeg_opt.bc -o djpeg.instrumented.bc
-RUN polytracker lower-bc djpeg.instrumented.bc -t djpeg -o djpeg_track
+RUN polytracker lower-bc djpeg.instrumented.bc -t djpeg -o djpeg_9e
+
+# libjpeg-9d
+WORKDIR /polytracker/the_klondike/jpeg-9d/build
+# Configure build
+RUN LDFLAGS="-static" CFLAGS="-g -O3" CC=clang CXX=clang++ ../configure
+
+RUN polytracker build make -j$((`nproc`+1))
+RUN polytracker extract-bc djpeg -o djpeg.bc
+RUN polytracker instrument-cflog djpeg.bc
+RUN polytracker opt-bc djpeg.bc -o djpeg_opt.bc
+RUN polytracker instrument-bc --taint --ftrace djpeg_opt.bc -o djpeg.instrumented.bc
+RUN polytracker lower-bc djpeg.instrumented.bc -t djpeg -o djpeg_9d
