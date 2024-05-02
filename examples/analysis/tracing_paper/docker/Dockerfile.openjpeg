@@ -38,18 +38,18 @@ RUN polytracker build cmake -S .. -B . \
 RUN polytracker build cmake --build . -j$(nproc)
 RUN polytracker instrument-targets --taint --ftrace --cflog opj_decompress
 
-# # References:
-# # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
-# # https://github.com/uclouvain/openjpeg/issues/1347
-# # https://github.com/uclouvain/openjpeg/pull/1362
-# # The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
+# References:
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
+# https://github.com/uclouvain/openjpeg/issues/1347
+# https://github.com/uclouvain/openjpeg/pull/1362
+# The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
 
-# # WORKDIR /polytracker/the_klondike/openjpeg/
+# WORKDIR /polytracker/openjpeg/
 
-# # RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
-# #     gunzip poc.j2k.gz
+# RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
+#     gunzip poc.j2k.gz
 
-# # # Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
-# # # This will create the TDAG and functionid.json traces for comparison.
+# Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
+# This will create the TDAG and functionid.json traces for comparison.
 
 # WORKDIR /polytracker/openjpeg/
