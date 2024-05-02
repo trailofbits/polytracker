@@ -1,53 +1,55 @@
 FROM trailofbits/polytracker:latest
-LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com, kelly.kaoudis@trailofbits.com"
+LABEL org.opencontainers.image.authors="kelly.kaoudis@trailofbits.com"
 ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /polytracker/the_klondike
+WORKDIR /polytracker
 RUN apt-get update && \
-    apt-get install -y git && \
-    git clone https://github.com/uclouvain/openjpeg.git
+    apt-get install -y wget && \
+    # fixed version
+    wget https://github.com/uclouvain/openjpeg/archive/refs/tags/v2.5.1.tar.gz && \
+    # reported version
+    wget https://github.com/uclouvain/openjpeg/archive/refs/tags/v2.5.0.tar.gz && \
+    tar xvf v2.5.1.tar.gz && \
+    tar xvf v2.5.0.tar.gz
 
-# build release binary
-ENV RELEASE=/polytracker/the_klondike/openjpeg/build/release
-WORKDIR "$RELEASE"
-RUN polytracker build cmake -S ../.. -B . \
-    -DBUILD_JPWL:bool=ON \
-    -DBUILD_MJ2:bool=ON \
+ENV FIXED=/polytracker/openjpeg-2.5.1/build
+ENV REPORTED=/polytracker/openjpeg-2.5.0/build
+
+# build v2.5.1 (fixed) https://github.com/uclouvain/openjpeg/blob/v2.5.1/CHANGELOG.md
+WORKDIR "$FIXED"
+RUN polytracker build cmake -S .. -B . \
+    -DBUILD_THIRDPARTY=ON \
     -DBUILD_DOC=OFF \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_UNIT_TESTS=OFF \
     -DBUILD_TESTING=OFF \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_EXE_LINKER_FLAGS="-L$RELEASE/bin -l:libopenjp2.a"
+    -DCMAKE_BUILD_TYPE=Debug
 RUN polytracker build cmake --build . -j$(nproc)
 RUN polytracker instrument-targets --taint --ftrace --cflog opj_decompress
 
-# build debug binary
-ENV DEBUG=/polytracker/the_klondike/openjpeg/build/debug
-WORKDIR "$DEBUG"
-RUN polytracker build cmake -S ../.. -B . \
-    -DBUILD_JPWL:bool=ON \
-    -DBUILD_MJ2:bool=ON \
+# build v2.5.0 (reported)
+WORKDIR "$REPORTED"
+RUN polytracker build cmake -S .. -B . \
+    -DBUILD_THIRDPARTY=ON \
     -DBUILD_DOC=OFF \
     -DBUILD_SHARED_LIBS=OFF \
     -DBUILD_UNIT_TESTS=OFF \
     -DBUILD_TESTING=OFF \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DCMAKE_EXE_LINKER_FLAGS="-L$DEBUG/bin -l:libopenjp2.a"
+    -DCMAKE_BUILD_TYPE=Debug
 RUN polytracker build cmake --build . -j$(nproc)
 RUN polytracker instrument-targets --taint --ftrace --cflog opj_decompress
 
-# References:
-# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
-# https://github.com/uclouvain/openjpeg/issues/1347
-# https://github.com/uclouvain/openjpeg/pull/1362
-# The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
+# # References:
+# # https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-3575
+# # https://github.com/uclouvain/openjpeg/issues/1347
+# # https://github.com/uclouvain/openjpeg/pull/1362
+# # The file shouldn't be decompressed if: either there is no EOC marker found, or Rsiz value is non compliant. Grok refuses to decompress the PoC in the open PR discussion, yet openjpeg attempts.
 
-# WORKDIR /polytracker/the_klondike/openjpeg/
+# # WORKDIR /polytracker/the_klondike/openjpeg/
 
-# RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
-#     gunzip poc.j2k.gz
+# # RUN wget https://github.com/uclouvain/openjpeg/files/6402272/poc.j2k.gz && \
+# #     gunzip poc.j2k.gz
 
-# # Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
-# # This will create the TDAG and functionid.json traces for comparison.
+# # # Test command: opj_decompress -i poc.j2k -o poc.j2k.png, using the appropriate binary we built above
+# # # This will create the TDAG and functionid.json traces for comparison.
 
-WORKDIR /polytracker/the_klondike/openjpeg/
+# WORKDIR /polytracker/openjpeg/
