@@ -15,7 +15,7 @@ RUN sed -Ei 's/^# deb-src /deb-src /' /etc/apt/sources.list
 #Update pkg-config/util-linux (needed for FontConfig)
 RUN apt update
 RUN apt install pkg-config uuid-dev gperf libtool \
-	gettext autopoint autoconf -y
+	gettext autopoint autoconf wget -y
 
 RUN apt-get install python3-dev
 
