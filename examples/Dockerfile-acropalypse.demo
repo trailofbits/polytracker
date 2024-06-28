@@ -4,15 +4,18 @@ LABEL org.opencontainers.image.authors="henrik.brodin@trailofbits.com"
 
 WORKDIR /polytracker/acropalypse
 
+RUN apt-get update && \
+    apt-get install wget && \
+    wget https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz && \
+    tar xvf libpng-1.6.39.tar.xz
 
-RUN curl -L https://downloads.sourceforge.net/libpng/libpng-1.6.39.tar.xz --output libpng.tar.xz
-RUN tar xvf libpng.tar.xz
 WORKDIR /polytracker/acropalypse/libpng-1.6.39
 
-RUN curl -L https://zlib.net/zlib-1.2.13.tar.xz --output zlib.tar.xz
-RUN  tar xf zlib.tar.xz
+RUN wget https://zlib.net/fossils/zlib-1.2.13.tar.gz && \
+    tar xvf zlib-1.2.13.tar.gz
 
 WORKDIR /polytracker/acropalypse/libpng-1.6.39/zlib-1.2.13/
+
 RUN polytracker build ./configure
 RUN polytracker build make
 RUN polytracker extract-bc -o ../libz.bc libz.a
