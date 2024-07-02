@@ -8,11 +8,10 @@ add_executable(
   bitmap_section.cpp
   encoding.cpp
   fnmapping.cpp
-  fntrace.cpp
+  events.cpp
   union.cpp
   labeldeq.cpp
-  stream_offset.cpp
-  control_flow_log.cpp)
+  stream_offset.cpp)
 
 target_include_directories(${TAINTDAG_UNITTEST}
                            PRIVATE ${CMAKE_SOURCE_DIR}/polytracker/include)

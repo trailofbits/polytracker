@@ -7,7 +7,7 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "taintdag/control_flow_log.h"
+#include "taintdag/events.h"
 #include "taintdag/section.h"
 #include <catch2/catch.hpp>
 
@@ -55,3 +55,22 @@ TEST_CASE("Simple varint encoding") {
     REQUIRE(buffer[4] == 0x0f);
   }
 }
+
+// TEST_CASE("Test events section operations") {
+//   namespace td = taintdag;
+//   SECTION("Log unique events") {
+//     td::OutputFile<td::Events> of{std::tmpnam(nullptr)};
+//     auto &events{of.section<td::Events>()};
+//     td::Functions::index_t fnidx{0};
+//     events.log_fn_event(td::Events::kind_t::entry, fnidx);
+//     events.log_fn_event(td::Events::kind_t::exit, fnidx);
+//     SECTION("Events are successfully written") {
+//       td::Events entry{*events.begin()};
+//       REQUIRE(entry.kind == td::Events::kind_t::entry);
+//       REQUIRE(entry.function == fnidx);
+//       td::Events exit{*(events.begin() + 1)};
+//       REQUIRE(exit.kind == td::Events::kind_t::exit);
+//       REQUIRE(exit.function == fnidx);
+//     }
+//   }
+// }
