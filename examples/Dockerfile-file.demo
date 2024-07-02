@@ -3,18 +3,18 @@ MAINTAINER Carson Harmon <carson.harmon@trailofbits.com>
 WORKDIR /polytracker/the_klondike
 
 RUN apt update
-RUN apt-get install automake libtool make python zlib1g-dev git -y
-RUN git clone https://github.com/file/file.git
+RUN apt-get install automake libtool make zlib1g-dev git -y
 
 RUN echo "temp" > /PLACEHOLDER
 ENV POLYPATH=/PLACEHOLDER
 
-#=================================
-WORKDIR file
-RUN autoreconf -f -i
+WORKDIR /polytracker/the_klondike
+RUN git clone https://github.com/file/file.git
+WORKDIR /polytracker/the_klondike/file
+RUN git fetch --tags && \
+    git checkout tags/FILE5_41
+RUN autoreconf -fiv
 RUN ./configure --prefix=/polytracker/the_klondike/bin/ --disable-shared
 RUN polytracker build make -j$((`nproc`+1)) install
-
-WORKDIR /polytracker/the_klondike/bin/bin
 RUN polytracker instrument-targets --taint --ftrace file --ignore-lists libz
 RUN mv file.instrumented file_track
