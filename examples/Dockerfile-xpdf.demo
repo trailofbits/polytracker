@@ -85,15 +85,13 @@ RUN polytracker build cmake -S .. -B . -DCMAKE_BUILD_TYPE=Release
 RUN polytracker build make -j$(nproc) install
 
 #=================================
-# Extract and instrument each tool of interest
-RUN polytracker extract-bc -o pdftotext.bc xpdf/pdftotext
-RUN polytracker instrument-bc --taint --ftrace pdftotext.bc -o pdftotext.instrumented.bc --ignore-lists freetype fontconfig xml2 libz
-RUN polytracker lower-bc pdftotext.instrumented.bc -t pdftotext -o pdftotext_track
+# Extract and instrument each tool of interest.
+# This should make three instrumented binaries (originals live in the xpdf/ directory):
+# pdftops.instrumented, pdftotext.instrumented, and pdfinfo.instrumented
+# These commands are split up for timing / debugging purposes but you could
+# run them all as one big instrument-targets as well.
+RUN polytracker instrument-targets --taint --ftrace pdftotext --ignore-lists freetype fontconfig xml2 libz
 
-RUN polytracker extract-bc -o pdfinfo.bc xpdf/pdfinfo
-RUN polytracker instrument-bc --taint --ftrace pdfinfo.bc -o pdfinfo.instrumented.bc --ignore-lists freetype fontconfig xml2 libz
-RUN polytracker lower-bc pdfinfo.instrumented.bc -t pdfinfo -o pdfinfo_track
+RUN polytracker instrument-targets --taint --ftrace pdfinfo --ignore-lists freetype fontconfig xml2 libz
 
-RUN polytracker extract-bc -o pdftops.bc xpdf/pdftops
-RUN polytracker instrument-bc --taint --ftrace pdftops.bc -o pdftops.instrumented.bc --ignore-lists freetype fontconfig xml2 libz
-RUN polytracker lower-bc pdftops.instrumented.bc -t pdftops -o pdftops_track
+RUN polytracker instrument-targets --taint --ftrace pdftops --ignore-lists freetype fontconfig xml2 libz
