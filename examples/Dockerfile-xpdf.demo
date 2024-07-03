@@ -3,8 +3,9 @@ LABEL org.opencontainers.image.authors="carson.harmon@trailofbits.com,kelly.kaou
 
 WORKDIR /polytracker/the_klondike
 
-# Update pkg-config/util-linux (needed for FontConfig)
-# qt5 is needed for xpdf to build happily.
+# Updating pkg-config/util-linux is needed for FontConfig
+# Note also that qt5 is needed for the cmake build of xpdf
+# (there appears to not be a cmake macro to turn off the build parts that require it)
 RUN apt-get update && apt-get install -y \
 	pkg-config \
 	uuid-dev \
