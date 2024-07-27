@@ -41,8 +41,10 @@ RUN polytracker build cmake -S . -B build \
 	-DWITH_FONTCONFIGURATION_FONTCONFIG=OFF \
 	-DCMAKE_EXE_LINKER_FLAGS="-pthread"
 
-# Build and instrument
 RUN polytracker build cmake --build build -j$(nproc)
-RUN polytracker instrument-targets --taint --ftrace pdftotext pdftops --ignore-lists freetype fontconfig
-RUN mv pdftotext.instrumented pdftotext_track
-RUN mv pdftops.instrumented pdftops_track
+
+# pdftotext (separate for measurement purposes only)
+RUN polytracker instrument-targets --taint --ftrace pdftotext --ignore-lists freetype fontconfig
+
+# pdftops (separate for measurement purposes only)
+RUN polytracker instrument-targets --taint --ftrace pdftops --ignore-lists freetype fontconfig
