@@ -339,7 +339,7 @@ We then added a focus on provenance relationships between information flow track
 2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023. 
 We started building a new kind of differential trace analysis that focuses on helping debug unexpected behavior in programs and compare the effects of bugs across program versions.
 - Evan Sultanik, Marek Surovič, Henrik Brodin, Kelly Kaoudis, Facundo Tuesca, Carson Harmon, Lisa Overall, Joseph Sweeney, and Bradford Larsen.
-"PolyTracker: Whole-Input Dynamic Information Flow Tracing." In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA). 
+"[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA). 
 We brought PolyTracker to ISSTA and talked about the novelty we introduce with the Tainted Directed Acyclic Graph (TDAG) trace format there.
 
 ## License and Acknowledgements
