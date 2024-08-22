@@ -9,9 +9,9 @@
 #include "polytracker/passes/tainted_control_flow.h"
 
 #include <llvm/IR/Attributes.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Instructions.h>
-#include <llvm/IR/DerivedTypes.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 

@@ -1,9 +1,9 @@
 import argparse
-import subprocess
-import os
 import json
+import os
+import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from .plugins import Command
 
@@ -147,7 +147,11 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     subprocess.check_call(cmd)
 
 
-def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str],) -> None:
+def _preopt_instrument_bitcode(
+    input_bitcode: Path,
+    output_bitcode: Path,
+    ignore_lists: List[str],
+) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
