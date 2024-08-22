@@ -147,10 +147,14 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     subprocess.check_call(cmd)
 
 
-def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
+def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str],) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
+    POLY_ABI_LIST_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "abi_lists" / "polytracker_abilist.txt"
+    )
+    ABI_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists")
 
     cmd = [
         "opt",
@@ -162,7 +166,13 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
         str(input_bitcode),
         "-o",
         str(output_bitcode),
+        f"-pt-tcf-ignore-list={POLY_ABI_LIST_PATH}",
     ]
+
+    # add function tracing ignore lists
+    for item in ignore_lists:
+        cmd.append(f"-pt-tcf-ignore-list={ABI_PATH}/{item}")
+
     # execute `cmd`
     subprocess.check_call(cmd)
 
@@ -172,7 +182,6 @@ def _instrument_bitcode(
     output_bitcode: Path,
     ignore_lists: List[str],
     add_taint_tracking: bool,
-    add_function_tracing: bool,
 ) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -197,9 +206,6 @@ def _instrument_bitcode(
     if add_taint_tracking:
         pass_pipeline.append("pt-taint")
 
-    if add_function_tracing:
-        pass_pipeline.append("pt-ftrace")
-
     if add_taint_tracking:
         pass_pipeline += ["pt-dfsan", "pt-rm-fn-attr"]
 
@@ -216,12 +222,6 @@ def _instrument_bitcode(
         cmd.append(f"-pt-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
         for item in ignore_lists:
             cmd.append(f"-pt-dfsan-abilist={ABI_PATH}/{item}")
-
-    if add_function_tracing:
-        # ignore lists for `pt-ftrace`
-        cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
-        for item in ignore_lists:
-            cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
 
     # input and output files
     cmd += [str(input_bitcode), "-o", str(output_bitcode)]
@@ -323,12 +323,6 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -341,7 +335,6 @@ class InstrumentBitcode(Command):
             args.output,
             args.ignore_lists,
             args.taint,
-            args.ftrace,
         )
 
 
@@ -406,12 +399,6 @@ class InstrumentTargets(Command):
         )
 
         parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -421,7 +408,7 @@ class InstrumentTargets(Command):
         parser.add_argument(
             "--cflog",
             action="store_true",
-            help="instrument with control affecting dataflow logging",
+            help="instrument with control affecting data flow logging",
         )
 
     def run(self, args: argparse.Namespace):
@@ -432,8 +419,12 @@ class InstrumentTargets(Command):
             opt_bc = bc_path.with_suffix(".opt.bc")
             _extract_bitcode(target_path, bc_path)
             if args.cflog:
-                # Control affecting data flow logging happens before optimization
-                _preopt_instrument_bitcode(bc_path, bc_path)
+                # Control affecting data flow logging involves placing
+                # instrumentation for capturing what data flow affects control
+                # flow. This means we want this instrumentation to exist "the
+                # same" for all opt levels and don't want to inconsistently
+                # instrument differently optimized bitcodes.
+                _preopt_instrument_bitcode(bc_path, bc_path, args.ignore_lists)
 
             _optimize_bitcode(bc_path, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
@@ -442,6 +433,5 @@ class InstrumentTargets(Command):
                 inst_bc_path,
                 args.ignore_lists,
                 args.taint,
-                args.ftrace,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)

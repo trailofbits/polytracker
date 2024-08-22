@@ -4,7 +4,7 @@ RUN mkdir -p /polytracker/the_klondike
 
 WORKDIR /polytracker/the_klondike
 
-ENV DEBIAN_FRONTEND=noninteractive 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
 
 RUN git clone --recursive --branch 1.20.0 git://git.ghostscript.com/mupdf.git
@@ -22,7 +22,7 @@ WORKDIR /polytracker/the_klondike/mupdf
 RUN git checkout d00de0e96a4a5ec90ffc30837d40cd624a6a89e0
 # Instrument mutool
 RUN polytracker build make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr/local build=release install
-RUN polytracker instrument-targets --taint --ftrace mutool
+RUN polytracker instrument-targets --taint --cflog mutool
 RUN mv mutool.instrumented mutool_track
 # Note, the /workdir directory is intended to be mounted at runtime
 VOLUME ["/workdir"]

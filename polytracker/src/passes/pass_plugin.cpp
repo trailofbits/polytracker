@@ -33,10 +33,10 @@ llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
                     mpm.addPass(polytracker::RemoveFnAttrsPass());
                     return true;
                   }
-                  if (name == "pt-ftrace") {
-                    mpm.addPass(polytracker::FunctionTracingPass());
-                    return true;
-                  }
+                  // if (name == "pt-ftrace") {
+                  //   mpm.addPass(polytracker::FunctionTracingPass());
+                  //   return true;
+                  // }
                   if (name == "pt-tcf") {
                     mpm.addPass(polytracker::TaintedControlFlowPass());
                     return true;

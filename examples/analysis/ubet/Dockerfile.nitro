@@ -32,7 +32,6 @@ RUN cp modules/c++/nitf/show_nitf++ nitro_Release
 
 RUN polytracker instrument-targets \
 	--taint \
-	--ftrace \
 	--cflog \
 	show_nitf++
 
@@ -51,7 +50,6 @@ RUN polytracker build cmake  --build . -j$((`nproc`+1)) --clean-first --target s
 RUN cp modules/c++/nitf/show_nitf++ nitro_Debug
 RUN polytracker instrument-targets \
 	--taint \
-	--ftrace \
 	--cflog \
 	show_nitf++
 
