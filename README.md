@@ -48,7 +48,7 @@ runtime traces produced from instrumented code,
 PolyTracker is controlled via a Python script called `polytracker`. You can
 install it by running
 
-```
+```bash
 pip3 install polytracker
 ```
 
@@ -57,13 +57,13 @@ users are likely to run it in a containerized environment. Luckily,
 `polytracker` makes this easy. All you need to do is have `docker` installed,
 then run:
 
-```
+```bash
 polytracker docker pull
 ```
 
 and
 
-```
+```bash
 polytracker docker run
 ```
 
@@ -78,7 +78,7 @@ instrumented program's control flow graph, and even extract a context free
 grammar matching the inputs accepted by the program. You can explore these
 commands by running
 
-```
+```bash
 polytracker --help
 ```
 
@@ -128,7 +128,7 @@ polytracker build make
 Then run `instrument-targets` on any targets of the build:
 
 ```bash
-$ polytracker instrument-targets a.bin b.so
+polytracker instrument-targets a.bin b.so
 ```
 
 Then `a.instrumented.bin` and `b.instrumented.so` will be the instrumented
@@ -202,7 +202,7 @@ PolyTracker accepts configuration parameters in the form of environment
 variables to avoid recompiling target programs. The current environment
 variables PolyTracker supports is:
 
-```
+```bash
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
@@ -251,20 +251,20 @@ focuses on ignoring system libraries. The original script can be found in
 Check out this Git repository. From the root, either build the base PolyTracker
 Docker image:
 
-```commandline
+```bash
 pip3 install -e ".[dev]" && polytracker docker rebuild
 ```
 
 or pull the latest prebuilt version from DockerHub:
 
-```commandline
+```bash
 docker pull trailofbits/polytracker:latest
 ```
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run
 this command:
 
-```commandline
+```bash
 docker build -t trailofbits/polytracker-demo-mupdf -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
@@ -275,16 +275,16 @@ information provided by the taint analysis.
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this
 command:
 
-```commandline
+```bash
 docker build -t trailofbits/polytracker-demo-poppler -f examples/pdf/Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in
 `/polytracker/the_klondike/poppler-0.84.0/build/utils`.
 
-```commandline
-$ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
-$ ./pdfinfo_track some_pdf.pdf
+```bash
+cd /polytracker/the_klondike/poppler-0.84.0/build/utils
+./pdfinfo_track some_pdf.pdf
 ```
 
 ## Building PolyTracker from Source
@@ -328,18 +328,18 @@ mitigations for this behavior currently being researched and developed.
 Here are some of the publicly available things we've done with PolyTracker. If you know of anything else you'd like to see listed here, please let us know!
 
 - The [Format Analysis Workbench](https://github.com/galoisinc/faw) integrates several key PolyTracker features, namely grammar extraction and blind spot detection.
-- Harmon, Carson, Bradford Larsen, and Evan A. Sultanik. "[Toward automated grammar extraction via semantic labeling of parser implementations.](https://bradfordlarsen.com/files/publications/semantic-labeling-langsec-2020.pdf)" 
+- Harmon, Carson, Bradford Larsen, and Evan A. Sultanik. "[Toward automated grammar extraction via semantic labeling of parser implementations.](https://bradfordlarsen.com/files/publications/semantic-labeling-langsec-2020.pdf)"
 2020 IEEE Security and Privacy Workshops (SPW). IEEE, 2020.
 We used PolyTracker traces to automatically extract grammars from instrumented programs.
 - Brodin, Henrik, Marek Surovič, and Evan Sultanik. "[Blind spots: Identifying exploitable program inputs.](https://langsec.org/spw23/papers/Brodin_LangSec23.pdf)"
 2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
 - Henrik used PolyTracker's blind spots (`mapping` and `cavities` more precisely) trace analysis functionality to pinpoint a CVE and [wrote about it on the Trail of Bits blog](https://blog.trailofbits.com/2023/03/30/acropalypse-polytracker-blind-spots/).
 We then added a focus on provenance relationships between information flow tracking (taint) labels, and used these relationships to find unused input bytes, or "blind spots".
-- Kaoudis, Kelly, Henrik Brodin, and Evan Sultanik. "[Automatically Detecting Variability Bugs Through Hybrid Control and Data Flow Analysis.](https://langsec.org/spw23/papers/Kaoudis_LangSec23.pdf)" 
-2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023. 
+- Kaoudis, Kelly, Henrik Brodin, and Evan Sultanik. "[Automatically Detecting Variability Bugs Through Hybrid Control and Data Flow Analysis.](https://langsec.org/spw23/papers/Kaoudis_LangSec23.pdf)"
+2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
 We started building a new kind of differential trace analysis that focuses on helping debug unexpected behavior in programs and compare the effects of bugs across program versions.
 - Evan Sultanik, Marek Surovič, Henrik Brodin, Kelly Kaoudis, Facundo Tuesca, Carson Harmon, Lisa Overall, Joseph Sweeney, and Bradford Larsen.
-"[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA). 
+"[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA).
 We brought PolyTracker to ISSTA and talked about the novelty we introduce with the Tainted Directed Acyclic Graph (TDAG) trace format there.
 
 ## License and Acknowledgements
@@ -351,8 +351,11 @@ licensed under the [Apache 2.0 license](LICENSE). © 2019, Trail of Bits.
 
 ## Maintainers
 
+Please contact us using `firstname.lastname@trailofbits.com`.
+
 [Evan Sultanik](https://github.com/ESultanik)<br />
 [Henrik Brodin](https://github.com/hbrodin)<br />
+
+## Past Maintainers
 [Marek Surovič](https://github.com/surovic)<br />
 [Facundo Tuesca](https://github.com/facutuesca)<br /> <br />
-`firstname.lastname@trailofbits.com`
