@@ -10,7 +10,7 @@ The Tainted Directed Acyclic Graph (TaintDAG, TDAG) binary file format is an abs
   <img src="img/tdagtree.png" alt="The Directed Acyclic Graph part of a TDAG. This is incidentally a figure from our ISSTA paper. Check out that paper if you want more diagrams." height="400"/>
 </p>
 
-*Figure: an idealized Tainted Directed Acyclic Graph. Increase in color saturation indicates the accumulation of data flow taint.*
+_Figure: an idealized Tainted Directed Acyclic Graph. Increase in color saturation indicates the accumulation of data flow taint._
 
 We store PolyTracker traces as TDAG files so they can be analyzed after they are recorded. Whenever a PolyTracker-instrumented binary runs, that binary produces a new TDAG. Unlike other information flow tracking tools, PolyTracker does not currently do any "online" analysis at runtime! We store PolyTracker traces in the TDAG format so that we can "post-hoc" or "offline" conduct sampled analyses, differential (comparative) analyses between traces, and other types of analyses that are not possible at runtime. Conveniently enough, this also means we don't need to spend runtime tracing memory on analysis operations and can separately optimize our analyses.
 
@@ -26,11 +26,12 @@ Each TDAG includes a number of subsections; the largest of these is typically th
   <img src="img/tdag.png" alt="The TDAG. This is incidentally a figure from our ISSTA paper. Check out that paper if you want more diagrams." height="400"/>
 </p>
 
-*Figure: Layout of an idealized TDAG. Increase in color saturation indicates the accumulation of data flow taint.*
+_Figure: Layout of an idealized TDAG. Increase in color saturation indicates the accumulation of data flow taint._
 
 Every [section](../polytracker/include/taintdag/section.h) in the TDAG has a predefined size, entry size, and optionally also spacing/padding between entries. The sections available in a TDAG file are accessed by tag by the class `TDFile` in [taint_dag.py](../polytracker/taint_dag.py).
 
 Some specifics:
+
 - [File Header](../polytracker/include/taintdag/outputfile.h): this header consists of the TDAG magic bytes, and then "meta" information used to determine the number, type, and contents of the sections that follow FileHeader. This is what `TDFile` is going to interpret to figure out what to do with the rest of the file contents.
 - [Labels](../polytracker/src/taintdag/) consists of the tainted information flow labels recorded at runtime
 - [Sources](../polytracker/src/taint_sources/taint_sources.cpp) contains source labels (byte offsets into the input)
@@ -46,16 +47,19 @@ Some specifics:
 You'll notice the TDAG doesn't just include data flow labels, but also has the other information we collect as well. We use LLVM passes to place several different kinds of static instrumentation at build time. Via this instrumentation, the PolyTracker library will collect different, complementary, aspects of runtime information flow.
 
 We track a couple different kinds of information flow, and record them all together in different sections of the same file:
+
 - dynamic information flow trace labels (taint labels)
 - "affects-control-flow" label tags (represented with the letter C in the above figure)
 - function entries and exits that correspond to the function log for callstack reconstruction purposes
 
 We also include the following more static data:
+
 - the function log that corresponds to the section of the control flow graph our data flow trace followed
 - the index of source bytes, and a mapping between source bytes and initial labels
 - the index of sink bytes
 
 Once the TDAG of interest has been read in, we can re-construct information that is useful for analyses, such as:
+
 - provenance relationships for each intermediate label (these tell you how we got a particular label and what data it descends from; these relationships also can be leveraged to determine what other labels descend from the label of interest), and
 - the control flow log to label mapping for each intermediate label (this tells you where/when we recorded the label during execution).
 
@@ -67,7 +71,7 @@ As the instrumented binary operates on the now labeled data, the associated tain
 
 ### Source Labels
 
-Whenever the instrumented program reads in data, by default, we label each byte of that input as a *taint source*. PolyTracker can also use either stdin and all of argv as sources of taint, but you'll need to set either `POLYTRACKER_STDIN_SOURCE` or `POLYTRACKER_TAINT_ARGV` to make that work. When we work with sources on the "read" or analysis side of PolyTracker, each `source` has a reference to the input file it came from.
+Whenever the instrumented program reads in data, by default, we label each byte of that input as a _taint source_. PolyTracker can also use either stdin and all of argv as sources of taint, but you'll need to set either `POLYTRACKER_STDIN_SOURCE` or `POLYTRACKER_TAINT_ARGV` to make that work. When we work with sources on the "read" or analysis side of PolyTracker, each `source` has a reference to the input file it came from.
 
 ### Shadow Memory Usage
 
@@ -83,7 +87,7 @@ For the above case the taint label of `result` represents a union of the taint l
 
 ### Range Versus Union
 
-If the taint labels considered for a union are adjacent in memory, for example, two consecutive source taint bytes, we create a *range* label instead. Unions and ranges occupy the same amount of storage. The main difference between these two label creation operations and the resulting label types is that a range can be "extended" to become a larger range.
+If the taint labels considered for a union are adjacent in memory, for example, two consecutive source taint bytes, we create a _range_ label instead. Unions and ranges occupy the same amount of storage. The main difference between these two label creation operations and the resulting label types is that a range can be "extended" to become a larger range.
 
 Consider the following operation on source bytes
 
