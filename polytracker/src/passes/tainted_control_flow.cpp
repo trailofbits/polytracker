@@ -10,6 +10,8 @@
 
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 
@@ -92,6 +94,11 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
   llvm::IRBuilder<> ir(&gep);
   for (auto &idx : gep.indices()) {
     if (llvm::isa<llvm::ConstantInt>(idx)) {
+      continue;
+    }
+
+    // we do not handle VectorTypes yet
+    if ((*(idx->getType())).isVectorTy()) {
       continue;
     }
 
