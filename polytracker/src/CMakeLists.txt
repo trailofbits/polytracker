@@ -42,7 +42,7 @@ set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/polytracker.cpp
     ${TAINTDAG_DIR}/print.cpp
     ${TAINTDAG_DIR}/fnmapping.cpp
-    ${TAINTDAG_DIR}/fntrace.cpp
+    ${TAINTDAG_DIR}/events.cpp
     ${TAINTDAG_DIR}/util.cpp)
 
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
