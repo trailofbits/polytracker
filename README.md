@@ -336,7 +336,7 @@ Here are some of the publicly available things we've done with PolyTracker. If y
 - Kaoudis, Kelly, Henrik Brodin, and Evan Sultanik. "[Automatically Detecting Variability Bugs Through Hybrid Control and Data Flow Analysis.](https://langsec.org/spw23/papers/Kaoudis_LangSec23.pdf)"
   2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
 - Evan Sultanik, Marek Surovič, Henrik Brodin, Kelly Kaoudis, Facundo Tuesca, Carson Harmon, Lisa Overall, Joseph Sweeney, and Bradford Larsen.
-  "[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA).
+  "[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA), 2024.
 
 ## License and Acknowledgements
 
