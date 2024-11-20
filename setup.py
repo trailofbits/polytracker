@@ -2,9 +2,9 @@ import os
 import platform
 import re
 import sys
-from setuptools import setup, find_packages
 from typing import Optional, Tuple
 
+from setuptools import find_packages, setup
 
 PYTHON_REQUIRES = ">=3.7"
 if sys.platform == "darwin":
