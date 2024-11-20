@@ -328,7 +328,7 @@ mitigations for this behavior currently being researched and developed.
 
 Here are some of the publicly available things we've done with PolyTracker. If you know of anything else you'd like to see listed here, please let us know!
 
-- The [Format Analysis Workbench](https://github.com/galoisinc/faw) integrates several key PolyTracker features, namely grammar extraction and blind spot detection.
+- The [Format Analysis Workbench](https://github.com/galoisinc/faw) integrates several PolyTracker features from different versions of the codebase, namely grammar extraction and blind spot detection.
 - Harmon, Carson, Bradford Larsen, and Evan A. Sultanik. "[Toward automated grammar extraction via semantic labeling of parser implementations.](https://bradfordlarsen.com/files/publications/semantic-labeling-langsec-2020.pdf)" 2020 IEEE Security and Privacy Workshops (SPW). IEEE, 2020.
 - Brodin, Henrik, Marek Surovič, and Evan Sultanik. "[Blind spots: Identifying exploitable program inputs.](https://langsec.org/spw23/papers/Brodin_LangSec23.pdf)"
   2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
