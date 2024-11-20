@@ -122,7 +122,7 @@ setup(
             "pytest",
             "flake8",
             "Sphinx",
-            "sphinx_rtd_theme~=0.4.3",
+            "sphinx_rtd_theme>=0.6",
             "types-setuptools",
         ]
     },
