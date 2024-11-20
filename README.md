@@ -199,8 +199,8 @@ instrumentation parameters without needing to recompile the binary.
 ### Environment Variables
 
 PolyTracker accepts configuration parameters in the form of environment
-variables to avoid recompiling target programs. The current environment
-variables PolyTracker supports is:
+variables to avoid recompiling target programs. The current set of environment
+variables that PolyTracker supports is:
 
 ```bash
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
@@ -329,19 +329,14 @@ mitigations for this behavior currently being researched and developed.
 Here are some of the publicly available things we've done with PolyTracker. If you know of anything else you'd like to see listed here, please let us know!
 
 - The [Format Analysis Workbench](https://github.com/galoisinc/faw) integrates several key PolyTracker features, namely grammar extraction and blind spot detection.
-- Harmon, Carson, Bradford Larsen, and Evan A. Sultanik. "[Toward automated grammar extraction via semantic labeling of parser implementations.](https://bradfordlarsen.com/files/publications/semantic-labeling-langsec-2020.pdf)"
-  2020 IEEE Security and Privacy Workshops (SPW). IEEE, 2020.
-  We used PolyTracker traces to automatically extract grammars from instrumented programs.
+- Harmon, Carson, Bradford Larsen, and Evan A. Sultanik. "[Toward automated grammar extraction via semantic labeling of parser implementations.](https://bradfordlarsen.com/files/publications/semantic-labeling-langsec-2020.pdf)" 2020 IEEE Security and Privacy Workshops (SPW). IEEE, 2020.
 - Brodin, Henrik, Marek Surovič, and Evan Sultanik. "[Blind spots: Identifying exploitable program inputs.](https://langsec.org/spw23/papers/Brodin_LangSec23.pdf)"
   2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
 - Henrik used PolyTracker's blind spots (`mapping` and `cavities` more precisely) trace analysis functionality to pinpoint a CVE and [wrote about it on the Trail of Bits blog](https://blog.trailofbits.com/2023/03/30/acropalypse-polytracker-blind-spots/).
-  We then added a focus on provenance relationships between information flow tracking (taint) labels, and used these relationships to find unused input bytes, or "blind spots".
 - Kaoudis, Kelly, Henrik Brodin, and Evan Sultanik. "[Automatically Detecting Variability Bugs Through Hybrid Control and Data Flow Analysis.](https://langsec.org/spw23/papers/Kaoudis_LangSec23.pdf)"
   2023 IEEE Security and Privacy Workshops (SPW). IEEE, 2023.
-  We started building a new kind of differential trace analysis that focuses on helping debug unexpected behavior in programs and compare the effects of bugs across program versions.
 - Evan Sultanik, Marek Surovič, Henrik Brodin, Kelly Kaoudis, Facundo Tuesca, Carson Harmon, Lisa Overall, Joseph Sweeney, and Bradford Larsen.
   "[PolyTracker: Whole-Input Dynamic Information Flow Tracing.](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf)" In Proceedings of the 33rd ACM SIGSOFT International Symposium on Software Testing and Analysis (ISSTA).
-  We brought PolyTracker to ISSTA and talked about the novelty we introduce with the Tainted Directed Acyclic Graph (TDAG) trace format there.
 
 ## License and Acknowledgements
 
@@ -356,6 +351,7 @@ Please contact us using `firstname.lastname@trailofbits.com`.
 
 [Evan Sultanik](https://github.com/ESultanik)<br />
 [Henrik Brodin](https://github.com/hbrodin)<br />
+[Kelly Kaoudis](https://github.com/kaoudis)<br />
 
 ## Past Maintainers
 
