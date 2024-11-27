@@ -48,7 +48,7 @@ runtime traces produced from instrumented code,
 PolyTracker is controlled via a Python script called `polytracker`. You can
 install it by running
 
-```bash
+```shell-script
 pip3 install polytracker
 ```
 
@@ -57,13 +57,13 @@ users are likely to run it in a containerized environment. Luckily,
 `polytracker` makes this easy. All you need to do is have `docker` installed,
 then run:
 
-```bash
+```shell-script
 polytracker docker pull
 ```
 
 and
 
-```bash
+```shell-script
 polytracker docker run
 ```
 
@@ -78,7 +78,7 @@ instrumented program's control flow graph, and even extract a context free
 grammar matching the inputs accepted by the program. You can explore these
 commands by running
 
-```bash
+```shell-script
 polytracker --help
 ```
 
@@ -100,7 +100,7 @@ instrumented environment. This will produce a `blight_journal.jsonl` file that
 records all commands run during the build. If you have a C/C++ target, you can
 instrument it by invoking `polytracker build` and passing your build command:
 
-```bash
+```shell-script
 polytracker build gcc -g -o my_binary my_source.c
 ```
 
@@ -110,14 +110,14 @@ directory to build an instrumented version of your build target. The
 instrumented build target will be built using the same flags as the original
 build target.
 
-```bash
+```shell-script
 polytracker instrument-targets my_binary
 ```
 
 `build` also supports more complex programs that use a build system like
 autotiools or CMake:
 
-```bash
+```shell-script
 polytracker build cmake .. -DCMAKE_BUILD_TYPE=Release
 polytracker build ninja
 # or
@@ -127,7 +127,7 @@ polytracker build make
 
 Then run `instrument-targets` on any targets of the build:
 
-```bash
+```shell-script
 polytracker instrument-targets a.bin b.so
 ```
 
@@ -202,7 +202,7 @@ PolyTracker accepts configuration parameters in the form of environment
 variables to avoid recompiling target programs. The current set of environment
 variables that PolyTracker supports is:
 
-```bash
+```shell-script
 POLYDB: A path to which to save the output database (default is polytracker.tdag)
 
 WLLVM_ARTIFACT_STORE: Provides a path to an existing directory to store artifact/manifest for all build targets
@@ -251,20 +251,20 @@ focuses on ignoring system libraries. The original script can be found in
 Check out this Git repository. From the root, either build the base PolyTracker
 Docker image:
 
-```bash
+```shell-script
 pip3 install -e ".[dev]" && polytracker docker rebuild
 ```
 
 or pull the latest prebuilt version from DockerHub:
 
-```bash
+```shell-script
 docker pull trailofbits/polytracker:latest
 ```
 
 For a demo of PolyTracker running on the [MuPDF](https://mupdf.com/) parser run
 this command:
 
-```bash
+```shell-script
 docker build -t trailofbits/polytracker-demo-mupdf -f examples/pdf/Dockerfile-mupdf.demo .
 ```
 
@@ -275,14 +275,14 @@ information provided by the taint analysis.
 For a demo of PolyTracker running on Poppler utils version 0.84.0 run this
 command:
 
-```bash
+```shell-script
 docker build -t trailofbits/polytracker-demo-poppler -f examples/pdf/Dockerfile-poppler.demo .
 ```
 
 All the poppler utils will be located in
 `/polytracker/the_klondike/poppler-0.84.0/build/utils`.
 
-```bash
+```shell-script
 cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 ./pdfinfo_track some_pdf.pdf
 ```
