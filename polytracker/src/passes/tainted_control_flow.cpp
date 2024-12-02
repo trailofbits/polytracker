@@ -95,6 +95,11 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
       continue;
     }
 
+    // we do not handle VectorTypes yet
+    if ((*(idx->getType())).isVectorTy()) {
+      continue;
+    }
+
     auto callret = ir.CreateCall(cond_br_log_fn,
                                  {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
                                   get_function_id_const(gep)});
