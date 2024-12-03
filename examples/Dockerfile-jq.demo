@@ -11,4 +11,4 @@ WORKDIR /polytracker/the_klondike/jq
 RUN autoreconf -fi
 RUN ./configure --with-oniguruma=builtin CC=clang
 RUN polytracker build make -j$((`nproc`+1))
-RUN polytracker instrument-targets --taint --ftrace jq
+RUN polytracker instrument-targets --taint --cflog jq

@@ -30,11 +30,7 @@ RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++ --co
 
 RUN cp modules/c++/nitf/show_nitf++ nitro_Release
 
-RUN polytracker instrument-targets \
-	--taint \
-	--ftrace \
-	--cflog \
-	show_nitf++
+RUN polytracker instrument-targets --taint --cflog show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_trackRelease
 
@@ -49,11 +45,7 @@ RUN polytracker build cmake ../.. \
 
 RUN polytracker build cmake  --build . -j$((`nproc`+1)) --clean-first --target show_nitf++ --config Debug
 RUN cp modules/c++/nitf/show_nitf++ nitro_Debug
-RUN polytracker instrument-targets \
-	--taint \
-	--ftrace \
-	--cflog \
-	show_nitf++
+RUN polytracker instrument-targets --taint --cflog show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_trackDebug
 

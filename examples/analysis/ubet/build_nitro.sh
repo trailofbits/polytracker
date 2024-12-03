@@ -14,7 +14,7 @@ opt -load "${COMPILER_DIR}/pass/libPolytrackerPass.so" -load-pass-plugin "${COMP
 echo "Optmize bitcode"
 polytracker opt-bc --output O3.bc after_preoptO3.bc
 echo "Instrument optimized bitcode"
-polytracker instrument-bc --ftrace --taint --output instrumentedO3.bc O3.bc
+polytracker instrument-bc --cflog --taint --output instrumentedO3.bc O3.bc
 echo "Lower optimized bitcode"
 polytracker lower-bc -t show_nitf++ -o nitro_trackRelease instrumentedO3.bc
 
@@ -36,7 +36,7 @@ opt -load "${COMPILER_DIR}/pass/libPolytrackerPass.so" -load-pass-plugin "${COMP
 cp after_preoptO0.bc O0.bc
 
 echo "Instrument non-optimized bitcode"
-polytracker instrument-bc --ftrace --taint --output instrumentedO0.bc O0.bc
+polytracker instrument-bc --cflog --taint --output instrumentedO0.bc O0.bc
 
 echo "Lower non-optimized bitcode"
 polytracker lower-bc -t show_nitf++ -o nitro_trackDebug instrumentedO0.bc
