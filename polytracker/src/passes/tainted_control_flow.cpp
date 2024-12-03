@@ -20,6 +20,11 @@
 
 #include <fstream>
 
+static llvm::cl::list<std::string> ignore_lists(
+    "pt-ftrace-ignore-list",
+    llvm::cl::desc(
+        "File that specifies functions that pt-tcf should ignore"));
+
 namespace polytracker {
 
 namespace detail {
@@ -185,10 +190,18 @@ TaintedControlFlowPass::run(llvm::Module &mod,
                             llvm::ModuleAnalysisManager &mam) {
   label_ty = llvm::IntegerType::get(mod.getContext(), DFSAN_LABEL_BITS);
   declareLoggingFunctions(mod);
+  auto fnsToIgnore{readIgnoreLists(ignore_lists)};
+
   for (auto &fn : mod) {
-    instrumentFunctionEnter(fn);
-    visit(fn);
+    auto fname{fn.getName()};
+    if (fnsToIgnore.count(fname.str())) {
+      continue;
+    } else {
+      instrumentFunctionEnter(fn);
+      visit(fn);
+    }
   }
+
   return llvm::PreservedAnalyses::none();
 }
 

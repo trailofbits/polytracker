@@ -14,7 +14,6 @@
 #include "taintdag/bitmap_section.h"
 #include "taintdag/control_flow_log.h"
 #include "taintdag/fnmapping.h"
-#include "taintdag/fntrace.h"
 #include "taintdag/labels.h"
 #include "taintdag/sink.h"
 #include "taintdag/stream_offset.h"
@@ -60,25 +59,15 @@ public:
   void log_tainted_control_flow(label_t taint_label, uint32_t function_id);
 
   // Instrumentation callback for when execution enters a function
-  // NOTE: There is a overlap in functionality between this and `function_entry`
-  // they will co-exist for now as they operate slightly different. The
-  // underlying reason is that this was developed separately to support the
-  // Tainted Control Flow logging mechanism.
   void enter_function(uint32_t function_id);
 
   // Instrumentation callback for when execution leaves a function
-  // NOTE: Se `enter_function` comment about overlap.
   void leave_function(uint32_t function_id);
 
   // Log tainted data flowed into the sink
   void taint_sink(int fd, util::Offset offset, void const *mem, size_t length);
   // Same as before, but use same label for all data
   void taint_sink(int fd, util::Offset offset, label_t label, size_t length);
-
-  // Log function entry
-  Functions::index_t function_entry(std::string_view name);
-  // Log function exit
-  void function_exit(Functions::index_t index);
 
 private:
   taint_range_t create_source_taint(source_index_t src,
@@ -95,7 +84,7 @@ private:
   // sections and in which order they appear.
   using ConcreteOutputFile =
       OutputFile<Sources, Labels, StringTable, TaintSink,
-                 SourceLabelIndexSection, Functions, Events, ControlFlowLog>;
+                 SourceLabelIndexSection, Functions, ControlFlowLog>;
   ConcreteOutputFile output_file_;
 
   // Tracking source offsets for streams (where offsets can be determined by

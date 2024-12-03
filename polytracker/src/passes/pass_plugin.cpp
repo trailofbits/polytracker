@@ -10,7 +10,6 @@
 #include <llvm/Passes/PassPlugin.h>
 
 #include "polytracker/passes/DataFlowSanitizer.h"
-#include "polytracker/passes/function_tracing.h"
 #include "polytracker/passes/remove_fn_attr.h"
 #include "polytracker/passes/taint_tracking.h"
 #include "polytracker/passes/tainted_control_flow.h"
@@ -31,10 +30,6 @@ llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
                   }
                   if (name == "pt-rm-fn-attr") {
                     mpm.addPass(polytracker::RemoveFnAttrsPass());
-                    return true;
-                  }
-                  if (name == "pt-ftrace") {
-                    mpm.addPass(polytracker::FunctionTracingPass());
                     return true;
                   }
                   if (name == "pt-tcf") {
