@@ -129,16 +129,19 @@ class TDLabelSection:
     def count(self):
         return len(self.section) // sizeof(c_uint64)
 
+class Event:
+    callstack: List = None
+    label: int = None
 
-class TDEnterFunctionEvent:
+    def __init__(self, callstack):
+        """Callstack at the point the event occurred"""
+        self.callstack = callstack
+
+class TDEnterFunctionEvent(Event):
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
     having the function just entered as the last member of the callstack.
     """
-
-    def __init__(self, callstack):
-        """Callstack after entering function"""
-        self.callstack = callstack
 
     def __repr__(self) -> str:
         return f"Enter: {self.callstack}"
@@ -149,15 +152,11 @@ class TDEnterFunctionEvent:
         return False
 
 
-class TDLeaveFunctionEvent:
+class TDLeaveFunctionEvent(Event):
     """Emitted whenever execution leaves a function.
     The callstack member is the callstack right before leaving the function,
     having the function about to leave as the last member of the callstack.
     """
-
-    def __init__(self, callstack):
-        """Callstack before leaving function"""
-        self.callstack = callstack
 
     def __repr__(self) -> str:
         return f"Leave: {self.callstack}"
@@ -168,7 +167,7 @@ class TDLeaveFunctionEvent:
         return False
 
 
-class TDTaintedControlFlowEvent:
+class TDTaintedControlFlowEvent(Event):
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
     Current callstack (including the function the control flow happened in) is available
@@ -326,15 +325,6 @@ class TDFunctionsSection:
             yield TDFnHeader.from_buffer_copy(self.section, offset)
 
 
-class TDEventsSection:
-    def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
-
-    def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDEvent)):
-            yield TDEvent.from_buffer_copy(self.section, offset)
-
-
 class TDFDHeader(Structure):
     """Python representation of the SourceEntry from taint_source.h"""
 
@@ -413,16 +403,6 @@ class TDSink(Structure):
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
-class TDEvent(Structure):
-    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
-
-    class Kind(Enum):
-        ENTRY = 0
-        EXIT = 1
-
-    def __repr__(self) -> str:
-        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
-
 
 TDSection = Union[
     TDLabelSection,
@@ -431,7 +411,6 @@ TDSection = Union[
     TDSinkSection,
     TDSourceIndexSection,
     TDFunctionsSection,
-    TDEventsSection,
     TDControlFlowLogSection,
 ]
 
@@ -475,8 +454,9 @@ class TDFile:
                 self.sections.append(TDFunctionsSection(self.buffer, hdr))
                 self.sections_by_type[TDFunctionsSection] = self.sections[-1]
             elif hdr.tag == 7:
-                self.sections.append(TDEventsSection(self.buffer, hdr))
-                self.sections_by_type[TDEventsSection] = self.sections[-1]
+                continue
+                # self.sections.append(TDEventsSection(self.buffer, hdr))
+                # self.sections_by_type[TDEventsSection] = self.sections[-1]
             elif hdr.tag == 8:
                 self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
                 self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
@@ -568,15 +548,6 @@ class TDFile:
         sink_section = self.sections_by_type[TDSinkSection]
         assert isinstance(sink_section, TDSinkSection)
         yield from sink_section.enumerate()
-
-    def read_event(self, offset: int) -> TDEvent:
-        return TDEvent.from_buffer_copy(self.buffer, offset)
-
-    @property
-    def events(self) -> Iterator[TDEvent]:
-        events_section = self.sections_by_type[TDEventsSection]
-        assert isinstance(events_section, TDEventsSection)
-        yield from events_section
 
 
 class TDTaintOutput(TaintOutput):

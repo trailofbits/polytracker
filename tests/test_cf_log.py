@@ -1,5 +1,4 @@
 import cxxfilt
-import json
 import pytest
 import subprocess
 
@@ -7,11 +6,26 @@ import polytracker
 from pathlib import Path
 
 from polytracker.taint_dag import (
+    Event,
     TDEnterFunctionEvent,
     TDLeaveFunctionEvent,
     TDTaintedControlFlowEvent,
+    TDProgramTrace
 )
+from polytracker import ProgramTrace
 
+@pytest.mark.program_trace("test_fntrace.cpp")
+def test_cf_log_fn_trace(program_trace: ProgramTrace):
+    assert isinstance(program_trace, TDProgramTrace)
+
+    functions = list(program_trace.tdfile.fn_headers)
+    names = set(map(lambda f: f[0], functions))
+    # we store the names in llvm mangled fashion but
+    assert names == set(["main", "_Z9factoriali"])
+
+    # you can easily unmangle them for readability!
+    functionid_mapping = list(map(cxxfilt.demangle, functions))
+    assert functionid_mapping == set(["main", "factorial(int)"])
 
 @pytest.mark.program_trace("test_cf_log.cpp")
 def test_cf_log(instrumented_binary: Path, trace_file: Path):
@@ -34,11 +48,11 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
         polytracker.taint_dag.TDControlFlowLogSection
     )
 
-    # The functionid mapping is available next to the built binary
-    with open(instrumented_binary.parent / "functionid.json", "rb") as f:
-        functionid_mapping = list(map(cxxfilt.demangle, json.load(f)))
+    functions = program_trace.tdfile.fn_headers
 
-    # Apply the id to function mappign
+    functionid_mapping = list(map(cxxfilt.demangle, functions))
+
+    # Apply the id to function mapping
     cflog.function_id_mapping(functionid_mapping)
 
     expected_seq = [
@@ -66,4 +80,8 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
 
     # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
     for got, expected in zip(cflog, expected_seq):
+        assert type(got) == Event
         assert got == expected
+        if type(got) == TDTaintedControlFlowEvent:
+            # inheritance should make this work?
+            assert got.label is not None

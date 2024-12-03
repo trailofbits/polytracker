@@ -39,7 +39,6 @@ Some specifics:
 - [Sinks](../polytracker/include/taintdag/sink.h) contains sink labels (representing bytes of the output)
 - [Strings](../polytracker/include/taintdag/string_table.h) todo(kaoudis) the string table is used in conjunction with the fnmapping to put together an earlier version of the control flow log used for grammar extraction
 - [Functions](../polytracker/include/taintdag/fnmapping.h) todo(kaoudis) this contains an early version of the function list part of the control flow log used for grammar extraction
-- [Events](../polytracker/include/taintdag/fntrace.h) todo(kaoudis) this contains an early version of the entry and exit events used to structure the control flow log
 - [Control Flow Log](../polytracker/include/taintdag/control_flow_log.h): this consists of the function entry and exit records we need to reconstruct the call stack that data flow passed through.
 
 ## TDAG Contents
