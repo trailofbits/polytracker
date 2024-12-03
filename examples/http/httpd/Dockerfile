@@ -11,7 +11,7 @@ WORKDIR /polytracker/examples/http/httpd/httpd
 RUN mkdir -p srclib/apr srclib/apr-util srclib/pcre srclib/expat
 RUN curl https://archive.apache.org/dist/apr/apr-1.7.0.tar.gz -o apr-1.7.0.tar.gz \
     && tar xfz apr-1.7.0.tar.gz -C srclib/apr --strip-components 1 \
-    && rm apr-1.7.0.tar.gz 
+    && rm apr-1.7.0.tar.gz
 RUN curl https://archive.apache.org/dist/apr/apr-util-1.6.1.tar.gz -o apr-util-1.6.1.tar.gz \
     && tar xfz apr-util-1.6.1.tar.gz -C srclib/apr-util --strip-components 1 \
     && rm apr-util-1.6.1.tar.gz
@@ -33,19 +33,19 @@ RUN polytracker build make
 # apr, apr-util are configured via httpd's configure script
 
 WORKDIR /polytracker/examples/http/httpd/httpd
-RUN polytracker build ./buildconf 
+RUN polytracker build ./buildconf
 RUN CFLAGS="-I$(pwd)/srclib/pcre -I$(pwd)/srclib/expat/lib" \
     LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
     polytracker build ./configure --disable-shared --with-mpm=prefork --with-pcre=srclib/pcre/pcre-config --with-included-apr \
     --enable-mods-static='authz_core unixd'
 RUN CFLAGS="-I$(pwd)/srclib/pcre -I$(pwd)/srclib/expat/lib" \
-    LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \ 
+    LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
     polytracker build make -j$((`nproc`+1))
 
-RUN polytracker instrument-targets --taint --ftrace httpd
+RUN polytracker instrument-targets --taint --cflog httpd
 RUN mv httpd.instrumented httpd_track
-# overwrite binary to be installed with our polytracker-instrumented version 
-RUN cp httpd_track httpd  
+# overwrite binary to be installed with our polytracker-instrumented version
+RUN cp httpd_track httpd
 RUN polytracker build make install
 
 COPY harness_httpd.sh /polytracker/examples/http/httpd/

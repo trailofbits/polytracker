@@ -27,7 +27,7 @@ RUN ../configure --disable-everything \
         --disable-asm
 
 RUN polytracker build make -j$((`nproc`+1))
-RUN polytracker instrument-targets --taint --ftrace ffmpeg_g --ignore-lists libz
+RUN polytracker instrument-targets --taint --cflog ffmpeg_g --ignore-lists libz
 RUN mv ffmpeg_g.instrumented ffmpeg_track
 
 # Use the following command to transcode a `.mov` h264/aac file to an `.avi` raw/aac file

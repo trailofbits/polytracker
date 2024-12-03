@@ -30,5 +30,5 @@ RUN cabal run ../../:daedalus -- compile-c++ nitf_main.ddl --out-dir=cpp_parser
 
 WORKDIR /polytracker/the_klondike/daedalus/formats/nitf/cpp_parser
 RUN polytracker build make parser && \
-    polytracker instrument-targets --taint --ftrace parser --ignore-lists gmp ssl libz && \
+    polytracker instrument-targets --taint --cflog parser --ignore-lists gmp ssl libz && \
     mv parser.instrumented parser-track

@@ -18,9 +18,6 @@ RUN polytracker build cmake .. \
 
 RUN polytracker build cmake --build . -j$((`nproc`+1)) --target show_nitf++
 
-RUN polytracker instrument-targets \
-	--taint \
-	--ftrace \
-	show_nitf++
+RUN polytracker instrument-targets --taint --cflog show_nitf++
 
 RUN mv show_nitf++.instrumented nitro_track

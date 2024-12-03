@@ -16,5 +16,5 @@ RUN git fetch --tags && \
 RUN autoreconf -fiv
 RUN ./configure --prefix=/polytracker/the_klondike/bin/ --disable-shared
 RUN polytracker build make -j$((`nproc`+1)) install
-RUN polytracker instrument-targets --taint --ftrace file --ignore-lists libz
+RUN polytracker instrument-targets --taint --cflog file --ignore-lists libz
 RUN mv file.instrumented file_track
