@@ -21,22 +21,6 @@ static void polytracker_initialize() {
   polytracker_init_flag.test_and_set(std::memory_order_relaxed);
 }
 
-extern "C" taintdag::Functions::index_t
-__polytracker_log_func_entry(char *name, uint16_t len) {
-  if (!polytracker_is_initialized()) {
-    return 0;
-  }
-  return get_polytracker_tdag().function_entry({name, len});
-}
-
-extern "C" void
-__polytracker_log_func_exit(taintdag::Functions::index_t func_index) {
-  if (!polytracker_is_initialized()) {
-    return;
-  }
-  get_polytracker_tdag().function_exit(func_index);
-}
-
 extern "C" dfsan_label __polytracker_union_table(const dfsan_label &l1,
                                                  const dfsan_label &l2) {
   if (!polytracker_is_initialized()) {

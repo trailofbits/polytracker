@@ -198,7 +198,7 @@ def _instrument_bitcode(
         pass_pipeline.append("pt-taint")
 
     if add_function_tracing:
-        pass_pipeline.append("pt-ftrace")
+        pass_pipeline.append("pt-tcf")
 
     if add_taint_tracking:
         pass_pipeline += ["pt-dfsan", "pt-rm-fn-attr"]
@@ -218,7 +218,7 @@ def _instrument_bitcode(
             cmd.append(f"-pt-dfsan-abilist={ABI_PATH}/{item}")
 
     if add_function_tracing:
-        # ignore lists for `pt-ftrace`
+        # ignore lists for `pt-tcf` (function tracing for control flow logging)
         cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
         for item in ignore_lists:
             cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
@@ -323,12 +323,6 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -341,7 +335,6 @@ class InstrumentBitcode(Command):
             args.output,
             args.ignore_lists,
             args.taint,
-            args.ftrace,
         )
 
 
@@ -406,12 +399,6 @@ class InstrumentTargets(Command):
         )
 
         parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -421,7 +408,7 @@ class InstrumentTargets(Command):
         parser.add_argument(
             "--cflog",
             action="store_true",
-            help="instrument with control affecting dataflow logging",
+            help="instrument with function tracing and control affecting dataflow logging",
         )
 
     def run(self, args: argparse.Namespace):
@@ -442,6 +429,5 @@ class InstrumentTargets(Command):
                 inst_bc_path,
                 args.ignore_lists,
                 args.taint,
-                args.ftrace,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)
