@@ -39,9 +39,9 @@ set(TAINTDAG_DIR taintdag)
 set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/encoding.cpp
     ${TAINTDAG_DIR}/error.cpp
+    ${TAINTDAG_DIR}/fnmapping.cpp
     ${TAINTDAG_DIR}/polytracker.cpp
     ${TAINTDAG_DIR}/print.cpp
-    ${TAINTDAG_DIR}/fnmapping.cpp
     ${TAINTDAG_DIR}/util.cpp)
 
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
