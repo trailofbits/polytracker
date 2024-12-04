@@ -71,11 +71,12 @@ extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
   return conditional;
 }
 
-extern "C" void __polytracker_enter_function(uint32_t function_id) {
+extern "C" void __polytracker_enter_function(uint32_t function_id, std::string_view function_name) {
   if (!polytracker_is_initialized()) {
     return;
   }
   get_polytracker_tdag().enter_function(function_id);
+  get_polytracker_tdag().record_function_name(function_id, function_name);
 }
 
 extern "C" void __polytracker_leave_function(uint32_t function_id) {

@@ -61,6 +61,9 @@ public:
   // Instrumentation callback for when execution enters a function
   void enter_function(uint32_t function_id);
 
+  // Log function name mapping when execution enters a function
+  void record_function_name(uint32_t function_id, std::string_view function_name);
+
   // Instrumentation callback for when execution leaves a function
   void leave_function(uint32_t function_id);
 
