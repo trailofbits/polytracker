@@ -39,14 +39,14 @@ void FunctionTracingPass::visitReturnInst(llvm::ReturnInst &ri) {
 llvm::PreservedAnalyses
 FunctionTracingPass::run(llvm::Module &mod, llvm::ModuleAnalysisManager &mam) {
   declareLoggingFunctions(mod);
-  auto ignore{readIgnoreLists(ignore_lists)};
+  auto ignore = readIgnoreLists(ignore_lists);
   for (auto &fn : mod) {
-    auto fname{fn.getName()};
+    auto fname = fn.getName();
     if (fn.isDeclaration() || ignore.count(fname.str())) {
       continue;
     }
     llvm::IRBuilder<> ir(&*fn.getEntryBlock().begin());
-    auto fname_ptr{ir.CreateGlobalStringPtr(fname)};
+    auto fname_ptr = ir.CreateGlobalStringPtr(fname);
     log_entry_calls[&fn] = ir.CreateCall(
         func_entry_log_fn, {fname_ptr, ir.getInt16(fname.size())});
     visit(fn);
