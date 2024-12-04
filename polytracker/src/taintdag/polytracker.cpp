@@ -182,6 +182,10 @@ void PolyTracker::enter_function(uint32_t function_id) {
   output_file_.section<ControlFlowLog>().enter_function(function_id);
 }
 
+void PolyTracker::record_function_name(uint32_t function_id, std::string_view function_name) {
+  output_file_.section<Functions>().add_mapping(function_id, function_name);
+}
+
 void PolyTracker::leave_function(uint32_t function_id) {
   output_file_.section<ControlFlowLog>().leave_function(function_id);
 }
