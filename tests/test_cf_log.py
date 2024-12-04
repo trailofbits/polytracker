@@ -78,7 +78,8 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
         TDLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
     ]
 
-    # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
+    assert len(got) > 0
+
     for got, expected in zip(cflog, expected_seq):
         assert type(got) == Event
         assert got == expected

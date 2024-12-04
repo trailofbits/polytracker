@@ -37,7 +37,7 @@ Some specifics:
 - [Sources](../polytracker/src/taint_sources/taint_sources.cpp) contains source labels (byte offsets into the input)
 - The Source Label Index is a bitmap that defines how to index the sources section.
 - [Sinks](../polytracker/include/taintdag/sink.h) contains sink labels (representing bytes of the output)
-- [Strings](../polytracker/include/taintdag/string_table.h) todo(kaoudis) the string table is used in conjunction with the fnmapping to put together an earlier version of the control flow log used for grammar extraction
+- [Strings](../polytracker/include/taintdag/string_table.h) todo(kaoudis) the string table is used in conjunction with the fnmapping to put together an earlier version of the control flow log used for grammar extraction. Note that the string table also contains other things!
 - [Functions](../polytracker/include/taintdag/fnmapping.h) todo(kaoudis) this contains an early version of the function list part of the control flow log used for grammar extraction
 - [Control Flow Log](../polytracker/include/taintdag/control_flow_log.h): this consists of the function entry and exit records we need to reconstruct the call stack that data flow passed through.
 
