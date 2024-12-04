@@ -15,26 +15,26 @@ TEST_CASE("Test fnmapping operations") {
   SECTION("Add unique functions, functions are successfully inserted") {
     td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
     auto &functions{of.section<td::Functions>()};
-    REQUIRE(functions.add_mapping("foo"));
-    REQUIRE(functions.add_mapping("bar"));
-    REQUIRE(functions.add_mapping("baz"));
+    REQUIRE(functions.add_mapping(4, "foo"));
+    REQUIRE(functions.add_mapping(55, "bar"));
+    REQUIRE(functions.add_mapping(1, "baz"));
   }
 
   SECTION("Add unique functions, functions have successive indices") {
     td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
     auto &functions{of.section<td::Functions>()};
-    REQUIRE(functions.add_mapping("foo").value_or(3) == 0);
-    REQUIRE(functions.add_mapping("bar").value_or(3) == 1);
-    REQUIRE(functions.add_mapping("baz").value_or(3) == 2);
+    REQUIRE(functions.add_mapping(4, "foo").value_or(3) == 0);
+    REQUIRE(functions.add_mapping(55, "bar").value_or(3) == 1);
+    REQUIRE(functions.add_mapping(1, "baz").value_or(3) == 2);
   }
 
   SECTION("Add duplicate functions, duplicate functions have the same index") {
     td::OutputFile<td::StringTable, td::Functions> of{std::tmpnam(nullptr)};
     auto &functions{of.section<td::Functions>()};
-    auto foo_1{functions.add_mapping("foo").value_or(3)};
-    functions.add_mapping("bar");
-    functions.add_mapping("baz");
-    auto foo_2{functions.add_mapping("foo").value_or(4)};
+    auto foo_1{functions.add_mapping(4, "foo").value_or(3)};
+    functions.add_mapping(55, "bar");
+    functions.add_mapping(1, "baz");
+    auto foo_2{functions.add_mapping(4, "foo").value_or(4)};
     REQUIRE(foo_1 == foo_2);
   }
 }
