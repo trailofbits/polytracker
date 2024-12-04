@@ -39,12 +39,12 @@ public:
       : FixedSizeAlloc{of.range},
         string_table{of.output_file.template section<StringTable>()} {}
 
-  std::optional<index_t> add_mapping(std::string_view name);
+  std::optional<index_t> add_mapping(uint32_t function_id, std::string_view function_name);
 
 private:
   StringTable &string_table;
   std::mutex mappings_mutex;
-  std::unordered_map<std::string_view, index_t> mappings;
+  std::unordered_map<uint32_t, index_t> mappings;
 };
 
 } // namespace taintdag
