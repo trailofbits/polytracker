@@ -8,7 +8,6 @@ add_executable(
   bitmap_section.cpp
   encoding.cpp
   fnmapping.cpp
-  fntrace.cpp
   union.cpp
   labeldeq.cpp
   stream_offset.cpp
