@@ -19,16 +19,21 @@ using index_t = Functions::index_t;
 
 } // namespace
 
-std::optional<index_t> Functions::add_mapping(std::string_view name) {
+// The goal here is to get to the following state:
+//  - the cflog section contains function ids
+//  - the functions section maps those function ids to the offsets of names in the strings table
+//  - the strings table contains names
+// In this way, the functions section is a lookup layer for getting names (in their original, mangled format - you can demangle them later with cxxfilt in python) out of the strings table.
+std::optional<index_t> Functions::add_mapping(uint32_t function_id, std::string_view function_name) {
   // Lock `mappings`
   // std::cout << "BREAK 1" << std::endl;
   std::unique_lock mappings_lock(mappings_mutex);
-  // See if we already have a mapping of `name`
-  if (auto it{mappings.find(name)}; it != mappings.end()) {
+  // See if we already have a mapping of the function id
+  if (auto it{mappings.find(function_id)}; it != mappings.end()) {
     return it->second;
   }
-  // Write `name` into the string table section
-  auto maybe_name_offset{string_table.add_string(name)};
+  // Write the function's mangled name into the string table section
+  auto maybe_name_offset{string_table.add_string(function_name)};
   if (!maybe_name_offset) {
     return {};
   }
@@ -39,7 +44,7 @@ std::optional<index_t> Functions::add_mapping(std::string_view name) {
     return {};
   }
   // Return index of `Function` in `Functions`
-  return mappings[name] = index(maybe_ctx->t);
+  return mappings[function_id] = index(maybe_ctx->t);
 }
 
 } // namespace taintdag
