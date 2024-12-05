@@ -59,7 +59,6 @@ struct ControlFlowLog : public SectionBase {
                  " bytes of output to the ControlFlowLog Section.");
     }
   }
-
   void enter_function(uint32_t function_id) {
     function_event(EnterFunction, function_id);
   }

@@ -166,7 +166,7 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
       ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
 
   fn_enter_log_fn = mod.getOrInsertFunction("__polytracker_enter_function",
-                                            ir.getVoidTy(), ir.getInt32Ty(), ir.getStringTy());
+                                            ir.getVoidTy(), ir.getInt32Ty());
 
   fn_leave_log_fn = mod.getOrInsertFunction("__polytracker_leave_function",
                                             ir.getVoidTy(), ir.getInt32Ty());
@@ -177,7 +177,7 @@ void TaintedControlFlowPass::instrumentFunctionEnter(llvm::Function &func) {
     return;
   }
   llvm::IRBuilder<> ir(&*func.getEntryBlock().begin());
-  ir.CreateCall(fn_enter_log_fn, get_function_id_const(func), func.getName());
+  ir.CreateCall(fn_enter_log_fn, get_function_id_const(func));
 }
 
 void TaintedControlFlowPass::visitReturnInst(llvm::ReturnInst &ri) {
