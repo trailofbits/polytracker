@@ -28,6 +28,7 @@ class TaintedControlFlowPass
   llvm::FunctionCallee cond_br_log_fn;
   // Log enter/leave functions
   llvm::FunctionCallee fn_enter_log_fn;
+  llvm::FunctionType *enter_log_fn_type;
   llvm::FunctionCallee fn_leave_log_fn;
 
   // Helpers
