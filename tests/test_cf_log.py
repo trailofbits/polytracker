@@ -6,7 +6,7 @@ import polytracker
 from pathlib import Path
 
 from polytracker.taint_dag import (
-    TDEvent,
+    # TDEvent,
     TDControlFlowLogSection,
     TDEnterFunctionEvent,
     TDLeaveFunctionEvent,
