@@ -155,7 +155,9 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
 }
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
-  llvm::IRBuilder<> ir(mod.getContext());
+  llvm::LLVMContext *context = &mod.getContext();
+  llvm::IRBuilder<> ir(*context);
+
   cond_br_log_fn = mod.getOrInsertFunction(
       "__polytracker_log_tainted_control_flow",
       llvm::AttributeList::get(
@@ -165,11 +167,11 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
                                  llvm::Attribute::ReadNone)}}),
       ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
 
-  fn_enter_log_fn = mod.getOrInsertFunction("__polytracker_enter_function",
-                                            ir.getVoidTy(), ir.getInt32Ty());
+  enter_log_fn_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*context), llvm::Type::getInt32Ty(*context), llvm::Type::getInt8PtrTy(*context));
 
-  fn_leave_log_fn = mod.getOrInsertFunction("__polytracker_leave_function",
-                                            ir.getVoidTy(), ir.getInt32Ty());
+  fn_enter_log_fn = mod.getOrInsertFunction("__polytracker_enter_function", enter_log_fn_type);
+
+  fn_leave_log_fn = mod.getOrInsertFunction("__polytracker_leave_function", ir.getVoidTy(), ir.getInt32Ty());
 }
 
 void TaintedControlFlowPass::instrumentFunctionEnter(llvm::Function &func) {
@@ -177,7 +179,13 @@ void TaintedControlFlowPass::instrumentFunctionEnter(llvm::Function &func) {
     return;
   }
   llvm::IRBuilder<> ir(&*func.getEntryBlock().begin());
-  ir.CreateCall(fn_enter_log_fn, get_function_id_const(func));
+
+  ir.CreateCall(fn_enter_log_fn,
+                {
+                  get_function_id_const(func),
+                  ir.CreateGlobalStringPtr(func.getName())
+                }
+  );
 }
 
 void TaintedControlFlowPass::visitReturnInst(llvm::ReturnInst &ri) {

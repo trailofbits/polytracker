@@ -64,6 +64,9 @@ public:
   // Instrumentation callback for when execution leaves a function
   void leave_function(uint32_t function_id);
 
+  // Log function name
+  void record_function_name(uint32_t function_id, std::string_view function_name);
+
   // Log tainted data flowed into the sink
   void taint_sink(int fd, util::Offset offset, void const *mem, size_t length);
   // Same as before, but use same label for all data
