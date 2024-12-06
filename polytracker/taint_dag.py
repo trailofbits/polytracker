@@ -433,7 +433,7 @@ class TDFile:
         section_offset = sizeof(TDFileMeta)
         self.sections: List[TDSection] = []
         self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
-        for i in range(0, self.filemeta.section_count):
+        for _ in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
@@ -469,12 +469,13 @@ class TDFile:
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
-        self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
+        self.fn_headers: List[str] = list(self.read_fn_headers())
 
     def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
         return self.sections_by_type[wanted_type]
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
+        print("hi from fd_headers")
         sources = self.sections_by_type[TDSourceSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(sources, TDSourceSection)
@@ -484,7 +485,8 @@ class TDFile:
             (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
         )
 
-    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+    def read_fn_headers(self) -> Iterator[str]:
+        print("hi from fn_headers")
         functions = self.sections_by_type[TDFunctionsSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(functions, TDFunctionsSection)
@@ -492,7 +494,7 @@ class TDFile:
 
         for header in functions:
             name = strings.read_string(header.name_offset)
-            yield name, header
+            yield name
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
@@ -560,7 +562,9 @@ class TDTaintOutput(TaintOutput):
 
 class TDProgramTrace(ProgramTrace):
     def __init__(self, file: BinaryIO) -> None:
+        print("hi!")
         self.tdfile: TDFile = TDFile(file)
+        print("HEOOOOLLLOOOOOO")
         self.tforest: TDTaintForest = TDTaintForest(self)
         self._inputs = None
 
@@ -841,9 +845,8 @@ class TDInfo(Command):
                     print(f"{i}: {path}")
 
             if args.print_fn_headers:
-                for i, h in enumerate(tdfile.fn_headers):
-                    name = h[0]
-                    print(f"{i}: {name}")
+                for i, function_name in enumerate(tdfile.fn_headers):
+                    print(f"{i}: {function_name}")
 
             if args.print_taint_sinks:
                 for s in tdfile.sinks:
