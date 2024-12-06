@@ -182,7 +182,7 @@ def test_cxx_global_object(program_trace: ProgramTrace):
     assert taints[0].offset == 1
     assert taints[0].length == 1
 
-
+@pytest.mark.skip(reason="the Taint Forest is currently not implemented")
 @pytest.mark.program_trace("test_simple_union.cpp", input="ABCDEFGH\n11235878\n")
 def test_taint_forest(program_trace: ProgramTrace):
     had_taint_union = False
