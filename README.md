@@ -298,6 +298,27 @@ the prebuilt Docker container. Otherwise, to install PolyTracker natively, we
 recommend replicating the install process from the
 [PolyTracker Dockerfile](Dockerfile).
 
+## Running Tests
+Running both the Python and C++ unit tests should be done inside the PolyTracker 
+Docker container.
+
+The Catch2 unit tests in `unittests/` live in 
+`/polytracker-build/unittests/src/taintdag/` within the container. Run the test binary 
+within the Docker container with
+```shell-script
+  cd /polytracker-build/unittests/src/taintdag/ && ./tests-taintdag
+```
+
+The Python unit tests in `tests/` require local test C++ programs that the test 
+fixtures will instrument. Run them using Pytest in the working
+```shell-script
+  pytest tests
+```
+Or use pytest to run a single test file with
+```shell-script
+  pytest tests/test_foo.py
+```
+
 ## Current Status and Known Issues
 
 PolyTracker currently only runs on Linux, because that is the only system
