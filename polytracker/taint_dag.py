@@ -129,7 +129,7 @@ class TDLabelSection:
     def count(self):
         return len(self.section) // sizeof(c_uint64)
 
-class Event:
+class CFEvent:
     callstack: List = None
     label: int = None
 
@@ -137,7 +137,7 @@ class Event:
         """Callstack at the point the event occurred"""
         self.callstack = callstack
 
-class TDEnterFunctionEvent(Event):
+class TDEnterFunctionEvent(CFEvent):
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
     having the function just entered as the last member of the callstack.
@@ -152,7 +152,7 @@ class TDEnterFunctionEvent(Event):
         return False
 
 
-class TDLeaveFunctionEvent(Event):
+class TDLeaveFunctionEvent(CFEvent):
     """Emitted whenever execution leaves a function.
     The callstack member is the callstack right before leaving the function,
     having the function about to leave as the last member of the callstack.
@@ -167,7 +167,7 @@ class TDLeaveFunctionEvent(Event):
         return False
 
 
-class TDTaintedControlFlowEvent(Event):
+class TDTaintedControlFlowEvent(CFEvent):
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
     Current callstack (including the function the control flow happened in) is available
@@ -342,8 +342,14 @@ class TDFDHeader(Structure):
 
 
 class TDFnHeader(Structure):
-    _fields_ = [("name_offset", c_uint32)]
+    # constructor for use with the mmap buffer
+    _fields_ = [("name_offset", c_uint32), ("function_id", c_uint32)]
 
+    # name_offset: the offset/location in the strings table of the fn name
+    # function_id: the id written to the cflog
+    def __init__(self, name_offset: int, function_id: int):
+        self.name_offset = name_offset
+        self.function_id = function_id
 
 class TDNode:
     def __init__(self, affects_control_flow: bool = False):
@@ -486,7 +492,7 @@ class TDFile:
         )
 
     def read_fn_headers(self) -> Iterator[str]:
-        print("hi from fn_headers")
+        print("get all the fn_headers")
         functions = self.sections_by_type[TDFunctionsSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(functions, TDFunctionsSection)
