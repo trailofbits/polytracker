@@ -97,7 +97,7 @@ class TDStringSection:
     """TDAG String Table section
 
     Interprets the String Table section in a TDAG file.
-    Corresponds to StringTableBase in string_table.h.
+    Corresponds to StringTable in string_table.h.
     """
 
     def __init__(self, mem, hdr):
