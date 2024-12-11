@@ -44,7 +44,7 @@ public:
 private:
   StringTable &string_table;
   std::mutex mappings_mutex;
-  std::unordered_map<uint32_t, index_t> mappings;
+  std::unordered_map<std::string_view, index_t> mappings;
 };
 
 } // namespace taintdag

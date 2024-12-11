@@ -17,12 +17,9 @@
 #include "taintdag/util.h"
 
 namespace taintdag {
-
-template <typename OffsetT = uint32_t, typename LengthT = uint16_t,
-          uint8_t Tag = 3, size_t AllocationSize = 0x100000>
-struct StringTableBase : public SectionBase {
-  using offset_t = OffsetT;
-  using length_t = LengthT;
+struct StringTable : public SectionBase {
+  using offset_t = uint32_t;
+  using length_t = uint16_t;
 
   static_assert(sizeof(length_t) <= sizeof(offset_t),
                 "offset_t should be larger than or equal to length_t");
@@ -31,19 +28,19 @@ struct StringTableBase : public SectionBase {
 
   // Max string length is limited by either length-type or by maximum offset
   // that can be expressed.
-  static constexpr size_t max_string_len =
+  static constexpr size_t max_entry_size =
       std::min(static_cast<size_t>(std::numeric_limits<length_t>::max()),
-               max_offset - sizeof(length_t));
+              max_offset - sizeof(length_t));
 
-  static constexpr uint8_t tag{Tag};
-  static constexpr size_t allocation_size{AllocationSize};
-  static constexpr size_t align_of = alignof(length_t);
+  static constexpr uint8_t tag{3};
+  static constexpr size_t allocation_size{0x100000};
+  static constexpr size_t align_of = 1;
 
   template <typename OF>
-  StringTableBase(SectionArg<OF> of) : SectionBase{of.range} {
-    if (of.range.size() > max_offset) {
-      error_exit("Tried to use an allocation of size ", of.range.size(),
-                 " max in current offset_t config is ", max_offset);
+  StringTable(SectionArg<OF> output_file) : SectionBase{output_file.range} {
+    if (output_file.range.size() > max_offset) {
+      error_exit("Tried to use an allocation of size ", output_file.range.size(),
+                " max in current offset_t config is ", max_offset);
     }
   }
 
@@ -52,15 +49,20 @@ struct StringTableBase : public SectionBase {
   // string, but the offset to the size of it. Recover the string
   // by using `from_offset`.
   std::optional<offset_t> add_string(std::string_view sv) {
-    if (sv.size() > max_string_len) {
-      error_exit("Tried to store a string of size ", sv.size(), " max is ",
-                 max_string_len);
-      // Doesn't return from here.
+    if ((sv.size() + sizeof(length_t)) > max_entry_size) {
+      spdlog::info("Tried to store a string of size {0:d} but max is {1:d} (will truncate string)", sv.size(), max_entry_size);
+
+      size_t to_truncate = max_entry_size - sizeof(length_t) - 1;
+      sv = sv.substr(0, to_truncate);
+
+      if ((sv.size() + sizeof(length_t)) > max_entry_size) {
+        error_exit("Truncated string was too big: ", sv.size() + sizeof(length_t));
+      }
     }
 
     auto len = allocated_len(sv.size());
     if (auto write_context = write(len)) {
-      // prefix with length
+      // todo(kaoudis) this is possibly a type confusion issue resulting in truncation since size_t is bigger than the current length_t
       *reinterpret_cast<length_t *>(&*(write_context->mem.begin())) = sv.size();
 
       // copy string
@@ -134,7 +136,5 @@ private:
     return req;
   }
 };
-
-using StringTable = StringTableBase<>;
 
 } // namespace taintdag
