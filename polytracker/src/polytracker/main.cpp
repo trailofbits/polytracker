@@ -87,7 +87,7 @@ polytrackers settings
 3. Set rest to default if possible and error if no polypath.
 */
 void polytracker_get_settings() {
-  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name)
+  DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_db_name);
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stderr_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdout_sink);
   DO_EARLY_DEFAULT_CONSTRUCT(std::string, polytracker_stdin_source);
