@@ -343,6 +343,7 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
 
   WHEN("Adding to the string table") {
     THEN("A string bigger than the maximum string size will be truncated and stored") {
+      // display the info logging
       spdlog::set_level(spdlog::level::debug);
 
       auto len = StringTable::max_entry_size + 10;

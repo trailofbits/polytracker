@@ -12,6 +12,7 @@ from typing import (
     cast,
 )
 
+from cxxfilt import demangle
 from enum import Enum
 from pathlib import Path
 from mmap import mmap, PROT_READ
@@ -94,10 +95,16 @@ class TDSourceSection:
 
 
 class TDStringSection:
-    """TDAG String Table section
+    """TDAG String Table section.
 
     Interprets the String Table section in a TDAG file.
-    Corresponds to StringTable in string_table.h.
+    Corresponds to StringTableBase in string_table.h.
+
+    The string table will contain information like the following:
+    - source names
+    - function names
+    - additional label metadata
+    Check usages of StringTableBase in the C++ ("write side") part of the codebase.
     """
 
     def __init__(self, mem, hdr):
@@ -105,10 +112,10 @@ class TDStringSection:
         self.align = hdr.align
 
     def read_string(self, offset):
-        size_of_string = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) >= offset + sizeof(c_uint16) + size_of_string
+        n = c_uint16.from_buffer_copy(self.section[offset:]).value
+        assert len(self.section) >= offset + sizeof(c_uint16) + n
         return str(
-            self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + size_of_string],
+            self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
         )
 
@@ -129,68 +136,77 @@ class TDLabelSection:
     def count(self):
         return len(self.section) // sizeof(c_uint64)
 
-class CFEvent:
-    callstack: List = None
-    label: int = None
+class ControlFlowEvent:
+    callstack: List
+    label: int
 
-    def __init__(self, callstack):
+    def __init__(self, callstack: List, label: int = None):
         """Callstack at the point the event occurred"""
         self.callstack = callstack
+        self.label = label
 
-class TDEnterFunctionEvent(CFEvent):
+    def __repr__(self, typ, callstack: List, label: int = None):
+        return f"{typ}: label {label}, callstack {callstack}"
+
+class CFEnterFunctionEvent(ControlFlowEvent):
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
     having the function just entered as the last member of the callstack.
     """
 
+    def __init__(self, callstack: List):
+        super().__init__(callstack)
+
     def __repr__(self) -> str:
-        return f"Enter: {self.callstack}"
+        ControlFlowEvent.__repr__(type(CFEnterFunctionEvent), self.callstack, None)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDEnterFunctionEvent):
+        if isinstance(__o, CFEnterFunctionEvent):
             return self.callstack == __o.callstack
         return False
 
 
-class TDLeaveFunctionEvent(CFEvent):
+class CFLeaveFunctionEvent(ControlFlowEvent):
     """Emitted whenever execution leaves a function.
     The callstack member is the callstack right before leaving the function,
     having the function about to leave as the last member of the callstack.
     """
 
+    def __init__(self, callstack: List):
+        super().__init__(callstack)
+
     def __repr__(self) -> str:
-        return f"Leave: {self.callstack}"
+        ControlFlowEvent.__repr__(type(CFLeaveFunctionEvent), self.callstack, None)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDLeaveFunctionEvent):
+        if isinstance(__o, CFLeaveFunctionEvent):
             return self.callstack == __o.callstack
         return False
 
 
-class TDTaintedControlFlowEvent(CFEvent):
+class TaintedControlFlowEvent(ControlFlowEvent):
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
     Current callstack (including the function the control flow happened in) is available
     in the `callstack` member."""
 
-    def __init__(self, callstack, label):
-        self.callstack = callstack
-        self.label = label
+    def __init__(self, callstack: List, label: int):
+        super().__init__(callstack, label)
 
     def __repr__(self) -> str:
-        return f"TaintedControlFlow label {self.label} callstack {self.callstack}"
+        ControlFlowEvent.__repr__(type(TaintedControlFlowEvent), self.callstack, self.label)
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDTaintedControlFlowEvent):
+        if isinstance(__o, TaintedControlFlowEvent):
             return self.label == __o.label and self.callstack == __o.callstack
         return False
 
 
 class TDControlFlowLogSection:
-    """TDAG Control flow log section
+    """TDAG Control flow log section.
 
     Interprets the control flow log section in a TDAG file.
-    Enables enumeration/random access of items
+    Enables enumeration/random access of items in the cflog.
     """
 
     # NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`.
@@ -215,26 +231,30 @@ class TDControlFlowLogSection:
     @staticmethod
     def _align_callstack(target_function_id, callstack):
         while callstack and callstack[-1] != target_function_id:
-            yield TDLeaveFunctionEvent(callstack[:])
+            yield CFLeaveFunctionEvent(callstack[:])
             callstack.pop()
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        self.funcmapping = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ControlFlowEvent]:
+        """Produces the cflog entries in order from the mmapped buffer."""
         buffer = self.section
         callstack = []
         while buffer:
             event = c_uint8.from_buffer_copy(buffer, 0).value
             buffer = buffer[1:]
+
+            # A function id is a uint32_t that the functions
+            # section maps to an index into the strings table
+            # If you need function names, you should be working
+            # with the tdfile, rather than with a singular section
+            # of the tdag directly.
             function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
-            if self.funcmapping != None:
-                function_id = self.funcmapping[function_id]
 
             if event == TDControlFlowLogSection.ENTER_FUNCTION:
                 callstack.append(function_id)
-                yield TDEnterFunctionEvent(callstack[:])
+                yield CFEnterFunctionEvent(callstack[:])
             elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
                 # Align call stack, if needed
                 yield from TDControlFlowLogSection._align_callstack(
@@ -242,7 +262,7 @@ class TDControlFlowLogSection:
                 )
 
                 # TODO(hbrodin): If the callstack doesn't contain function_id at all, this will break.
-                yield TDLeaveFunctionEvent(callstack[:])
+                yield CFLeaveFunctionEvent(callstack[:])
                 callstack.pop()
             else:
                 # Align call stack, if needed
@@ -251,14 +271,10 @@ class TDControlFlowLogSection:
                 )
 
                 label, buffer = TDControlFlowLogSection._decode_varint(buffer)
-                yield TDTaintedControlFlowEvent(callstack[:], label)
+                yield TaintedControlFlowEvent(callstack[:], label)
 
         # Drain callstack with artifical TDLeaveFunction events (using a dummy function id that doesn't exist)
         yield from TDControlFlowLogSection._align_callstack(-1, callstack)
-
-    def function_id_mapping(self, id_to_name_array):
-        """This method stores an array used to translate from function id to symbolic names"""
-        self.funcmapping = id_to_name_array
 
 
 class TDSinkSection:
@@ -317,12 +333,15 @@ class TDSourceIndexSection(TDBitmapSection):
 
 
 class TDFunctionsSection:
+    """This section holds the mapping between the function IDs stored in callstack form in the cflog section, and the function names stored in the string table. See fnmapping in the C++ part of the codebase for the "write" side part of Polytracker that pertains to this section. Each entry is an uint32_t as set in fnmapping.cpp, but a TDFnHeader will then contain *two* of these: the function_id and the name_offset.
+
+    Structure in memory: |offset|function id|..."""
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDFnHeader)):
-            yield TDFnHeader.from_buffer_copy(self.section, offset)
+        for entry in range(0, len(self.section), sizeof(TDFnHeader)):
+            yield TDFnHeader.from_buffer_copy(self.section, entry)
 
 
 class TDFDHeader(Structure):
@@ -342,10 +361,11 @@ class TDFDHeader(Structure):
 
 
 class TDFnHeader(Structure):
-    # constructor for use with the mmap buffer
+    # This corresponds to the Function inline constructor in fnmapping.h.
+    # Anything using Structure needs to be in sync with the corresponding C++.
     _fields_ = [
         ("name_offset", c_uint32),
-        # ("function_id", c_uint32)
+        ("function_id", c_uint32)
     ]
 
 class TDNode:
@@ -458,6 +478,8 @@ class TDFile:
                 self.sections_by_type[TDFunctionsSection] = self.sections[-1]
             elif hdr.tag == 7:
                 continue
+                # todo(kaoudis): change tag indices and remove this
+                # this will break compatibility with old tdags
                 # self.sections.append(TDEventsSection(self.buffer, hdr))
                 # self.sections_by_type[TDEventsSection] = self.sections[-1]
             elif hdr.tag == 8:
@@ -472,33 +494,44 @@ class TDFile:
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
-        self.fn_headers: List[str] = list(self.read_fn_headers())
 
     def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
         return self.sections_by_type[wanted_type]
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
-        print("hi from fd_headers")
         sources = self.sections_by_type[TDSourceSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(sources, TDSourceSection)
         assert isinstance(strings, TDStringSection)
 
         for source in sources.enumerate():
-            source_name = strings.read_string(source.name_offset)
-            print(source_name)
-            yield Path(source_name), source
+            yield Path(strings.read_string(source.name_offset)), source
 
-    def read_fn_headers(self) -> Iterator[str]:
+    @property
+    def mangled_fn_symbol_lookup(self) -> Dict[int, str]:
+        """Unordered! map of dynamically observed function IDs to clang symbols. You can demangle the symbols with cxxfilt.demangle."""
+        lookup = {}
         functions = self.sections_by_type[TDFunctionsSection]
-        strings = self.sections_by_type[TDStringSection]
         assert isinstance(functions, TDFunctionsSection)
+        strings = self.sections_by_type[TDStringSection]
         assert isinstance(strings, TDStringSection)
 
-        for header in functions:
-            name = strings.read_string(header.name_offset)
-            print(name)
-            yield name
+        for entry in functions:
+            lookup[entry.function_id] = strings.read_string(entry.name_offset)
+
+        return lookup
+
+    def cflog(self, demangle_symbols: bool=False) -> Iterator[ControlFlowEvent]:
+        """Presents the control flow log. Does not demangle symbols by default, for performance."""
+        cflog_section = self.sections_by_type[TDControlFlowLogSection]
+
+        if demangle_symbols:
+            for cflog_entry in cflog_section:
+                cflog_entry.callstack[:] = [demangle(self.mangled_fn_symbol_lookup[function_id]) for function_id in cflog_entry.callstack]
+
+                yield cflog_entry
+        else:
+            cflog_section.__iter__()
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
@@ -566,9 +599,7 @@ class TDTaintOutput(TaintOutput):
 
 class TDProgramTrace(ProgramTrace):
     def __init__(self, file: BinaryIO) -> None:
-        print("hi!")
         self.tdfile: TDFile = TDFile(file)
-        print("HEOOOOLLLOOOOOO")
         self.tforest: TDTaintForest = TDTaintForest(self)
         self._inputs = None
 
@@ -803,13 +834,7 @@ class TDInfo(Command):
             "--print-fd-headers",
             "-f",
             action="store_true",
-            help="print file descriptor headers",
-        )
-        parser.add_argument(
-            "--print-fn-headers",
-            "-x",
-            action="store_true",
-            help="print function headers",
+            help="print file descriptor headers (sources)",
         )
         parser.add_argument(
             "--print-taint-sinks",
@@ -848,10 +873,6 @@ class TDInfo(Command):
                     path = h[0]
                     print(f"{i}: {path}")
 
-            if args.print_fn_headers:
-                for i, function_name in enumerate(tdfile.fn_headers):
-                    print(f"{i}: {function_name}")
-
             if args.print_taint_sinks:
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
@@ -861,11 +882,9 @@ class TDInfo(Command):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
             if args.print_function_trace:
-                for e in tdfile.events:
-                    print(f"{e}")
+                for k,v in tdfile.mangled_fn_symbol_lookup:
+                    print(f"function_id '{k}': function '{demangle(v)}'")
 
             if args.print_control_flow_log:
-                cflog = tdfile._get_section(TDControlFlowLogSection)
-                assert isinstance(cflog, TDControlFlowLogSection)
-                for obj in cflog:
-                    print(f"{obj}")
+                for event in tdfile.cflog(demangle_symbols=True):
+                    print(str(event))

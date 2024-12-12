@@ -210,7 +210,6 @@ def run_instrumented(is_debug: bool, inputfile: Path, targetdir: Path):
     e = {
         "POLYDB": str(db),
         "POLYTRACKER_STDOUT_SINK": "1",
-        "POLYTRACKER_LOG_CONTROL_FLOW": "1",
     }
     ret = subprocess.run(args, env=e, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     os.rename(db, targetdir / db)
@@ -275,7 +274,7 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
             map(
                 lambda e: (input_offsets(e.label, tdfile), e.callstack),
                 filter(
-                    lambda e: isinstance(e, taint_dag.TDTaintedControlFlowEvent), cflog
+                    lambda e: isinstance(e, taint_dag.TaintedControlFlowEvent), cflog
                 ),
             )
         )

@@ -142,7 +142,7 @@ template <typename T> struct FixedSizeAlloc : SectionBase {
                           .t = *new (&*(write_context->mem.begin()))
                                    T{std::forward<Args>(args)...}};
     }
-    // Failed to allocate memory
+    spdlog::error("Failed to allocate memory in the section for the object, so could not construct the object in the tdag section");
     return {};
   }
 
