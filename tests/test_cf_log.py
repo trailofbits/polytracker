@@ -7,11 +7,11 @@ from pathlib import Path
 
 from polytracker.taint_dag import (
     ControlFlowEvent,
-    TDControlFlowLogSection,
     CFEnterFunctionEvent,
     CFLeaveFunctionEvent,
     TaintedControlFlowEvent,
-    TDProgramTrace
+    TDControlFlowLogSection,
+    TDNode,
 )
 from polytracker import ProgramTrace
 from typing import List
@@ -35,6 +35,18 @@ def test_callstack_mapping(program_trace: ProgramTrace):
         for callstack_entry in cflog_entry.callstack:
             # when we look up the function id it should map to a name we traced
             assert callstack_entry in program_trace.tdfile.mangled_fn_symbol_lookup
+
+@pytest.mark.program_trace("test_fntrace.cpp")
+def test_label_mapping(program_trace: ProgramTrace):
+    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[TDControlFlowLogSection]
+
+    for cflog_entry in cflog:
+        if cflog_entry.label is not None:
+            node: TDNode = program_trace.tdfile.decode_node(cflog_entry.label)
+            assert node.affects_control_flow
+        else:
+            assert cflog_entry.label is None
+
 
 @pytest.mark.program_trace("test_cf_log.cpp")
 def test_cf_log(instrumented_binary: Path, trace_file: Path):
