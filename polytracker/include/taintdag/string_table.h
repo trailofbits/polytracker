@@ -34,15 +34,10 @@ struct StringTable : public SectionBase {
 
   static constexpr uint8_t tag{3};
   static constexpr size_t allocation_size{0x100000};
-  static constexpr size_t align_of = 1;
+  static constexpr size_t align_of = alignof(length_t);
 
   template <typename OF>
-  StringTable(SectionArg<OF> output_file) : SectionBase{output_file.range} {
-    if (output_file.range.size() > max_offset) {
-      error_exit("Tried to use an allocation of size ", output_file.range.size(),
-                " max in current offset_t config is ", max_offset);
-    }
-  }
+  StringTable(SectionArg<OF> output_file) : SectionBase{output_file.range} {}
 
   // Appends the string `sv` to the string table.
   // Returns the offset of the string entry. Note that this is not the

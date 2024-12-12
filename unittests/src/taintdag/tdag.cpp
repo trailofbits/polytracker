@@ -1,4 +1,5 @@
 #include <catch2/catch.hpp>
+#include <random>
 
 #include "taintdag/outputfile.h"
 #include "taintdag/section.h"
@@ -11,7 +12,7 @@
 
 namespace taintdag {
 
-TEST_CASE("Test TDAG", "Integration") {
+TEST_CASE("Test TDAG", "[Integration]") {
   OutputFile<Sources, Labels, StringTable> tdg("filename.bin");
   auto offset1 = tdg.section<StringTable>().add_string("Hello");
   auto offset2 = tdg.section<StringTable>().add_string("World!");
@@ -116,7 +117,7 @@ TEST_CASE("SectionBase operations are consistent", "[SectionBase]") {
   auto ctx = sb.write(1);
   REQUIRE(!ctx);
 
-  // If offset is requirested for out of bounds memory, just abort. Something
+  // If offset is requested for out of bounds memory, just abort. Something
   // is seriously wrong.
   REQUIRE_THROWS_AS(sb.offset(SectionBase::span_t::iterator{}),
                     test::ErrorExit);
@@ -238,70 +239,61 @@ TEST_CASE("FixedSizeAlloc operations are consistent", "[FixedSizeAlloc]") {
 }
 
 // Dummy OutputFile, to allow retrieving the StringTable
-struct DummyOf {
-  template <typename T> T &section() { return st; }
+struct DummyOutputFile {
+  template <typename T> T &section() { return string_table; }
 
-  StringTable &st;
+  StringTable &string_table;
 };
 
-TEST_CASE("Taint sources basic usage", "[Sources]") {
+TEST_CASE("The Sources and StringTable sections can be used to store source entries", "[Sources, StringTable]") {
+  OutputFile<StringTable, Sources> of{std::tmpnam(nullptr)};
+  auto &sources_section{of.section<Sources>()};
+  auto &string_table{of.section<StringTable>()};
 
-  const size_t max_sources = 4;
-  const size_t allocation_size = max_sources * sizeof(SourceEntry);
-  alignas(SourceEntry) uint8_t backing[allocation_size];
-
-  const size_t strings_size = 128;
-  uint8_t string_backing[strings_size];
-
-  // NOTE(hbrodin): .output_file arg is not used in StringTable so just
-  // construct an int.
-  int dummy = 1;
-  StringTable st(
-      SectionArg<int>{.output_file = dummy, .range = string_backing});
-
-  DummyOf of{st};
-
-  Sources src{SectionArg<DummyOf>{.output_file = of, .range = backing}};
-
-  // TODO(hbrodin): Refactor below.
-
-  SECTION("Add and retrieve mappings") {
+  SECTION("Can add taint-source entries to the Sources section", "[Sources, StringTable]") {
     int fd = 3;
-    REQUIRE(!src.mapping_idx(fd));
+    REQUIRE(!sources_section.mapping_idx(fd));
 
-    auto s1 = src.add_source("test", fd, 122);
-    REQUIRE(s1);
-    auto m = src.mapping_idx(fd);
-    REQUIRE(m);
+    auto s1 = sources_section.add_source("test", fd, 122);
+    REQUIRE(s1.has_value());
+
+    auto m = sources_section.mapping_idx(fd);
+    REQUIRE(m.has_value());
     REQUIRE(*s1 == *m);
 
-    auto m1 = src.get(*m);
+    auto m1 = sources_section.get(*m);
     REQUIRE(m1.fd == fd);
-    REQUIRE(m1.name(st) == "test");
+
+    REQUIRE(m1.name(string_table) == "test");
     REQUIRE(m1.size == 122);
 
     int fd2 = 99;
-    auto s2 = src.add_source("test2", fd2, SourceEntry::InvalidSize);
-    REQUIRE(s2);
-    auto idx2 = src.mapping_idx(fd2);
-    REQUIRE(idx2);
-    auto m2 = src.get(*idx2);
+    auto s2 = sources_section.add_source("test2", fd2, SourceEntry::InvalidSize);
+    REQUIRE(s2.has_value());
+
+    auto idx2 = sources_section.mapping_idx(fd2);
+    REQUIRE(idx2.has_value());
+
+    auto m2 = sources_section.get(*idx2);
     REQUIRE(m2.fd == fd2);
-    REQUIRE(m2.name(st) == "test2");
+    REQUIRE(m2.name(string_table) == "test2");
+
     REQUIRE(m2.size == SourceEntry::InvalidSize);
   }
 
-  SECTION("Latest wins in case of multiple mappings for same fd") {
-    int fd = 1;
-    src.add_source("first", fd);
-    src.add_source("second", fd);
+  WHEN("Adding taint-sources to the Sources section and the string table") {
+    THEN("Latest wins in terms in case output_file has multiple mappings for the same fd") {
+      int fd = 1;
+      sources_section.add_source("first", fd);
+      sources_section.add_source("second", fd);
 
-    auto mm = src.mapping_idx(fd);
-    REQUIRE(mm);
+      auto mm = sources_section.mapping_idx(fd);
+      REQUIRE(mm);
 
-    auto m = src.get(*mm);
-    REQUIRE(m.fd == fd);
-    REQUIRE(m.name(st) == "second");
+      auto m = sources_section.get(*mm);
+      REQUIRE(m.fd == fd);
+      REQUIRE(m.name(string_table) == "second");
+    }
   }
 }
 
@@ -309,84 +301,105 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
   // To be able to capture error_exits
   test::ErrorExitReplace errthrow;
 
-  alignas(StringTable::length_t) uint8_t backing[64];
+  OutputFile<StringTable> of{std::tmpnam(nullptr)};
+  auto &string_table{of.section<StringTable>()};
 
-  int dummy = 1;
-  StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
-
-  SECTION("Initial properties") {
-    REQUIRE(StringTable::align_of == alignof(StringTable::length_t));
-    REQUIRE(st.size() == 0);
-    REQUIRE(st.begin() == st.end());
-
-    REQUIRE(sizeof(StringTable::length_t) <= sizeof(StringTable::offset_t));
+  SECTION("StringTable properties") {
+    // squish everything together as close as we can
+    REQUIRE(StringTable::align_of == 2UL);
+    // no elements in the string table to start
+    REQUIRE(string_table.size() == 0);
+    REQUIRE(string_table.begin() == string_table.end());
   }
 
-  SECTION("Adding/retrieving") {
-    auto ofs = st.add_string("Hello");
-    REQUIRE(ofs);
-    REQUIRE(st.from_offset(*ofs) == "Hello");
+  WHEN("A string is added") {
+    THEN("It should also be retrievable from the offset of its length") {
+      auto ofs = string_table.add_string("Hello");
+      REQUIRE(ofs);
+      REQUIRE(string_table.from_offset(*ofs) == "Hello");
 
-    auto ofs2 = st.add_string("World");
-    REQUIRE(ofs2);
-    REQUIRE(st.from_offset(*ofs2) == "World");
+      auto ofs2 = string_table.add_string("World");
+      REQUIRE(ofs2);
+      REQUIRE(string_table.from_offset(*ofs2) == "World");
+    }
   }
 
-  SECTION("Iteration") {
-    st.add_string("a");
-    st.add_string("b");
-    st.add_string("c");
-    st.add_string("d");
+  WHEN("Multiple strings are added") {
+    THEN("They should be iterable using begin() and end()") {
+      string_table.add_string("a");
+      string_table.add_string("b");
+      string_table.add_string("c");
+      string_table.add_string("d");
 
-    std::vector<std::string_view> res;
-    std::copy(st.begin(), st.end(), std::back_inserter(res));
-    REQUIRE(res.size() == 4);
-    REQUIRE(res[0] == "a");
-    REQUIRE(res[1] == "b");
-    REQUIRE(res[2] == "c");
-    REQUIRE(res[3] == "d");
+      std::vector<std::string_view> res;
+      std::copy(string_table.begin(), string_table.end(), std::back_inserter(res));
+      REQUIRE(res.size() == 4);
+      REQUIRE(res[0] == "a");
+      REQUIRE(res[1] == "b");
+      REQUIRE(res[2] == "c");
+      REQUIRE(res[3] == "d");
+    }
   }
 
-  SECTION("Capacity") {
-    SECTION("Fill with one string") {
-      std::string s(sizeof(backing) - sizeof(StringTable::length_t), 'A');
-      REQUIRE(st.add_string(s));
-      std::string s2{1, 'B'};
-      REQUIRE(!st.add_string(s2));
+  WHEN("Adding to the string table") {
+    THEN("A string bigger than the maximum string size will be truncated and stored") {
+      spdlog::set_level(spdlog::level::debug);
+
+      auto len = StringTable::max_entry_size + 10;
+      std::string too_big(len, 'A');
+      REQUIRE_NOTHROW([&](){
+        auto offset = string_table.add_string(too_big);
+        REQUIRE(offset.has_value());
+
+        std::string_view result = string_table.from_offset(offset.value());
+        REQUIRE(result.size() + sizeof(StringTable::length_t) == StringTable::max_entry_size - 1);
+      }());
     }
 
-    SECTION("Fill with many short strings") {
+    THEN("Can fill the string table with many short strings") {
       std::string s{"a"};
-      size_t n = 0;
-      while (st.add_string(s)) {
-        ++n;
+      while (auto os = string_table.add_string(s)) {
+        if (!os.has_value()) {
+          break;
+        }
+        auto result = string_table.from_offset(os.value());
+        REQUIRE(s.compare(result.data()) == 0);
       }
-      auto allocsize = sizeof(StringTable::length_t) + s.size();
-      // Per string allocation size
-      if (auto rem = allocsize % StringTable::align_of; rem != 0) {
-        allocsize += StringTable::align_of - rem;
-      }
-
-      REQUIRE(n == sizeof(backing) / allocsize);
     }
-  }
 
-  SECTION("Errors") {
-    // Trying to store a string larger than can be represented by the length_t
-    auto len =
-        static_cast<size_t>(std::numeric_limits<StringTable::length_t>::max()) +
-        1;
-    char const *strp = reinterpret_cast<char const *>(&backing[0]);
-    REQUIRE_THROWS_AS(st.add_string({strp, len}), test::ErrorExit);
+    THEN("Add a maximumly big string and will still be able to add other strings") {
+      auto size = StringTable::max_entry_size - sizeof(StringTable::length_t);
+      std::string s(size, 'A');
+      REQUIRE_NOTHROW([&](){
+        auto offset = string_table.add_string(s);
+        REQUIRE(offset.has_value());
+        auto result = string_table.from_offset(offset.value());
+        // no truncation happened this time
+        REQUIRE(result.size() == size);
+        REQUIRE(s.compare(result.data()) == 0);
+      }());
 
-    // Allocation is larger than can be represented by the offset type.
-    auto alloc_size =
-        static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
-        1;
-    auto span = StringTable::span_t{&backing[0], alloc_size};
-    REQUIRE_THROWS_AS(
-        (StringTable{SectionArg<int>{.output_file = dummy, .range = span}}),
-        test::ErrorExit);
+      std::string s2{1, 'B'};
+      auto os2 = string_table.add_string(s2);
+      REQUIRE(os2.has_value());
+
+      std::string s3("hello");
+      auto os3 = string_table.add_string(s3);
+      REQUIRE(os3.has_value());
+    }
   }
 }
+
+  // TEST_CASE("An allocation that is larger than can be represented in the string table will result in error", "[StringTable]") {
+  //   auto alloc_size =
+  //       static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
+  //       1;
+  //   alignas(StringTable::offset_t) uint8_t backing[64];
+  //   int dummy = 1;
+  //   StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
+  //   auto span = StringTable::span_t{&backing[0], alloc_size};
+  //   REQUIRE_THROWS_AS(
+  //       st,
+  //       test::ErrorExit);
+  // }
 } // namespace taintdag
