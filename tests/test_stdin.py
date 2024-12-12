@@ -13,16 +13,14 @@ from pathlib import Path
 def test_stdin_read(instrumented_binary: Path, trace_file: Path, method: str):
     # Data to write to stdin, one byte at a time
     stdin_data = "abcdefghi\njklmnopqr"
-    print("hi")
+
     subprocess.run(
         [str(instrumented_binary), method],
         input=stdin_data.encode("utf-8"),
         env={"POLYDB": str(trace_file), "POLYTRACKER_STDIN_SOURCE": str(1)},
     ).check_returncode()
-    print("hurro")
     program_trace = polytracker.PolyTrackerTrace.load(trace_file)
 
-    assert False == True
     # Ensure /dev/stdin is in the list of inputs
     assert "/dev/stdin" in [x.path for x in program_trace.inputs]
 

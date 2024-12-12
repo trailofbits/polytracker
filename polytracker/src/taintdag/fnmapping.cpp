@@ -23,7 +23,7 @@ std::optional<index_t> Functions::add_mapping(uint32_t function_id, std::string_
   // Lock `mappings`
   std::unique_lock mappings_lock(mappings_mutex);
   // See if we already have a mapping of `name`
-  if (auto it{mappings.find(function_name)}; it != mappings.end()) {
+  if (auto it{mappings.find(function_id)}; it != mappings.end()) {
     return it->second;
   }
   // Write `name` into the string table section
@@ -32,13 +32,19 @@ std::optional<index_t> Functions::add_mapping(uint32_t function_id, std::string_
     return {};
   }
   // Write a `Function` via `construct`
-  auto name_offset{*maybe_name_offset};
+  uint32_t name_offset{*maybe_name_offset};
   auto maybe_ctx{construct(name_offset)};
   if (!maybe_ctx) {
     return {};
   }
+
+  // auto maybe_fn_id_ctx{construct(function_id)};
+  // if (!maybe_fn_id_ctx) {
+  //   return {};
+  // }
+
   // Return index of `Function` in `Functions`
-  return mappings[function_name] = index(maybe_ctx->t);
+  return mappings[function_id] = index(maybe_ctx->t);
 }
 
 } // namespace taintdag

@@ -105,10 +105,10 @@ class TDStringSection:
         self.align = hdr.align
 
     def read_string(self, offset):
-        n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) >= offset + sizeof(c_uint16) + n
+        size_of_string = c_uint16.from_buffer_copy(self.section[offset:]).value
+        assert len(self.section) >= offset + sizeof(c_uint16) + size_of_string
         return str(
-            self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
+            self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + size_of_string],
             "utf-8",
         )
 
@@ -343,13 +343,10 @@ class TDFDHeader(Structure):
 
 class TDFnHeader(Structure):
     # constructor for use with the mmap buffer
-    _fields_ = [("name_offset", c_uint32), ("function_id", c_uint32)]
-
-    # name_offset: the offset/location in the strings table of the fn name
-    # function_id: the id written to the cflog
-    def __init__(self, name_offset: int, function_id: int):
-        self.name_offset = name_offset
-        self.function_id = function_id
+    _fields_ = [
+        ("name_offset", c_uint32),
+        # ("function_id", c_uint32)
+    ]
 
 class TDNode:
     def __init__(self, affects_control_flow: bool = False):
@@ -487,12 +484,12 @@ class TDFile:
         assert isinstance(sources, TDSourceSection)
         assert isinstance(strings, TDStringSection)
 
-        yield from (
-            (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
-        )
+        for source in sources.enumerate():
+            source_name = strings.read_string(source.name_offset)
+            print(source_name)
+            yield Path(source_name), source
 
     def read_fn_headers(self) -> Iterator[str]:
-        print("get all the fn_headers")
         functions = self.sections_by_type[TDFunctionsSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(functions, TDFunctionsSection)
@@ -500,6 +497,7 @@ class TDFile:
 
         for header in functions:
             name = strings.read_string(header.name_offset)
+            print(name)
             yield name
 
     def input_labels(self) -> Iterator[int]:

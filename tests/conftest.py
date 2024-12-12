@@ -79,11 +79,8 @@ def program_trace(input_file, trace_file, instrumented_binary, monkeypatch):
     monkeypatch.chdir(input_file.parent)
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
-        # instrumented binary
         instrumented_binary,
-        # input data
         str(input_file),
     ]
     subprocess.check_call(cmd)
-    # Read the trace file
     return polytracker.PolyTrackerTrace.load(trace_file)
