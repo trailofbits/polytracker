@@ -49,8 +49,6 @@ public:
   void instrumentFunctionEnter(llvm::Function &func);
   void visitReturnInst(llvm::ReturnInst &ri);
 
-  function_id function_mapping(llvm::Function &func);
-
   std::unordered_map<uintptr_t, function_id> function_ids_;
   function_id function_counter_{0};
 };
