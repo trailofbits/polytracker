@@ -13,9 +13,6 @@
 #include <unordered_map>
 
 namespace polytracker {
-namespace detail {
-struct FunctionMappingJSONWriter;
-}
 
 class TaintedControlFlowPass
     : public llvm::PassInfoMixin<TaintedControlFlowPass>,
@@ -42,10 +39,6 @@ class TaintedControlFlowPass
 public:
   using function_id = uint32_t;
 
-  TaintedControlFlowPass();
-  TaintedControlFlowPass(TaintedControlFlowPass &&);
-  ~TaintedControlFlowPass();
-
   llvm::PreservedAnalyses run(llvm::Module &mod,
                               llvm::ModuleAnalysisManager &mam);
   void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
@@ -60,8 +53,6 @@ public:
 
   std::unordered_map<uintptr_t, function_id> function_ids_;
   function_id function_counter_{0};
-
-  std::unique_ptr<detail::FunctionMappingJSONWriter> function_mapping_writer_;
 };
 
 } // namespace polytracker
