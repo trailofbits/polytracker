@@ -1,5 +1,4 @@
 #include <catch2/catch.hpp>
-#include <random>
 
 #include "taintdag/outputfile.h"
 #include "taintdag/section.h"
