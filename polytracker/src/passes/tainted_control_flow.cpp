@@ -55,19 +55,15 @@ private:
 } // namespace detail
 
 namespace {
-uint32_t
-get_or_add_mapping(uintptr_t key, std::unordered_map<uintptr_t, uint32_t> &m,
-                   uint32_t &counter, std::string_view name,
-                   polytracker::detail::FunctionMappingJSONWriter &js) {
-  if (auto it = m.find(key); it != m.end()) {
-    return it->second;
-  } else {
-    js.append(name);
-    return m[key] = counter++;
+  uint32_t get_or_add_mapping(uintptr_t key, std::unordered_map<uintptr_t, uint32_t> &mapping, uint32_t &counter) {
+    if (auto it = mapping.find(key); it != mapping.end()) {
+      return it->second;
+    } else {
+      return mapping[key] = counter++;
+    }
   }
-}
-
 } // namespace
+
 void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
                                                  llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
@@ -81,9 +77,7 @@ void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
 llvm::ConstantInt *
 TaintedControlFlowPass::get_function_id_const(llvm::Function &func) {
   auto func_address = reinterpret_cast<uintptr_t>(&func);
-  std::string_view name = func.getName();
-  auto fid = get_or_add_mapping(func_address, function_ids_, function_counter_,
-                                name, *function_mapping_writer_);
+  auto fid = get_or_add_mapping(func_address, function_ids_, function_counter_);
   return llvm::ConstantInt::get(func.getContext(), llvm::APInt(32, fid, false));
 }
 
