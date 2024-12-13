@@ -91,8 +91,8 @@ RUN polytracker build make -j$(nproc) install
 # pdftops.instrumented, pdftotext.instrumented, and pdfinfo.instrumented
 # These commands are split up for timing / debugging purposes but you could
 # run them all as one big instrument-targets as well.
-RUN polytracker instrument-targets --taint --cflog pdftotext --ignore-lists freetype fontconfig xml2 libz
+RUN polytracker instrument-targets --cflog pdftotext --ignore-lists freetype fontconfig xml2 libz
 
-RUN polytracker instrument-targets --taint --cflog pdfinfo --ignore-lists freetype fontconfig xml2 libz
+RUN polytracker instrument-targets --cflog pdfinfo --ignore-lists freetype fontconfig xml2 libz
 
-RUN polytracker instrument-targets --taint --cflog pdftops --ignore-lists freetype fontconfig xml2 libz
+RUN polytracker instrument-targets --cflog pdftops --ignore-lists freetype fontconfig xml2 libz

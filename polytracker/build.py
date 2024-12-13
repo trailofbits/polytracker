@@ -205,11 +205,7 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
     ]
 
-    pass_pipeline: List[str] = []
-    pass_pipeline.append("pt-taint")
-
-    pass_pipeline += ["pt-dfsan", "pt-rm-fn-attr"]
-
+    pass_pipeline: List[str] = ["pt-taint", "pt-dfsan", "pt-rm-fn-attr"]
     cmd.append(f"-passes={','.join(pass_pipeline)}")
 
     # ignore lists for `pt-taint`
@@ -317,12 +313,6 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
-            "--taint",
-            action="store_true",
-            help="instrument with taint tracking",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -330,13 +320,10 @@ class InstrumentBitcode(Command):
         )
 
     def run(self, args: argparse.Namespace):
-        if args.taint:
-            _instrument_bitcode(
-                args.input,
-                args.output,
-                args.ignore_lists)
-        else:
-            raise ValueError("No action was specified. Try using the argument --taint?")
+        _instrument_bitcode(
+            args.input,
+            args.output,
+            args.ignore_lists)
 
 
 class LowerBitcode(Command):
@@ -394,12 +381,6 @@ class InstrumentTargets(Command):
         )
 
         parser.add_argument(
-            "--taint",
-            action="store_true",
-            help="instrument with taint tracking",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -413,9 +394,6 @@ class InstrumentTargets(Command):
         )
 
     def run(self, args: argparse.Namespace):
-        if not args.taint and not args.cflog:
-                raise ValueError("Did you specify an action? Try --taint or --cflog")
-
         for target in args.targets:
             blight_cmds = _read_blight_journal(args.journal_path)
             target_cmd, target_path = _find_target(target, blight_cmds)
@@ -431,9 +409,8 @@ class InstrumentTargets(Command):
 
             _optimize_bitcode(bc_path, opt_bc)
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
-            if args.taint:
-                _instrument_bitcode(
-                    input_bitcode=opt_bc,
-                    output_bitcode=inst_bc_path,
-                    ignore_lists=args.ignore_lists)
+            _instrument_bitcode(
+                input_bitcode=opt_bc,
+                output_bitcode=inst_bc_path,
+                ignore_lists=args.ignore_lists)
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)

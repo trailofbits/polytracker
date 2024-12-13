@@ -37,7 +37,7 @@ def polytracker_build(cmdline):
 
 
 def polytracker_instrument(bin):
-    command = ["/usr/bin/env", "polytracker", "instrument-targets", "--taint", bin]
+    command = ["/usr/bin/env", "polytracker", "instrument-targets", "--cflog", bin]
     target_name = f"{bin}.instrumented"
     if not no_build:
         subprocess.call(command, cwd=src_dir)

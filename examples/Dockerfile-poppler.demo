@@ -44,7 +44,7 @@ RUN polytracker build cmake -S . -B build \
 RUN polytracker build cmake --build build -j$(nproc)
 
 # pdftotext (separate for measurement purposes only)
-RUN polytracker instrument-targets --taint --cflog pdftotext --ignore-lists freetype fontconfig
+RUN polytracker instrument-targets --cflog pdftotext --ignore-lists freetype fontconfig
 
 # pdftops (separate for measurement purposes only)
-RUN polytracker instrument-targets --taint --cflog pdftops --ignore-lists freetype fontconfig
+RUN polytracker instrument-targets --cflog pdftops --ignore-lists freetype fontconfig
