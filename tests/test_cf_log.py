@@ -41,11 +41,12 @@ def test_label_mapping(program_trace: ProgramTrace):
     cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[TDControlFlowLogSection]
 
     for cflog_entry in cflog:
-        if cflog_entry.label is not None:
+        if type(cflog_entry) == TaintedControlFlowEvent:
+            assert hasattr(cflog_entry, 'label')
             node: TDNode = program_trace.tdfile.decode_node(cflog_entry.label)
             assert node.affects_control_flow
         else:
-            assert cflog_entry.label is None
+            assert not hasattr(cflog_entry, 'label')
 
 
 @pytest.mark.program_trace("test_cf_log.cpp")
