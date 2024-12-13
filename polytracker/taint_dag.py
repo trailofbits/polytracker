@@ -206,7 +206,7 @@ class TaintedControlFlowEvent:
         self.label = label
 
     def __repr__(self) -> str:
-        return f"TaintedControlFlowEvent: {self.label}, {self.callstack}"
+        return f"TaintedControlFlowEvent: taint label {self.label} | {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, TaintedControlFlowEvent):
