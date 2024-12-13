@@ -27,6 +27,7 @@ from ctypes import (
     c_uint16,
     sizeof,
 )
+from typing_extensions import deprecated
 
 from .plugins import Command
 from .repl import PolyTrackerREPL
@@ -93,6 +94,27 @@ class TDSourceSection:
         for offset in range(0, len(self.mem), sizeof(TDFDHeader)):
             yield TDFDHeader.from_buffer_copy(self.mem[offset:])
 
+@deprecated("Use ControlFlowEvent instead, TDEvents are no longer written")
+class TDEvent(Structure):
+    """This is an old version of the ControlFlowEvent kept for backward compatibility only"""
+    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
+
+    class Kind(Enum):
+        ENTRY = 0
+        EXIT = 1
+
+    def __repr__(self) -> str:
+        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
+
+@deprecated("Use TDControlFlowLog instead, TDEvents section is no longer written")
+class TDEventsSection:
+    """This is an old version of the CFLog kept for backward compatibility only"""
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+
+    def __iter__(self):
+        for offset in range(0, len(self.section), sizeof(TDEvent)):
+            yield TDEvent.from_buffer_copy(self.section, offset)
 
 class TDStringSection:
     """TDAG String Table section.
@@ -431,6 +453,7 @@ TDSection = Union[
     TDSinkSection,
     TDSourceIndexSection,
     TDFunctionsSection,
+    TDEventsSection,
     TDControlFlowLogSection,
 ]
 
@@ -474,11 +497,8 @@ class TDFile:
                 self.sections.append(TDFunctionsSection(self.buffer, hdr))
                 self.sections_by_type[TDFunctionsSection] = self.sections[-1]
             elif hdr.tag == 7:
-                continue
-                # todo(kaoudis): change tag indices and remove this
-                # this will break compatibility with old tdags
-                # self.sections.append(TDEventsSection(self.buffer, hdr))
-                # self.sections_by_type[TDEventsSection] = self.sections[-1]
+                self.sections.append(TDEventsSection(self.buffer, hdr))
+                self.sections_by_type[TDEventsSection] = self.sections[-1]
             elif hdr.tag == 8:
                 self.sections.append(TDControlFlowLogSection(self.buffer, hdr))
                 self.sections_by_type[TDControlFlowLogSection] = self.sections[-1]
@@ -515,15 +535,22 @@ class TDFile:
 
         return lookup
 
+    def _maybe_demangle(self, function_id: int) -> Union[str, int]:
+        """Depending on the age of the tdag, it may not contain a function mapping. If the tdag doesn't contain a function mapping, this will only return function ids and you'll need to manually map them against symbols gathered statically from the compiled instrumented binary. """
+        maybe_symbol = self.mangled_fn_symbol_lookup.get(function_id)
+        if maybe_symbol is not None:
+            return demangle(maybe_symbol)
+        else:
+            return function_id
+
     def cflog(self, demangle_symbols: bool=False) -> Iterator[ControlFlowEvent]:
         """Presents the control flow log. Does not demangle symbols by default, for performance."""
-        print(self.sections_by_type.keys())
         cflog_section = self.sections_by_type[TDControlFlowLogSection]
         assert isinstance(cflog_section, TDControlFlowLogSection)
 
         if demangle_symbols:
             for cflog_entry in cflog_section:
-                cflog_entry.callstack[:] = [demangle(self.mangled_fn_symbol_lookup[function_id]) for function_id in cflog_entry.callstack]
+                cflog_entry.callstack[:] = [self._maybe_demangle(function_id) for function_id in cflog_entry.callstack]
 
                 yield cflog_entry
         else:
@@ -882,11 +909,13 @@ class TDInfo(Command):
                     for k,v in tdfile.mangled_fn_symbol_lookup:
                         print(f"function_id '{k}': function '{demangle(v)}'")
                 else:
-                    print("No Functions section could be read from the tdag!")
+                    print("Error: no Functions section could be read from the tdag!")
+                    print(f"Sections that could be read: {tdfile.sections.keys()}")
 
             if args.print_control_flow_log:
-                if TDControlFlowLogSection in tdfile.sections:
+                if TDControlFlowLogSection in tdfile.sections_by_type.keys():
                     for event in tdfile.cflog(demangle_symbols=True):
                         print(event)
                 else:
-                    print("No Control Flow Log section could be read from the tdag! Consider trying to read it with an earlier Polytracker version?")
+                    print("Error: no Control Flow Log section could be read from the tdag! Consider trying to read it with an earlier Polytracker version?")
+                    print(f"Sections that could be read: {tdfile.sections}")
