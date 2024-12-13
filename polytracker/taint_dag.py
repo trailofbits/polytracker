@@ -136,29 +136,18 @@ class TDLabelSection:
     def count(self):
         return len(self.section) // sizeof(c_uint64)
 
-class ControlFlowEvent:
-    callstack: List
-    label: int
 
-    def __init__(self, callstack: List, label: int = None):
-        """Callstack at the point the event occurred"""
-        self.callstack = callstack
-        self.label = label
-
-    def __repr__(self, typ, callstack: List, label: int = None):
-        return f"{typ}: label {label}, callstack {callstack}"
-
-class CFEnterFunctionEvent(ControlFlowEvent):
+class CFEnterFunctionEvent:
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
     having the function just entered as the last member of the callstack.
     """
 
     def __init__(self, callstack: List):
-        super().__init__(callstack)
+        self.callstack = callstack
 
     def __repr__(self) -> str:
-        ControlFlowEvent.__repr__(type(CFEnterFunctionEvent), self.callstack, None)
+        return f"CFEnterFunctionEvent: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, CFEnterFunctionEvent):
@@ -166,17 +155,17 @@ class CFEnterFunctionEvent(ControlFlowEvent):
         return False
 
 
-class CFLeaveFunctionEvent(ControlFlowEvent):
+class CFLeaveFunctionEvent:
     """Emitted whenever execution leaves a function.
     The callstack member is the callstack right before leaving the function,
     having the function about to leave as the last member of the callstack.
     """
 
     def __init__(self, callstack: List):
-        super().__init__(callstack)
+        self.callstack = callstack
 
     def __repr__(self) -> str:
-        ControlFlowEvent.__repr__(type(CFLeaveFunctionEvent), self.callstack, None)
+        return f"CFLeaveFunctionEvent: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, CFLeaveFunctionEvent):
@@ -184,22 +173,30 @@ class CFLeaveFunctionEvent(ControlFlowEvent):
         return False
 
 
-class TaintedControlFlowEvent(ControlFlowEvent):
+class TaintedControlFlowEvent:
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
     Current callstack (including the function the control flow happened in) is available
     in the `callstack` member."""
 
-    def __init__(self, callstack: List, label: int):
-        super().__init__(callstack, label)
+    def __init__(self, callstack: List, label: int = None):
+        self.callstack = callstack
+        self.label = label
 
     def __repr__(self) -> str:
-        ControlFlowEvent.__repr__(type(TaintedControlFlowEvent), self.callstack, self.label)
+        return f"TaintedControlFlowEvent: {self.label}, {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
         if isinstance(__o, TaintedControlFlowEvent):
             return self.label == __o.label and self.callstack == __o.callstack
         return False
+
+
+ControlFlowEvent = Union[
+    CFEnterFunctionEvent,
+    CFLeaveFunctionEvent,
+    TaintedControlFlowEvent,
+]
 
 
 class TDControlFlowLogSection:
@@ -495,9 +492,6 @@ class TDFile:
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
 
-    def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
-        return self.sections_by_type[wanted_type]
-
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
         sources = self.sections_by_type[TDSourceSection]
         strings = self.sections_by_type[TDStringSection]
@@ -523,7 +517,9 @@ class TDFile:
 
     def cflog(self, demangle_symbols: bool=False) -> Iterator[ControlFlowEvent]:
         """Presents the control flow log. Does not demangle symbols by default, for performance."""
+        print(self.sections_by_type.keys())
         cflog_section = self.sections_by_type[TDControlFlowLogSection]
+        assert isinstance(cflog_section, TDControlFlowLogSection)
 
         if demangle_symbols:
             for cflog_entry in cflog_section:
@@ -531,7 +527,7 @@ class TDFile:
 
                 yield cflog_entry
         else:
-            cflog_section.__iter__()
+            cflog_section()
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
@@ -853,14 +849,14 @@ class TDInfo(Command):
             "--print-function-trace",
             "-t",
             action="store_true",
-            help="print function trace events",
+            help="print function trace",
         )
 
         parser.add_argument(
             "--print-control-flow-log",
             "-c",
             action="store_true",
-            help="print function trace events",
+            help="print control flow log events",
         )
 
     def run(self, args):
@@ -882,9 +878,15 @@ class TDInfo(Command):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
             if args.print_function_trace:
-                for k,v in tdfile.mangled_fn_symbol_lookup:
-                    print(f"function_id '{k}': function '{demangle(v)}'")
+                if TDFunctionsSection in tdfile.sections and len(tdfile.mangled_fn_symbol_lookup) > 0:
+                    for k,v in tdfile.mangled_fn_symbol_lookup:
+                        print(f"function_id '{k}': function '{demangle(v)}'")
+                else:
+                    print("No Functions section could be read from the tdag!")
 
             if args.print_control_flow_log:
-                for event in tdfile.cflog(demangle_symbols=True):
-                    print(str(event))
+                if TDControlFlowLogSection in tdfile.sections:
+                    for event in tdfile.cflog(demangle_symbols=True):
+                        print(event)
+                else:
+                    print("No Control Flow Log section could be read from the tdag! Consider trying to read it with an earlier Polytracker version?")
