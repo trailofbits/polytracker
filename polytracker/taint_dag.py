@@ -917,5 +917,5 @@ class TDInfo(Command):
                     for event in tdfile.cflog(demangle_symbols=True):
                         print(event)
                 else:
-                    print("Error: no Control Flow Log section could be read from the tdag! Consider trying to read it with an earlier Polytracker version?")
+                    print("Error: no Control Flow Log section could be read from the tdag!")
                     print(f"Sections that could be read: {tdfile.sections}")
