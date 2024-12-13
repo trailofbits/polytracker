@@ -42,7 +42,7 @@ RUN CFLAGS="-I$(pwd)/srclib/pcre -I$(pwd)/srclib/expat/lib" \
     LDFLAGS="-L$(pwd)/srclib/pcre/.libs -L$(pwd)/srclib/expat/lib/.libs" \
     polytracker build make -j$((`nproc`+1))
 
-RUN polytracker instrument-targets --taint --cflog httpd
+RUN polytracker instrument-targets --cflog httpd
 RUN mv httpd.instrumented httpd_track
 # overwrite binary to be installed with our polytracker-instrumented version
 RUN cp httpd_track httpd

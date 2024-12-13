@@ -27,5 +27,5 @@ RUN CPPFLAGS="-I$(pwd)/zlib-1.2.13/include" LDFLAGS="-L$(pwd)/zlib-1.2.13/lib" p
 RUN polytracker extract-bc -o pngtest.bc pngtest
 
 RUN llvm-link -o pngtest-linked.bc pngtest.bc libz.bc
-RUN polytracker instrument-bc --taint --cflog pngtest-linked.bc -o instrumented.bc
+RUN polytracker instrument-bc --cflog pngtest-linked.bc -o instrumented.bc
 RUN polytracker lower-bc instrumented.bc -t pngtest -o pngtest.instrumented

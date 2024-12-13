@@ -10,7 +10,7 @@ COPY Makefile example_picohttpparser.c /polytracker/examples/http/picohttpparser
 
 # Build and instrument
 RUN polytracker build make -j$((`nproc`+1))
-RUN polytracker instrument-targets --taint --cflog example_picohttpparser
+RUN polytracker instrument-targets --cflog example_picohttpparser
 RUN mv example_picohttpparser.instrumented example_picohttpparser_track
 
 # Note, the /workdir and /testcase directories are intended to be mounted at runtime
