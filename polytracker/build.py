@@ -363,7 +363,7 @@ class LowerBitcode(Command):
 
 class InstrumentTargets(Command):
     name = "instrument-targets"
-    help = "instruments blight journal build targets with polytracker"
+    help = "instruments blight journal build targets with polytracker for dynamic taint analysis"
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
         parser.add_argument(
@@ -390,7 +390,7 @@ class InstrumentTargets(Command):
         parser.add_argument(
             "--cflog",
             action="store_true",
-            help="instrument with function tracing and control affecting dataflow logging",
+            help="also instrument with function tracing and control affecting dataflow logging IN ADDITION TO the default dynamic taint analysis instrumentation passes",
         )
 
     def run(self, args: argparse.Namespace):
