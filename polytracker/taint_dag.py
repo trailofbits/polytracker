@@ -905,12 +905,12 @@ class TDInfo(Command):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
             if args.print_function_trace:
-                if TDFunctionsSection in tdfile.sections and len(tdfile.mangled_fn_symbol_lookup) > 0:
+                if TDFunctionsSection in tdfile.sections_by_type.keys() and len(tdfile.mangled_fn_symbol_lookup) > 0:
                     for k,v in tdfile.mangled_fn_symbol_lookup:
                         print(f"function_id '{k}': function '{demangle(v)}'")
                 else:
                     print("Error: no Functions section could be read from the tdag!")
-                    print(f"Sections that could be read: {tdfile.sections.keys()}")
+                    print(f"Sections that could be read: {tdfile.sections}")
 
             if args.print_control_flow_log:
                 if TDControlFlowLogSection in tdfile.sections_by_type.keys():
