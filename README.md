@@ -289,12 +289,15 @@ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 
 ## Hacking on PolyTracker Using the Docker Environment
 Suppose you want to get a little more in-depth in extending the PolyTracker 
-codebase or in working with TDAG traces, and you don't want to mess with your
+codebase or in analysing TDAG traces, and you don't want to mess with your
 local environment by installing an LLVM version that is heavily customized. 
 
 If you're working in Ubuntu and starting from a relatively clean 22.04 or 24.04 
 base, the [linked Gist](https://gist.github.com/kaoudis/cf412abafea5ca4054c852f9e5905aab) 
 details steps to get a working passthrough version of the PolyTracker base container.
+The base container provides a development environment with all dependencies 
+that you can directly work in, or can extend (as we've done in the example 
+Dockerfiles).
 
 <script src="https://gist.github.com/kaoudis/cf412abafea5ca4054c852f9e5905aab"> </script>
 
