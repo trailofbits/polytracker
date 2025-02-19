@@ -300,8 +300,6 @@ The base container provides a development environment with all dependencies
 that you can directly work in, or can extend (as we've done in the example
 Dockerfiles).
 
-<script src="https://gist.github.com/kaoudis/cf412abafea5ca4054c852f9e5905aab"> </script>
-
 ## Running Tests
 
 Running both the Python and C++ unit tests should be done inside the PolyTracker
