@@ -255,7 +255,7 @@ Docker image:
 pip3 install -e ".[dev]" && polytracker docker rebuild
 ```
 
-or pull the latest prebuilt version from DockerHub:
+or just pull the latest prebuilt version from DockerHub:
 
 ```shell-script
 docker pull trailofbits/polytracker:latest
@@ -287,16 +287,16 @@ cd /polytracker/the_klondike/poppler-0.84.0/build/utils
 ./pdfinfo_track some_pdf.pdf
 ```
 
-## Building PolyTracker from Source
+## Hacking on PolyTracker Using the Docker Environment
+Suppose you want to get a little more in-depth in extending the PolyTracker 
+codebase or in working with TDAG traces, and you don't want to mess with your
+local environment by installing an LLVM version that is heavily customized. 
 
-The compilation process for both PolyTracker LLVM and PolyTracker is rather
-fickle, since it involves juggling both instrumented and non-instrumented
-versions of standard library bitcode. We highly recommend using our pre-built
-and tested Docker container if at all possible. Installing the PolyTracker
-Python package on your host system will allow you to seamlessly interact with
-the prebuilt Docker container. Otherwise, to install PolyTracker natively, we
-recommend replicating the install process from the
-[PolyTracker Dockerfile](Dockerfile).
+If you're working in Ubuntu and starting from a relatively clean 22.04 or 24.04 
+base, the [linked Gist](https://gist.github.com/kaoudis/cf412abafea5ca4054c852f9e5905aab) 
+details steps to get a working passthrough version of the PolyTracker base container.
+
+<script src="https://gist.github.com/kaoudis/cf412abafea5ca4054c852f9e5905aab"> </script>
 
 ## Running Tests
 Running both the Python and C++ unit tests should be done inside the PolyTracker 
