@@ -32,27 +32,23 @@ def _run(instrumented_binary: Path, trace_file: Path, method: str) -> None:
         print(f"stderr: {e.stderr}")
 
 def _test_out(program_trace: taint_dag.TDProgramTrace) -> None:
-    """Test the resulting tdag program trace, checking its inputs to make sure we worked with tainted stdin"""
+    """Test the resulting tdag program trace, checking its inputs to make sure 
+    we tainted and tracked every byte of stdin. Offsets must be ordered as they 
+    were read."""
     assert "/dev/stdin" in [input.path for input in program_trace.inputs]
     expected_offset = 0
     for input_label in program_trace.tdfile.input_labels():
         src_node = program_trace.tdfile.decode_node(input_label)
         assert isinstance(src_node, polytracker.taint_dag.TDSourceNode)
-
-        # Requires that offsets are ordered according to read
         assert src_node.offset == expected_offset
-
-        # Ensure all source labels originate from stdin
         assert program_trace.tdfile.fd_headers[src_node.idx][0] == Path("/dev/stdin")
         expected_offset += 1
 
-    # Should be as many source labels as the length of stdin_data
     assert expected_offset == len(_stdin_data)
 
 @pytest.mark.program_trace("test_stdin.cpp")
 def test_stdin_read(instrumented_binary: Path, trace_file: Path):
     _run(instrumented_binary, trace_file, "read")
-    # if running the instrumented binary fails before trace creation, we might have no tdag out.
     program_trace: taint_dag.TDProgramTrace = polytracker.PolyTrackerTrace.load(trace_file)
     _test_out(program_trace)
 
