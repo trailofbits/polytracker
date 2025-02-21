@@ -86,17 +86,3 @@ extern "C" uint64_t __dfsw___polytracker_log_tainted_control_flow(
   *ret_label = conditional_label;
   return conditional;
 }
-
-extern "C" void __polytracker_enter_function(uint32_t function_id) {
-  if (!polytracker_is_initialized()) {
-    return;
-  }
-  get_polytracker_tdag().enter_function(function_id);
-}
-
-extern "C" void __polytracker_leave_function(uint32_t function_id) {
-  if (!polytracker_is_initialized()) {
-    return;
-  }
-  get_polytracker_tdag().leave_function(function_id);
-}

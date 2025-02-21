@@ -14,8 +14,8 @@
 #include <sanitizer/dfsan_interface.h>
 
 #include "taintdag/error.h"
+#include "taintdag/events.h"
 #include "taintdag/fnmapping.h"
-#include "taintdag/fntrace.h"
 
 namespace taintdag {
 
@@ -176,15 +176,7 @@ void PolyTracker::affects_control_flow(label_t lbl) {
 }
 
 void PolyTracker::log_tainted_control_flow(label_t lbl, uint32_t function_id) {
-  output_file_.section<ControlFlowLog>().tainted_control_flow(lbl, function_id);
-}
-
-void PolyTracker::enter_function(uint32_t function_id) {
-  output_file_.section<ControlFlowLog>().enter_function(function_id);
-}
-
-void PolyTracker::leave_function(uint32_t function_id) {
-  output_file_.section<ControlFlowLog>().leave_function(function_id);
+  output_file_.section<Events>().log_cf_event(lbl, function_id);
 }
 
 Functions::index_t PolyTracker::function_entry(std::string_view name) {
@@ -194,13 +186,13 @@ Functions::index_t PolyTracker::function_entry(std::string_view name) {
     error_exit("Failed to add function mapping for: ", name);
   }
   auto &events{output_file_.section<Events>()};
-  events.log_fn_event(Event::kind_t::entry, *maybe_index);
+  events.log_fn_event(Events::kind_t::entry, *maybe_index);
   return *maybe_index;
 }
 
 void PolyTracker::function_exit(Functions::index_t index) {
   auto &events{output_file_.section<Events>()};
-  events.log_fn_event(Event::kind_t::exit, index);
+  events.log_fn_event(Events::kind_t::exit, index);
 }
 
 } // namespace taintdag
