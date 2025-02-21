@@ -32,6 +32,7 @@ def _run(instrumented_binary: Path, trace_file: Path, method: str) -> None:
         print(f"stderr: {e.stderr}")
 
 def _test_out(program_trace: taint_dag.TDProgramTrace) -> None:
+    """Test the resulting tdag program trace, checking its inputs to make sure we worked with tainted stdin"""
     assert "/dev/stdin" in [input.path for input in program_trace.inputs]
     expected_offset = 0
     for input_label in program_trace.tdfile.input_labels():
