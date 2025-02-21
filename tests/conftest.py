@@ -26,10 +26,11 @@ def build(target: Path, binary: Path) -> None:
 
     cmd = ["build"]
     if target.suffix == ".cpp":
-        cmd.append("clang++")
+        cmd += ["clang++", "-std=c++20"]
     else:
         cmd.append("clang")
 
+    # debugging and want symbols? add -O0 here
     cmd += ["-g", "-o", str(binary), str(target)]
     run_polytracker(cmd)
 
