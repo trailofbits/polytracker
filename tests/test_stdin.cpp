@@ -1,7 +1,7 @@
-#include <cassert>
 #include <cstdint>
 #include <unistd.h>
-#include <string>
+#include <cstring>
+#include <iostream>
 
 int stdin_read() {
   char inbyte;
@@ -97,26 +97,27 @@ int stdin_getchar_unlocked() {
 }
 
 // Reads from stdin using different methods based on argv[1]
-// the following functions can be used
-// read,
 int main(int argc, char *argv[]) {
-  assert(argc == 2);
-  std::string_view method{argv[1]};
-
-  if (method == "read") {
+  if (argc != 2) {
+    exit(EXIT_FAILURE);
+  }
+  
+  if (std::strncmp(argv[1], "read", 4) == 0) {
+    printf("got read\n");
     stdin_read();
-  } else if (method == "fread") {
+  } else if (std::strncmp(argv[1], "fread", 5) == 0) {
     stdin_fread();
-  } else if (method == "getc") {
+  } else if (std::strncmp(argv[1], "getc", 4) == 0) {
     stdin_getc();
-  } else if (method == "getc_unlocked") {
+  } else if (std::strncmp(argv[1], "getc_unlocked", 13) == 0) {
     stdin_getc_unlocked();
-  } else if (method == "getchar") {
+  } else if (std::strncmp(argv[1], "getchar", 7) == 0) {
     stdin_getchar();
-  } else if (method == "getchar_unlocked") {
+  } else if (std::strncmp(argv[1], "getchar_unlocked", 16) == 0) {
     stdin_getchar_unlocked();
-  } else if (method == "fgetc") {
+  } else if (std::strncmp(argv[1], "fgetc", 5) == 0) {
     stdin_fgetc();
   }
-  return 0;
+
+  exit(EXIT_SUCCESS);
 }
