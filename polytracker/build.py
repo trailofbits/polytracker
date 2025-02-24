@@ -1,9 +1,9 @@
 import argparse
-import subprocess
-import os
 import json
+import os
+import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from .plugins import Command
 
@@ -148,9 +148,8 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
 
 
 def _preopt_instrument_bitcode(
-        input_bitcode: Path,
-        output_bitcode: Path,
-        ignore_lists: List[str]) -> None:
+    input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str]
+) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
@@ -182,9 +181,7 @@ def _preopt_instrument_bitcode(
 
 
 def _instrument_bitcode(
-    input_bitcode: Path,
-    output_bitcode: Path,
-    ignore_lists: List[str]
+    input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str]
 ) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -319,11 +316,31 @@ class InstrumentBitcode(Command):
             help="specify additional ignore lists to polytracker",
         )
 
+        parser.add_argument(
+            "--cflog",
+            action="store_true",
+            help="also instrument with function tracing and control affecting dataflow logging IN ADDITION TO the default dynamic taint analysis instrumentation passes",
+        )
+
     def run(self, args: argparse.Namespace):
-        _instrument_bitcode(
-            args.input,
-            args.output,
-            args.ignore_lists)
+        if args.cflog:
+            cflog_output = Path(f"{args.output.stem}.cflog_instrumented.bc")
+            _preopt_instrument_bitcode(
+                input_bitcode=args.input,
+                output_bitcode=cflog_output,
+                ignore_lists=args.ignore_lists,
+            )
+            _instrument_bitcode(
+                input_bitcode=cflog_output,
+                output_bitcode=args.output,
+                ignore_lists=args.ignore_lists,
+            )
+        else:
+            _instrument_bitcode(
+                input_bitcode=args.input,
+                output_bitcode=args.output,
+                ignore_lists=args.ignore_lists,
+            )
 
 
 class LowerBitcode(Command):
@@ -401,16 +418,23 @@ class InstrumentTargets(Command):
             opt_bc = bc_path.with_suffix(".opt.bc")
             _extract_bitcode(target_path, bc_path)
             if args.cflog:
-                # Control affecting data flow logging happens before optimization
+                # Control affecting data flow logging instrumentation happens
+                # before optimization
+                cflog_bc_path = Path(f"{bc_path.stem}.cflog_instrumented.bc")
                 _preopt_instrument_bitcode(
                     input_bitcode=bc_path,
-                    output_bitcode=bc_path,
-                    ignore_lists=args.ignore_lists)
+                    output_bitcode=cflog_bc_path,
+                    ignore_lists=args.ignore_lists,
+                )
 
-            _optimize_bitcode(bc_path, opt_bc)
+                _optimize_bitcode(input_bitcode=cflog_bc_path, output_bitcode=opt_bc)
+            else:
+                _optimize_bitcode(input_bitcode=bc_path, output_bitcode=opt_bc)
+
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
                 input_bitcode=opt_bc,
                 output_bitcode=inst_bc_path,
-                ignore_lists=args.ignore_lists)
+                ignore_lists=args.ignore_lists,
+            )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)
