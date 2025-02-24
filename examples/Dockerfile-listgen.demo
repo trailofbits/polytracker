@@ -11,7 +11,7 @@ RUN apt update
 #Update pkg-config/util-linux (needed for FontConfig)
 RUN apt update
 RUN apt install pkg-config uuid-dev gperf libtool \
-	gettext autopoint autoconf -y
+	gettext autopoint autoconf wget -y
 
 RUN apt-get install python3-dev
 
@@ -38,7 +38,7 @@ RUN make -j5 install
 WORKDIR /polytracker/the_klondike
 
 #zlib
-RUN wget https://www.zlib.net/zlib-1.2.11.tar.gz
+RUN wget https://www.zlib.net/fossils/zlib-1.2.11.tar.gz
 RUN tar -xzvf zlib-1.2.11.tar.gz
 WORKDIR zlib-1.2.11
 RUN ./configure --prefix=/usr  && make -j$(nproc) test && make -j$(nproc) install

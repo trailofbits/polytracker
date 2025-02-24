@@ -25,5 +25,5 @@ RUN polytracker build make -j$((`nproc`+1)) HAVE_X11=no HAVE_GLUT=no prefix=/usr
 RUN polytracker instrument-targets --cflog mutool
 RUN mv mutool.instrumented mutool_track
 # Note, the /workdir directory is intended to be mounted at runtime
-VOLUME ["/workdir"]
-WORKDIR /workdir
+# VOLUME ["/workdir"]
+# WORKDIR /workdir
