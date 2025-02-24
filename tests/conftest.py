@@ -1,11 +1,10 @@
-import subprocess
 import sys
+import pytest
+import subprocess
+import polytracker
+
 from pathlib import Path
 from typing import List
-
-import pytest
-
-import polytracker
 
 
 def pytest_configure(config):

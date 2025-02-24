@@ -30,7 +30,7 @@ struct StringTable : public SectionBase {
   // that can be expressed.
   static constexpr size_t max_entry_size =
       std::min(static_cast<size_t>(std::numeric_limits<length_t>::max()),
-               max_offset - sizeof(length_t));
+              max_offset - sizeof(length_t));
 
   static constexpr uint8_t tag{3};
   static constexpr size_t allocation_size{0x100000};
@@ -45,23 +45,19 @@ struct StringTable : public SectionBase {
   // by using `from_offset`.
   std::optional<offset_t> add_string(std::string_view sv) {
     if ((sv.size() + sizeof(length_t)) > max_entry_size) {
-      spdlog::info("Tried to store a string of size {0:d} but max is {1:d} "
-                   "(will truncate string)",
-                   sv.size(), max_entry_size);
+      spdlog::info("Tried to store a string of size {0:d} but max is {1:d} (will truncate string)", sv.size(), max_entry_size);
 
       size_t to_truncate = max_entry_size - sizeof(length_t) - 1;
       sv = sv.substr(0, to_truncate);
 
       if ((sv.size() + sizeof(length_t)) > max_entry_size) {
-        error_exit("Truncated string was too big: ",
-                   sv.size() + sizeof(length_t));
+        error_exit("Truncated string was too big: ", sv.size() + sizeof(length_t));
       }
     }
 
     auto len = allocated_len(sv.size());
     if (auto write_context = write(len)) {
-      // todo(kaoudis) this is possibly a type confusion issue resulting in
-      // truncation since size_t is bigger than the current length_t
+      // todo(kaoudis) this is possibly a type confusion issue resulting in truncation since size_t is bigger than the current length_t
       *reinterpret_cast<length_t *>(&*(write_context->mem.begin())) = sv.size();
 
       // copy string
