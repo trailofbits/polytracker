@@ -1,11 +1,11 @@
 #include <catch2/catch.hpp>
 
+#include "taintdag/labels.h"
 #include "taintdag/outputfile.h"
 #include "taintdag/section.h"
 #include "taintdag/storage.h"
 #include "taintdag/string_table.h"
 #include "taintdag/taint_source.h"
-#include "taintdag/labels.h"
 
 #include "utils.h"
 
@@ -244,12 +244,15 @@ struct DummyOutputFile {
   StringTable &string_table;
 };
 
-TEST_CASE("The Sources and StringTable sections can be used to store source entries", "[Sources, StringTable]") {
+TEST_CASE(
+    "The Sources and StringTable sections can be used to store source entries",
+    "[Sources, StringTable]") {
   OutputFile<StringTable, Sources> of{std::tmpnam(nullptr)};
   auto &sources_section{of.section<Sources>()};
   auto &string_table{of.section<StringTable>()};
 
-  SECTION("Can add taint-source entries to the Sources section", "[Sources, StringTable]") {
+  SECTION("Can add taint-source entries to the Sources section",
+          "[Sources, StringTable]") {
     int fd = 3;
     REQUIRE(!sources_section.mapping_idx(fd));
 
@@ -267,7 +270,8 @@ TEST_CASE("The Sources and StringTable sections can be used to store source entr
     REQUIRE(m1.size == 122);
 
     int fd2 = 99;
-    auto s2 = sources_section.add_source("test2", fd2, SourceEntry::InvalidSize);
+    auto s2 =
+        sources_section.add_source("test2", fd2, SourceEntry::InvalidSize);
     REQUIRE(s2.has_value());
 
     auto idx2 = sources_section.mapping_idx(fd2);
@@ -281,7 +285,8 @@ TEST_CASE("The Sources and StringTable sections can be used to store source entr
   }
 
   WHEN("Adding taint-sources to the Sources section and the string table") {
-    THEN("Latest wins in terms in case output_file has multiple mappings for the same fd") {
+    THEN("Latest wins in terms in case output_file has multiple mappings for "
+         "the same fd") {
       int fd = 1;
       sources_section.add_source("first", fd);
       sources_section.add_source("second", fd);
@@ -331,7 +336,8 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
       string_table.add_string("d");
 
       std::vector<std::string_view> res;
-      std::copy(string_table.begin(), string_table.end(), std::back_inserter(res));
+      std::copy(string_table.begin(), string_table.end(),
+                std::back_inserter(res));
       REQUIRE(res.size() == 4);
       REQUIRE(res[0] == "a");
       REQUIRE(res[1] == "b");
@@ -341,18 +347,20 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
   }
 
   WHEN("Adding to the string table") {
-    THEN("A string bigger than the maximum string size will be truncated and stored") {
+    THEN("A string bigger than the maximum string size will be truncated and "
+         "stored") {
       // display the info logging
       spdlog::set_level(spdlog::level::debug);
 
       auto len = StringTable::max_entry_size + 10;
       std::string too_big(len, 'A');
-      REQUIRE_NOTHROW([&](){
+      REQUIRE_NOTHROW([&]() {
         auto offset = string_table.add_string(too_big);
         REQUIRE(offset.has_value());
 
         std::string_view result = string_table.from_offset(offset.value());
-        REQUIRE(result.size() + sizeof(StringTable::length_t) == StringTable::max_entry_size - 1);
+        REQUIRE(result.size() + sizeof(StringTable::length_t) ==
+                StringTable::max_entry_size - 1);
       }());
     }
 
@@ -367,10 +375,11 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
       }
     }
 
-    THEN("Add a maximumly big string and will still be able to add other strings") {
+    THEN("Add a maximumly big string and will still be able to add other "
+         "strings") {
       auto size = StringTable::max_entry_size - sizeof(StringTable::length_t);
       std::string s(size, 'A');
-      REQUIRE_NOTHROW([&](){
+      REQUIRE_NOTHROW([&]() {
         auto offset = string_table.add_string(s);
         REQUIRE(offset.has_value());
         auto result = string_table.from_offset(offset.value());
@@ -390,15 +399,18 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
   }
 }
 
-  TEST_CASE("An allocation that is larger than can be represented in the string table will result in truncation and does not prevent adding more strings", "[StringTable]") {
-    auto alloc_size =
-        static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
-        1;
-    alignas(StringTable::offset_t) uint8_t backing[64];
-    int dummy = 1;
-    StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
-    auto span = StringTable::span_t{&backing[0], alloc_size};
-    std::string_view tinystring{"eep"};
-    REQUIRE_NOTHROW(st.add_string(tinystring));
-  }
+TEST_CASE(
+    "An allocation that is larger than can be represented in the string table "
+    "will result in truncation and does not prevent adding more strings",
+    "[StringTable]") {
+  auto alloc_size =
+      static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
+      1;
+  alignas(StringTable::offset_t) uint8_t backing[64];
+  int dummy = 1;
+  StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
+  auto span = StringTable::span_t{&backing[0], alloc_size};
+  std::string_view tinystring{"eep"};
+  REQUIRE_NOTHROW(st.add_string(tinystring));
+}
 } // namespace taintdag

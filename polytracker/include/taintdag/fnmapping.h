@@ -25,8 +25,8 @@ struct Function {
   offset_t name_offset;
   uint32_t function_id;
 
-  Function(offset_t name_ofs, uint32_t f_id) :
-    name_offset(name_ofs), function_id(f_id) {};
+  Function(offset_t name_ofs, uint32_t f_id)
+      : name_offset(name_ofs), function_id(f_id){};
 };
 
 class Functions : public FixedSizeAlloc<Function> {
@@ -42,7 +42,8 @@ public:
       : FixedSizeAlloc{of.range},
         string_table{of.output_file.template section<StringTable>()} {}
 
-  std::optional<index_t> add_mapping(uint32_t function_id, std::string_view function_name);
+  std::optional<index_t> add_mapping(uint32_t function_id,
+                                     std::string_view function_name);
 
 private:
   StringTable &string_table;

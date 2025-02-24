@@ -1,13 +1,12 @@
 # /usr/bin/python
 import os
 import random
-import sys
 import subprocess
-from typing import List, Tuple
+import sys
 from pathlib import Path
+from typing import List, Tuple
 
 from polytracker import PolyTrackerTrace
-
 
 src_arg = Path(sys.argv[1])
 no_build = "nobuild" == sys.argv[2] if len(sys.argv) > 2 else False

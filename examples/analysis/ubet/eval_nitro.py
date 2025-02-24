@@ -1,19 +1,20 @@
 import argparse
-from collections import defaultdict
-import subprocess
 import os
+import subprocess
 import sys
-from typing import Optional, Set, Iterator, Tuple, Dict
-from polytracker import PolyTrackerTrace, taint_dag
-from polytracker.taint_dag import TDFile, TDNode, TDSourceNode, TDUnionNode, TDRangeNode
-from polytracker.mapping import InputOutputMapping
+from collections import defaultdict
+from functools import partialmethod
 from pathlib import Path
+from typing import Dict, Iterator, Optional, Set, Tuple
+
+import cxxfilt
 
 # To Silence TQDM!
 from tqdm import tqdm
-from functools import partialmethod
 
-import cxxfilt
+from polytracker import PolyTrackerTrace, taint_dag
+from polytracker.mapping import InputOutputMapping
+from polytracker.taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
