@@ -390,16 +390,15 @@ TEST_CASE("StringTable add/iterate", "[StringTable]") {
   }
 }
 
-  // TEST_CASE("An allocation that is larger than can be represented in the string table will result in error", "[StringTable]") {
-  //   auto alloc_size =
-  //       static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
-  //       1;
-  //   alignas(StringTable::offset_t) uint8_t backing[64];
-  //   int dummy = 1;
-  //   StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
-  //   auto span = StringTable::span_t{&backing[0], alloc_size};
-  //   REQUIRE_THROWS_AS(
-  //       st,
-  //       test::ErrorExit);
-  // }
+  TEST_CASE("An allocation that is larger than can be represented in the string table will result in truncation and does not prevent adding more strings", "[StringTable]") {
+    auto alloc_size =
+        static_cast<size_t>(std::numeric_limits<StringTable::offset_t>::max()) +
+        1;
+    alignas(StringTable::offset_t) uint8_t backing[64];
+    int dummy = 1;
+    StringTable st{SectionArg<int>{.output_file = dummy, .range = backing}};
+    auto span = StringTable::span_t{&backing[0], alloc_size};
+    std::string_view tinystring{"eep"};
+    REQUIRE_NOTHROW(st.add_string(tinystring));
+  }
 } // namespace taintdag
