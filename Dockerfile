@@ -1,5 +1,5 @@
 # Build base image
-FROM ubuntu:jammy as base
+FROM ubuntu:jammy AS base
 
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
 
@@ -41,7 +41,7 @@ RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
 ENV PATH=$PATH:/root/go/bin
 
 # Clone llvm to build `libc++` from source
-FROM base as llvm-sources
+FROM base AS llvm-sources
 
 RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-project.git /llvm-project
 
@@ -54,7 +54,7 @@ RUN git clone --depth 1 --branch llvmorg-13.0.0 https://github.com/llvm/llvm-pro
 
 # Build "clean" `libc++` with `gclang`. Used to link the uninstrumented
 # target of the user project. Installed into `/cxx_lib/clean_build`.
-FROM llvm-sources as clean-libcxx
+FROM llvm-sources AS clean-libcxx
 
 ENV WLLVM_BC_STORE=/cxx_clean_bitcode
 RUN mkdir -p $WLLVM_BC_STORE
@@ -78,7 +78,7 @@ RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`np
 
 # Build "poly" `libc++` with `gclang`. Used to link the instrumented
 # target of the user project. Installed into `/cxx_lib/poly_build`.
-FROM clean-libcxx as poly-libcxx
+FROM clean-libcxx AS poly-libcxx
 
 ENV WLLVM_BC_STORE=/cxx_poly_bitcode
 RUN mkdir -p $WLLVM_BC_STORE
@@ -104,7 +104,7 @@ RUN cmake -GNinja \
 RUN cmake --build $LIBCXX_BUILD_DIR --target install-cxx install-cxxabi -j$((`nproc`+1))
 
 # Build and install the polytracker
-FROM poly-libcxx as polytracker
+FROM poly-libcxx AS polytracker
 
 ARG DFSAN_FILENAME_ARCH=x86_64
 
