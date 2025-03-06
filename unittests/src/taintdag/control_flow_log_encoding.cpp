@@ -7,12 +7,13 @@
  * the LICENSE file found in the root directory of this source tree.
  */
 
-#include "taintdag/control_flow_log.h"
+#include "taintdag/control_flow_log_encoding.h"
 #include "taintdag/section.h"
+
 #include <catch2/catch.hpp>
 
-TEST_CASE("Simple varint encoding") {
-  using namespace taintdag::detail;
+TEST_CASE("Simple control flow log varint encoding") {
+  using namespace taintdag;
   uint8_t buffer[5];
 
   SECTION("Encode 0") {

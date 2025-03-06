@@ -6,12 +6,16 @@ add_executable(
   tdag.cpp
   taintdag.cpp
   bitmap_section.cpp
-  encoding.cpp
+  control_flow_log_encoding.cpp
+  taint_label_encoding.cpp
   fnmapping.cpp
   union.cpp
   labeldeq.cpp
+  section.cpp
   stream_offset.cpp
-  control_flow_log.cpp)
+  string_table.cpp
+  storage.cpp
+  )
 
 target_include_directories(${TAINTDAG_UNITTEST}
                            PRIVATE ${CMAKE_SOURCE_DIR}/polytracker/include)

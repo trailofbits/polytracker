@@ -42,7 +42,8 @@ set(TAINTDAG_SOURCES
     ${TAINTDAG_DIR}/fnmapping.cpp
     ${TAINTDAG_DIR}/polytracker.cpp
     ${TAINTDAG_DIR}/print.cpp
-    ${TAINTDAG_DIR}/util.cpp)
+    ${TAINTDAG_DIR}/util.cpp
+    ${TAINTDAG_DIR}/control_flow_log_encoding.cpp)
 
 add_library(Polytracker STATIC ${POLYTRACKER_SOURCES} ${TAINT_SOURCES}
                                ${TAINTDAG_SOURCES})
