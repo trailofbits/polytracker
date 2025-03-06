@@ -38,8 +38,8 @@ Some specifics:
 - The Source Label Index is a bitmap that defines how to index the sources section.
 - [Sinks](../polytracker/include/taintdag/sink.h) contains sink labels (representing bytes of the output)
 - [Strings](../polytracker/include/taintdag/string_table.h) the string table contains things like names of sources, the function names used with the functions section to map to the control flow log, etc. todo(kaoudis) in future this could probably be less of a catchall for 'all things stringly' and those things could have separate lookups or be stored inline if we're gonna mmap so much space anyway.
-- [Functions](../polytracker/include/taintdag/fnmapping.h) todo(kaoudis) this section maps the low-level function identifiers used in the cflog to the actual (mangled) names in the strings table. see test_cf_log.py for details of how this looks/works.
-- [Control Flow Log](../polytracker/include/taintdag/control_flow_log.h): this consists of the function entry and exit records we need to reconstruct the call stack that data flow passed through. see test_cf_log.py for details of how this looks/works.
+- [Functions](../polytracker/include/taintdag/fnmapping.h) todo(kaoudis) this section maps the low-level function identifiers used in the cflog to the actual (mangled) names in the strings table. see tests/test_cf_log.py for how this layout looks/works.
+- [Control Flow Log](../polytracker/include/taintdag/control_flow_log.h): this consists of the function entry and exit records we need to reconstruct the call stack that data flow ("tainted control flow" or "control affecting data flow" are ways that we have referred to this subset of data flow) passed through, plus recorded function ids that can be mapped back through the Functions section to the String Table to get mangled symbols. see test_cf_log.py and unittests/src/taintdag/tdag.cpp for details of how this looks/works.
 
 ## TDAG Contents
 
