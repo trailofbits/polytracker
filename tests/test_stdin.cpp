@@ -1,7 +1,7 @@
 #include <cstdint>
-#include <unistd.h>
 #include <cstring>
 #include <iostream>
+#include <unistd.h>
 
 int stdin_read() {
   char inbyte;
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   if (argc != 2) {
     exit(EXIT_FAILURE);
   }
-  
+
   if (std::strncmp(argv[1], "read", 4) == 0) {
     printf("got read\n");
     stdin_read();

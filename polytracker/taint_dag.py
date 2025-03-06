@@ -1,47 +1,47 @@
+from ctypes import (
+    Structure,
+    c_char,
+    c_int32,
+    c_int64,
+    c_uint8,
+    c_uint16,
+    c_uint32,
+    c_uint64,
+    sizeof,
+)
+from enum import Enum
+from mmap import PROT_READ, mmap
+from pathlib import Path
 from typing import (
     BinaryIO,
-    Union,
+    Dict,
     Iterable,
     Iterator,
-    Optional,
-    Dict,
-    Tuple,
     List,
+    Optional,
     Set,
+    Tuple,
     Type,
+    Union,
     cast,
 )
 
 from cxxfilt import demangle
-from enum import Enum
-from pathlib import Path
-from mmap import mmap, PROT_READ
-from ctypes import (
-    Structure,
-    c_char,
-    c_int64,
-    c_uint64,
-    c_int32,
-    c_uint32,
-    c_uint8,
-    c_uint16,
-    sizeof,
-)
 from typing_extensions import deprecated
 
-from .plugins import Command
-from .repl import PolyTrackerREPL
-from .polytracker import ProgramTrace
 from .inputs import Input
+from .plugins import Command
+from .polytracker import ProgramTrace
+from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest, TaintForestNode
 from .tracing import (
     BasicBlock,
     ByteOffset,
     Function,
     TaintAccess,
-    TraceEvent,
     TaintOutput,
     Taints,
+    TraceEvent,
 )
 
 
@@ -94,9 +94,11 @@ class TDSourceSection:
         for offset in range(0, len(self.mem), sizeof(TDFDHeader)):
             yield TDFDHeader.from_buffer_copy(self.mem[offset:])
 
+
 @deprecated("Use ControlFlowEvent instead, TDEvents are no longer written")
 class TDEvent(Structure):
     """This is an old version of the ControlFlowEvent kept for backward compatibility only"""
+
     _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
 
     class Kind(Enum):
@@ -106,15 +108,18 @@ class TDEvent(Structure):
     def __repr__(self) -> str:
         return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
 
+
 @deprecated("Use TDControlFlowLog instead, TDEvents section is no longer written")
 class TDEventsSection:
     """This is an old version of the CFLog kept for backward compatibility only"""
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self):
         for offset in range(0, len(self.section), sizeof(TDEvent)):
             yield TDEvent.from_buffer_copy(self.section, offset)
+
 
 class TDStringSection:
     """TDAG String Table section.
@@ -355,6 +360,7 @@ class TDFunctionsSection:
     """This section holds the mapping between the function IDs stored in callstack form in the cflog section, and the function names stored in the string table. See fnmapping in the C++ part of the codebase for the "write" side part of Polytracker that pertains to this section. Each entry is an uint32_t as set in fnmapping.cpp, but a TDFnHeader will then contain *two* of these: the function_id and the name_offset.
 
     Structure in memory: |offset|function id|..."""
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
@@ -382,10 +388,8 @@ class TDFDHeader(Structure):
 class TDFnHeader(Structure):
     # This corresponds to the Function inline constructor in fnmapping.h.
     # Anything using Structure needs to be in sync with the corresponding C++.
-    _fields_ = [
-        ("name_offset", c_uint32),
-        ("function_id", c_uint32)
-    ]
+    _fields_ = [("name_offset", c_uint32), ("function_id", c_uint32)]
+
 
 class TDNode:
     def __init__(self, affects_control_flow: bool = False):
@@ -443,7 +447,6 @@ class TDSink(Structure):
 
     def __repr__(self) -> str:
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
-
 
 
 TDSection = Union[
@@ -536,21 +539,24 @@ class TDFile:
         return lookup
 
     def _maybe_demangle(self, function_id: int) -> Union[str, int]:
-        """Depending on the age of the tdag, it may not contain a function mapping. If the tdag doesn't contain a function mapping, this will only return function ids and you'll need to manually map them against symbols gathered statically from the compiled instrumented binary. """
+        """Depending on the age of the tdag, it may not contain a function mapping. If the tdag doesn't contain a function mapping, this will only return function ids and you'll need to manually map them against symbols gathered statically from the compiled instrumented binary."""
         maybe_symbol = self.mangled_fn_symbol_lookup.get(function_id)
         if maybe_symbol is not None:
             return demangle(maybe_symbol)
         else:
             return function_id
 
-    def cflog(self, demangle_symbols: bool=False) -> Iterator[ControlFlowEvent]:
+    def cflog(self, demangle_symbols: bool = False) -> Iterator[ControlFlowEvent]:
         """Presents the control flow log. Does not demangle symbols by default, for performance."""
         cflog_section = self.sections_by_type[TDControlFlowLogSection]
         assert isinstance(cflog_section, TDControlFlowLogSection)
 
         if demangle_symbols:
             for cflog_entry in cflog_section:
-                cflog_entry.callstack[:] = [self._maybe_demangle(function_id) for function_id in cflog_entry.callstack]
+                cflog_entry.callstack[:] = [
+                    self._maybe_demangle(function_id)
+                    for function_id in cflog_entry.callstack
+                ]
 
                 yield cflog_entry
         else:
@@ -905,8 +911,11 @@ class TDInfo(Command):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
             if args.print_function_trace:
-                if TDFunctionsSection in tdfile.sections_by_type.keys() and len(tdfile.mangled_fn_symbol_lookup) > 0:
-                    for k,v in tdfile.mangled_fn_symbol_lookup:
+                if (
+                    TDFunctionsSection in tdfile.sections_by_type.keys()
+                    and len(tdfile.mangled_fn_symbol_lookup) > 0
+                ):
+                    for k, v in tdfile.mangled_fn_symbol_lookup:
                         print(f"function_id '{k}': function '{demangle(v)}'")
                 else:
                     print("Error: no Functions section could be read from the tdag!")
@@ -917,5 +926,7 @@ class TDInfo(Command):
                     for event in tdfile.cflog(demangle_symbols=True):
                         print(event)
                 else:
-                    print("Error: no Control Flow Log section could be read from the tdag!")
+                    print(
+                        "Error: no Control Flow Log section could be read from the tdag!"
+                    )
                     print(f"Sections that could be read: {tdfile.sections}")

@@ -1,20 +1,21 @@
+import subprocess
+from pathlib import Path
+from typing import List
+
 import cxxfilt
 import pytest
-import subprocess
 
 import polytracker
-from pathlib import Path
-
+from polytracker import ProgramTrace
 from polytracker.taint_dag import (
-    ControlFlowEvent,
     CFEnterFunctionEvent,
     CFLeaveFunctionEvent,
+    ControlFlowEvent,
     TaintedControlFlowEvent,
     TDControlFlowLogSection,
     TDNode,
 )
-from polytracker import ProgramTrace
-from typing import List
+
 
 @pytest.mark.program_trace("test_fntrace.cpp")
 def test_function_mapping(program_trace: ProgramTrace):
@@ -25,9 +26,12 @@ def test_function_mapping(program_trace: ProgramTrace):
     for symbol in mangled_symbols:
         assert cxxfilt.demangle(symbol) in expected_names
 
+
 @pytest.mark.program_trace("test_fntrace.cpp")
 def test_callstack_mapping(program_trace: ProgramTrace):
-    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[TDControlFlowLogSection]
+    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
+        TDControlFlowLogSection
+    ]
 
     for cflog_entry in cflog:
         assert len(cflog_entry.callstack) > 0
@@ -36,17 +40,20 @@ def test_callstack_mapping(program_trace: ProgramTrace):
             # when we look up the function id it should map to a name we traced
             assert callstack_entry in program_trace.tdfile.mangled_fn_symbol_lookup
 
+
 @pytest.mark.program_trace("test_fntrace.cpp")
 def test_label_mapping(program_trace: ProgramTrace):
-    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[TDControlFlowLogSection]
+    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
+        TDControlFlowLogSection
+    ]
 
     for cflog_entry in cflog:
         if type(cflog_entry) == TaintedControlFlowEvent:
-            assert hasattr(cflog_entry, 'label')
+            assert hasattr(cflog_entry, "label")
             node: TDNode = program_trace.tdfile.decode_node(cflog_entry.label)
             assert node.affects_control_flow
         else:
-            assert not hasattr(cflog_entry, 'label')
+            assert not hasattr(cflog_entry, "label")
 
 
 @pytest.mark.program_trace("test_cf_log.cpp")
@@ -81,9 +88,7 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
         CFEnterFunctionEvent(["main", "f1(unsigned char)"]),
         TaintedControlFlowEvent(["main", "f1(unsigned char)"], 7),
         CFEnterFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
-        TaintedControlFlowEvent(
-            ["main", "f1(unsigned char)", "f2(unsigned char)"], 7
-        ),
+        TaintedControlFlowEvent(["main", "f1(unsigned char)", "f2(unsigned char)"], 7),
         CFLeaveFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
         CFLeaveFunctionEvent(["main", "f1(unsigned char)"]),
         CFLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
@@ -100,4 +105,6 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
 
     for entry in cflog:
         for callstack_entry in entry.callstack:
-            assert callstack_entry in list(program_trace.tdfile.mangled_fn_symbol_lookup.values())
+            assert callstack_entry in list(
+                program_trace.tdfile.mangled_fn_symbol_lookup.values()
+            )

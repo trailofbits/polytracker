@@ -15,9 +15,8 @@
 #include "utils.h"
 
 namespace taintdag {
-TEST_CASE(
-    "The Sources and StringTable sections can store source entries",
-    "[Sources, StringTable]") {
+TEST_CASE("The Sources and StringTable sections can store source entries",
+          "[Sources, StringTable]") {
   OutputFile<StringTable, Sources> of{std::tmpnam(nullptr)};
   auto &sources_section{of.section<Sources>()};
   auto &string_table{of.section<StringTable>()};
