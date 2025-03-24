@@ -87,7 +87,7 @@ The following Dockerfiles did not build on master or on the new branch. Here's m
 
 #### DaeDaLus NITF
 
-DaeDaLus NITF parser fails on the Cabal build of DaeDaLus, and also did at the time I did the prior eval work for the paper. I think this is because the DaeDaLus repository main branch is broken, and we need to pin a prior working commit in that Dockerfile.
+DaeDaLus NITF parser fails on the Cabal build of DaeDaLus, and also did at the time I did the prior eval work for the paper. I think this is because the DaeDaLus repository main branch is broken, and we need to pin a prior working commit in that Dockerfile. I don't know what this commit would be - the one mentioned in the Dockerfile doesn't build, either.
 
 #### jq
 
