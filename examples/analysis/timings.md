@@ -1,5 +1,5 @@
 # What did this change break?
-Hopefully nothing?
+Hopefully nothing? :D
 
 # What is this change doing?
 My goal is for taint tracking to work exactly as before, but to clean up the ftrace/cflog/events side of the house, unifying `--cflog` and `--ftrace` options (cleaning up / simplifying how we are writing to the Functions, Events, Control Flow Log, and String Table sections overall) so we don't add duplicate instrumentation to software or write duplicate data to the TDAG and/or separate files (i.e., functionid.json) anymore.
@@ -69,6 +69,9 @@ TDAG size is fixed because of how we write TDAGs right now; it didn't change.
 | Dockerfile-xpdf.demo `pdfinfo`      |  154.5 s   | 141.9 s | 143.3 s   | 164.2 s   |
 | Dockerfile-xpdf.demo `pdftops`      |  206.9 s   | 189.9 s | 187.2 s   | 217.2 s   |
 | Dockerfile-xpdf.demo `pdftotext`    |  169.1 s   | 157.1 s | 154.4 s   | 184.3 s   |
+
+# What's weird here
+The sizes of bitcode when instrumented with all our passes before AND after these changes seem like they could be indicative of extra instrumentation (perhaps the labels pass instrumenting the cflog and/or functions pass?), though I haven't dug into whether this is truly happening yet. It doesn't _seem like_ this is exactly hurting anything at the moment, but I would be curious if others notice the same.
 
 ## Notes
 
