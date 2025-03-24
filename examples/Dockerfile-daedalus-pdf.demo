@@ -9,6 +9,7 @@ RUN apt-get update && apt-get -y upgrade && apt-get install -y git pkg-config
 
 RUN git clone --recursive https://github.com/GaloisInc/daedalus.git
 WORKDIR /polytracker/the_klondike/daedalus
+RUN git checkout 46a2502a8c68b17534079356a71af90e87801fdc
 
 FROM trailofbits/polytracker:latest
 LABEL org.opencontainers.image.authors="evan.sultanik@trailofbits.com"
