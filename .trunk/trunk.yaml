@@ -1,6 +1,6 @@
 version: 0.1
 cli:
-  version: 1.14.1
+  version: 1.22.11
 plugins:
   sources:
     - id: trunk
@@ -16,29 +16,47 @@ lint:
     - linters: [ALL]
       paths:
         - polytracker/src/compiler-rt/**
+        - third_party/**
+    - linters: [bandit]
+      paths:
+        - tests/**
+  definitions:
+    - name: flake8
+      direct_configs:
+        - .flake8
+    - name: ruff
+      direct_configs:
+        - .ruff.toml
+    - name: mypy
+      direct_configs:
+        - .mypy.ini
+    - name: clang-format
+      direct_configs:
+        - .clang-format
+
   enabled:
-    - taplo@0.8.1
-    - actionlint@1.6.25
-    - bandit@1.7.5
-    - black@23.7.0
-    - checkov@2.4.5
+    - taplo@0.9.3
+    - actionlint@1.7.7
+    - bandit@1.8.3
+    - black@25.1.0
+    - checkov@3.2.390
     - clang-format@16.0.3
-    - flake8@6.1.0
+    - flake8@7.1.2
     - git-diff-check
-    - hadolint@2.12.0
-    - isort@5.12.0
-    - markdownlint@0.35.0
-    - mypy@1.5.1
-    - oxipng@8.0.0
-    - prettier@3.0.2
-    - ruff@0.0.285
-    - shellcheck@0.9.0
+    - hadolint@2.12.1-beta
+    - isort@6.0.1
+    - markdownlint@0.44.0
+    - mypy@1.15.0
+    - oxipng@9.1.4
+    - prettier@3.5.3
+    - ruff@0.11.1
+    - shellcheck@0.10.0
     - shfmt@3.6.0
-    - svgo@3.0.2
-    - terrascan@1.18.3
-    - trivy@0.44.1
-    - trufflehog@3.48.0
-    - yamllint@1.32.0
+    - svgo@3.3.2
+    - terrascan@1.19.1
+    - trivy@0.60.0
+    - trufflehog@3.88.18
+    - yamllint@1.36.2
 actions:
   disabled:
     - trunk-announce
