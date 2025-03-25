@@ -1,11 +1,11 @@
 name: Build
-
+permissions: read-all
 on:
   workflow_dispatch: {}
 
   push:
     branches:
-      - "master"
+      - master
 
     tags:
       - "*"
@@ -21,16 +21,16 @@ jobs:
 
     steps:
       - name: Clone polytracker repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and export
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           tags: trailofbits/polytracker:latest
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Clone polytracker repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 1
@@ -94,10 +94,10 @@ jobs:
         run: docker load --input /tmp/polytracker.tar
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build ${{ matrix.example }}
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: examples
           file: examples/Dockerfile-${{ matrix.example }}.demo
