@@ -62,10 +62,10 @@ jobs:
         with:
           image: trailofbits/polytracker:latest
           run: |
-              cd /polytracker-build/unittests/src/taintdag && \
-              pwd && \
-              chmod +x tests-taintdag && \
-              ./tests-taintdag
+            cd /polytracker-build/unittests/src/taintdag && \
+            pwd && \
+            chmod +x tests-taintdag && \
+            ./tests-taintdag
 
       - name: Python (integration) tests
         uses: addnab/docker-run-action@v3
