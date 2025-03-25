@@ -1,5 +1,5 @@
 name: Build
-permissions: read-all
+permissions: {}
 on:
   workflow_dispatch: {}
 
