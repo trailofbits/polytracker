@@ -1,7 +1,7 @@
 import argparse
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from typing import Dict, List, Tuple
 
