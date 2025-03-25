@@ -1,17 +1,17 @@
-import subprocess
+import subprocess  # nosec B404
 from pathlib import Path
 from random import choice
-from string import printable
+from string import printable as chars
 
 import pytest
 
 import polytracker
-from polytracker import taint_dag
 
 # Ensure stdin reads in multiple ways are verified
-# examples: getc, fgetc, fread, fread_unlocked, fgetc_unlocked, gets, fgets, getdelim, __getdelim, getw
+# examples: getc, fgetc, fread, fread_unlocked,
+# fgetc_unlocked, gets, fgets, getdelim, __getdelim, getw
 
-_stdin_data = "\n".join(choice(printable) for _ in range(40)).encode("utf-8")
+_stdin_data = "\n".join(choice(chars) for _ in range(40))  # nosec B311
 
 
 def _create_tdag_trace(
@@ -21,11 +21,11 @@ def _create_tdag_trace(
     out DRY from the test framework so it's easy to see when an individual test
     fails."""
     # https://docs.python.org/3/library/subprocess.html#subprocess.CalledProcessError.returncode
-    subprocess.run(
+    subprocess.run(  # nosec B603
         args=[str(instrumented_binary), method],
         env={"POLYDB": str(trace_file), "POLYTRACKER_STDIN_SOURCE": "1"},
         stderr=subprocess.STDOUT,
-        input=_stdin_data,
+        input=_stdin_data.encode("utf-8"),
         close_fds=False,
     ).check_returncode()
 
@@ -34,9 +34,7 @@ def _test_trace(trace_file: Path) -> None:
     """Test the tdag output, checking its inputs to make sure we tainted and
     tracked every byte of stdin. Offsets must be ordered as they were read."""
 
-    program_trace: taint_dag.TDProgramTrace = polytracker.PolyTrackerTrace.load(
-        trace_file
-    )
+    program_trace = polytracker.PolyTrackerTrace.load(trace_file)
     assert "/dev/stdin" in [input.path for input in program_trace.inputs]
 
     expected_offset = 0
