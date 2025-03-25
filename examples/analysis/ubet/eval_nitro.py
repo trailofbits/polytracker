@@ -1,6 +1,6 @@
 import argparse
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from collections import defaultdict
 from functools import partialmethod
@@ -312,9 +312,11 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
             print_cols(
                 str(dbg_entry[0]),
                 str(rel_entry[0]),
-                f" !!! DBG: {dbg_callstack} != REL: {rel_callstack}"
-                if dbg_callstack != rel_callstack
-                else "",
+                (
+                    f" !!! DBG: {dbg_callstack} != REL: {rel_callstack}"
+                    if dbg_callstack != rel_callstack
+                    else ""
+                ),
             )
             dbgidx += 1
             relidx += 1
