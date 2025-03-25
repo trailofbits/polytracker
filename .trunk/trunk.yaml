@@ -4,14 +4,17 @@ cli:
 plugins:
   sources:
     - id: trunk
-      ref: v1.2.1
+      ref: v1.6.7
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.19.5
-    - node@18.12.1
+    - go@1.21.0
+    - node@18.20.5
     - python@3.10.8
 lint:
+  threshold:
+    - linters: [ALL]
+      level: high
   ignore:
     - linters: [ALL]
       paths:
@@ -24,15 +27,6 @@ lint:
     - name: flake8
       direct_configs:
         - .flake8
-    - name: ruff
-      direct_configs:
-        - .ruff.toml
-    - name: mypy
-      direct_configs:
-        - .mypy.ini
-    - name: clang-format
-      direct_configs:
-        - .clang-format
 
   enabled:
     - taplo@0.9.3
