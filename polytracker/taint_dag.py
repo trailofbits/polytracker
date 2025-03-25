@@ -97,7 +97,9 @@ class TDSourceSection:
 
 @deprecated("Use ControlFlowEvent instead, TDEvents are no longer written")
 class TDEvent(Structure):
-    """This is an old version of the ControlFlowEvent kept for backward compatibility only"""
+    """TDEvent is an old version of the ControlFlowEvent kept for backward
+    compatibility only.
+    """
 
     _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
 
@@ -109,12 +111,14 @@ class TDEvent(Structure):
         return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
 
 
-@deprecated("Use TDControlFlowLog instead, TDEvents section is no longer written")
+@deprecated("Use TDControlFlowLog; the TDEvents section is no longer written")
 class TDEventsSection:
-    """This is an old version of the CFLog kept for backward compatibility only"""
+    """TDEventsSection is an old version of the CFLog kept for backward
+    compatibility only.
+    """
 
     def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]  # nosec E203
 
     def __iter__(self):
         for offset in range(0, len(self.section), sizeof(TDEvent)):
@@ -131,7 +135,8 @@ class TDStringSection:
     - source names
     - function names
     - additional label metadata
-    Check usages of StringTableBase in the C++ ("write side") part of the codebase.
+    Check usages of StringTableBase in the C++ ("write side") part of the
+    codebase.
     """
 
     def __init__(self, mem, hdr):
@@ -140,7 +145,11 @@ class TDStringSection:
 
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) >= offset + sizeof(c_uint16) + n
+        if not (len(self.section) >= offset + sizeof(c_uint16) + n):
+            raise AssertionError(
+                """Section out of alignment with c_uint16
+                so string could not be read"""
+            )
         return str(
             self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
@@ -206,16 +215,18 @@ class TaintedControlFlowEvent:
     Current callstack (including the function the control flow happened in) is available
     in the `callstack` member."""
 
-    def __init__(self, callstack: List, label: int = None):
+    def __init__(self, callstack: List, label: Optional[int] = None):
         self.callstack = callstack
         self.label = label
 
     def __repr__(self) -> str:
         return f"TaintedControlFlowEvent: taint label {self.label} | {self.callstack}"
 
-    def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TaintedControlFlowEvent):
-            return self.label == __o.label and self.callstack == __o.callstack
+    def __eq__(self, other) -> bool:
+        if isinstance(other, TaintedControlFlowEvent) and self.label is not None:
+            return self.label == other.label and self.callstack == other.callstack
+        elif self.label is None and other.label is None:
+            return self.callstack == other.callstack
         return False
 
 
@@ -262,7 +273,7 @@ class TDControlFlowLogSection:
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self) -> Iterator[ControlFlowEvent]:
-        """Produces the cflog entries in order from the mmapped buffer."""
+        """Produce the cflog entries in order from the mmapped buffer."""
         buffer = self.section
         callstack = []
         while buffer:
@@ -326,7 +337,12 @@ class TDBitmapSection:
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        assert len(self.section) % 8 == 0  # Multiple of uint64_t
+        if len(self.section) % 8 != 0:
+            # Multiple of uint64_t
+            raise AssertionError(
+                """Bitmap Section out of alignment and
+                                 cannot be read"""
+            )
 
     def enumerate_set_bits(self):
         """Enumerates all bits that are set
@@ -357,9 +373,16 @@ class TDSourceIndexSection(TDBitmapSection):
 
 
 class TDFunctionsSection:
-    """This section holds the mapping between the function IDs stored in callstack form in the cflog section, and the function names stored in the string table. See fnmapping in the C++ part of the codebase for the "write" side part of Polytracker that pertains to this section. Each entry is an uint32_t as set in fnmapping.cpp, but a TDFnHeader will then contain *two* of these: the function_id and the name_offset.
+    """TDFunctionsSection holds the mapping between the function IDs
+    stored in callstack form in the cflog section, and the function
+    names stored in the string table. See fnmapping in the C++ part
+    of the codebase for the "write" side part of Polytracker that
+    pertains to this section. Each entry is an uint32_t as set in
+    fnmapping.cpp, but a TDFnHeader will then contain *two* of these:
+    the function_id and the name_offset.
 
-    Structure in memory: |offset|function id|..."""
+    Structure in memory: |offset|function id|...
+    """
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
@@ -517,21 +540,27 @@ class TDFile:
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
         sources = self.sections_by_type[TDSourceSection]
+        if not isinstance(sources, TDSourceSection):
+            raise AssertionError("Sources Section could not be read")
         strings = self.sections_by_type[TDStringSection]
-        assert isinstance(sources, TDSourceSection)
-        assert isinstance(strings, TDStringSection)
+        if not isinstance(strings, TDStringSection):
+            raise AssertionError("Strings Table could not be read")
 
         for source in sources.enumerate():
             yield Path(strings.read_string(source.name_offset)), source
 
     @property
     def mangled_fn_symbol_lookup(self) -> Dict[int, str]:
-        """Unordered! map of dynamically observed function IDs to clang symbols. You can demangle the symbols with cxxfilt.demangle."""
+        """Unordered! map of dynamically observed function IDs to clang
+        symbols. You can demangle the symbols with cxxfilt.demangle.
+        """
         lookup = {}
         functions = self.sections_by_type[TDFunctionsSection]
-        assert isinstance(functions, TDFunctionsSection)
+        if not isinstance(functions, TDFunctionsSection):
+            raise AssertionError("Functions Section could not be read")
         strings = self.sections_by_type[TDStringSection]
-        assert isinstance(strings, TDStringSection)
+        if not isinstance(strings, TDStringSection):
+            raise AssertionError("String Table could not be read")
 
         for entry in functions:
             lookup[entry.function_id] = strings.read_string(entry.name_offset)
@@ -539,17 +568,24 @@ class TDFile:
         return lookup
 
     def _maybe_demangle(self, function_id: int) -> Union[str, int]:
-        """Depending on the age of the tdag, it may not contain a function mapping. If the tdag doesn't contain a function mapping, this will only return function ids and you'll need to manually map them against symbols gathered statically from the compiled instrumented binary."""
+        """Depending on the age of the tdag, it may not contain a function
+        mapping. If the tdag doesn't contain a function mapping, this will
+        only return function ids and you'll need to manually map them against
+        symbols gathered statically from the compiled instrumented binary.
+        """
         maybe_symbol = self.mangled_fn_symbol_lookup.get(function_id)
         if maybe_symbol is not None:
             return demangle(maybe_symbol)
         else:
             return function_id
 
-    def cflog(self, demangle_symbols: bool = False) -> Iterator[ControlFlowEvent]:
-        """Presents the control flow log. Does not demangle symbols by default, for performance."""
+    def cflog(self, demangle_symbols=False) -> Iterator[ControlFlowEvent]:
+        """Presents the control flow log. Does not demangle symbols by default,
+        for performance.
+        """
         cflog_section = self.sections_by_type[TDControlFlowLogSection]
-        assert isinstance(cflog_section, TDControlFlowLogSection)
+        if not isinstance(cflog_section, TDControlFlowLogSection):
+            raise AssertionError("CFLog section not correctly read from TDAG?")
 
         if demangle_symbols:
             for cflog_entry in cflog_section:
@@ -560,25 +596,28 @@ class TDFile:
 
                 yield cflog_entry
         else:
-            cflog_section()
+            cflog_section.__iter__()
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
         source_index_section = self.sections_by_type[TDSourceIndexSection]
-        assert isinstance(source_index_section, TDSourceIndexSection)
+        if not isinstance(source_index_section, TDSourceIndexSection):
+            raise AssertionError("Source Index not correctly read from TDAG?")
         return source_index_section.enumerate_set_bits()
 
     @property
     def label_count(self):
         label_section = self.sections_by_type[TDLabelSection]
-        assert isinstance(label_section, TDLabelSection)
+        if not isinstance(label_section, TDLabelSection):
+            raise AssertionError("Could not read Label Section from TDAG?")
         return label_section.count()
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
         label_section = self.sections_by_type[TDLabelSection]
-        assert isinstance(label_section, TDLabelSection)
+        if not isinstance(label_section, TDLabelSection):
+            raise AssertionError("Could not read Label Section from TDAG?")
         result = label_section.read_raw(label)
 
         self.raw_nodes[label] = result
@@ -614,7 +653,8 @@ class TDFile:
     @property
     def sinks(self) -> Iterator[TDSink]:
         sink_section = self.sections_by_type[TDSinkSection]
-        assert isinstance(sink_section, TDSinkSection)
+        if not isinstance(sink_section, TDSinkSection):
+            raise AssertionError("Could not read Sink Section from TDAG?")
         yield from sink_section.enumerate()
 
 
@@ -652,9 +692,14 @@ class TDProgramTrace(ProgramTrace):
         raise NotImplementedError()
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
-        assert node.source is not None
+        if node.source is None:
+            raise AssertionError(
+                """
+            No source could be found from which offset could be calculated"""
+            )
         tdnode: TDNode = self.tdfile.decode_node(node.label)
-        assert isinstance(tdnode, TDSourceNode)
+        if not isinstance(tdnode, TDSourceNode):
+            raise AssertionError("Source Node could not be decoded")
         return ByteOffset(node.source, tdnode.offset)
 
     @property
@@ -695,7 +740,8 @@ class TDProgramTrace(ProgramTrace):
         seen: Set[int] = set()
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
-            assert isinstance(source_node, TDSourceNode)
+            if not isinstance(source_node, TDSourceNode):
+                raise AssertionError("Source Node could not be decoded?")
             if source_node.idx not in seen:
                 path, fd_header = self.tdfile.fd_headers[source_node.idx]
                 yield Input(fd_header.fd, str(path), fd_header.size)
@@ -832,10 +878,11 @@ class TDTaintForest(TaintForest):
                 (curr, node.last),
             )
 
-        assert False
+        raise AssertionError("TDTaintForestNode could not be created")
 
     def get_node(self, label: int, source: Optional[Input] = None) -> TDTaintForestNode:
-        assert source is None
+        if source is not None:
+            raise AssertionError("Node could not be retrieved from label")
 
         if self.node_cache[label] is not None:
             return cast(TDTaintForestNode, self.node_cache[label])
@@ -918,7 +965,7 @@ class TDInfo(Command):
                     for k, v in tdfile.mangled_fn_symbol_lookup:
                         print(f"function_id '{k}': function '{demangle(v)}'")
                 else:
-                    print("Error: no Functions section could be read from the tdag!")
+                    print("Error: no Functions section was read from tdag!")
                     print(f"Sections that could be read: {tdfile.sections}")
 
             if args.print_control_flow_log:
@@ -926,7 +973,5 @@ class TDInfo(Command):
                     for event in tdfile.cflog(demangle_symbols=True):
                         print(event)
                 else:
-                    print(
-                        "Error: no Control Flow Log section could be read from the tdag!"
-                    )
+                    print("Error: no Control Flow Log section read from tdag!")
                     print(f"Sections that could be read: {tdfile.sections}")
