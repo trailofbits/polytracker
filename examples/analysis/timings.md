@@ -1,14 +1,14 @@
-# What did this change break?
-
-Hopefully nothing? :D
-
 # What is this change doing?
 
 My goal is for taint tracking to work exactly as before, but to clean up the ftrace/cflog/events side of the house, unifying `--cflog` and `--ftrace` options (cleaning up / simplifying how we are writing to the Functions, Events, Control Flow Log, and String Table sections overall) so we don't add duplicate instrumentation to software or write duplicate data to the TDAG and/or separate files (i.e., functionid.json) anymore.
 
 Everything that I could build got run on example inputs to make sure it worked as expected. As a part of these changes we don't write to functionid.json anymore and just use the space we were allocating and not filling in in the tdag, since it's a humongous region we don't use all of anyway. TDAG size is fixed, but our usage of it is slightly more efficient currently. A future goal could be to only mmap the space we need so file size can be smaller.
 
-# Instrumentation Time and Resulting Bitcode Sizes
+## What did this change break?
+
+Hopefully nothing? :D
+
+## Instrumentation Time and Resulting Bitcode Sizes
 
 These experiments reproduce the measurements from the
 [PolyTracker paper](https://github.com/trailofbits/publications/blob/master/papers/issta24-polytracker.pdf),
@@ -22,7 +22,7 @@ I'm comparing the before-and-after of the TDAG condensation changes on `kaoudis/
 
 All the current example Dockerfiles on `master` that work right now (we/I need to clean up the others a bit; they're a bit bitrotted) are included here for completeness. The following measurements aren't terribly scientific, they are from one run of the Dockerfile each (whereas for the paper I averaged ten runs apiece).
 
-## Bitcode sizes
+### Bitcode sizes
 
 The "in" .bc file is the whole-program .bc file that gets the first layer of instrumentation applied to it. The CFlog .bc is the "in" .bc with CFlog instrumentation, pre-optimization (if optimization occurs in the PolyTracker build). the final .bc file is the instrumented .bc file ending in `.instrumented.bc` that we lower to an executable. bc size may have changed because what instrumentation we use changed: I removed the separate function name recording / events pass-level code, and added function name recording to the tdag into the cflog pass. I also removed the separate `--ftrace` and `--taint` options: we do `--taint` by default, and `--ftrace` is part of `--cflog` now.
 
@@ -47,11 +47,11 @@ As measured by `ls -lb` in the container, and normalized into MiB:
 | Dockerfile-xpdf.demo `pdftops`      | 4.75 MiB    | 5.78 MiB                                 | 22.52 MiB                                       | 5.55 MiB         | 22.25 MiB                      | 23.85 MiB                    |
 | Dockerfile-xpdf.demo `pdftotext`    | 3.98 MiB    | 4.85 MiB                                 | 18.67 MiB                                       | 4.64 MiB         | 18.41 MiB                      | 19.37 MiB                    |
 
-## TDAG sizes
+### TDAG sizes
 
 TDAG size is fixed because of how we write TDAGs right now; it didn't change.
 
-## Total instrumentation time
+### Total instrumentation time
 
 "Instrumentation time" here refers either to the time Docker takes to run `polytracker instrument-targets`, which includes how long it takes to do both cflog and taint label instrumentation placement as well as executable creation, or the time to do equivalent steps.
 
@@ -76,7 +76,7 @@ As measured by Docker:
 | Dockerfile-xpdf.demo `pdftops`      | 206.9 s                                             | 189.9 s                                                    | 187.2 s                                   | 217.2 s                                 |
 | Dockerfile-xpdf.demo `pdftotext`    | 169.1 s                                             | 157.1 s                                                    | 154.4 s                                   | 184.3 s                                 |
 
-# What's weird here
+## What's weird here
 
 The sizes of bitcode when instrumented with all our passes before AND after these changes seem like they could be indicative of extra instrumentation (perhaps the labels pass instrumenting the cflog and/or functions pass?), though I haven't dug into whether this is truly happening yet. It doesn't _seem like_ this is exactly hurting anything at the moment, but I would be curious if others notice the same.
 
