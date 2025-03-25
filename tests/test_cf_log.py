@@ -6,7 +6,6 @@ import cxxfilt
 import pytest
 
 import polytracker
-from polytracker import ProgramTrace
 from polytracker.taint_dag import (
     CFEnterFunctionEvent,
     CFLeaveFunctionEvent,
@@ -18,7 +17,7 @@ from polytracker.taint_dag import (
 
 
 @pytest.mark.program_trace("test_fntrace.cpp")
-def test_function_mapping(program_trace: ProgramTrace):
+def test_function_mapping(program_trace) -> None:
     mangled_symbols = list(program_trace.tdfile.mangled_fn_symbol_lookup.values())
 
     assert mangled_symbols == ["main", "_Z9factoriali"]
@@ -28,7 +27,7 @@ def test_function_mapping(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_fntrace.cpp")
-def test_callstack_mapping(program_trace: ProgramTrace):
+def test_callstack_mapping(program_trace) -> None:
     cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
         TDControlFlowLogSection
     ]
@@ -42,13 +41,13 @@ def test_callstack_mapping(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_fntrace.cpp")
-def test_label_mapping(program_trace: ProgramTrace):
+def test_label_mapping(program_trace) -> None:
     cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
         TDControlFlowLogSection
     ]
 
     for cflog_entry in cflog:
-        if type(cflog_entry) == TaintedControlFlowEvent:
+        if type(cflog_entry) is TaintedControlFlowEvent:
             assert hasattr(cflog_entry, "label")
             node: TDNode = program_trace.tdfile.decode_node(cflog_entry.label)
             assert node.affects_control_flow
@@ -57,7 +56,7 @@ def test_label_mapping(program_trace: ProgramTrace):
 
 
 @pytest.mark.program_trace("test_cf_log.cpp")
-def test_cf_log(instrumented_binary: Path, trace_file: Path):
+def test_cf_log(instrumented_binary: Path, trace_file: Path) -> None:
     """Demonstrates how the cflog should work end to end, integrated with the fn mapping and the function symbols from the strings table."""
     # Data to write to stdin, one byte at a time
     stdin_data = "abcdefgh"
@@ -98,7 +97,7 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
     for got, expected in zip(cflog, expected_seq):
         assert got == expected
 
-        if type(got) == TaintedControlFlowEvent:
+        if type(got) is TaintedControlFlowEvent:
             assert got.label is not None
 
         assert len(got.callstack) > 0
