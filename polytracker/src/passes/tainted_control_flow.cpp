@@ -38,16 +38,6 @@ uint32_t get_or_add_mapping(uintptr_t key,
 }
 } // namespace
 
-void TaintedControlFlowPass::insertCondBrLogCall(llvm::Instruction &inst,
-                                                 llvm::Value *val) {
-  llvm::IRBuilder<> ir(&inst);
-  auto dummy_val{val};
-  if (inst.getType()->isVectorTy()) {
-    dummy_val = ir.CreateExtractElement(val, uint64_t(0));
-  }
-  ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
-}
-
 llvm::ConstantInt *
 TaintedControlFlowPass::get_function_id_const(llvm::Function &func) {
   auto func_address = reinterpret_cast<uintptr_t>(&func);
@@ -61,23 +51,24 @@ TaintedControlFlowPass::get_function_id_const(llvm::Instruction &i) {
 }
 
 void TaintedControlFlowPass::visitGetElementPtrInst(
-    llvm::GetElementPtrInst &gep) {
+  llvm::GetElementPtrInst &gep) {
   llvm::IRBuilder<> ir(&gep);
+  // if an index is a constant, skip it
   for (auto &idx : gep.indices()) {
     if (llvm::isa<llvm::ConstantInt>(idx)) {
       continue;
     }
 
-    // we do not handle VectorTypes yet
-    if ((*(idx->getType())).isVectorTy()) {
-      continue;
+    // for now, taint only the first element of any vector index!
+    // this is an improvement over skipping vector types as we previously did
+    if (llvm::isa<llvm::VectorType>(idx->getType())) {
+      auto firstVectorElem = ir.CreateExtractElement(idx, ir.getInt32(0));
+      ir.CreateCall(cond_br_log_fn,
+          {ir.CreateSExtOrTrunc(firstVectorElem, ir.getInt64Ty()), get_function_id_const(gep)});
+    } else {
+      ir.CreateCall(cond_br_log_fn,
+          {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()), get_function_id_const(gep)});
     }
-
-    auto callret = ir.CreateCall(cond_br_log_fn,
-                                 {ir.CreateSExtOrTrunc(idx, ir.getInt64Ty()),
-                                  get_function_id_const(gep)});
-
-    idx = ir.CreateSExtOrTrunc(callret, idx->getType());
   }
 }
 
@@ -88,38 +79,73 @@ void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 
   llvm::IRBuilder<> ir(&bi);
   auto cond = bi.getCondition();
-
-  auto callret = ir.CreateCall(
-      cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(bi)});
-
-  bi.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
+  
+  // just taint the first element of any vector type for now.
+  // this is an improvement over skipping vector types as we previously did!
+  if (llvm::isa<llvm::VectorType>(cond->getType())) {
+    auto firstVectorElem = ir.CreateExtractElement(cond, ir.getInt32(0));
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(firstVectorElem, ir.getInt64Ty()), get_function_id_const(bi)});
+  } else {
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(bi)});
+  }
 }
 
 void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   llvm::IRBuilder<> ir(&si);
   auto cond = si.getCondition();
 
-  auto callret = ir.CreateCall(
-      cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
-
-  si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
+  // just taint the first element of any vector type for now.
+  // this is an improvement over skipping vector types as we previously did!
+  if (llvm::isa<llvm::VectorType>(cond->getType())) {
+    auto firstVectorElem = ir.CreateExtractElement(cond, ir.getInt32(0));
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(firstVectorElem, ir.getInt64Ty()), get_function_id_const(si)});
+  } else {
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
+  }
 }
 
 void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
-  // TODO(hbrodin): Can't handle atm.
-  if (si.getType()->isVectorTy()) {
-    return;
-  }
   llvm::IRBuilder<> ir(&si);
   auto cond = si.getCondition();
 
-  auto callret = ir.CreateCall(
-      cond_br_log_fn,
-      {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
+  // just taint the first element of any vector type for now.
+  // this is an improvement over skipping vector types as we previously did!
+  if (llvm::isa<llvm::VectorType>(cond->getType())) {
+    auto firstVectorElem = ir.CreateExtractElement(cond, ir.getInt32(0));
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(firstVectorElem, ir.getInt64Ty()), get_function_id_const(si)});
+  } else {
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(cond, ir.getInt64Ty()), get_function_id_const(si)});
+  }
+}
 
-  si.setCondition(ir.CreateSExtOrTrunc(callret, cond->getType()));
+void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+  llvm::IRBuilder<> ir(&ibi);
+  auto addr = ibi.getAddress();
+
+  if (llvm::isa<llvm::VectorType>(addr->getType())) {
+    auto firstVectorElem = ir.CreateExtractElement(addr, ir.getInt32(0));
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(firstVectorElem, ir.getInt64Ty()), get_function_id_const(ibi)});
+  } else {
+    ir.CreateCall(cond_br_log_fn,
+        {ir.CreateSExtOrTrunc(addr, ir.getInt64Ty()), get_function_id_const(ibi)});
+  }
+}
+
+void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
+  llvm::IRBuilder<> ir(&ii);
+  auto func = ii.getCalledFunction();
+  
+  // Log the function entry with the function ID
+  ir.CreateCall(fn_enter_log_fn, 
+                {get_function_id_const(ii),
+                 ir.CreateGlobalStringPtr(func ? func->getName() : "indirect")});
 }
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {

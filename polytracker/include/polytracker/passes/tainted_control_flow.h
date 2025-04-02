@@ -45,6 +45,8 @@ public:
   void visitBranchInst(llvm::BranchInst &bi);
   void visitSwitchInst(llvm::SwitchInst &si);
   void visitSelectInst(llvm::SelectInst &si);
+  void visitIndirectBrInst(llvm::IndirectBrInst &ibi);
+  void visitInvokeInst(llvm::InvokeInst &ii);
 
   void instrumentFunctionEnter(llvm::Function &func);
   void visitReturnInst(llvm::ReturnInst &ri);

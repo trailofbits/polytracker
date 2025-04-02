@@ -104,6 +104,22 @@ void TaintTrackingPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertCondBrLogCall(si, si.getCondition());
 }
 
+void TaintTrackingPass::visitSelectInst(llvm::SelectInst &si) {
+  insertCondBrLogCall(si, si.getCondition());
+}
+
+void TaintTrackingPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+  insertCondBrLogCall(ibi, ibi.getAddress());
+}
+
+void TaintTrackingPass::visitInvokeInst(llvm::InvokeInst &ii) {
+  // Track taint on the function pointer for indirect calls
+  auto func = ii.getCalledFunction();
+  if (!func) {
+    insertCondBrLogCall(ii, ii.getCalledOperand());
+  }
+}
+
 void TaintTrackingPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::IRBuilder<> ir(mod.getContext());
   taint_start_fn = mod.getOrInsertFunction("__taint_start", ir.getVoidTy());
