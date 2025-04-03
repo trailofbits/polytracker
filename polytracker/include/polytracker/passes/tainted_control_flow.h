@@ -17,10 +17,8 @@ namespace polytracker {
 class TaintedControlFlowPass
     : public llvm::PassInfoMixin<TaintedControlFlowPass>,
       public llvm::InstVisitor<TaintedControlFlowPass> {
-  //
+  // represents the taint label type
   llvm::IntegerType *label_ty{nullptr};
-  // Taint tracking startup
-  llvm::FunctionCallee taint_start_fn;
   // Log taint label affecting control flow
   llvm::FunctionCallee cond_br_log_fn;
   // Log enter/leave functions
@@ -29,8 +27,7 @@ class TaintedControlFlowPass
   llvm::FunctionCallee fn_leave_log_fn;
 
   // Helpers
-  void insertCondBrLogCall(llvm::Instruction &inst, llvm::Value *val);
-  void insertTaintStartupCall(llvm::Module &mod);
+  void insertInstrumentation(llvm::Instruction &inst, llvm::Value *val);
   void declareLoggingFunctions(llvm::Module &mod);
 
   llvm::ConstantInt *get_function_id_const(llvm::Function &f);
