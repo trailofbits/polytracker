@@ -73,9 +73,11 @@ void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
                                             llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
   auto dummy_val{val};
+
   if (inst.getType()->isVectorTy()) {
     dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
+  
   ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
@@ -113,11 +115,7 @@ void TaintTrackingPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
 }
 
 void TaintTrackingPass::visitInvokeInst(llvm::InvokeInst &ii) {
-  // Track taint on the function pointer for indirect calls
-  auto func = ii.getCalledFunction();
-  if (!func) {
-    insertCondBrLogCall(ii, ii.getCalledOperand());
-  }
+  insertCondBrLogCall(ii, ii.getCalledOperand());
 }
 
 void TaintTrackingPass::declareLoggingFunctions(llvm::Module &mod) {
