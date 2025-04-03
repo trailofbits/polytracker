@@ -15,7 +15,7 @@ namespace polytracker {
 
 class TaintTrackingPass : public llvm::PassInfoMixin<TaintTrackingPass>,
                           public llvm::InstVisitor<TaintTrackingPass> {
-  //
+  // represents the taint label type
   llvm::IntegerType *label_ty{nullptr};
   // Taint tracking startup
   llvm::FunctionCallee taint_start_fn;
