@@ -33,7 +33,7 @@ llvm::PassPluginLibraryInfo getPolyTrackerPluginInfo() {
                     return true;
                   }
                   if (name == "pt-tcf") {
-                    mpm.addPass(polytracker::TaintedControlFlowPass());
+                    // mpm.addPass(polytracker::TaintedControlFlowPass());
                     return true;
                   }
                   return false;

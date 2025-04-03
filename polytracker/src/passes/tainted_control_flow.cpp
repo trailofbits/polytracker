@@ -59,9 +59,6 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
     dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
 
-  // Log the type of dummy_val before the call
-  spdlog::debug("HIIIIII dummy_val type: {}", dummy_val->getType()->getTypeID());
-
   // logs the label and the function id at this point;
   // data flow has affected control flow here.
   ir.CreateCall(cond_br_log_fn,
@@ -92,20 +89,20 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertInstrumentation(si, cond);
 }
 
-void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
-  auto cond = si.getCondition();
-  insertInstrumentation(si, cond);
-}
+// void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
+//   auto cond = si.getCondition();
+//   insertInstrumentation(si, cond);
+// }
 
-void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
-  auto addr = ibi.getAddress();
-  insertInstrumentation(ibi, addr);
-}
+// void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+//   auto addr = ibi.getAddress();
+//   insertInstrumentation(ibi, addr);
+// }
 
-void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
-  auto func = ii.getCalledOperand();
-  insertInstrumentation(ii, func);
-}
+// void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
+//   auto func = ii.getCalledOperand();
+//   insertInstrumentation(ii, func);
+// }
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::LLVMContext *context = &mod.getContext();
