@@ -67,8 +67,8 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
 
   // logs the label and the function id at this point;
   // data flow has affected control flow here.
-  ir.CreateCall(cond_br_log_fn,
-          {ir.CreateSExtOrTrunc(dummy_val, label_ty), get_function_id_const(inst)});
+  // ir.CreateCall(cond_br_log_fn,
+  //         {ir.CreateSExtOrTrunc(dummy_val, label_ty), get_function_id_const(inst)});
 }
 
 void TaintedControlFlowPass::visitGetElementPtrInst(
