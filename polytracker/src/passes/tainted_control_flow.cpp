@@ -97,10 +97,13 @@ void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
   insertInstrumentation(si, cond);
 }
 
-// void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
-//   auto addr = ibi.getAddress();
-//   insertInstrumentation(ibi, addr);
-// }
+void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+  auto addr = ibi.getAddress();
+  if (llvm::isa<llvm::Constant>(addr)) {
+    return;
+  }
+  insertInstrumentation(ibi, addr);
+}
 
 // void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
 //   auto func = ii.getCalledOperand();
