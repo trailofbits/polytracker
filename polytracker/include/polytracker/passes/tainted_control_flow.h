@@ -40,7 +40,7 @@ public:
                               llvm::ModuleAnalysisManager &mam);
   void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
-  void visitSwitchInst(llvm::SwitchInst &si);
+  // void visitSwitchInst(llvm::SwitchInst &si);
   // void visitSelectInst(llvm::SelectInst &si);
   // void visitIndirectBrInst(llvm::IndirectBrInst &ibi);
   // void visitInvokeInst(llvm::InvokeInst &ii);
