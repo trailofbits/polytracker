@@ -56,7 +56,7 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
   auto dummy_val{val};
   
   if (llvm::isa<llvm::VectorType>(val->getType())) {
-    auto vec = llvm::cast<llvm::VectorType>(val));
+    auto vec = llvm::cast<llvm::VectorType>(val);
     if (llvm::isa<llvm::Constant>(vec.getElementType())) {
       return;
     }
