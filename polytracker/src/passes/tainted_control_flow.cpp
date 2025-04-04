@@ -56,6 +56,10 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
   auto dummy_val{val};
   
   if (llvm::isa<llvm::VectorType>(val->getType())) {
+    if (llvm::isa<llvm::Constant>(val->getElementType())) {
+      return;
+    }
+
     dummy_val = ir.CreateExtractElement(val, uint64_t(0));
   }
 
@@ -69,20 +73,20 @@ void TaintedControlFlowPass::visitGetElementPtrInst(
   llvm::GetElementPtrInst &gep) {
   // if an index is a constant, skip it
   for (auto &idx : gep.indices()) {
-    if (llvm::isa<llvm::ConstantInt>(idx)) {
+    if (llvm::isa<llvm::Constant>(idx)) {
       continue;
     }
     insertInstrumentation(gep, idx);
   }
 }
 
-void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
-  if (bi.isUnconditional()) {
-    return;
-  }
-  auto cond = bi.getCondition();
-  insertInstrumentation(bi, cond);
-}
+// void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
+//   if (bi.isUnconditional()) {
+//     return;
+//   }
+//   auto cond = bi.getCondition();
+//   insertInstrumentation(bi, cond);
+// }
 
 // void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
 //   auto cond = si.getCondition();
