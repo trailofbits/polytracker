@@ -89,10 +89,13 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertInstrumentation(si, cond);
 }
 
-// void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
-//   auto cond = si.getCondition();
-//   insertInstrumentation(si, cond);
-// }
+void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
+  auto cond = si.getCondition();
+  if (llvm::isa<llvm::Constant>(cond)) {
+    return;
+  }
+  insertInstrumentation(si, cond);
+}
 
 // void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
 //   auto addr = ibi.getAddress();
