@@ -65,22 +65,24 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
     dummy_val = ir.CreateExtractElement(val, ir.getInt32(0));
   }
 
+  auto label = ir.CreateSExtOrTrunc(dummy_val, label_ty);
+  auto function_id = get_function_id_const(inst);
+
   // logs the label and the function id at this point;
   // data flow has affected control flow here.
-  ir.CreateCall(cond_br_log_fn,
-          {ir.CreateSExtOrTrunc(dummy_val, label_ty), get_function_id_const(inst)});
+  ir.CreateCall(cond_br_log_fn, {label, function_id});
 }
 
-void TaintedControlFlowPass::visitGetElementPtrInst(
-  llvm::GetElementPtrInst &gep) {
-  // if an index is a constant, skip it
-  for (auto &idx : gep.indices()) {
-    if (llvm::isa<llvm::Constant>(idx)) {
-      continue;
-    }
-    insertInstrumentation(gep, idx);
-  }
-}
+// void TaintedControlFlowPass::visitGetElementPtrInst(
+//   llvm::GetElementPtrInst &gep) {
+//   // if an index is a constant, skip it
+//   for (auto &idx : gep.indices()) {
+//     if (llvm::isa<llvm::Constant>(idx)) {
+//       continue;
+//     }
+//     insertInstrumentation(gep, idx);
+//   }
+// }
 
 // void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 //   if (bi.isUnconditional()) {
