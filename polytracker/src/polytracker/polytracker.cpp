@@ -43,19 +43,19 @@ extern "C" void __polytracker_taint_argv(int argc, char *argv[]) {
   polytracker::taint_argv(argc, argv);
 }
 
-extern "C" void ___polytracker_log_tainted_control_flow(
-    dfsan_label conditional_label, uint32_t function_label) {
+extern "C" void __polytracker_log_tainted_control_flow(
+    dfsan_label conditional_label, uint32_t function_id) {
   if (conditional_label > 0) {
     get_polytracker_tdag().log_tainted_control_flow(conditional_label,
-                                                    function_label);
+                                                    function_id);
   }
 }
 
-// extern "C" void __dfsw___polytracker_log_tainted_control_flow(
-//     uint64_t conditional, uint32_t functionid, dfsan_label conditional_label,
-//     uint32_t function_label) {
-//   ___polytracker_log_tainted_control_flow(conditional_label, function_label);
-// }
+extern "C" void __dfsw___polytracker_log_tainted_control_flow(
+    uint64_t conditional, uint32_t functionid, dfsan_label conditional_label,
+    uint32_t function_id_label) {
+  __polytracker_log_tainted_control_flow(conditional_label, function_id_label);
+}
 
 extern "C" void __polytracker_enter_function(uint32_t function_id,
                                              const char *function_name) {
