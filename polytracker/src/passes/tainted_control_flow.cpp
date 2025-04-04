@@ -62,13 +62,13 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
       return;
     }
 
-    dummy_val = ir.CreateExtractElement(val, uint64_t(0));
+    dummy_val = ir.CreateExtractElement(val, ir.getInt32(0));
   }
 
   // logs the label and the function id at this point;
   // data flow has affected control flow here.
-  // ir.CreateCall(cond_br_log_fn,
-  //         {ir.CreateSExtOrTrunc(dummy_val, label_ty), get_function_id_const(inst)});
+  ir.CreateCall(cond_br_log_fn,
+          {ir.CreateSExtOrTrunc(dummy_val, label_ty), get_function_id_const(inst)});
 }
 
 void TaintedControlFlowPass::visitGetElementPtrInst(
@@ -130,7 +130,7 @@ void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
           {{llvm::AttributeList::FunctionIndex,
             llvm::Attribute::get(mod.getContext(),
                                  llvm::Attribute::ReadNone)}}),
-      ir.getInt64Ty(), ir.getInt64Ty(), ir.getInt32Ty());
+      ir.getVoidTy(), label_ty, ir.getInt32Ty());
 
   enter_log_fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(*context), llvm::Type::getInt32Ty(*context),
