@@ -54,7 +54,6 @@ extern "C" void __polytracker_log_tainted_control_flow(
 extern "C" void __dfsw___polytracker_log_tainted_control_flow(
     uint64_t conditional, uint32_t functionid, dfsan_label conditional_label,
     dfsan_label function_id_label) {
-  // Convert function_id_label from dfsan_label to uint32_t
   uint32_t fid_32 = static_cast<uint32_t>(function_id_label);
   __polytracker_log_tainted_control_flow(conditional_label, fid_32);
 }

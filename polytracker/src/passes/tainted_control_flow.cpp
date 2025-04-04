@@ -56,13 +56,11 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
   auto dummy_val{val};
   
   if (llvm::isa<llvm::VectorType>(val->getType())) {
-    // constants aren't derived from input, so we don't need to taint them
-    if (llvm::isa<llvm::ConstantDataVector>(val) || 
-        llvm::isa<llvm::ConstantVector>(val)) {
+    dummy_val = ir.CreateExtractElement(val, ir.getInt32(0));
+
+    if (llvm::isa<llvm::VectorType>(dummy_val->getType())) {
       return;
     }
-
-    dummy_val = ir.CreateExtractElement(val, ir.getInt32(0));
   }
 
   auto label = ir.CreateSExtOrTrunc(dummy_val, label_ty);
@@ -73,16 +71,16 @@ TaintedControlFlowPass::insertInstrumentation(llvm::Instruction &inst, llvm::Val
   ir.CreateCall(cond_br_log_fn, {label, function_id});
 }
 
-// void TaintedControlFlowPass::visitGetElementPtrInst(
-//   llvm::GetElementPtrInst &gep) {
-//   // if an index is a constant, skip it
-//   for (auto &idx : gep.indices()) {
-//     if (llvm::isa<llvm::Constant>(idx)) {
-//       continue;
-//     }
-//     insertInstrumentation(gep, idx);
-//   }
-// }
+void TaintedControlFlowPass::visitGetElementPtrInst(
+  llvm::GetElementPtrInst &gep) {
+  // if an index is a constant, skip it
+  for (auto &idx : gep.indices()) {
+    if (llvm::isa<llvm::Constant>(idx)) {
+      continue;
+    }
+    insertInstrumentation(gep, idx);
+  }
+}
 
 // void TaintedControlFlowPass::visitBranchInst(llvm::BranchInst &bi) {
 //   if (bi.isUnconditional()) {
