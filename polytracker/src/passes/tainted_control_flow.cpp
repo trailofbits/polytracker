@@ -105,10 +105,13 @@ void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
   insertInstrumentation(ibi, addr);
 }
 
-// void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
-//   auto func = ii.getCalledOperand();
-//   insertInstrumentation(ii, func);
-// }
+void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
+  auto called = ii.getCalledOperand();
+  if (llvm::isa<llvm::Constant>(called)) {
+    return;
+  }
+  insertInstrumentation(ii, called);
+}
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::LLVMContext *context = &mod.getContext();
