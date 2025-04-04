@@ -89,29 +89,29 @@ void TaintedControlFlowPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertInstrumentation(si, cond);
 }
 
-void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
-  auto cond = si.getCondition();
-  if (llvm::isa<llvm::Constant>(cond)) {
-    return;
-  }
-  insertInstrumentation(si, cond);
-}
+// void TaintedControlFlowPass::visitSelectInst(llvm::SelectInst &si) {
+//   auto cond = si.getCondition();
+//   if (llvm::isa<llvm::Constant>(cond)) {
+//     return;
+//   }
+//   insertInstrumentation(si, cond);
+// }
 
-void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
-  auto addr = ibi.getAddress();
-  if (llvm::isa<llvm::Constant>(addr)) {
-    return;
-  }
-  insertInstrumentation(ibi, addr);
-}
+// void TaintedControlFlowPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+//   auto addr = ibi.getAddress();
+//   if (llvm::isa<llvm::Constant>(addr)) {
+//     return;
+//   }
+//   insertInstrumentation(ibi, addr);
+// }
 
-void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
-  auto called = ii.getCalledOperand();
-  if (llvm::isa<llvm::Constant>(called)) {
-    return;
-  }
-  insertInstrumentation(ii, called);
-}
+// void TaintedControlFlowPass::visitInvokeInst(llvm::InvokeInst &ii) {
+//   auto called = ii.getCalledOperand();
+//   if (llvm::isa<llvm::Constant>(called)) {
+//     return;
+//   }
+//   insertInstrumentation(ii, called);
+// }
 
 void TaintedControlFlowPass::declareLoggingFunctions(llvm::Module &mod) {
   llvm::LLVMContext *context = &mod.getContext();
