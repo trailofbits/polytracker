@@ -1,45 +1,38 @@
-from typing import (
-    BinaryIO,
-    Union,
-    Iterable,
-    Iterator,
-    Optional,
-    Dict,
-    Tuple,
-    List,
-    Set,
-    Type,
-    cast,
-)
-
-from enum import Enum
-from pathlib import Path
-from mmap import mmap, PROT_READ
+from collections.abc import Iterable, Iterator
 from ctypes import (
     Structure,
     c_char,
-    c_int64,
-    c_uint64,
     c_int32,
-    c_uint32,
+    c_int64,
     c_uint8,
     c_uint16,
+    c_uint32,
+    c_uint64,
     sizeof,
 )
+from enum import Enum
+from mmap import PROT_READ, mmap
+from pathlib import Path
+from typing import (
+    BinaryIO,
+    Optional,
+    Union,
+    cast,
+)
 
-from .plugins import Command
-from .repl import PolyTrackerREPL
-from .polytracker import ProgramTrace
 from .inputs import Input
+from .plugins import Command
+from .polytracker import ProgramTrace
+from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest, TaintForestNode
 from .tracing import (
     BasicBlock,
     ByteOffset,
     Function,
     TaintAccess,
-    TraceEvent,
     TaintOutput,
     Taints,
+    TraceEvent,
 )
 
 
@@ -230,7 +223,7 @@ class TDControlFlowLogSection:
             event = c_uint8.from_buffer_copy(buffer, 0).value
             buffer = buffer[1:]
             function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
-            if self.funcmapping != None:
+            if self.funcmapping is not None:
                 function_id = self.funcmapping[function_id]
 
             if event == TDControlFlowLogSection.ENTER_FUNCTION:
@@ -238,18 +231,14 @@ class TDControlFlowLogSection:
                 yield TDEnterFunctionEvent(callstack[:])
             elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
                 # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
-                )
+                yield from TDControlFlowLogSection._align_callstack(function_id, callstack)
 
                 # TODO(hbrodin): If the callstack doesn't contain function_id at all, this will break.
                 yield TDLeaveFunctionEvent(callstack[:])
                 callstack.pop()
             else:
                 # Align call stack, if needed
-                yield from TDControlFlowLogSection._align_callstack(
-                    function_id, callstack
-                )
+                yield from TDControlFlowLogSection._align_callstack(function_id, callstack)
 
                 label, buffer = TDControlFlowLogSection._decode_varint(buffer)
                 yield TDTaintedControlFlowEvent(callstack[:], label)
@@ -452,8 +441,8 @@ class TDFile:
 
         self.filemeta = TDFileMeta.from_buffer_copy(self.buffer)
         section_offset = sizeof(TDFileMeta)
-        self.sections: List[TDSection] = []
-        self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
+        self.sections: list[TDSection] = []
+        self.sections_by_type: dict[type[TDSection], TDSection] = {}
         for i in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
@@ -485,26 +474,24 @@ class TDFile:
 
             section_offset += sizeof(TDSectionMeta)
 
-        self.raw_nodes: Dict[int, int] = {}
-        self.sink_cache: Dict[int, TDSink] = {}
+        self.raw_nodes: dict[int, int] = {}
+        self.sink_cache: dict[int, TDSink] = {}
 
-        self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
-        self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
+        self.fd_headers: list[tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
+        self.fn_headers: list[tuple[str, TDFnHeader]] = list(self.read_fn_headers())
 
-    def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
+    def _get_section(self, wanted_type: type[TDSection]) -> TDSection:
         return self.sections_by_type[wanted_type]
 
-    def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
+    def read_fd_headers(self) -> Iterator[tuple[Path, TDFDHeader]]:
         sources = self.sections_by_type[TDSourceSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(sources, TDSourceSection)
         assert isinstance(strings, TDStringSection)
 
-        yield from (
-            (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
-        )
+        yield from ((Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate())
 
-    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+    def read_fn_headers(self) -> Iterator[tuple[str, TDFnHeader]]:
         functions = self.sections_by_type[TDFunctionsSection]
         strings = self.sections_by_type[TDStringSection]
         assert isinstance(functions, TDFunctionsSection)
@@ -639,13 +626,13 @@ class TDProgramTrace(ProgramTrace):
         raise NotImplementedError()
 
     @property
-    def outputs(self) -> Optional[Iterable[Input]]:
+    def outputs(self) -> Iterable[Input] | None:
         return super().outputs
 
     @staticmethod
     @PolyTrackerREPL.register("load_trace_tdag")
-    def load(tdpath: Union[str, Path]) -> "TDProgramTrace":
-        """loads a trace from a .tdag file emitted by an instrumented binary"""
+    def load(tdpath: str | Path) -> "TDProgramTrace":
+        """Loads a trace from a .tdag file emitted by an instrumented binary"""
         return TDProgramTrace(open(tdpath, "rb"))
 
     @property
@@ -653,7 +640,7 @@ class TDProgramTrace(ProgramTrace):
         # TODO (hbrodin): Current implementation needs to do a lot of work
         # to determine if a file header is an input or not. Consider
         # implementation alternatives.
-        seen: Set[int] = set()
+        seen: set[int] = set()
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
             assert isinstance(source_node, TDSourceNode)
@@ -679,7 +666,7 @@ class TDProgramTrace(ProgramTrace):
         return self.tforest
 
     def inputs_affecting_control_flow(self) -> Taints:
-        result: Set[ByteOffset] = set()
+        result: set[ByteOffset] = set()
 
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
@@ -695,13 +682,13 @@ class TDTaintForestNode(TaintForestNode):
         self,
         forest: "TDTaintForest",
         label: int,
-        source: Optional[Input],
+        source: Input | None,
         affected_control_flow: bool = False,
-        parent_labels: Optional[Tuple[int, int]] = None,
+        parent_labels: tuple[int, int] | None = None,
     ):
         super().__init__(label, source, affected_control_flow)
         self.forest: TDTaintForest = forest
-        self.parents: Optional[Tuple[int, int]] = parent_labels
+        self.parents: tuple[int, int] | None = parent_labels
 
     def __repr__(self):
         return (
@@ -713,7 +700,7 @@ class TDTaintForestNode(TaintForestNode):
         )
 
     @property
-    def parent_labels(self) -> Optional[Tuple[int, int]]:
+    def parent_labels(self) -> tuple[int, int] | None:
         return self.parents
 
     @property
@@ -734,7 +721,7 @@ class TDTaintForestNode(TaintForestNode):
 class TDTaintForest(TaintForest):
     def __init__(self, trace: TDProgramTrace) -> None:
         self.trace: TDProgramTrace = trace
-        self.node_cache: Dict[int, Optional[TDTaintForestNode]] = {}
+        self.node_cache: dict[int, TDTaintForestNode | None] = {}
 
         self.node_cache[0] = TDTaintForestNode(self, 0, None)
         for i in range(1, self.trace.tdfile.label_count):
@@ -762,9 +749,7 @@ class TDTaintForest(TaintForest):
             return TDTaintForestNode(self, label, source, node.affects_control_flow)
 
         elif isinstance(node, TDUnionNode):
-            return TDTaintForestNode(
-                self, label, None, node.affects_control_flow, (node.left, node.right)
-            )
+            return TDTaintForestNode(self, label, None, node.affects_control_flow, (node.left, node.right))
 
         # TDRangeNode has to be unfolded into a tree of union nodes in a sum-like
         # fashion. The created intermediate nodes are given labels via
@@ -793,10 +778,11 @@ class TDTaintForest(TaintForest):
                 (curr, node.last),
             )
 
-        assert False
+        raise RuntimeError(f"unexpected taint node type {type(node).__name__} for label {label}")
 
-    def get_node(self, label: int, source: Optional[Input] = None) -> TDTaintForestNode:
-        assert source is None
+    def get_node(self, label: int, source: Input | None = None) -> TDTaintForestNode:
+        if source is not None:
+            raise ValueError("source must be None for TDTaintForest.get_node()")
 
         if self.node_cache[label] is not None:
             return cast(TDTaintForestNode, self.node_cache[label])
