@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -y update && apt-get -y install \
   software-properties-common                \
+  python3-distutils                         \
   ninja-build                               \
   golang                                    \
   clang-12                                  \
