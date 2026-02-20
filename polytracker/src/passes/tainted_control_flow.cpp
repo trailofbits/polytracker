@@ -28,24 +28,27 @@ class FunctionMappingJSONWriter {
 public:
   FunctionMappingJSONWriter(std::string_view filename)
       : file(filename.data(), std::ios::binary) {
+    if (!file.is_open()) {
+      spdlog::error("Failed to open function mapping file: {}", filename);
+    }
     file << "[";
   }
 
   ~FunctionMappingJSONWriter() {
-    // Back up and erase the last ",\n"
-    file.seekp(-2, std::ios::cur);
+    if (has_entries_) {
+      file.seekp(-2, std::ios::cur);
+    }
     file << "\n]\n";
   }
 
   void append(std::string_view name) {
-    // Will cause an additional ',' but don't care about that right now...
-    // The destructor will back up two steps and replace the ',' with a newline
-    // and array termination.
     file << "\"" << name << "\",\n";
+    has_entries_ = true;
   }
 
 private:
   std::ofstream file;
+  bool has_entries_ = false;
 };
 } // namespace detail
 
