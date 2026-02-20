@@ -11,8 +11,7 @@
 #include <cstdio>
 #include <functional>
 #include <optional>
-#include <span>
-#include <string>
+#include <stdexcept>
 
 #include "taintdag/taint.h"
 
@@ -27,16 +26,13 @@ struct TypeIndex<T, std::tuple<Types...>> {
         {(std::is_same_v<Types, T>)...}};
     const auto it = std::find(eq.begin(), eq.end(), true);
     if (it == eq.end())
-      std::runtime_error("Type is not in type sequnce");
+      // Non-constexpr constructor triggers a compile-time error if
+      // this branch is reached during constant evaluation.
+      // Cannot use throw: built with -fno-exceptions.
+      std::runtime_error("Type is not in type sequence");
     return std::distance(eq.begin(), it);
   }();
 };
-
-inline void dump_range(std::string name, std::span<uint8_t> range) {
-  auto begin = reinterpret_cast<uintptr_t>(&*range.begin());
-  auto end = reinterpret_cast<uintptr_t>(&*range.end());
-  printf("Name: %s begin: %lx end: %lx\n", name.data(), begin, end);
-}
 
 // Unify length from various read operations to a single type
 //
