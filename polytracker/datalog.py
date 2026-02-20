@@ -1,16 +1,10 @@
-from argparse import ArgumentParser, Namespace
-from typing import List, Dict, Union
-
-from .grammars import (
-    # ExtractGrammarCommand,
-    Terminal,
-    ProgramTrace,
-    trace_to_grammar,
-)
-from .plugins import CommandExtension
-
 import re
 
+from .grammars import (
+    ProgramTrace,
+    Terminal,
+    trace_to_grammar,
+)
 
 TRUE_FACT_NAME = "POLYTRACKER_TRUE_FACT"
 
@@ -136,7 +130,7 @@ class DatalogRuleList:
     """
 
     def __init__(self, rule_sequence, start_term: int):
-        self.rules: List[Union[DatalogTrueFact, DatalogRule]] = []
+        self.rules: list[DatalogTrueFact | DatalogRule] = []
         for term in rule_sequence:
             # If its a string, its a production rule
             if isinstance(term, str):
@@ -145,16 +139,12 @@ class DatalogRuleList:
                     start_term += 1
                     continue
 
-                self.rules.append(
-                    DatalogRule(term, chr(start_term), chr(start_term + 1))
-                )
+                self.rules.append(DatalogRule(term, chr(start_term), chr(start_term + 1)))
                 start_term += 1
             # If its a terminal, we must make sure the name matches that of the fact.
             elif isinstance(term, Terminal):
                 for val in term.terminal:
-                    self.rules.append(
-                        DatalogRule(str(val), chr(start_term), chr(start_term + 1))
-                    )
+                    self.rules.append(DatalogRule(str(val), chr(start_term), chr(start_term + 1)))
                     start_term += 1
             else:
                 print(f"WARNING term is not string/terminal: {term}")
@@ -181,13 +171,13 @@ class DatalogGrammar:
 
     def __init__(self, trace: ProgramTrace):
         self.trace = trace
-        self.clause_decls: List[DatalogRuleDecl] = []
-        self.output_decls: List[DatalogOutputDecl] = []
-        self.clauses: List[DatalogClause] = []
+        self.clause_decls: list[DatalogRuleDecl] = []
+        self.output_decls: list[DatalogOutputDecl] = []
+        self.clauses: list[DatalogClause] = []
         self.extract_datalog_grammar()
 
     def extract_datalog_grammar(self):
-        unique_rules: Dict[str, bool] = {}
+        unique_rules: dict[str, bool] = {}
         grammar = trace_to_grammar(self.trace)
         # Note, this is potentially buggy for now.
         # grammar.simplify()
@@ -231,69 +221,5 @@ class DatalogGrammar:
     @property
     def val(self) -> str:
         return "\n".join(
-            [x.val for x in self.clause_decls]
-            + [x.val for x in self.output_decls]
-            + [x.val for x in self.clauses]
+            [x.val for x in self.clause_decls] + [x.val for x in self.output_decls] + [x.val for x in self.clauses]
         )
-
-
-# TODO (msurovic): Re-enable once TDProgramTrace.access_sequence() is implemented
-
-# class ExtractDatalogCommand(CommandExtension[ExtractGrammarCommand]):
-#     name = "datalog"
-#     parent_type = ExtractGrammarCommand
-#     datalog_grammar: DatalogGrammar
-#     datalog_fact_decls: List[DatalogFactDecl]
-#     datalog_facts: List[DatalogFact]
-#     true_fact_decl: DatalogTrueFactDecl
-#     true_facts: List[DatalogTrueFact]
-
-#     def __init_arguments__(self, parser: ArgumentParser):
-#         parser.add_argument(
-#             "--extract-datalog",
-#             "-d",
-#             type=str,
-#             default=None,
-#             help="path to which to optionally save a datalog grammar",
-#         )
-
-#     def run(self, command: ExtractGrammarCommand, args: Namespace):
-#         if len(command.traces) > 1:
-#             raise NotImplementedError(
-#                 "TODO: Add support for generating DataLog grammars from multiple traces"
-#             )
-#         elif args.extract_datalog is None:
-#             return 0
-#         trace = command.traces[0]
-#         inputs = list(trace.inputs)
-#         if len(inputs) != 1:
-#             raise NotImplementedError(
-#                 "TODO: Add support for extracting DataLog grammars from traces with more than "
-#                 "one input"
-#             )
-#         data = inputs[0].content
-#         self.datalog_grammar = DatalogGrammar(trace)
-#         unique_bytes: Dict[int, bool] = {}
-#         self.datalog_fact_decls = []
-#         self.datalog_facts = []
-#         self.true_fact_decl = DatalogTrueFactDecl()
-#         self.true_facts = []
-#         for i, byte in enumerate(data):
-#             # Add another true fact
-#             self.true_facts.append(DatalogTrueFact(i))
-#             # Declare the new type of byte
-#             if byte not in unique_bytes:
-#                 self.datalog_fact_decls.append(DatalogFactDecl(str(byte)))
-#                 unique_bytes[byte] = True
-#             self.datalog_facts.append(DatalogFact(str(byte), i, i + 1))
-#         return 0
-
-#     def __str__(self):
-#         facts = "\n".join(
-#             [self.true_fact_decl.val]
-#             + [x.val + "." for x in self.true_facts]
-#             + [x.val for x in self.datalog_fact_decls]
-#             + [fact.val for fact in self.datalog_facts]
-#         )
-#         grammar = self.datalog_grammar.val
-#         return f"{facts}\n\n{grammar}"

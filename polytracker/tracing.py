@@ -1,20 +1,14 @@
 """A module defining the abstract classes used for represenging a program trace."""
 
-from abc import ABC, abstractmethod
-from argparse import ArgumentParser, Namespace
-from collections import defaultdict
-from enum import IntFlag
 import itertools
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from collections.abc import Iterable, Iterator
+from enum import IntFlag
 from os.path import commonpath
 from pathlib import Path
 from typing import (
-    Dict,
-    Iterable,
-    Iterator,
-    List,
     Optional,
-    Set,
-    Tuple,
     Union,
 )
 
@@ -22,7 +16,6 @@ from cxxfilt import demangle
 
 from .graphs import DiGraph
 from .inputs import Input, InputProperties
-from .plugins import Command
 from .taint_forest import TaintForest, TaintForestNode
 
 
@@ -99,7 +92,7 @@ class TaintedRegion:
         """
         return self.source.content[self.offset : self.offset + self.length]
 
-    def __getitem__(self, index_or_slice: Union[int, slice]) -> "TaintedRegion":
+    def __getitem__(self, index_or_slice: int | slice) -> "TaintedRegion":
         """Gets a :class:`ByteOffset` or sliced :class:`TaintedRegion` from this region"""
         if isinstance(index_or_slice, slice):
             if index_or_slice.step is not None and index_or_slice.step != 1:
@@ -112,9 +105,7 @@ class TaintedRegion:
                 stop = self.length + stop
             if start >= stop or start >= self.length or stop <= 0:
                 return TaintedRegion(source=self.source, offset=self.offset, length=0)
-            return TaintedRegion(
-                source=self.source, offset=self.offset + start, length=stop - start
-            )
+            return TaintedRegion(source=self.source, offset=self.offset + start, length=stop - start)
         elif index_or_slice < 0 or index_or_slice >= self.length:
             raise IndexError(index_or_slice)
         else:
@@ -167,8 +158,8 @@ class TaintDiff:
         """
         self.taints1: Taints = taints1
         self.taints2: Taints = taints2
-        self._only_in_first: Optional[List[ByteOffset]] = None
-        self._only_in_second: Optional[List[ByteOffset]] = None
+        self._only_in_first: list[ByteOffset] | None = None
+        self._only_in_second: list[ByteOffset] | None = None
 
     def _diff(self):
         if self._only_in_first is not None:
@@ -179,7 +170,7 @@ class TaintDiff:
         self._only_in_second = sorted(in_second - in_first)
 
     @property
-    def bytes_only_in_first(self) -> List[ByteOffset]:
+    def bytes_only_in_first(self) -> list[ByteOffset]:
         """Returns a list of all of the tainted byte offsets only in the first set of taints."""
         self._diff()
         return self._only_in_first  # type: ignore
@@ -190,7 +181,7 @@ class TaintDiff:
         yield from Taints.to_regions(self.bytes_only_in_first, is_sorted=True)
 
     @property
-    def bytes_only_in_second(self) -> List[ByteOffset]:
+    def bytes_only_in_second(self) -> list[ByteOffset]:
         """Returns a list of all of the tainted byte offsets only in the second set of taints."""
         self._diff()
         return self._only_in_second  # type: ignore
@@ -205,11 +196,7 @@ class TaintDiff:
         return bool(self.bytes_only_in_first) or bool(self.bytes_only_in_second)
 
     def __eq__(self, other):
-        return (
-            isinstance(other, TaintDiff)
-            and self.taints1 == other.taints1
-            and self.taints2 == other.taints2
-        )
+        return isinstance(other, TaintDiff) and self.taints1 == other.taints1 and self.taints2 == other.taints2
 
 
 class Taints:
@@ -222,14 +209,14 @@ class Taints:
             byte_offsets: The tainted byte offsets to include in this collection.
 
         """
-        offsets_by_source: Dict[Input, Set[ByteOffset]] = defaultdict(set)
+        offsets_by_source: dict[Input, set[ByteOffset]] = defaultdict(set)
         for offset in byte_offsets:
             offsets_by_source[offset.source].add(offset)
-        self._offsets_by_source: Dict[Input, List[ByteOffset]] = {
+        self._offsets_by_source: dict[Input, list[ByteOffset]] = {
             source: sorted(offsets) for source, offsets in offsets_by_source.items()
         }
 
-    def sources(self) -> Set[Input]:
+    def sources(self) -> set[Input]:
         """Returns the set of sources from which this collection of taints originates."""
         return set(self._offsets_by_source.keys())
 
@@ -255,35 +242,29 @@ class Taints:
         return Taints.to_regions(self, is_sorted=True)
 
     @staticmethod
-    def to_regions(
-        offsets: Iterable[ByteOffset], is_sorted: bool = False
-    ) -> Iterator[TaintedRegion]:
+    def to_regions(offsets: Iterable[ByteOffset], is_sorted: bool = False) -> Iterator[TaintedRegion]:
         """Converts the list of byte offsets into contiguous regions."""
-        last_input: Optional[Input] = None
-        last_offset: Optional[ByteOffset] = None
-        region: Optional[TaintedRegion] = None
+        last_input: Input | None = None
+        last_offset: ByteOffset | None = None
+        region: TaintedRegion | None = None
         if not is_sorted:
             offsets = sorted(offsets)
         for offset in offsets:
             if last_input is None:
                 last_input = offset.source
-            elif last_input != offset.source or (
-                last_offset is not None and last_offset.offset != offset.offset - 1
-            ):
+            elif last_input != offset.source or (last_offset is not None and last_offset.offset != offset.offset - 1):
                 if region is not None:
                     yield region
                 region = None
             last_offset = offset
             if region is None:
-                region = TaintedRegion(
-                    source=offset.source, offset=offset.offset, length=offset.length
-                )
+                region = TaintedRegion(source=offset.source, offset=offset.offset, length=offset.length)
             else:
                 region.length += offset.length
         if region is not None:
             yield region
 
-    def find(self, byte_sequence: Union[int, str, bytes]) -> Iterator[TaintedRegion]:
+    def find(self, byte_sequence: int | str | bytes) -> Iterator[TaintedRegion]:
         """Yields all matching tainted subsequences in this collection.
 
         Args:
@@ -323,7 +304,7 @@ class Taints:
         """
         return TaintDiff(self, other)
 
-    def __contains__(self, byte_sequence: Union[int, str, bytes]):
+    def __contains__(self, byte_sequence: int | str | bytes):
         """Checks whether this taint collection contains at least one matching byte sequence.
 
         This is equivalent to::
@@ -388,7 +369,7 @@ class Function:
 
         """
         self.name: str = name
-        self.basic_blocks: List[BasicBlock] = []
+        self.basic_blocks: list[BasicBlock] = []
         """A list of :class:`basic blocks <BasicBlock>` contained in this function."""
         self.function_index: int = function_index
 
@@ -403,12 +384,12 @@ class Function:
         raise NotImplementedError()
 
     @abstractmethod
-    def calls_to(self) -> Set["Function"]:
+    def calls_to(self) -> set["Function"]:
         """Returns the set of functions to which this function calls, potentially including itself (if recursive)."""
         raise NotImplementedError()
 
     @abstractmethod
-    def called_from(self) -> Set["Function"]:
+    def called_from(self) -> set["Function"]:
         """Returns the set of functions from which this function is called, potentially including itself
         (if recursive)"""
         raise NotImplementedError()
@@ -417,9 +398,7 @@ class Function:
         return self.function_index
 
     def __eq__(self, other):
-        return (
-            isinstance(other, Function) and self.function_index == other.function_index
-        )
+        return isinstance(other, Function) and self.function_index == other.function_index
 
     def __str__(self):
         return self.name
@@ -452,9 +431,9 @@ class BasicBlock:
         """
         self.function: Function = function
         self.index_in_function: int = index_in_function
-        self.children: Set[BasicBlock] = set()
+        self.children: set[BasicBlock] = set()
         """All basic blocks to which this block can jump."""
-        self.predecessors: Set[BasicBlock] = set()
+        self.predecessors: set[BasicBlock] = set()
         """All basic blocks that precede this basic block."""
         function.basic_blocks.append(self)
 
@@ -482,9 +461,7 @@ class BasicBlock:
     def is_conditional(self, trace: "ProgramTrace") -> bool:
         """Returns whether this basic block contains a conditional branch."""
         # we are a conditional if we have at least two children in the same function and we are not a loop entry
-        return sum(
-            1 for c in self.children if c.function == self.function
-        ) >= 2 and not self.is_loop_entry(trace)
+        return sum(1 for c in self.children if c.function == self.function) >= 2 and not self.is_loop_entry(trace)
 
     def __hash__(self):
         return hash((self.function, self.index_in_function))
@@ -516,6 +493,7 @@ class TraceEvent:
 
         Args:
             uid: An identifier for this event that is unique across the entire trace.
+
         """
         self.uid: int = uid
 
@@ -675,18 +653,14 @@ class FunctionEntry(FunctionEvent):
 
         """
         if self.entrypoint is None:
-            raise ValueError(
-                f"Unable to determine the function entrypoint for {self!r}"
-            )
+            raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
         return self.entrypoint.basic_block
 
     @property
     def function(self) -> Function:
         """Returns the function that was called"""
         if self.entrypoint is None:
-            raise ValueError(
-                f"Unable to determine the function entrypoint for {self!r}"
-            )
+            raise ValueError(f"Unable to determine the function entrypoint for {self!r}")
         return self.entrypoint.function
 
     @property
@@ -702,9 +676,7 @@ class FunctionEntry(FunctionEvent):
 class TaintAccess:
     """An abstract class for representing a taint access event."""
 
-    def __init__(
-        self, access_id: int, event: TraceEvent, label: int, access_type: ByteAccessType
-    ):
+    def __init__(self, access_id: int, event: TraceEvent, label: int, access_type: ByteAccessType):
         """Initializes a taint access.
 
         Args:
@@ -712,6 +684,7 @@ class TaintAccess:
             event: The trace event associated with this access.
             label: The taint label accessed.
             access_type: The type of access.
+
         """
         self.access_id: int = access_id
         self.event: TraceEvent = event
@@ -743,6 +716,7 @@ class TaintOutput:
         Args:
             output_offset: offset within the output file
             label: The taint label of the output
+
         """
         self.source: Input = source
         self.offset: int = output_offset
@@ -786,10 +760,7 @@ class BasicBlockEntry(ControlFlowEvent):
         while event is not None and event != self.function_entry:
             if isinstance(event, FunctionReturn):
                 event = event.function_entry
-            elif (
-                isinstance(event, BasicBlockEntry)
-                and event.basic_block == self.basic_block
-            ):
+            elif isinstance(event, BasicBlockEntry) and event.basic_block == self.basic_block:
                 entry_count += 1
             if event is not None:
                 event = event.previous_control_flow_event
@@ -869,7 +840,7 @@ class FunctionReturn(ControlFlowEvent):
         raise NotImplementedError()
 
     @property
-    def returning_to(self) -> Optional[BasicBlockEntry]:
+    def returning_to(self) -> BasicBlockEntry | None:
         """The basic block to which the function returned."""
         next_event = self.next_control_flow_event
         if isinstance(next_event, BasicBlockEntry):
@@ -881,9 +852,7 @@ class FunctionReturn(ControlFlowEvent):
         """The function from which we are returning."""
         entry = self.function_entry
         if entry is None:
-            raise ValueError(
-                f"Unable to determine the function entry object associated with function return {self!r}"
-            )
+            raise ValueError(f"Unable to determine the function entry object associated with function return {self!r}")
         return entry.basic_block.function
 
 
@@ -933,11 +902,11 @@ class FunctionInvocation(ControlFlowEvent):
         return self.function_entry.next_global_event
 
     @property
-    def previous_global_event(self) -> Optional[TraceEvent]:
+    def previous_global_event(self) -> TraceEvent | None:
         return self.function_entry.previous_global_event
 
     @property
-    def function_return(self) -> Optional[FunctionReturn]:
+    def function_return(self) -> FunctionReturn | None:
         return self.function_entry.function_return
 
     @property
@@ -983,12 +952,8 @@ class FunctionInvocation(ControlFlowEvent):
     def taints(self) -> Taints:
         """Returns all taints operated on by this function or any functions called by this function."""
         if not hasattr(self, "_taints"):
-            setattr(
-                self,
-                "_taints",
-                Taints(itertools.chain(*(event.taints() for event in self))),
-            )
-        return getattr(self, "_taints")
+            self._taints = Taints(itertools.chain(*(event.taints() for event in self)))
+        return self._taints
 
     def __str__(self):
         s = str(self.function)
@@ -1006,8 +971,8 @@ class FunctionInvocation(ControlFlowEvent):
 class ProgramTrace(ABC):
     """An abstract class for representing a program trace."""
 
-    _cfg: Optional[DiGraph[BasicBlock]] = None
-    _func_cfg: Optional[DiGraph[Function]] = None
+    _cfg: DiGraph[BasicBlock] | None = None
+    _func_cfg: DiGraph[Function] | None = None
 
     @abstractmethod
     def __len__(self) -> int:
@@ -1075,7 +1040,7 @@ class ProgramTrace(ABC):
 
     @property
     @abstractmethod
-    def outputs(self) -> Optional[Iterable[Input]]:
+    def outputs(self) -> Iterable[Input] | None:
         """The taint syncs written to in this trace."""
         raise NotImplementedError()
 
@@ -1086,9 +1051,9 @@ class ProgramTrace(ABC):
         raise NotImplementedError()
 
     def input_properties(self, source: Input) -> InputProperties:
-        first_usages: List[Optional[int]] = [None] * source.size
-        file_seeks: List[Tuple[int, int, int]] = []
-        last_offset: Optional[int] = None
+        first_usages: list[int | None] = [None] * source.size
+        file_seeks: list[tuple[int, int, int]] = []
+        last_offset: int | None = None
         for i, taint_access in enumerate(self.access_sequence()):
             for offset in taint_access.taints():
                 if not offset.source == source:
@@ -1099,16 +1064,10 @@ class ProgramTrace(ABC):
                     if offset.offset < last_offset:
                         file_seeks.append((i - 1, last_offset, offset.offset))
                 last_offset = offset.offset
-        unused_bytes = [
-            offset
-            for offset, first_used in enumerate(first_usages)
-            if first_used is None
-        ]
+        unused_bytes = [offset for offset, first_used in enumerate(first_usages) if first_used is None]
         out_of_order = [
             previous_offset + 1
-            for previous_offset, (previous, first_used) in enumerate(
-                zip(first_usages, first_usages[1:])
-            )
+            for previous_offset, (previous, first_used) in enumerate(zip(first_usages, first_usages[1:]))
             if previous > first_used  # type: ignore
         ]
         return InputProperties(
@@ -1130,14 +1089,12 @@ class ProgramTrace(ABC):
 
     def inputs_affecting_control_flow(self) -> Taints:
         """Returns the set of byte offsets that affected control flow"""
-        return self.taints(
-            (node for node in self.taint_forest if node.affected_control_flow)
-        )
+        return self.taints(node for node in self.taint_forest if node.affected_control_flow)
 
     def taints(self, nodes: Iterable[TaintForestNode]) -> Taints:
-        seen: Set[TaintForestNode] = set(nodes)
-        stack: List[TaintForestNode] = list(seen)
-        result: Set[ByteOffset] = set()
+        seen: set[TaintForestNode] = set(nodes)
+        stack: list[TaintForestNode] = list(seen)
+        result: set[ByteOffset] = set()
         while stack:
             node = stack.pop()
 
@@ -1185,9 +1142,7 @@ class ProgramTrace(ABC):
         """Returns the number of basic block entries in this trace."""
         return sum(1 for event in self if isinstance(event, BasicBlockEntry))
 
-    def next_function_entry(
-        self, after: Optional[FunctionEntry] = None
-    ) -> Optional[FunctionEntry]:
+    def next_function_entry(self, after: FunctionEntry | None = None) -> FunctionEntry | None:
         """Returns the next function entry, or None if none exists"""
         if after is None:
             try:
@@ -1205,7 +1160,7 @@ class ProgramTrace(ABC):
         return None
 
     @property
-    def entrypoint(self) -> Optional[FunctionInvocation]:
+    def entrypoint(self) -> FunctionInvocation | None:
         """Returns the entrypoint to this trace (*i.e.*, its first :class:`FunctionInvocation`, typically ``main``)."""
         try:
             return FunctionInvocation(next(iter(self.function_trace())))
@@ -1241,7 +1196,7 @@ class ProgramTrace(ABC):
     def cfg(self) -> DiGraph[BasicBlock]:
         """The static control flow graph associated with this trace."""
         if not hasattr(self, "_cfg") or self._cfg is None:
-            setattr(self, "_cfg", DiGraph())
+            self._cfg = DiGraph()
             for bb in self.basic_blocks:
                 self._cfg.add_node(bb)  # type: ignore
                 for child in bb.children:
@@ -1251,7 +1206,7 @@ class ProgramTrace(ABC):
     @property
     def function_cfg(self) -> DiGraph[Function]:
         if not hasattr(self, "_func_cfg") or self._func_cfg is None:
-            setattr(self, "_func_cfg", DiGraph())
+            self._func_cfg = DiGraph()
             for func in self.functions:
                 self._func_cfg.add_node(func)  # type: ignore
                 for child in func.calls_to():
@@ -1280,21 +1235,7 @@ class ProgramTrace(ABC):
             return True
 
 
-# TODO (msurovic): Pending integration from different PR
-
-# class TraceCommand(Command):
-#     name = "trace"
-#     help = "commands related to tracing"
-#     parser: ArgumentParser
-
-#     def __init_arguments__(self, parser: ArgumentParser):
-#         self.parser = parser
-
-#     def run(self, args: Namespace):
-#         self.parser.print_help()
-
-
-def common_parent_directory(*paths: Union[Path, str]) -> Path:
+def common_parent_directory(*paths: Path | str) -> Path:
     """Returns the deepest parent directory common to every path in paths"""
     p = []
     for path in paths:
@@ -1302,146 +1243,3 @@ def common_parent_directory(*paths: Union[Path, str]) -> Path:
             path = Path(path)
         p.append(path.absolute())
     return Path(commonpath(p))
-
-
-# TODO (hbrodin): Pending integration from different PR
-
-# class RunTraceCommand(Subcommand[TraceCommand]):
-#     name = "run"
-#     help = "run an instrumented binary"
-#     parent_type = TraceCommand
-
-#     def __init_arguments__(self, parser):
-#         parser.add_argument(
-#             "--no-bb-trace",
-#             action="store_true",
-#             help="do not trace at the basic block level",
-#         )
-#         parser.add_argument(
-#             "--output-db",
-#             "-o",
-#             type=str,
-#             default="polytracker.db",
-#             help="path to the output database (default is polytracker.db)",
-#         )
-#         parser.add_argument(
-#             "INSTRUMENTED_BINARY", type=str, help="the instrumented binary to run"
-#         )
-#         parser.add_argument("INPUT_FILE", type=str, help="the file to track")
-#         parser.add_argument("args", nargs=REMAINDER)
-
-#     @staticmethod
-#     @PolyTrackerREPL.register("run_trace")
-#     def run_trace(
-#         instrumented_binary_path: Union[str, Path],
-#         input_file_path: Union[str, Path],
-#         no_bb_trace: bool = False,
-#         output_db_path: Optional[Union[str, Path]] = None,
-#         args=(),
-#         return_trace: bool = True,
-#     ) -> Union[ProgramTrace, int]:
-#         """
-#         Runs an instrumented binary and returns the resulting trace
-
-#         Args:
-#             instrumented_binary_path: path to the instrumented binary
-#             input_file_path: input file to track
-#             no_bb_trace: if True, only functions will be traced and not basic blocks
-#             output_db_path: path to save the output database
-#             args: additional arguments to pass the binary
-#             return_trace: if True (the default), return the resulting ProgramTrace. If False, just return the exit code.
-
-#         Returns:
-#             The program trace or the instrumented binary's exit code
-
-#         """
-#         can_run_natively = PolyTrackerREPL.registered_globals["CAN_RUN_NATIVELY"]
-
-#         if output_db_path is None:
-#             # use a temporary file
-#             tmpdir: Optional[TemporaryDirectory] = TemporaryDirectory()
-#             output_db_path = Path(tmpdir.name) / "polytracker.db"  # type: ignore
-#         else:
-#             if not isinstance(output_db_path, Path):
-#                 output_db_path = Path(output_db_path)
-#             tmpdir = None
-
-#         if not isinstance(instrumented_binary_path, Path):
-#             instrumented_binary_path = Path(instrumented_binary_path)
-
-#         if not isinstance(input_file_path, Path):
-#             input_file_path = Path(input_file_path)
-
-#         if output_db_path.exists():
-#             PolyTrackerREPL.warning(
-#                 f'<style fg="gray">{output_db_path}</style> already exists'
-#             )
-
-#         if can_run_natively:
-#             kwargs = {}
-#             instrumented_binary_path = str(instrumented_binary_path)
-#         else:
-#             cwd = common_parent_directory(
-#                 input_file_path, output_db_path, instrumented_binary_path
-#             )
-#             kwargs = {"cwd": str(cwd)}
-
-#             input_file_path = input_file_path.absolute().relative_to(cwd)
-#             output_db_path = output_db_path.absolute().relative_to(cwd)
-#             instrumented_binary_path = str(
-#                 instrumented_binary_path.absolute().relative_to(cwd)
-#             )
-#             if not instrumented_binary_path.startswith("."):
-#                 instrumented_binary_path = f"./{instrumented_binary_path}"
-
-#         cmd_args = [instrumented_binary_path] + list(args) + [str(input_file_path)]
-#         env = {
-#             "POLYPATH": str(input_file_path),
-#             "POLYTRACE": ["1", "0"][no_bb_trace],
-#             "POLYDB": str(output_db_path),
-#         }
-#         if can_run_natively:
-#             retval = subprocess.call(cmd_args, env=env)  # type: ignore
-#         else:
-#             run_command = PolyTrackerREPL.commands["docker_run"]
-#             retval = run_command(args=cmd_args, interactive=True, env=env, **kwargs)
-#         if return_trace:
-#             from . import PolyTrackerTrace
-
-#             trace = PolyTrackerTrace.load(output_db_path)
-#             if tmpdir is not None:
-#                 weakref.finalize(trace, tmpdir.cleanup)
-#             return trace
-#         else:
-#             if tmpdir is not None:
-#                 tmpdir.cleanup()
-#             return retval
-
-#     def run(self, args: Namespace):
-#         retval = RunTraceCommand.run_trace(
-#             instrumented_binary_path=args.INSTRUMENTED_BINARY,
-#             input_file_path=args.INPUT_FILE,
-#             no_bb_trace=args.no_bb_trace,
-#             output_db_path=args.output_db,
-#             args=args.args,
-#             return_trace=False,
-#         )
-#         if retval == 0:
-#             print(f"Trace saved to {args.output_db}")
-#         return retval
-
-
-# TODO (hbrodin): Pending integration from other PR
-# class CFGTraceCommand(Subcommand[TraceCommand]):
-#     name = "cfg"
-#     help = "export a trace as an annotated cfg"
-#     parent_type = TraceCommand
-
-#     def __init_arguments__(self, parser):
-#         parser.add_argument("TRACE_DB", type=str, help="path to the trace database")
-
-#     def run(self, args: Namespace):
-#         from . import PolyTrackerTrace
-
-#         db = PolyTrackerTrace.load(args.TRACE_DB)
-#         db.function_cfg.to_dot().save("trace.dot")
