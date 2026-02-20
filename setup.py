@@ -1,25 +1,11 @@
 import os
-import platform
 import re
 import sys
 from typing import Optional, Tuple
 
 from setuptools import find_packages, setup
 
-PYTHON_REQUIRES = ">=3.7"
-if sys.platform == "darwin":
-    try:
-        macos_major_version = int(platform.release().split(".")[0])
-        if macos_major_version >= 20:
-            # We are running macOS Big Sur or later.
-            # The new shared cache on Big Sur breaks `ctypes.util.find_library`,
-            # which is used by the `cxxfilt` dependency.
-            # https://stackoverflow.com/questions/62587131/macos-big-sur-python-ctypes-find-library-does-not-find-libraries-ssl-corefou/63609524#63609524
-            # https://github.com/python/cpython/pull/22855
-            # This wasn't patched in CPython until version 3.9.1, so require that:
-            PYTHON_REQUIRES = ">=3.9.1"
-    except ValueError:
-        pass
+PYTHON_REQUIRES = ">=3.12"
 
 SETUP_DIR = os.path.dirname(os.path.realpath(__file__))
 POLYTRACKER_HEADER = os.path.join(
@@ -102,29 +88,24 @@ setup(
     packages=find_packages(),
     python_requires=PYTHON_REQUIRES,
     install_requires=[
-        "blight~=0.0.47",
-        "cxxfilt~=0.2.2",
+        "blight~=0.0.53",
+        "cxxfilt>=0.3,<1.0",
         "docker~=4.4.0",
-        "graphviz~=0.14.1",
-        "intervaltree~=3.0.2",
-        "networkx~=2.4",
-        "Pillow>=7.2.0",
-        "prompt_toolkit~=3.0.8",
-        "pygments~=2.15.0",
+        "graphviz~=0.20",
+        "intervaltree~=3.1",
+        "networkx~=3.0",
+        "Pillow>=10.0",
+        "prompt_toolkit~=3.0.40",
+        "pygments~=2.18",
         "setuptools>=75.8.0",
-        "tqdm>=4.59.0",  # We need at least this version to get the `delay` option
-        "typing_extensions>=3.7.4.2",
-        "types-setuptools~=57.4.9",
+        "tqdm>=4.66",
     ],
     extras_require={
         "dev": [
-            "black>=22.3.0",
-            "mypy",
-            "pytest",
-            "flake8",
-            "Sphinx",
-            "sphinx_rtd_theme>=0.6",
-            "types-setuptools",
+            "mypy>=1.10",
+            "pytest>=8.0",
+            "Sphinx>=7.0",
+            "sphinx_rtd_theme>=2.0",
         ]
     },
     entry_points={"console_scripts": CONSOLE_SCRIPTS},
@@ -134,6 +115,8 @@ setup(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
         "Topic :: Utilities",
     ],
 )

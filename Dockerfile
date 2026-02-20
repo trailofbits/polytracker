@@ -16,17 +16,23 @@ ARG BUILD_TYPE="Release"
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -y update && apt-get -y install \
+  software-properties-common                \
   ninja-build                               \
-  python3-pip                               \
-  python3.8-dev                             \
   golang                                    \
   clang-12                                  \
   cmake                                     \
   git                                       \
   file
 
+RUN add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get -y update && apt-get -y install \
+    python3.12 python3.12-dev python3.12-venv
+
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 10
+RUN python3 -m ensurepip && python3 -m pip install --upgrade pip
+
 # Install python dependencies via pip
-RUN pip3 install pytest blight
+RUN python3 -m pip install pytest blight
 
 # Install symlinks to clang and llvm bitcode tools
 RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
@@ -34,7 +40,7 @@ RUN update-alternatives --install /usr/bin/opt opt /usr/bin/opt-12 10 && \
     update-alternatives --install /usr/bin/llvm-ar llvm-ar /usr/bin/llvm-ar-12 10 && \
     update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 10 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 10 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.12 10
 
 # Install gllvm for builds with bitcode references embedded in binary build targets
 RUN GO111MODULE=off go get github.com/SRI-CSL/gllvm/cmd/...
@@ -111,7 +117,7 @@ ARG DFSAN_FILENAME_ARCH=x86_64
 WORKDIR /workdir
 COPY . /polytracker
 
-RUN pip3 install /polytracker
+RUN python3 -m pip install /polytracker
 
 RUN cmake -GNinja \
   -B/polytracker-build \
