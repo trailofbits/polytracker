@@ -8,18 +8,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/*
-inline dfsan_label *shadow_for(void *ptr) {
-  //Was 1, the shift should be DFSAN_LABEL_BITS/16
-  return (dfsan_label *) ((((uptr) ptr) & ShadowMask()) << 2);
-}
-
-inline const dfsan_label *shadow_for(const void *ptr) {
-  return shadow_for(const_cast<void *>(ptr));
-}
-
-ShadowMask() = static const uptr kShadowMask = ~0x700000000000;
-*/
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
 namespace {
