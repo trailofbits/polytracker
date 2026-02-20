@@ -6,34 +6,19 @@
 #include "taintdag/polytracker.h"
 #include "taintdag/util.h"
 
-#include <algorithm>
 #include <arpa/inet.h>
 #include <assert.h>
 #include <fcntl.h>
-#include <iostream>
-#include <mutex>
 #include <pthread.h>
 #include <sanitizer/dfsan_interface.h>
+#include <sstream>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string>
 #include <sys/mman.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <thread>
-#include <time.h>
 #include <unistd.h>
-#include <unordered_map>
-#include <vector>
-#include <wchar.h>
-
-#ifdef DEBUG_INFO
-#include <iostream>
-#endif
 
 EARLY_CONSTRUCT_EXTERN_GETTER(taintdag::PolyTracker, polytracker_tdag);
 
@@ -306,24 +291,6 @@ EXT_C_FUNC char *__dfsw_fgets(char *str, int count, FILE *fd,
   return ret;
 }
 
-// TODO (hbrodin): Should this be removed? The call to fgets doesn't seem right,
-// especially then length is sizeof char*, typically eight. In general it is
-// unbounded and the gets-function is deprecated.
-EXT_C_FUNC char *__dfsw_gets(char *str, dfsan_label str_label,
-                             dfsan_label *ret_label) {
-  auto offset = Offset::from_file(stdin);
-  char *ret = fgets(str, sizeof str, stdin);
-
-  if (ret) {
-    size_t len = strlen(ret);
-    get_polytracker_tdag().source_taint(fileno(stdin), str, offset, len);
-    *ret_label = str_label;
-  } else {
-    *ret_label = 0;
-  }
-
-  return ret;
-}
 
 EXT_C_FUNC ssize_t __dfsw_getdelim(char **lineptr, size_t *n, int delim,
                                    FILE *fd, dfsan_label buf_label,
@@ -434,7 +401,7 @@ static std::optional<std::string> connect_name(int socket) {
 
   if (!inet_ntop(AF_INET, &(local_addr.sin_addr), local_str,
                  sizeof(local_str))) {
-    taintdag::error_exit("inet_ntop failed for remote addr");
+    taintdag::error_exit("inet_ntop failed for local addr");
   }
 
   if (!inet_ntop(AF_INET, &(remote_addr.sin_addr), remote_str,
