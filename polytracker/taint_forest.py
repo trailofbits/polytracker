@@ -1,24 +1,23 @@
 from abc import abstractmethod
-from typing import Iterator, Optional, Tuple
+from collections.abc import Iterator
+from typing import Optional
+
+import networkx as nx
 
 from .graphs import DAG
 from .inputs import Input
 from .plugins import Command
 
-import networkx as nx
-
 
 class TaintForestNode:
-    def __init__(
-        self, label: int, source: Optional[Input], affected_control_flow: bool = False
-    ):
+    def __init__(self, label: int, source: Input | None, affected_control_flow: bool = False):
         self.label: int = label
-        self.source: Optional[Input] = source
+        self.source: Input | None = source
         self.affected_control_flow: bool = affected_control_flow
 
     @property
     @abstractmethod
-    def parent_labels(self) -> Optional[Tuple[int, int]]:
+    def parent_labels(self) -> tuple[int, int] | None:
         raise NotImplementedError()
 
     @property
@@ -35,11 +34,7 @@ class TaintForestNode:
         return self.parent_one is None and self.parent_two is None
 
     def __eq__(self, other):
-        return (
-            isinstance(other, TaintForestNode)
-            and other.label == self.label
-            and other.source == self.source
-        )
+        return isinstance(other, TaintForestNode) and other.label == self.label and other.source == self.source
 
     def __lt__(self, other):
         return isinstance(other, TaintForestNode) and self.label < other.label
@@ -55,7 +50,7 @@ class TaintForest:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_node(self, label: int, source: Optional[Input] = None) -> TaintForestNode:
+    def get_node(self, label: int, source: Input | None = None) -> TaintForestNode:
         raise NotImplementedError()
 
     @abstractmethod
@@ -89,9 +84,7 @@ class ExportTaintForest(Command):
 
     def __init_arguments__(self, parser):
         parser.add_argument("POLYTRACKER_DB", type=str, help="the trace database")
-        parser.add_argument(
-            "OUTPUT_PATH", type=str, help="path to which to save the .dot file"
-        )
+        parser.add_argument("OUTPUT_PATH", type=str, help="path to which to save the .dot file")
 
     def run(self, args):
         from . import PolyTrackerTrace
@@ -100,6 +93,4 @@ class ExportTaintForest(Command):
         graph = trace.taint_forest.to_graph()
         graph.to_dot().save(args.OUTPUT_PATH)
         print(f"Exported the taint forest to {args.OUTPUT_PATH}")
-        print(
-            f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`"
-        )
+        print(f"To render it to a PDF, run `dot -Tpdf -o taint_forest.pdf {args.OUTPUT_PATH}`")

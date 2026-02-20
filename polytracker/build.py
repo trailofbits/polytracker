@@ -1,9 +1,8 @@
 import argparse
-import subprocess
-import os
 import json
+import os
+import subprocess
 from pathlib import Path
-from typing import List, Dict, Tuple
 
 from .plugins import Command
 
@@ -33,7 +32,7 @@ def _default_blight_journal_path() -> Path:
     return Path.cwd() / "blight_journal.jsonl"
 
 
-def _handle_cmd(build_cmd: List[str], blight_journal: Path) -> None:
+def _handle_cmd(build_cmd: list[str], blight_journal: Path) -> None:
     ARTIFACT_STORE_PATH_ENV: str = _ensure_env_set("WLLVM_ARTIFACT_STORE")
     ARTIFACT_STORE_PATH: Path = _ensure_path_exists(Path(ARTIFACT_STORE_PATH_ENV))
 
@@ -41,7 +40,7 @@ def _handle_cmd(build_cmd: List[str], blight_journal: Path) -> None:
     CXX_INCLUDE_PATH_ABI: Path = CXX_INCLUDE_PATH / "include" / "c++" / "v1"
     CXX_LIB_PATH: Path = _cxx_dir_path() / "clean_build" / "lib"
 
-    LINK_LIBS: List[str] = [
+    LINK_LIBS: list[str] = [
         str(CXX_LIB_PATH / "libc++.a"),
         str(CXX_LIB_PATH / "libc++abi.a"),
         "-lpthread",
@@ -76,20 +75,16 @@ def _handle_cmd(build_cmd: List[str], blight_journal: Path) -> None:
     os.putenv("BLIGHT_WRAPPED_CC", "gclang")
     os.putenv("BLIGHT_WRAPPED_CXX", "gclang++")
 
-    subprocess.check_call(
-        ["blight-exec", "--guess-wrapped", "--swizzle-path", "--", *build_cmd]
-    )
+    subprocess.check_call(["blight-exec", "--guess-wrapped", "--swizzle-path", "--", *build_cmd])
 
 
 def _lower_bitcode(
     input_bitcode: Path,
     output_file: Path,
-    blight_cmd: Dict,
+    blight_cmd: dict,
 ) -> None:
-    POLY_LIB_PATH: Path = _ensure_path_exists(
-        _compiler_dir_path() / "lib" / "libPolytracker.a"
-    )
-    POLYCXX_LIBS: List[str] = [
+    POLY_LIB_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "lib" / "libPolytracker.a")
+    POLYCXX_LIBS: list[str] = [
         str(_cxx_dir_path() / "poly_build" / "lib" / "libc++.a"),
         str(_cxx_dir_path() / "poly_build" / "lib" / "libc++abi.a"),
         str(POLY_LIB_PATH),
@@ -148,9 +143,7 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
 
 
 def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
-    POLY_PASS_PATH: Path = _ensure_path_exists(
-        _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
-    )
+    POLY_PASS_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "pass" / "libPolytrackerPass.so")
 
     cmd = [
         "opt",
@@ -170,20 +163,14 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
 def _instrument_bitcode(
     input_bitcode: Path,
     output_bitcode: Path,
-    ignore_lists: List[str],
+    ignore_lists: list[str],
     add_taint_tracking: bool,
     add_function_tracing: bool,
 ) -> None:
-    POLY_PASS_PATH: Path = _ensure_path_exists(
-        _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
-    )
-    POLY_ABI_LIST_PATH: Path = _ensure_path_exists(
-        _compiler_dir_path() / "abi_lists" / "polytracker_abilist.txt"
-    )
+    POLY_PASS_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "pass" / "libPolytrackerPass.so")
+    POLY_ABI_LIST_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists" / "polytracker_abilist.txt")
     ABI_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists")
-    DFSAN_ABI_LIST_PATH: Path = _ensure_path_exists(
-        _compiler_dir_path() / "abi_lists" / "dfsan_abilist.txt"
-    )
+    DFSAN_ABI_LIST_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists" / "dfsan_abilist.txt")
     # load pass plugin and specify a pass pipeline
     cmd = [
         "opt",
@@ -193,7 +180,7 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
     ]
 
-    pass_pipeline: List[str] = []
+    pass_pipeline: list[str] = []
     if add_taint_tracking:
         pass_pipeline.append("pt-taint")
 
@@ -229,7 +216,7 @@ def _instrument_bitcode(
     subprocess.check_call(cmd)
 
 
-def _find_target(target: str, blight_cmds: List[Dict]) -> Tuple[Dict, Path]:
+def _find_target(target: str, blight_cmds: list[dict]) -> tuple[dict, Path]:
     for cmd in blight_cmds:
         for output in cmd["FindOutputs"].get("outputs", []):
             output_path = Path(output["path"])
@@ -238,9 +225,9 @@ def _find_target(target: str, blight_cmds: List[Dict]) -> Tuple[Dict, Path]:
     raise LookupError(f"'{target}' not found in build targets")
 
 
-def _read_blight_journal(journal_path: Path) -> List[Dict]:
-    result: List[Dict] = []
-    with open(journal_path, "r") as f:
+def _read_blight_journal(journal_path: Path) -> list[dict]:
+    result: list[dict] = []
+    with open(journal_path) as f:
         for line in f:
             result.append(json.loads(line))
     return result

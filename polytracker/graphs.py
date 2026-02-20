@@ -1,17 +1,9 @@
 import math
+from collections.abc import Callable, Collection, Iterable
 from typing import (
-    TypeVar,
-    Generic,
-    Optional,
-    Collection,
-    Dict,
-    Union,
-    Iterable,
-    Callable,
-    Set,
-    FrozenSet,
-    Tuple,
     Any,
+    Generic,
+    TypeVar,
 )
 
 import graphviz
@@ -26,19 +18,14 @@ D = TypeVar("D", bound="DiGraph")
 class DiGraph(nx.DiGraph, Generic[N]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._dominator_forest: Optional[DiGraph[N]] = None
-        self._roots: Optional[Collection[N]] = None
-        self._path_lengths: Optional[Dict[N, Dict[N, int]]] = None
+        self._dominator_forest: DiGraph[N] | None = None
+        self._roots: Collection[N] | None = None
+        self._path_lengths: dict[N, dict[N, int]] | None = None
 
-    def path_length(self, from_node: N, to_node: N) -> Union[int, float]:
+    def path_length(self, from_node: N, to_node: N) -> int | float:
         if self._path_lengths is None:
-            self._path_lengths = dict(
-                nx.all_pairs_shortest_path_length(self, cutoff=None)
-            )
-        if (
-            from_node not in self._path_lengths
-            or to_node not in self._path_lengths[from_node]
-        ):
+            self._path_lengths = dict(nx.all_pairs_shortest_path_length(self, cutoff=None))
+        if from_node not in self._path_lengths or to_node not in self._path_lengths[from_node]:
             return math.inf
         else:
             return self._path_lengths[from_node][to_node]
@@ -55,21 +42,14 @@ class DiGraph(nx.DiGraph, Generic[N]):
             self._roots = tuple(self._find_roots())
         return self._roots
 
-    def depth(self, node: N) -> Union[int, float]:
+    def depth(self, node: N) -> int | float:
         return min(self.path_length(root, node) for root in self.roots)
 
     def ancestors(self, node: N) -> OrderedSet[N]:
         if not self.has_node(node):
             raise nx.NetworkXError(f"Node {node} is not in the graph")
         return OrderedSet(
-            *(
-                x
-                for _, x in sorted(
-                    (d, n)
-                    for n, d in nx.shortest_path_length(self, target=node).items()
-                    if n is not node
-                )
-            )
+            *(x for _, x in sorted((d, n) for n, d in nx.shortest_path_length(self, target=node).items() if n is not node))
         )
 
     def has_one_predecessor(self, node: N) -> bool:
@@ -100,7 +80,7 @@ class DiGraph(nx.DiGraph, Generic[N]):
             A new, simplified graph of the same type.
 
         """
-        nodes: Set[N] = set(self.nodes)
+        nodes: set[N] = set(self.nodes)
         ret: D = self.__class__()
         ret.add_edges_from(self.edges)
         while nodes:
@@ -112,16 +92,13 @@ class DiGraph(nx.DiGraph, Generic[N]):
                 incoming_nodes = list(self.predecessors(pred))
                 outgoing_nodes = list(self.successors(node))
                 ret.remove_nodes_from([pred, node])
-                ret.add_edges_from(
-                    [(i, new_node) for i in incoming_nodes]
-                    + [(new_node, o) for o in outgoing_nodes]
-                )
+                ret.add_edges_from([(i, new_node) for i in incoming_nodes] + [(new_node, o) for o in outgoing_nodes])
                 if new_node is not pred:
                     nodes.remove(pred)
                     nodes.add(new_node)
         return ret
 
-    def descendants(self, node: N) -> FrozenSet[N]:
+    def descendants(self, node: N) -> frozenset[N]:
         return frozenset(nx.dfs_successors(self, node).keys())
 
     @property
@@ -137,8 +114,8 @@ class DiGraph(nx.DiGraph, Generic[N]):
 
     def to_dot(
         self,
-        comment: Optional[str] = None,
-        labeler: Optional[Callable[[N], str]] = None,
+        comment: str | None = None,
+        labeler: Callable[[N], str] | None = None,
         node_filter=None,
     ) -> graphviz.Digraph:
         if labeler is None:
@@ -214,7 +191,7 @@ G = TypeVar("G", bound=nx.DiGraph)
 
 
 def non_disjoint_union_all(first_graph: G, *graphs: G) -> G:
-    edges: Set[Tuple[Any, Any]] = set(first_graph.edges)
+    edges: set[tuple[Any, Any]] = set(first_graph.edges)
     for graph in graphs:
         edges |= graph.edges
     return first_graph.__class__(list(edges))

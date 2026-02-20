@@ -1,6 +1,7 @@
 from collections import OrderedDict
-from collections.abc import MutableSet as AbstractMutableSet, MutableMapping
-from typing import Callable, Generic, Iterator, Optional, TypeVar, Union
+from collections.abc import Callable, Iterator, MutableMapping
+from collections.abc import MutableSet as AbstractMutableSet
+from typing import Generic, TypeVar
 
 R = TypeVar("R")
 V = TypeVar("V")
@@ -11,7 +12,7 @@ class Memoized(Generic[R]):
     def __init__(self, func: Callable[..., R]):
         self.func = func
         self._set: bool = False
-        self.cached: Optional[R] = None
+        self.cached: R | None = None
 
     def __call__(self, *args, **kwargs) -> R:
         if not self._set:
@@ -54,11 +55,11 @@ NO_DEFAULT = object()
 
 
 class LRUCache(Generic[R, V], MutableMapping):
-    def __init__(self, max_size: Optional[int] = 30000000):
+    def __init__(self, max_size: int | None = 30000000):
         self._items: OrderedDict[R, V] = OrderedDict()
-        self.max_size: Optional[int] = max_size
+        self.max_size: int | None = max_size
 
-    def get(self, k: R, default: A = NO_DEFAULT) -> Union[V, A]:  # type: ignore
+    def get(self, k: R, default: A = NO_DEFAULT) -> V | A:  # type: ignore
         try:
             return self[k]
         except KeyError:

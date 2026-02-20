@@ -1,5 +1,5 @@
 import math
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 from PIL import Image, ImageEnhance
 from tqdm import tqdm
@@ -36,7 +36,7 @@ def file_diff(
 def temporal_animation(
     output_path: str,
     trace: ProgramTrace,
-    for_input: Optional[Input] = None,
+    for_input: Input | None = None,
     aspect_ratio: float = 1.61803398875,
 ):
     if for_input is None:
@@ -46,7 +46,7 @@ def temporal_animation(
     width = max(int(math.ceil(num_bytes / height)), 1)
     while width * height < num_bytes:
         height += 1
-    images: List[Image] = []
+    images: list[Image] = []
     for access in tqdm(
         trace.access_sequence(),
         desc="building temporal animation",
@@ -64,6 +64,4 @@ def temporal_animation(
             col = offset.offset % width
             image.putpixel((col, row), 0)
         images.append(image)
-    images[0].save(
-        output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True
-    )
+    images[0].save(output_path, save_all=True, append_images=images[1:], fps=100.0, loop=True)

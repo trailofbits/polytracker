@@ -3,27 +3,25 @@ This module maps input byte offsets to output byte offsets
 """
 
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+
 from tqdm import tqdm
 
 from .plugins import Command
 from .taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
-
 LabelType = int
 OffsetType = int
-FileOffsetType = Tuple[Path, OffsetType]
-CavityType = Tuple[OffsetType, OffsetType]
+FileOffsetType = tuple[Path, OffsetType]
+CavityType = tuple[OffsetType, OffsetType]
 
 
 class InputOutputMapping:
     def __init__(self, f: TDFile):
         self.tdfile: TDFile = f
 
-    def dfs_walk(
-        self, label: LabelType, seen: Optional[Set[LabelType]] = None
-    ) -> Iterator[Tuple[LabelType, TDNode]]:
+    def dfs_walk(self, label: LabelType, seen: set[LabelType] | None = None) -> Iterator[tuple[LabelType, TDNode]]:
         if seen is None:
             seen = set()
 
@@ -50,8 +48,8 @@ class InputOutputMapping:
             elif isinstance(n, TDRangeNode):
                 stack.extend(range(n.first, n.last + 1))
 
-    def mapping(self) -> Dict[FileOffsetType, Set[FileOffsetType]]:
-        result: Dict[FileOffsetType, Set[FileOffsetType]] = defaultdict(set)
+    def mapping(self) -> dict[FileOffsetType, set[FileOffsetType]]:
+        result: dict[FileOffsetType, set[FileOffsetType]] = defaultdict(set)
         for s in tqdm(list(self.tdfile.sinks)):
             for _, n in self.dfs_walk(s.label):
                 if isinstance(n, TDSourceNode):
@@ -61,7 +59,7 @@ class InputOutputMapping:
 
         return result
 
-    def marker_to_ranges(self, m: bytes) -> List[CavityType]:
+    def marker_to_ranges(self, m: bytes) -> list[CavityType]:
         ranges = []
         start = None
         for i, v in enumerate(m):
@@ -76,9 +74,9 @@ class InputOutputMapping:
             ranges.append((start, len(m)))
         return ranges
 
-    def file_cavities(self) -> Dict[Path, List[CavityType]]:
-        seen: Set[LabelType] = set()
-        markers: Dict[int, bytearray] = {}
+    def file_cavities(self) -> dict[Path, list[CavityType]]:
+        seen: set[LabelType] = set()
+        markers: dict[int, bytearray] = {}
 
         # Create the initial marker arrays, one per source file. Each offset in the
         # marker array corresponds to a single source file offset. Iterate over all
@@ -100,9 +98,7 @@ class InputOutputMapping:
                     # Use whatever size is greater (size hint will be zero for failures) to allocate the
                     # array.
                     fdheader = self.tdfile.fd_headers[source_index][1]
-                    size = (
-                        source_offset + 1 if fdheader.invalid_size() else fdheader.size
-                    )
+                    size = source_offset + 1 if fdheader.invalid_size() else fdheader.size
                     markers[source_index] = bytearray(size)
 
                 marker = markers[source_index]
@@ -138,7 +134,7 @@ class InputOutputMapping:
                             seen.update(range(n.first, n.last + 1))
 
         # Flatten all files by name in case files are opened multiple times
-        merged: Dict[Path, bytes] = {}
+        merged: dict[Path, bytes] = {}
 
         for k, v in markers.items():
             fname = self.tdfile.fd_headers[k][0]

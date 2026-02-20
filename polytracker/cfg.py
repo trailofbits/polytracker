@@ -1,19 +1,8 @@
-from typing import (
-    Callable,
-    Dict,
-    FrozenSet,
-    ItemsView,
-    Iterable,
-    Iterator,
-    KeysView,
-    List,
-    Optional,
-    Tuple,
-)
+import os
+from collections.abc import Callable, ItemsView, Iterable, Iterator, KeysView
 
 import cxxfilt
 import graphviz
-import os
 
 from .graphs import DiGraph
 
@@ -22,18 +11,18 @@ class FunctionInfo:
     def __init__(
         self,
         name: str,
-        cmp_bytes: Dict[str, List[int]],
-        input_bytes: Optional[Dict[str, List[int]]] = None,
+        cmp_bytes: dict[str, list[int]],
+        input_bytes: dict[str, list[int]] | None = None,
         called_from: Iterable[str] = (),
     ):
         self.name: str = name
-        self.called_from: FrozenSet[str] = frozenset(called_from)
-        self._cmp_bytes: Dict[str, List[int]] = cmp_bytes
+        self.called_from: frozenset[str] = frozenset(called_from)
+        self._cmp_bytes: dict[str, list[int]] = cmp_bytes
         if input_bytes is None:
-            self._input_bytes: Dict[str, List[int]] = cmp_bytes
+            self._input_bytes: dict[str, list[int]] = cmp_bytes
         else:
             self._input_bytes = input_bytes
-        self._demangled_name: Optional[str] = None
+        self._demangled_name: str | None = None
 
     @property
     def demangled_name(self) -> str:
@@ -53,15 +42,15 @@ class FunctionInfo:
             # find the largest byte this trace touched
             return max(self.input_bytes[source])
 
-    def taint_source_sizes(self) -> Dict[str, int]:
+    def taint_source_sizes(self) -> dict[str, int]:
         return {source: self.source_size(source) for source in self.taint_sources}
 
     @property
-    def input_bytes(self) -> Dict[str, List[int]]:
+    def input_bytes(self) -> dict[str, list[int]]:
         return self._input_bytes
 
     @property
-    def cmp_bytes(self) -> Dict[str, List[int]]:
+    def cmp_bytes(self) -> dict[str, list[int]]:
         return self._cmp_bytes
 
     @property
@@ -69,9 +58,9 @@ class FunctionInfo:
         return self.input_bytes.keys()
 
     @staticmethod
-    def tainted_chunks(byte_offsets: Iterable[int]) -> Iterator[Tuple[int, int]]:
-        start_offset: Optional[int] = None
-        last_offset: Optional[int] = None
+    def tainted_chunks(byte_offsets: Iterable[int]) -> Iterator[tuple[int, int]]:
+        start_offset: int | None = None
+        last_offset: int | None = None
         for offset in sorted(byte_offsets):
             if last_offset is None:
                 start_offset = offset
@@ -82,23 +71,23 @@ class FunctionInfo:
         if last_offset is not None:
             yield start_offset, last_offset + 1  # type: ignore
 
-    def input_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+    def input_chunks(self) -> Iterator[tuple[str, tuple[int, int]]]:
         for source, byte_offsets in self.input_bytes.items():
             for start, end in FunctionInfo.tainted_chunks(byte_offsets):
                 yield source, (start, end)
 
-    def cmp_chunks(self) -> Iterator[Tuple[str, Tuple[int, int]]]:
+    def cmp_chunks(self) -> Iterator[tuple[str, tuple[int, int]]]:
         for source, byte_offsets in self.cmp_bytes.items():
             for start, end in FunctionInfo.tainted_chunks(byte_offsets):
                 yield source, (start, end)
 
-    def __getitem__(self, input_source_name: str) -> List[int]:
+    def __getitem__(self, input_source_name: str) -> list[int]:
         return self.input_bytes[input_source_name]
 
     def __iter__(self) -> Iterable[str]:
         return self.taint_sources
 
-    def items(self) -> ItemsView[str, List[int]]:
+    def items(self) -> ItemsView[str, list[int]]:
         return self.input_bytes.items()
 
     def __hash__(self):
@@ -123,11 +112,11 @@ class CFG(DiGraph[FunctionInfo]):
 
     def to_dot(
         self,
-        comment: Optional[str] = "PolyTracker Program Trace",
-        labeler: Optional[Callable[[FunctionInfo], str]] = None,
+        comment: str | None = "PolyTracker Program Trace",
+        labeler: Callable[[FunctionInfo], str] | None = None,
         node_filter=None,
     ) -> graphviz.Digraph:
-        function_labels: Dict[str, str] = {}
+        function_labels: dict[str, str] = {}
 
         def func_labeler(f):
             if labeler is not None:

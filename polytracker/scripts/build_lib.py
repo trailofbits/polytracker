@@ -20,18 +20,12 @@ from optparse import OptionParser
 
 def defined_function_list(object):
     functions = []
-    readelf_proc = subprocess.Popen(
-        ["readelf", "-s", "-W", object], stdout=subprocess.PIPE
-    )
+    readelf_proc = subprocess.Popen(["readelf", "-s", "-W", object], stdout=subprocess.PIPE)
     readelf = readelf_proc.communicate()[0].decode(errors="replace").split("\n")
     if readelf_proc.returncode != 0:
         raise subprocess.CalledProcessError(readelf_proc.returncode, "readelf")
     for line in readelf:
-        if (
-            (line[31:35] == "FUNC" or line[31:36] == "IFUNC")
-            and line[39:44] != "LOCAL"
-            and line[55:58] != "UND"
-        ):
+        if (line[31:35] == "FUNC" or line[31:36] == "IFUNC") and line[39:44] != "LOCAL" and line[55:58] != "UND":
             function_name = line[59:].split("@")[0]
             functions.append(function_name)
     return functions
@@ -102,10 +96,7 @@ libs = [
     ]
 ]
 
-libs += [
-    os.path.join(options.libc_archive_path, name)
-    for name in ["libc_nonshared.a", "libpthread_nonshared.a"]
-]
+libs += [os.path.join(options.libc_archive_path, name) for name in ["libc_nonshared.a", "libpthread_nonshared.a"]]
 
 libs.append(os.path.join(options.libgcc_dso_path, "libgcc_s.so.1"))
 libs.append(os.path.join(options.libgcc_archive_path, "libgcc.a"))

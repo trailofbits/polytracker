@@ -1,26 +1,21 @@
 """A module for modeling taint sources like input files"""
 
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 
 class InputProperties:
     def __init__(
         self,
-        unused_byte_offsets: List[int],
-        out_of_order_byte_offsets: List[int],
-        file_seeks: List[Tuple[int, int, int]],
+        unused_byte_offsets: list[int],
+        out_of_order_byte_offsets: list[int],
+        file_seeks: list[tuple[int, int, int]],
     ):
-        self.unused_byte_offsets: List[int] = unused_byte_offsets
-        self.file_seeks: List[Tuple[int, int, int]] = file_seeks
-        self.out_of_order_byte_offsets: List[int] = out_of_order_byte_offsets
+        self.unused_byte_offsets: list[int] = unused_byte_offsets
+        self.file_seeks: list[tuple[int, int, int]] = file_seeks
+        self.out_of_order_byte_offsets: list[int] = out_of_order_byte_offsets
 
     def __bool__(self):
-        return (
-            not self.unused_byte_offsets
-            and not self.out_of_order_byte_offsets
-            and not self.file_seeks
-        )
+        return not self.unused_byte_offsets and not self.out_of_order_byte_offsets and not self.file_seeks
 
 
 class Input:
@@ -32,8 +27,8 @@ class Input:
         path: str,
         size: int,
         track_start: int = 0,
-        track_end: Optional[int] = None,
-        content: Optional[bytes] = None,
+        track_end: int | None = None,
+        content: bytes | None = None,
     ):
         """Initializes a taint source.
 
@@ -44,6 +39,7 @@ class Input:
             track_start: The byte offset of the source where tracing started.
             track_end: The byte offset of the source where tracing ended. (Defaults to the end of the input.)
             content: The original bytes of the input.
+
         """
         self.uid: int = uid
         self.path: str = path
@@ -53,7 +49,7 @@ class Input:
             self.track_end: int = size
         else:
             self.track_end = track_end
-        self.stored_content: Optional[bytes] = content
+        self.stored_content: bytes | None = content
 
     @property
     def content(self) -> bytes:
@@ -81,8 +77,4 @@ class Input:
         return self.uid
 
     def __eq__(self, other):
-        return (
-            isinstance(other, Input)
-            and self.uid == other.uid
-            and self.path == other.path
-        )
+        return isinstance(other, Input) and self.uid == other.uid and self.path == other.path

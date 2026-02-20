@@ -1,9 +1,7 @@
-from typing import Dict, List
-
-import sys
-import os
-from collections import defaultdict
 import argparse
+import os
+import sys
+from collections import defaultdict
 
 """
 This file reads in two Polytracker ABI lists and produces
@@ -28,9 +26,9 @@ It returns the conflicts found, and all the functions/attributes declared within
 
 
 def analyze_abi_file(filename):
-    file_conflicts: Dict[str, str] = defaultdict()
-    func_attrs: Dict[str, List[str]] = defaultdict(list)
-    with open(filename, "r") as curr_file:
+    file_conflicts: dict[str, str] = defaultdict()
+    func_attrs: dict[str, list[str]] = defaultdict(list)
+    with open(filename) as curr_file:
         all_lines = curr_file.readlines()
         for line in all_lines:
             # This skips all non definition lines
@@ -97,15 +95,9 @@ def main():
         one file declaring a function to be <functional, discard, custom> while another disagrees.
         """
     )
-    parser.add_argument(
-        "--file-one", "-f1", type=str, default=None, help="Path to first ABI file"
-    )
-    parser.add_argument(
-        "--file-two", "-f2", type=str, default=None, help="Path to second ABI file"
-    )
-    parser.add_argument(
-        "--choose-file", "-cf", type=int, default=None, help="Take all from file 1 or 2"
-    )
+    parser.add_argument("--file-one", "-f1", type=str, default=None, help="Path to first ABI file")
+    parser.add_argument("--file-two", "-f2", type=str, default=None, help="Path to second ABI file")
+    parser.add_argument("--choose-file", "-cf", type=int, default=None, help="Take all from file 1 or 2")
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -130,8 +122,7 @@ def main():
     diff_conflicts = [
         file
         for file in f1_func_attrs.keys()
-        if file in f2_func_attrs.keys()
-        and list_diff(f1_func_attrs[file], f2_func_attrs[file])
+        if file in f2_func_attrs.keys() and list_diff(f1_func_attrs[file], f2_func_attrs[file])
     ]
     if args.choose_file is not None:
         print(args.choose_file)

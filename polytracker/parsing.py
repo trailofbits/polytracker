@@ -1,13 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from logging import getLogger
 from typing import (
     Generic,
-    Iterable,
-    Iterator,
-    List,
     Optional,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -17,7 +13,6 @@ from tqdm import tqdm
 
 from .graphs import DAG
 from .tracing import BasicBlockEntry, FunctionInvocation, ProgramTrace, TraceEvent
-
 
 log = getLogger(__file__)
 
@@ -31,21 +26,17 @@ class ParseTree(ABC, Generic[V]):
 
     def __init__(self, value: V):
         self.value: V = value
-        self._descendants: Optional[int] = None
+        self._descendants: int | None = None
 
     @property
     @abstractmethod
-    def children(self: T) -> List[T]:
+    def children(self: T) -> list[T]:
         raise NotImplementedError()
 
     def to_dag(self) -> DAG["ParseTree[V]"]:
         dag: DAG[ParseTree[V]] = DAG()
         if self.children:
-            dag.add_edges_from(
-                (node, child)
-                for node in self.preorder_traversal()
-                for child in node.children
-            )
+            dag.add_edges_from((node, child) for node in self.preorder_traversal() for child in node.children)
         else:
             dag.add_node(self)
         return dag
@@ -58,7 +49,7 @@ class ParseTree(ABC, Generic[V]):
         return self._descendants  # type: ignore
 
     def postorder_traversal(self: T) -> Iterator[T]:
-        s: List[Tuple[bool, T]] = [(False, self)]
+        s: list[tuple[bool, T]] = [(False, self)]
         while s:
             expanded_children, node = s.pop()
             if not expanded_children and node.children:
@@ -69,7 +60,7 @@ class ParseTree(ABC, Generic[V]):
                 yield node
 
     def preorder_traversal(self: T) -> Iterator[T]:
-        s: List[T] = [self]
+        s: list[T] = [self]
         while s:
             node = s.pop()
             yield node
@@ -126,35 +117,32 @@ class ImmutableParseTree(Generic[V], ParseTree[V]):
 
     def __init__(self: IPT, value: V, children: Iterable[IPT] = ()):
         super().__init__(value)
-        self._children: List[IPT] = list(children)
+        self._children: list[IPT] = list(children)
 
     @property
-    def children(self: IPT) -> List[IPT]:
+    def children(self: IPT) -> list[IPT]:
         return self._children
 
     def clone(self: IPT) -> IPT:
         class IPTNode:
             def __init__(
-                self, node: IPT, parent: Optional["IPTNode"] = None  # noqa: F821
+                self,
+                node: IPT,
+                parent: Optional["IPTNode"] = None,  # noqa: F821
             ):  # noqa: F821
                 self.node: IPT = node
-                self.children: Optional[List[IPT]] = None
-                self.parent: Optional[IPTNode] = parent
+                self.children: list[IPT] | None = None
+                self.parent: IPTNode | None = parent
 
-        to_clone: List[IPTNode] = [IPTNode(self)]
+        to_clone: list[IPTNode] = [IPTNode(self)]
         while to_clone:
             ipt_node = to_clone[-1]
             if ipt_node.children is None:
                 ipt_node.children = []
-                to_clone.extend(
-                    IPTNode(child, ipt_node)
-                    for child in reversed(ipt_node.node.children)
-                )
+                to_clone.extend(IPTNode(child, ipt_node) for child in reversed(ipt_node.node.children))
             else:
                 to_clone.pop()
-                cloned = self.__class__(
-                    value=ipt_node.node.value, children=ipt_node.children
-                )
+                cloned = self.__class__(value=ipt_node.node.value, children=ipt_node.children)
                 if ipt_node.parent is not None:
                     assert ipt_node.parent.children is not None
                     ipt_node.parent.children.append(cloned)
@@ -169,7 +157,7 @@ MPT = TypeVar("MPT", bound="MutableParseTree")
 
 class MutableParseTree(Generic[V], ImmutableParseTree[V]):
     @ImmutableParseTree.children.setter  # type: ignore
-    def children(self: MPT, new_children: List[MPT]):
+    def children(self: MPT, new_children: list[MPT]):
         self._children = new_children
 
     def add_child(self: MPT, new_child: MPT):
@@ -211,12 +199,12 @@ def highlight_offset(text: bytes, offset, highlight_length=20) -> str:
         elif i == offset - start_offset:
             offset_len = len(byte_text)
         ret = f"{ret}{byte_text}"
-    ret = f"\"{ret}\"\n {' ' * before}{'^' * offset_len}"
+    ret = f'"{ret}"\n {" " * before}{"^" * offset_len}'
     return ret
 
 
 class Terminal:
-    def __init__(self, terminal: Union[bytes, str]):
+    def __init__(self, terminal: bytes | str):
         if isinstance(terminal, str):
             terminal = terminal.encode("utf-8")
         self.terminal: bytes = terminal
@@ -249,12 +237,12 @@ class Start:
         return "<START>"
 
 
-N = TypeVar("N", bound=ParseTree[Union[Start, TraceEvent, Terminal]])
+N = TypeVar("N", bound=ParseTree[Start | TraceEvent | Terminal])
 
 
 def trace_to_tree(
     trace: ProgramTrace,
-    node_type: Type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],  # type: ignore
+    node_type: type[N] = ParseTree[Union[Start, TraceEvent, Terminal]],  # type: ignore
     include_terminals: bool = True,
 ) -> N:
     if trace.entrypoint is None:
@@ -264,9 +252,7 @@ def trace_to_tree(
 
     entrypoint_node = node_type(trace.entrypoint)
     root.children.append(entrypoint_node)
-    function_stack: List[Tuple[FunctionInvocation, N]] = [
-        (trace.entrypoint, entrypoint_node)
-    ]
+    function_stack: list[tuple[FunctionInvocation, N]] = [(trace.entrypoint, entrypoint_node)]
 
     with tqdm(
         unit=" functions",
@@ -292,9 +278,7 @@ def trace_to_tree(
                 func = bb.called_function
                 if func is not None:
                     if not func.touched_taint:
-                        log.debug(
-                            f"skipping call to {func.function.demangled_name} because it did not touch taint"
-                        )
+                        log.debug(f"skipping call to {func.function.demangled_name} because it did not touch taint")
                         continue
                     child_node = node_type(func)
                     node.children.append(child_node)
@@ -307,17 +291,15 @@ G = TypeVar("G", bound="NonGeneralizedParseTree")
 
 
 class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal]]):
-    def __init__(
-        self: G, value: Union[Start, TraceEvent, Terminal], children: Iterable[G] = ()
-    ):
+    def __init__(self: G, value: Start | TraceEvent | Terminal, children: Iterable[G] = ()):
         super().__init__(value=value, children=children)
-        self.consumed: List[Tuple[int, int]]
+        self.consumed: list[tuple[int, int]]
         if isinstance(value, BasicBlockEntry):
             self.intervals: IntervalTree = IntervalTree(self._consumed_intervals())
         else:
             self.intervals = IntervalTree()
-        self._begin: Optional[int] = None
-        self._end: Optional[int] = None
+        self._begin: int | None = None
+        self._end: int | None = None
 
     @property
     def begin_offset(self) -> int:
@@ -339,37 +321,18 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
     def matches(self) -> bytes:
         return b"".join(terminal.terminal for terminal in self.terminals())
 
-    def verify_bounds(
-        self, check_overlap=True, check_coverage=True, check_missing_children=True
-    ):
+    def verify_bounds(self, check_overlap=True, check_coverage=True, check_missing_children=True):
         covered_input_bytes = IntervalTree()
         for child in self.children:
-            if check_overlap and covered_input_bytes.overlaps(
-                child.begin_offset, child.end_offset
-            ):
-                overlap = ", ".join(
-                    [
-                        interval.data
-                        for interval in covered_input_bytes[
-                            child.begin_offset : child.end_offset
-                        ]
-                    ]
-                )
-                raise ValueError(
-                    f"Child node {child.value!s} of {self.value!s} overlaps with these siblings: "
-                    f"{overlap!r}"
-                )
+            if check_overlap and covered_input_bytes.overlaps(child.begin_offset, child.end_offset):
+                overlap = ", ".join([interval.data for interval in covered_input_bytes[child.begin_offset : child.end_offset]])
+                raise ValueError(f"Child node {child.value!s} of {self.value!s} overlaps with these siblings: {overlap!r}")
             if child.end_offset > child.begin_offset:
-                covered_input_bytes.addi(
-                    child.begin_offset, child.end_offset, str(child.value)
-                )
+                covered_input_bytes.addi(child.begin_offset, child.end_offset, str(child.value))
         if (
             check_coverage
             and not self.is_leaf()
-            and (
-                covered_input_bytes.begin() != self.begin_offset
-                or covered_input_bytes.end() != self.end_offset
-            )
+            and (covered_input_bytes.begin() != self.begin_offset or covered_input_bytes.end() != self.end_offset)
         ):
             raise ValueError(
                 f"Node {self.value!s} was expected to have bounds ({self.begin_offset}, "
@@ -379,14 +342,9 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
         if check_missing_children and not self.is_leaf():
             covered_input_bytes.merge_overlaps(strict=False)
             if len(covered_input_bytes) > 1:
-                missing = (
-                    IntervalTree.from_tuples([(self.begin_offset, self.end_offset)])
-                    - covered_input_bytes
-                )
+                missing = IntervalTree.from_tuples([(self.begin_offset, self.end_offset)]) - covered_input_bytes
                 missing_str = ", ".join(f"[{i.begin}:{i.end}]" for i in missing)
-                raise ValueError(
-                    f"Node {self.value!s} is missing children that cover these byte ranges: {missing_str}"
-                )
+                raise ValueError(f"Node {self.value!s} is missing children that cover these byte ranges: {missing_str}")
 
     def verify(self, string: bytes):
         offset: int = 0
@@ -418,13 +376,10 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
         ):
             if len(node.children) == 1:
                 child = node.children[0]
-                if (
-                    isinstance(child.value, BasicBlockEntry)
-                    and len(child.children) == 1
-                ):
+                if isinstance(child.value, BasicBlockEntry) and len(child.children) == 1:
                     node.children = [child.children[0]]
 
-    def _winners(self, to_compare: "NonGeneralizedParseTree") -> Optional[List[int]]:
+    def _winners(self, to_compare: "NonGeneralizedParseTree") -> list[int] | None:
         if self.end_offset <= to_compare.begin_offset:
             # we do not have overlap
             return None
@@ -450,12 +405,9 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
                 their_last_used.append(last_used)
             else:
                 their_last_used.append(-1)
-        return [
-            our_last - their_last
-            for our_last, their_last in zip(our_last_used, their_last_used)
-        ]
+        return [our_last - their_last for our_last, their_last in zip(our_last_used, their_last_used)]
 
-    def best_partition(self, right_sibling: "NonGeneralizedParseTree") -> Optional[int]:
+    def best_partition(self, right_sibling: "NonGeneralizedParseTree") -> int | None:
         winners = self._winners(right_sibling)
         if winners is None:
             # we do not overlap
@@ -474,12 +426,10 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
                 best_badness = badness
         return best_point
 
-    def best_subset(self, parent: "NonGeneralizedParseTree") -> Tuple[int, int]:
+    def best_subset(self, parent: "NonGeneralizedParseTree") -> tuple[int, int]:
         winners = self._winners(parent)
         if winners is None:
-            raise ValueError(
-                "The child does not overlap with its parent! This should never happen."
-            )
+            raise ValueError("The child does not overlap with its parent! This should never happen.")
         # TODO: See if we can improve this algorithm
         left_offset = 0
         right_offset = len(winners)
@@ -492,22 +442,16 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
     def deconflict_sibling(self, right_sibling: "NonGeneralizedParseTree"):
         best_point = self.best_partition(right_sibling)
         if best_point is not None:
-            self.intervals.chop(
-                right_sibling.begin_offset + best_point, self.end_offset
-            )
+            self.intervals.chop(right_sibling.begin_offset + best_point, self.end_offset)
             right_sibling.intervals.chop(0, right_sibling.begin_offset + best_point)
 
     def deconflict_parent(self, parent: "NonGeneralizedParseTree"):
         left_offset, right_offset = self.best_subset(parent)
-        self.intervals.chop(
-            self.begin_offset + left_offset, self.end_offset - right_offset
-        )
+        self.intervals.chop(self.begin_offset + left_offset, self.end_offset - right_offset)
 
     def bottom_up_pass(self):
         # first, remove any children that do not produce a terminal
-        self.children = [
-            child for child in self.children if child.begin_offset < child.end_offset
-        ]
+        self.children = [child for child in self.children if child.begin_offset < child.end_offset]
         # ensure that none of our children's intervals overlap
         for child, right_sibling in zip(self.children, self.children[1:]):
             child.deconflict_sibling(right_sibling)
@@ -517,9 +461,7 @@ class NonGeneralizedParseTree(MutableParseTree[Union[Start, TraceEvent, Terminal
         self.intervals.split_overlaps()
         self.intervals.merge_overlaps(data_reducer=max)
         if __debug__:
-            self.verify_bounds(
-                check_overlap=True, check_coverage=False, check_missing_children=False
-            )
+            self.verify_bounds(check_overlap=True, check_coverage=False, check_missing_children=False)
 
     def top_down_pass(self):
         self._begin = self.begin_offset
@@ -550,9 +492,7 @@ def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTre
 
     inputs = list(trace.inputs)
     if len(inputs) != 1:
-        raise ValueError(
-            f"Trace {trace!r} must have exactly one input; found {len(inputs)}"
-        )
+        raise ValueError(f"Trace {trace!r} must have exactly one input; found {len(inputs)}")
     inputstr = inputs[0].content
 
     for node in tqdm(
@@ -580,14 +520,12 @@ def trace_to_non_generalized_tree(trace: ProgramTrace) -> NonGeneralizedParseTre
         node.top_down_pass()
         # add terminals
         last_end = node_begin
-        new_children: List[NonGeneralizedParseTree] = []
+        new_children: list[NonGeneralizedParseTree] = []
         for child in node.children:
             if child.begin_offset >= child.end_offset:
                 continue
             if last_end < child.begin_offset:
-                terminal = NonGeneralizedParseTree(
-                    Terminal(inputstr[last_end : child.begin_offset])
-                )
+                terminal = NonGeneralizedParseTree(Terminal(inputstr[last_end : child.begin_offset]))
                 terminal.intervals.addi(last_end, child.begin_offset)
                 new_children.append(terminal)
             new_children.append(child)

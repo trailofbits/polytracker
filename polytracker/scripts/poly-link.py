@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import sys
 import subprocess
+import sys
 
 args = list(sys.argv[1:])
 final = ["llvm-link", "--only-needed"] + args

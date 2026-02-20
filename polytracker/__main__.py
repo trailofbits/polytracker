@@ -1,8 +1,8 @@
-import sys
 import argparse
+import sys
 
-from .plugins import add_command_subparsers
 from . import polytracker
+from .plugins import add_command_subparsers
 
 
 def main():
