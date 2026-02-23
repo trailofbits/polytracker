@@ -1,13 +1,12 @@
 # /usr/bin/python
 import os
 import random
-import sys
 import subprocess
-from typing import List, Tuple
+import sys
 from pathlib import Path
+from typing import List, Tuple
 
 from polytracker import PolyTrackerTrace
-
 
 src_arg = Path(sys.argv[1])
 no_build = "nobuild" == sys.argv[2] if len(sys.argv) > 2 else False
@@ -37,7 +36,7 @@ def polytracker_build(cmdline):
 
 
 def polytracker_instrument(bin):
-    command = ["/usr/bin/env", "polytracker", "instrument-targets", "--taint", bin]
+    command = ["/usr/bin/env", "polytracker", "instrument-targets", "--cflog", bin]
     target_name = f"{bin}.instrumented"
     if not no_build:
         subprocess.call(command, cwd=src_dir)

@@ -13,26 +13,21 @@
 #include <unordered_map>
 
 namespace polytracker {
-namespace detail {
-struct FunctionMappingJSONWriter;
-}
 
 class TaintedControlFlowPass
     : public llvm::PassInfoMixin<TaintedControlFlowPass>,
       public llvm::InstVisitor<TaintedControlFlowPass> {
-  //
+  // represents the taint label type
   llvm::IntegerType *label_ty{nullptr};
-  // Taint tracking startup
-  llvm::FunctionCallee taint_start_fn;
   // Log taint label affecting control flow
   llvm::FunctionCallee cond_br_log_fn;
   // Log enter/leave functions
   llvm::FunctionCallee fn_enter_log_fn;
+  llvm::FunctionType *enter_log_fn_type;
   llvm::FunctionCallee fn_leave_log_fn;
 
   // Helpers
-  void insertCondBrLogCall(llvm::Instruction &inst, llvm::Value *val);
-  void insertTaintStartupCall(llvm::Module &mod);
+  void insertInstrumentation(llvm::Instruction &inst, llvm::Value *val);
   void declareLoggingFunctions(llvm::Module &mod);
 
   llvm::ConstantInt *get_function_id_const(llvm::Function &f);
@@ -41,26 +36,20 @@ class TaintedControlFlowPass
 public:
   using function_id = uint32_t;
 
-  TaintedControlFlowPass();
-  TaintedControlFlowPass(TaintedControlFlowPass &&);
-  ~TaintedControlFlowPass();
-
   llvm::PreservedAnalyses run(llvm::Module &mod,
                               llvm::ModuleAnalysisManager &mam);
-  void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
+  // void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
-  void visitSwitchInst(llvm::SwitchInst &si);
-  void visitSelectInst(llvm::SelectInst &si);
+  // void visitSwitchInst(llvm::SwitchInst &si);
+  // void visitSelectInst(llvm::SelectInst &si);
+  // void visitIndirectBrInst(llvm::IndirectBrInst &ibi);
+  // void visitInvokeInst(llvm::InvokeInst &ii);
 
   void instrumentFunctionEnter(llvm::Function &func);
   void visitReturnInst(llvm::ReturnInst &ri);
 
-  function_id function_mapping(llvm::Function &func);
-
   std::unordered_map<uintptr_t, function_id> function_ids_;
   function_id function_counter_{0};
-
-  std::unique_ptr<detail::FunctionMappingJSONWriter> function_mapping_writer_;
 };
 
 } // namespace polytracker

@@ -1,45 +1,47 @@
-from typing import (
-    BinaryIO,
-    Union,
-    Iterable,
-    Iterator,
-    Optional,
-    Dict,
-    Tuple,
-    List,
-    Set,
-    Type,
-    cast,
-)
-
-from enum import Enum
-from pathlib import Path
-from mmap import mmap, PROT_READ
 from ctypes import (
     Structure,
     c_char,
-    c_int64,
-    c_uint64,
     c_int32,
-    c_uint32,
+    c_int64,
     c_uint8,
     c_uint16,
+    c_uint32,
+    c_uint64,
     sizeof,
 )
+from enum import Enum
+from mmap import PROT_READ, mmap
+from pathlib import Path
+from typing import (
+    BinaryIO,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
-from .plugins import Command
-from .repl import PolyTrackerREPL
-from .polytracker import ProgramTrace
+from cxxfilt import demangle
+from typing_extensions import deprecated
+
 from .inputs import Input
+from .plugins import Command
+from .polytracker import ProgramTrace
+from .repl import PolyTrackerREPL
 from .taint_forest import TaintForest, TaintForestNode
 from .tracing import (
     BasicBlock,
     ByteOffset,
     Function,
     TaintAccess,
-    TraceEvent,
     TaintOutput,
     Taints,
+    TraceEvent,
 )
 
 
@@ -93,11 +95,48 @@ class TDSourceSection:
             yield TDFDHeader.from_buffer_copy(self.mem[offset:])
 
 
+@deprecated("Use ControlFlowEvent instead, TDEvents are no longer written")
+class TDEvent(Structure):
+    """TDEvent is an old version of the ControlFlowEvent kept for backward
+    compatibility only.
+    """
+
+    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
+
+    class Kind(Enum):
+        ENTRY = 0
+        EXIT = 1
+
+    def __repr__(self) -> str:
+        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
+
+
+@deprecated("Use TDControlFlowLog; the TDEvents section is no longer written")
+class TDEventsSection:
+    """TDEventsSection is an old version of the CFLog kept for backward
+    compatibility only.
+    """
+
+    def __init__(self, mem, hdr):
+        self.section = mem[hdr.offset : hdr.offset + hdr.size]  # nosec E203
+
+    def __iter__(self):
+        for offset in range(0, len(self.section), sizeof(TDEvent)):
+            yield TDEvent.from_buffer_copy(self.section, offset)
+
+
 class TDStringSection:
-    """TDAG String Table section
+    """TDAG String Table section.
 
     Interprets the String Table section in a TDAG file.
     Corresponds to StringTableBase in string_table.h.
+
+    The string table will contain information like the following:
+    - source names
+    - function names
+    - additional label metadata
+    Check usages of StringTableBase in the C++ ("write side") part of the
+    codebase.
     """
 
     def __init__(self, mem, hdr):
@@ -106,7 +145,11 @@ class TDStringSection:
 
     def read_string(self, offset):
         n = c_uint16.from_buffer_copy(self.section[offset:]).value
-        assert len(self.section) >= offset + sizeof(c_uint16) + n
+        if not (len(self.section) >= offset + sizeof(c_uint16) + n):
+            raise AssertionError(
+                """Section out of alignment with c_uint16
+                so string could not be read"""
+            )
         return str(
             self.section[offset + sizeof(c_uint16) : offset + sizeof(c_uint16) + n],
             "utf-8",
@@ -130,68 +173,75 @@ class TDLabelSection:
         return len(self.section) // sizeof(c_uint64)
 
 
-class TDEnterFunctionEvent:
+class CFEnterFunctionEvent:
     """Emitted whenever execution enters a function.
     The callstack member is the callstack right before entering the function,
     having the function just entered as the last member of the callstack.
     """
 
-    def __init__(self, callstack):
-        """Callstack after entering function"""
+    def __init__(self, callstack: List):
         self.callstack = callstack
 
     def __repr__(self) -> str:
-        return f"Enter: {self.callstack}"
+        return f"CFEnterFunctionEvent: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDEnterFunctionEvent):
+        if isinstance(__o, CFEnterFunctionEvent):
             return self.callstack == __o.callstack
         return False
 
 
-class TDLeaveFunctionEvent:
+class CFLeaveFunctionEvent:
     """Emitted whenever execution leaves a function.
     The callstack member is the callstack right before leaving the function,
     having the function about to leave as the last member of the callstack.
     """
 
-    def __init__(self, callstack):
-        """Callstack before leaving function"""
+    def __init__(self, callstack: List):
         self.callstack = callstack
 
     def __repr__(self) -> str:
-        return f"Leave: {self.callstack}"
+        return f"CFLeaveFunctionEvent: {self.callstack}"
 
     def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDLeaveFunctionEvent):
+        if isinstance(__o, CFLeaveFunctionEvent):
             return self.callstack == __o.callstack
         return False
 
 
-class TDTaintedControlFlowEvent:
+class TaintedControlFlowEvent:
     """Emitted whenever a control flow change is influenced by tainted data.
     The label that influenced the control flow is available in the `label` member.
     Current callstack (including the function the control flow happened in) is available
     in the `callstack` member."""
 
-    def __init__(self, callstack, label):
+    def __init__(self, callstack: List, label: Optional[int] = None):
         self.callstack = callstack
         self.label = label
 
     def __repr__(self) -> str:
-        return f"TaintedControlFlow label {self.label} callstack {self.callstack}"
+        return f"TaintedControlFlowEvent: taint label {self.label} | {self.callstack}"
 
-    def __eq__(self, __o: object) -> bool:
-        if isinstance(__o, TDTaintedControlFlowEvent):
-            return self.label == __o.label and self.callstack == __o.callstack
+    def __eq__(self, other) -> bool:
+        if isinstance(other, TaintedControlFlowEvent) and self.label is not None:
+            return self.label == other.label and self.callstack == other.callstack
+        elif self.label is None and other.label is None:
+            return self.callstack == other.callstack
         return False
 
 
+ControlFlowEvent = Union[
+    CFEnterFunctionEvent,
+    CFLeaveFunctionEvent,
+    TaintedControlFlowEvent,
+]
+
+
 class TDControlFlowLogSection:
-    """TDAG Control flow log section
+    """TDAG Control flow log section.
 
     Interprets the control flow log section in a TDAG file.
-    Enables enumeration/random access of items
+    Enables enumeration/random access of items in the cflog.
     """
 
     # NOTE: MUST correspond to the members in the `ControlFlowLog::EventType`` in `control_flog_log.h`.
@@ -216,26 +266,30 @@ class TDControlFlowLogSection:
     @staticmethod
     def _align_callstack(target_function_id, callstack):
         while callstack and callstack[-1] != target_function_id:
-            yield TDLeaveFunctionEvent(callstack[:])
+            yield CFLeaveFunctionEvent(callstack[:])
             callstack.pop()
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        self.funcmapping = None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ControlFlowEvent]:
+        """Produce the cflog entries in order from the mmapped buffer."""
         buffer = self.section
         callstack = []
         while buffer:
             event = c_uint8.from_buffer_copy(buffer, 0).value
             buffer = buffer[1:]
+
+            # A function id is a uint32_t that the functions
+            # section maps to an index into the strings table
+            # If you need function names, you should be working
+            # with the tdfile, rather than with a singular section
+            # of the tdag directly.
             function_id, buffer = TDControlFlowLogSection._decode_varint(buffer)
-            if self.funcmapping != None:
-                function_id = self.funcmapping[function_id]
 
             if event == TDControlFlowLogSection.ENTER_FUNCTION:
                 callstack.append(function_id)
-                yield TDEnterFunctionEvent(callstack[:])
+                yield CFEnterFunctionEvent(callstack[:])
             elif event == TDControlFlowLogSection.LEAVE_FUNCTION:
                 # Align call stack, if needed
                 yield from TDControlFlowLogSection._align_callstack(
@@ -243,7 +297,7 @@ class TDControlFlowLogSection:
                 )
 
                 # TODO(hbrodin): If the callstack doesn't contain function_id at all, this will break.
-                yield TDLeaveFunctionEvent(callstack[:])
+                yield CFLeaveFunctionEvent(callstack[:])
                 callstack.pop()
             else:
                 # Align call stack, if needed
@@ -252,14 +306,10 @@ class TDControlFlowLogSection:
                 )
 
                 label, buffer = TDControlFlowLogSection._decode_varint(buffer)
-                yield TDTaintedControlFlowEvent(callstack[:], label)
+                yield TaintedControlFlowEvent(callstack[:], label)
 
         # Drain callstack with artifical TDLeaveFunction events (using a dummy function id that doesn't exist)
         yield from TDControlFlowLogSection._align_callstack(-1, callstack)
-
-    def function_id_mapping(self, id_to_name_array):
-        """This method stores an array used to translate from function id to symbolic names"""
-        self.funcmapping = id_to_name_array
 
 
 class TDSinkSection:
@@ -287,7 +337,12 @@ class TDBitmapSection:
 
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
-        assert len(self.section) % 8 == 0  # Multiple of uint64_t
+        if len(self.section) % 8 != 0:
+            # Multiple of uint64_t
+            raise AssertionError(
+                """Bitmap Section out of alignment and
+                                 cannot be read"""
+            )
 
     def enumerate_set_bits(self):
         """Enumerates all bits that are set
@@ -318,21 +373,23 @@ class TDSourceIndexSection(TDBitmapSection):
 
 
 class TDFunctionsSection:
+    """TDFunctionsSection holds the mapping between the function IDs
+    stored in callstack form in the cflog section, and the function
+    names stored in the string table. See fnmapping in the C++ part
+    of the codebase for the "write" side part of Polytracker that
+    pertains to this section. Each entry is an uint32_t as set in
+    fnmapping.cpp, but a TDFnHeader will then contain *two* of these:
+    the function_id and the name_offset.
+
+    Structure in memory: |offset|function id|...
+    """
+
     def __init__(self, mem, hdr):
         self.section = mem[hdr.offset : hdr.offset + hdr.size]
 
     def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDFnHeader)):
-            yield TDFnHeader.from_buffer_copy(self.section, offset)
-
-
-class TDEventsSection:
-    def __init__(self, mem, hdr):
-        self.section = mem[hdr.offset : hdr.offset + hdr.size]
-
-    def __iter__(self):
-        for offset in range(0, len(self.section), sizeof(TDEvent)):
-            yield TDEvent.from_buffer_copy(self.section, offset)
+        for entry in range(0, len(self.section), sizeof(TDFnHeader)):
+            yield TDFnHeader.from_buffer_copy(self.section, entry)
 
 
 class TDFDHeader(Structure):
@@ -352,7 +409,9 @@ class TDFDHeader(Structure):
 
 
 class TDFnHeader(Structure):
-    _fields_ = [("name_offset", c_uint32)]
+    # This corresponds to the Function inline constructor in fnmapping.h.
+    # Anything using Structure needs to be in sync with the corresponding C++.
+    _fields_ = [("name_offset", c_uint32), ("function_id", c_uint32)]
 
 
 class TDNode:
@@ -413,17 +472,6 @@ class TDSink(Structure):
         return f"TDSink fdidx: {self.fdidx} offset: {self.offset} label: {self.label}"
 
 
-class TDEvent(Structure):
-    _fields_ = [("kind", c_uint8), ("fnidx", c_uint16)]
-
-    class Kind(Enum):
-        ENTRY = 0
-        EXIT = 1
-
-    def __repr__(self) -> str:
-        return f"kind: {self.Kind(self.kind).name} fnidx: {self.fnidx}"
-
-
 TDSection = Union[
     TDLabelSection,
     TDSourceSection,
@@ -454,7 +502,7 @@ class TDFile:
         section_offset = sizeof(TDFileMeta)
         self.sections: List[TDSection] = []
         self.sections_by_type: Dict[Type[TDSection], TDSection] = {}
-        for i in range(0, self.filemeta.section_count):
+        for _ in range(0, self.filemeta.section_count):
             hdr = TDSectionMeta.from_buffer_copy(self.buffer, section_offset)
             if hdr.tag == 1:
                 self.sections.append(TDSourceSection(self.buffer, hdr))
@@ -489,48 +537,87 @@ class TDFile:
         self.sink_cache: Dict[int, TDSink] = {}
 
         self.fd_headers: List[Tuple[Path, TDFDHeader]] = list(self.read_fd_headers())
-        self.fn_headers: List[Tuple[str, TDFnHeader]] = list(self.read_fn_headers())
-
-    def _get_section(self, wanted_type: Type[TDSection]) -> TDSection:
-        return self.sections_by_type[wanted_type]
 
     def read_fd_headers(self) -> Iterator[Tuple[Path, TDFDHeader]]:
         sources = self.sections_by_type[TDSourceSection]
+        if not isinstance(sources, TDSourceSection):
+            raise AssertionError("Sources Section could not be read")
         strings = self.sections_by_type[TDStringSection]
-        assert isinstance(sources, TDSourceSection)
-        assert isinstance(strings, TDStringSection)
+        if not isinstance(strings, TDStringSection):
+            raise AssertionError("Strings Table could not be read")
 
-        yield from (
-            (Path(strings.read_string(x.name_offset)), x) for x in sources.enumerate()
-        )
+        for source in sources.enumerate():
+            yield Path(strings.read_string(source.name_offset)), source
 
-    def read_fn_headers(self) -> Iterator[Tuple[str, TDFnHeader]]:
+    @property
+    def mangled_fn_symbol_lookup(self) -> Dict[int, str]:
+        """Unordered! map of dynamically observed function IDs to clang
+        symbols. You can demangle the symbols with cxxfilt.demangle.
+        """
+        lookup = {}
         functions = self.sections_by_type[TDFunctionsSection]
+        if not isinstance(functions, TDFunctionsSection):
+            raise AssertionError("Functions Section could not be read")
         strings = self.sections_by_type[TDStringSection]
-        assert isinstance(functions, TDFunctionsSection)
-        assert isinstance(strings, TDStringSection)
+        if not isinstance(strings, TDStringSection):
+            raise AssertionError("String Table could not be read")
 
-        for header in functions:
-            name = strings.read_string(header.name_offset)
-            yield name, header
+        for entry in functions:
+            lookup[entry.function_id] = strings.read_string(entry.name_offset)
+
+        return lookup
+
+    def _maybe_demangle(self, function_id: int) -> Union[str, int]:
+        """Depending on the age of the tdag, it may not contain a function
+        mapping. If the tdag doesn't contain a function mapping, this will
+        only return function ids and you'll need to manually map them against
+        symbols gathered statically from the compiled instrumented binary.
+        """
+        maybe_symbol = self.mangled_fn_symbol_lookup.get(function_id)
+        if maybe_symbol is not None:
+            return demangle(maybe_symbol)
+        else:
+            return function_id
+
+    def cflog(self, demangle_symbols=False) -> Iterator[ControlFlowEvent]:
+        """Presents the control flow log. Does not demangle symbols by default,
+        for performance.
+        """
+        cflog_section = self.sections_by_type[TDControlFlowLogSection]
+        if not isinstance(cflog_section, TDControlFlowLogSection):
+            raise AssertionError("CFLog section not correctly read from TDAG?")
+
+        if demangle_symbols:
+            for cflog_entry in cflog_section:
+                cflog_entry.callstack[:] = [
+                    self._maybe_demangle(function_id)
+                    for function_id in cflog_entry.callstack
+                ]
+
+                yield cflog_entry
+        else:
+            cflog_section.__iter__()
 
     def input_labels(self) -> Iterator[int]:
         """Enumerates all taint labels that are input labels (source taint)"""
         source_index_section = self.sections_by_type[TDSourceIndexSection]
-        assert isinstance(source_index_section, TDSourceIndexSection)
+        if not isinstance(source_index_section, TDSourceIndexSection):
+            raise AssertionError("Source Index not correctly read from TDAG?")
         return source_index_section.enumerate_set_bits()
 
     @property
     def label_count(self):
         label_section = self.sections_by_type[TDLabelSection]
-        assert isinstance(label_section, TDLabelSection)
+        if not isinstance(label_section, TDLabelSection):
+            raise AssertionError("Could not read Label Section from TDAG?")
         return label_section.count()
 
     def read_node(self, label: int) -> int:
         if label in self.raw_nodes:
             return self.raw_nodes[label]
         label_section = self.sections_by_type[TDLabelSection]
-        assert isinstance(label_section, TDLabelSection)
+        if not isinstance(label_section, TDLabelSection):
+            raise AssertionError("Could not read Label Section from TDAG?")
         result = label_section.read_raw(label)
 
         self.raw_nodes[label] = result
@@ -566,17 +653,9 @@ class TDFile:
     @property
     def sinks(self) -> Iterator[TDSink]:
         sink_section = self.sections_by_type[TDSinkSection]
-        assert isinstance(sink_section, TDSinkSection)
+        if not isinstance(sink_section, TDSinkSection):
+            raise AssertionError("Could not read Sink Section from TDAG?")
         yield from sink_section.enumerate()
-
-    def read_event(self, offset: int) -> TDEvent:
-        return TDEvent.from_buffer_copy(self.buffer, offset)
-
-    @property
-    def events(self) -> Iterator[TDEvent]:
-        events_section = self.sections_by_type[TDEventsSection]
-        assert isinstance(events_section, TDEventsSection)
-        yield from events_section
 
 
 class TDTaintOutput(TaintOutput):
@@ -613,9 +692,14 @@ class TDProgramTrace(ProgramTrace):
         raise NotImplementedError()
 
     def file_offset(self, node: TaintForestNode) -> ByteOffset:
-        assert node.source is not None
+        if node.source is None:
+            raise AssertionError(
+                """
+            No source could be found from which offset could be calculated"""
+            )
         tdnode: TDNode = self.tdfile.decode_node(node.label)
-        assert isinstance(tdnode, TDSourceNode)
+        if not isinstance(tdnode, TDSourceNode):
+            raise AssertionError("Source Node could not be decoded")
         return ByteOffset(node.source, tdnode.offset)
 
     @property
@@ -656,7 +740,8 @@ class TDProgramTrace(ProgramTrace):
         seen: Set[int] = set()
         for source_label in self.tdfile.input_labels():
             source_node = self.tdfile.decode_node(source_label)
-            assert isinstance(source_node, TDSourceNode)
+            if not isinstance(source_node, TDSourceNode):
+                raise AssertionError("Source Node could not be decoded?")
             if source_node.idx not in seen:
                 path, fd_header = self.tdfile.fd_headers[source_node.idx]
                 yield Input(fd_header.fd, str(path), fd_header.size)
@@ -793,10 +878,11 @@ class TDTaintForest(TaintForest):
                 (curr, node.last),
             )
 
-        assert False
+        raise AssertionError("TDTaintForestNode could not be created")
 
     def get_node(self, label: int, source: Optional[Input] = None) -> TDTaintForestNode:
-        assert source is None
+        if source is not None:
+            raise AssertionError("Node could not be retrieved from label")
 
         if self.node_cache[label] is not None:
             return cast(TDTaintForestNode, self.node_cache[label])
@@ -824,13 +910,7 @@ class TDInfo(Command):
             "--print-fd-headers",
             "-f",
             action="store_true",
-            help="print file descriptor headers",
-        )
-        parser.add_argument(
-            "--print-fn-headers",
-            "-x",
-            action="store_true",
-            help="print function headers",
+            help="print file descriptor headers (sources)",
         )
         parser.add_argument(
             "--print-taint-sinks",
@@ -849,14 +929,14 @@ class TDInfo(Command):
             "--print-function-trace",
             "-t",
             action="store_true",
-            help="print function trace events",
+            help="print function trace",
         )
 
         parser.add_argument(
             "--print-control-flow-log",
             "-c",
             action="store_true",
-            help="print function trace events",
+            help="print control flow log events",
         )
 
     def run(self, args):
@@ -869,11 +949,6 @@ class TDInfo(Command):
                     path = h[0]
                     print(f"{i}: {path}")
 
-            if args.print_fn_headers:
-                for i, h in enumerate(tdfile.fn_headers):
-                    name = h[0]
-                    print(f"{i}: {name}")
-
             if args.print_taint_sinks:
                 for s in tdfile.sinks:
                     print(f"{s} -> {tdfile.decode_node(s.label)}")
@@ -883,11 +958,20 @@ class TDInfo(Command):
                     print(f"Label {lbl}: {tdfile.decode_node(lbl)}")
 
             if args.print_function_trace:
-                for e in tdfile.events:
-                    print(f"{e}")
+                if (
+                    TDFunctionsSection in tdfile.sections_by_type.keys()
+                    and len(tdfile.mangled_fn_symbol_lookup) > 0
+                ):
+                    for k, v in tdfile.mangled_fn_symbol_lookup:
+                        print(f"function_id '{k}': function '{demangle(v)}'")
+                else:
+                    print("Error: no Functions section was read from tdag!")
+                    print(f"Sections that could be read: {tdfile.sections}")
 
             if args.print_control_flow_log:
-                cflog = tdfile._get_section(TDControlFlowLogSection)
-                assert isinstance(cflog, TDControlFlowLogSection)
-                for obj in cflog:
-                    print(f"{obj}")
+                if TDControlFlowLogSection in tdfile.sections_by_type.keys():
+                    for event in tdfile.cflog(demangle_symbols=True):
+                        print(event)
+                else:
+                    print("Error: no Control Flow Log section read from tdag!")
+                    print(f"Sections that could be read: {tdfile.sections}")

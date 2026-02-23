@@ -21,14 +21,17 @@
 namespace taintdag {
 
 struct Function {
-public:
   using offset_t = StringTable::offset_t;
   offset_t name_offset;
+  uint32_t function_id;
+
+  Function(offset_t name_ofs, uint32_t f_id)
+      : name_offset(name_ofs), function_id(f_id){};
 };
 
 class Functions : public FixedSizeAlloc<Function> {
 public:
-  using index_t = uint16_t;
+  using index_t = StringTable::offset_t;
 
   static constexpr uint8_t tag{6};
   static constexpr size_t allocation_size{std::numeric_limits<index_t>::max() *
@@ -39,11 +42,13 @@ public:
       : FixedSizeAlloc{of.range},
         string_table{of.output_file.template section<StringTable>()} {}
 
-  std::optional<index_t> add_mapping(std::string_view name);
+  std::optional<index_t> add_mapping(uint32_t function_id,
+                                     std::string_view function_name);
 
 private:
   StringTable &string_table;
   std::mutex mappings_mutex;
+  // look up Function index in the Functions section by function name
   std::unordered_map<std::string_view, index_t> mappings;
 };
 

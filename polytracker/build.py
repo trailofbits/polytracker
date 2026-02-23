@@ -1,9 +1,9 @@
 import argparse
-import subprocess
-import os
 import json
+import os
+import subprocess  # nosec B404
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from .plugins import Command
 
@@ -147,10 +147,16 @@ def _optimize_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
     subprocess.check_call(cmd)
 
 
-def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> None:
+def _preopt_instrument_bitcode(
+    input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str]
+) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
     )
+    POLY_ABI_LIST_PATH: Path = _ensure_path_exists(
+        _compiler_dir_path() / "abi_lists" / "polytracker_abilist.txt"
+    )
+    ABI_PATH: Path = _ensure_path_exists(_compiler_dir_path() / "abi_lists")
 
     cmd = [
         "opt",
@@ -163,16 +169,19 @@ def _preopt_instrument_bitcode(input_bitcode: Path, output_bitcode: Path) -> Non
         "-o",
         str(output_bitcode),
     ]
+
+    if ignore_lists and len(ignore_lists) > 0:
+        # ignore lists for `pt-tcf` (function tracing for control flow logging)
+        cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
+        for item in ignore_lists:
+            cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
+
     # execute `cmd`
     subprocess.check_call(cmd)
 
 
 def _instrument_bitcode(
-    input_bitcode: Path,
-    output_bitcode: Path,
-    ignore_lists: List[str],
-    add_taint_tracking: bool,
-    add_function_tracing: bool,
+    input_bitcode: Path, output_bitcode: Path, ignore_lists: List[str]
 ) -> None:
     POLY_PASS_PATH: Path = _ensure_path_exists(
         _compiler_dir_path() / "pass" / "libPolytrackerPass.so"
@@ -193,35 +202,19 @@ def _instrument_bitcode(
         str(POLY_PASS_PATH),
     ]
 
-    pass_pipeline: List[str] = []
-    if add_taint_tracking:
-        pass_pipeline.append("pt-taint")
-
-    if add_function_tracing:
-        pass_pipeline.append("pt-ftrace")
-
-    if add_taint_tracking:
-        pass_pipeline += ["pt-dfsan", "pt-rm-fn-attr"]
-
+    pass_pipeline: List[str] = ["pt-taint", "pt-dfsan", "pt-rm-fn-attr"]
     cmd.append(f"-passes={','.join(pass_pipeline)}")
 
-    if add_taint_tracking:
-        # ignore lists for `pt-taint`
-        cmd.append(
-            f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",
-        )
-        for item in ignore_lists:
-            cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
-        # abi lists for `dfsan`
-        cmd.append(f"-pt-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
-        for item in ignore_lists:
-            cmd.append(f"-pt-dfsan-abilist={ABI_PATH}/{item}")
-
-    if add_function_tracing:
-        # ignore lists for `pt-ftrace`
-        cmd.append(f"-pt-ftrace-ignore-list={POLY_ABI_LIST_PATH}")
-        for item in ignore_lists:
-            cmd.append(f"-pt-ftrace-ignore-list={ABI_PATH}/{item}")
+    # ignore lists for `pt-taint`
+    cmd.append(
+        f"-pt-taint-ignore-list={POLY_ABI_LIST_PATH}",
+    )
+    for item in ignore_lists:
+        cmd.append(f"-pt-taint-ignore-list={ABI_PATH}/{item}")
+    # abi lists for `dfsan`
+    cmd.append(f"-pt-dfsan-abilist={DFSAN_ABI_LIST_PATH}")
+    for item in ignore_lists:
+        cmd.append(f"-pt-dfsan-abilist={ABI_PATH}/{item}")
 
     # input and output files
     cmd += [str(input_bitcode), "-o", str(output_bitcode)]
@@ -317,32 +310,37 @@ class InstrumentBitcode(Command):
         )
 
         parser.add_argument(
-            "--taint",
-            action="store_true",
-            help="instrument with taint tracking",
-        )
-
-        parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
             help="specify additional ignore lists to polytracker",
         )
 
-    def run(self, args: argparse.Namespace):
-        _instrument_bitcode(
-            args.input,
-            args.output,
-            args.ignore_lists,
-            args.taint,
-            args.ftrace,
+        parser.add_argument(
+            "--cflog",
+            action="store_true",
+            help="also instrument with function tracing and control affecting dataflow logging IN ADDITION TO the default dynamic taint analysis instrumentation passes",
         )
+
+    def run(self, args: argparse.Namespace):
+        if args.cflog:
+            cflog_output = Path(f"{args.output.stem}.cflog_instrumented.bc")
+            _preopt_instrument_bitcode(
+                input_bitcode=args.input,
+                output_bitcode=cflog_output,
+                ignore_lists=args.ignore_lists,
+            )
+            _instrument_bitcode(
+                input_bitcode=cflog_output,
+                output_bitcode=args.output,
+                ignore_lists=args.ignore_lists,
+            )
+        else:
+            _instrument_bitcode(
+                input_bitcode=args.input,
+                output_bitcode=args.output,
+                ignore_lists=args.ignore_lists,
+            )
 
 
 class LowerBitcode(Command):
@@ -382,7 +380,7 @@ class LowerBitcode(Command):
 
 class InstrumentTargets(Command):
     name = "instrument-targets"
-    help = "instruments blight journal build targets with polytracker"
+    help = "instruments blight journal build targets with polytracker for dynamic taint analysis"
 
     def __init_arguments__(self, parser: argparse.ArgumentParser):
         parser.add_argument(
@@ -400,18 +398,6 @@ class InstrumentTargets(Command):
         )
 
         parser.add_argument(
-            "--taint",
-            action="store_true",
-            help="instrument with taint tracking",
-        )
-
-        parser.add_argument(
-            "--ftrace",
-            action="store_true",
-            help="instrument with function tracing",
-        )
-
-        parser.add_argument(
             "--ignore-lists",
             nargs="+",
             default=[],
@@ -421,7 +407,7 @@ class InstrumentTargets(Command):
         parser.add_argument(
             "--cflog",
             action="store_true",
-            help="instrument with control affecting dataflow logging",
+            help="also instrument with function tracing and control affecting dataflow logging IN ADDITION TO the default dynamic taint analysis instrumentation passes",
         )
 
     def run(self, args: argparse.Namespace):
@@ -432,16 +418,23 @@ class InstrumentTargets(Command):
             opt_bc = bc_path.with_suffix(".opt.bc")
             _extract_bitcode(target_path, bc_path)
             if args.cflog:
-                # Control affecting data flow logging happens before optimization
-                _preopt_instrument_bitcode(bc_path, bc_path)
+                # Control affecting data flow logging instrumentation happens
+                # before optimization
+                cflog_bc_path = Path(f"{bc_path.stem}.cflog_instrumented.bc")
+                _preopt_instrument_bitcode(
+                    input_bitcode=bc_path,
+                    output_bitcode=cflog_bc_path,
+                    ignore_lists=args.ignore_lists,
+                )
 
-            _optimize_bitcode(bc_path, opt_bc)
+                _optimize_bitcode(input_bitcode=cflog_bc_path, output_bitcode=opt_bc)
+            else:
+                _optimize_bitcode(input_bitcode=bc_path, output_bitcode=opt_bc)
+
             inst_bc_path = Path(f"{bc_path.stem}.instrumented.bc")
             _instrument_bitcode(
-                opt_bc,
-                inst_bc_path,
-                args.ignore_lists,
-                args.taint,
-                args.ftrace,
+                input_bitcode=opt_bc,
+                output_bitcode=inst_bc_path,
+                ignore_lists=args.ignore_lists,
             )
             _lower_bitcode(inst_bc_path, Path(inst_bc_path.stem), target_cmd)

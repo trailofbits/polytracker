@@ -1,10 +1,11 @@
-import sys
-import pytest
 import subprocess
-import polytracker
-
+import sys
 from pathlib import Path
 from typing import List
+
+import pytest
+
+import polytracker
 
 
 def pytest_configure(config):
@@ -26,16 +27,17 @@ def build(target: Path, binary: Path) -> None:
 
     cmd = ["build"]
     if target.suffix == ".cpp":
-        cmd.append("clang++")
+        cmd += ["clang++", "-std=c++20"]
     else:
         cmd.append("clang")
 
+    # debugging and want symbols? add -O0 here
     cmd += ["-g", "-o", str(binary), str(target)]
     run_polytracker(cmd)
 
 
 def instrument(target: str) -> None:
-    cmd = ["instrument-targets", "--taint", "--ftrace", "--cflog", target]
+    cmd = ["instrument-targets", "--cflog", target]
     run_polytracker(cmd)
 
 
@@ -79,11 +81,8 @@ def program_trace(input_file, trace_file, instrumented_binary, monkeypatch):
     monkeypatch.chdir(input_file.parent)
     monkeypatch.setenv("POLYDB", str(trace_file))
     cmd = [
-        # instrumented binary
         instrumented_binary,
-        # input data
         str(input_file),
     ]
     subprocess.check_call(cmd)
-    # Read the trace file
     return polytracker.PolyTrackerTrace.load(trace_file)

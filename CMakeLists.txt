@@ -22,8 +22,6 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_subdirectory(third_party/Catch2)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/third_party/Catch2/contrib")
 add_subdirectory(third_party/indicators)
 set(SPDLOG_NO_EXCEPTIONS TRUE)
 add_subdirectory(third_party/spdlog)
@@ -31,4 +29,6 @@ add_subdirectory(third_party/spdlog)
 add_subdirectory(polytracker)
 
 enable_testing()
+add_subdirectory(third_party/Catch2)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/third_party/Catch2/contrib")
 add_subdirectory(unittests/src/taintdag)

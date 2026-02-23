@@ -73,9 +73,11 @@ void TaintTrackingPass::insertCondBrLogCall(llvm::Instruction &inst,
                                             llvm::Value *val) {
   llvm::IRBuilder<> ir(&inst);
   auto dummy_val{val};
-  if (inst.getType()->isVectorTy()) {
-    dummy_val = ir.CreateExtractElement(val, uint64_t(0));
+
+  if (llvm::isa<llvm::VectorType>(val->getType())) {
+    dummy_val = ir.CreateExtractElement(val, ir.getInt32(0));
   }
+  
   ir.CreateCall(cond_br_log_fn, {ir.CreateSExtOrTrunc(dummy_val, label_ty)});
 }
 
@@ -86,7 +88,7 @@ void TaintTrackingPass::insertTaintStartupCall(llvm::Module &mod) {
 
 void TaintTrackingPass::visitGetElementPtrInst(llvm::GetElementPtrInst &gep) {
   for (auto &idx : gep.indices()) {
-    if (llvm::isa<llvm::ConstantInt>(idx)) {
+    if (llvm::isa<llvm::Constant>(idx)) {
       continue;
     }
     insertCondBrLogCall(gep, idx);
@@ -102,6 +104,30 @@ void TaintTrackingPass::visitBranchInst(llvm::BranchInst &bi) {
 
 void TaintTrackingPass::visitSwitchInst(llvm::SwitchInst &si) {
   insertCondBrLogCall(si, si.getCondition());
+}
+
+void TaintTrackingPass::visitSelectInst(llvm::SelectInst &si) {
+  auto cond = si.getCondition();
+  if (llvm::isa<llvm::Constant>(cond)) {
+    return;
+  }
+  insertCondBrLogCall(si, cond);
+}
+
+void TaintTrackingPass::visitIndirectBrInst(llvm::IndirectBrInst &ibi) {
+  auto addr = ibi.getAddress();
+  if (llvm::isa<llvm::Constant>(addr)) {
+    return;
+  }
+  insertCondBrLogCall(ibi, addr);
+}
+
+void TaintTrackingPass::visitInvokeInst(llvm::InvokeInst &ii) {
+  auto called = ii.getCalledOperand();
+  if (llvm::isa<llvm::Constant>(called)) {
+    return;
+  }
+  insertCondBrLogCall(ii, called);
 }
 
 void TaintTrackingPass::declareLoggingFunctions(llvm::Module &mod) {

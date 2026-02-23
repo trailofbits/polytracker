@@ -1,19 +1,20 @@
 import argparse
-from collections import defaultdict
-import subprocess
 import os
+import subprocess  # nosec B404
 import sys
-from typing import Optional, Set, Iterator, Tuple, Dict
-from polytracker import PolyTrackerTrace, taint_dag
-from polytracker.taint_dag import TDFile, TDNode, TDSourceNode, TDUnionNode, TDRangeNode
-from polytracker.mapping import InputOutputMapping
+from collections import defaultdict
+from functools import partialmethod
 from pathlib import Path
+from typing import Dict, Iterator, Optional, Set, Tuple
+
+import cxxfilt
 
 # To Silence TQDM!
 from tqdm import tqdm
-from functools import partialmethod
 
-import cxxfilt
+from polytracker import PolyTrackerTrace, taint_dag
+from polytracker.mapping import InputOutputMapping
+from polytracker.taint_dag import TDFile, TDNode, TDRangeNode, TDSourceNode, TDUnionNode
 
 tqdm.__init__ = partialmethod(tqdm.__init__, disable=True)
 
@@ -210,7 +211,6 @@ def run_instrumented(is_debug: bool, inputfile: Path, targetdir: Path):
     e = {
         "POLYDB": str(db),
         "POLYTRACKER_STDOUT_SINK": "1",
-        "POLYTRACKER_LOG_CONTROL_FLOW": "1",
     }
     ret = subprocess.run(args, env=e, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     os.rename(db, targetdir / db)
@@ -275,7 +275,7 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
             map(
                 lambda e: (input_offsets(e.label, tdfile), e.callstack),
                 filter(
-                    lambda e: isinstance(e, taint_dag.TDTaintedControlFlowEvent), cflog
+                    lambda e: isinstance(e, taint_dag.TaintedControlFlowEvent), cflog
                 ),
             )
         )
@@ -312,9 +312,11 @@ def compare_cflog(dbg_tdfile, rel_tdfile):
             print_cols(
                 str(dbg_entry[0]),
                 str(rel_entry[0]),
-                f" !!! DBG: {dbg_callstack} != REL: {rel_callstack}"
-                if dbg_callstack != rel_callstack
-                else "",
+                (
+                    f" !!! DBG: {dbg_callstack} != REL: {rel_callstack}"
+                    if dbg_callstack != rel_callstack
+                    else ""
+                ),
             )
             dbgidx += 1
             relidx += 1

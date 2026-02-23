@@ -15,7 +15,7 @@ namespace polytracker {
 
 class TaintTrackingPass : public llvm::PassInfoMixin<TaintTrackingPass>,
                           public llvm::InstVisitor<TaintTrackingPass> {
-  //
+  // represents the taint label type
   llvm::IntegerType *label_ty{nullptr};
   // Taint tracking startup
   llvm::FunctionCallee taint_start_fn;
@@ -32,6 +32,9 @@ public:
   void visitGetElementPtrInst(llvm::GetElementPtrInst &gep);
   void visitBranchInst(llvm::BranchInst &bi);
   void visitSwitchInst(llvm::SwitchInst &si);
+  void visitSelectInst(llvm::SelectInst &si);
+  void visitIndirectBrInst(llvm::IndirectBrInst &ibi);
+  void visitInvokeInst(llvm::InvokeInst &ii);
 };
 
 } // namespace polytracker

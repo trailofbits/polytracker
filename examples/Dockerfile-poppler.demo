@@ -3,7 +3,7 @@ FROM ubuntu:focal AS poppler-sources
 WORKDIR /polytracker/the_klondike
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git
-RUN git clone --depth=1 --branch poppler-23.06.0 https://anongit.freedesktop.org/git/poppler/poppler.git
+RUN git clone --depth=1 --branch poppler-23.06.0 https://gitlab.freedesktop.org/poppler/poppler.git
 
 # Now, build the qpdf image using previously downloaded source
 FROM trailofbits/polytracker:latest
@@ -21,6 +21,7 @@ RUN polytracker build cmake -S . -B build \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DBUILD_GTK_TESTS=OFF \
 	-DBUILD_QT5_TESTS=OFF \
+	-DBUILD_QT6_TESTS=OFF \
 	-DBUILD_CPP_TESTS=OFF \
 	-DENABLE_BOOST=OFF \
 	-DENABLE_CPP=OFF \
@@ -44,7 +45,7 @@ RUN polytracker build cmake -S . -B build \
 RUN polytracker build cmake --build build -j$(nproc)
 
 # pdftotext (separate for measurement purposes only)
-RUN polytracker instrument-targets --taint --ftrace pdftotext --ignore-lists freetype fontconfig
+RUN polytracker instrument-targets pdftotext --ignore-lists freetype fontconfig
 
 # pdftops (separate for measurement purposes only)
-RUN polytracker instrument-targets --taint --ftrace pdftops --ignore-lists freetype fontconfig
+RUN polytracker instrument-targets pdftops --ignore-lists freetype fontconfig

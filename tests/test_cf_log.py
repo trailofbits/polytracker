@@ -1,20 +1,63 @@
-import cxxfilt
-import json
-import pytest
 import subprocess
+from pathlib import Path
+from typing import List
+
+import cxxfilt
+import pytest
 
 import polytracker
-from pathlib import Path
-
 from polytracker.taint_dag import (
-    TDEnterFunctionEvent,
-    TDLeaveFunctionEvent,
-    TDTaintedControlFlowEvent,
+    CFEnterFunctionEvent,
+    CFLeaveFunctionEvent,
+    ControlFlowEvent,
+    TaintedControlFlowEvent,
+    TDControlFlowLogSection,
+    TDNode,
 )
 
 
+@pytest.mark.program_trace("test_fntrace.cpp")
+def test_function_mapping(program_trace) -> None:
+    mangled_symbols = list(program_trace.tdfile.mangled_fn_symbol_lookup.values())
+
+    assert mangled_symbols == ["main", "_Z9factoriali"]
+    expected_names = ["main", "factorial(int)"]
+    for symbol in mangled_symbols:
+        assert cxxfilt.demangle(symbol) in expected_names
+
+
+@pytest.mark.program_trace("test_fntrace.cpp")
+def test_callstack_mapping(program_trace) -> None:
+    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
+        TDControlFlowLogSection
+    ]
+
+    for cflog_entry in cflog:
+        assert len(cflog_entry.callstack) > 0
+        # a callstack entry (if not mapped and demangled) is just a function id
+        for callstack_entry in cflog_entry.callstack:
+            # when we look up the function id it should map to a name we traced
+            assert callstack_entry in program_trace.tdfile.mangled_fn_symbol_lookup
+
+
+@pytest.mark.program_trace("test_fntrace.cpp")
+def test_label_mapping(program_trace) -> None:
+    cflog: TDControlFlowLogSection = program_trace.tdfile.sections_by_type[
+        TDControlFlowLogSection
+    ]
+
+    for cflog_entry in cflog:
+        if type(cflog_entry) is TaintedControlFlowEvent:
+            assert hasattr(cflog_entry, "label")
+            node: TDNode = program_trace.tdfile.decode_node(cflog_entry.label)
+            assert node.affects_control_flow
+        else:
+            assert not hasattr(cflog_entry, "label")
+
+
 @pytest.mark.program_trace("test_cf_log.cpp")
-def test_cf_log(instrumented_binary: Path, trace_file: Path):
+def test_cf_log(instrumented_binary: Path, trace_file: Path) -> None:
+    """Demonstrates how the cflog should work end to end, integrated with the fn mapping and the function symbols from the strings table."""
     # Data to write to stdin, one byte at a time
     stdin_data = "abcdefgh"
 
@@ -24,46 +67,43 @@ def test_cf_log(instrumented_binary: Path, trace_file: Path):
         env={
             "POLYDB": str(trace_file),
             "POLYTRACKER_STDIN_SOURCE": "1",
-            "POLYTRACKER_LOG_CONTROL_FLOW": "1",
         },
     )
 
     program_trace = polytracker.PolyTrackerTrace.load(trace_file)
 
-    cflog = program_trace.tdfile._get_section(
-        polytracker.taint_dag.TDControlFlowLogSection
-    )
-
-    # The functionid mapping is available next to the built binary
-    with open(instrumented_binary.parent / "functionid.json", "rb") as f:
-        functionid_mapping = list(map(cxxfilt.demangle, json.load(f)))
-
-    # Apply the id to function mappign
-    cflog.function_id_mapping(functionid_mapping)
-
     expected_seq = [
-        TDEnterFunctionEvent(["main"]),
-        TDTaintedControlFlowEvent(["main"], 1),
-        TDTaintedControlFlowEvent(["main"], 2),
-        TDTaintedControlFlowEvent(["main"], 3),
-        TDTaintedControlFlowEvent(["main"], 4),
-        TDTaintedControlFlowEvent(["main"], 5),
-        TDTaintedControlFlowEvent(["main"], 6),
-        TDTaintedControlFlowEvent(["main"], 7),
-        TDTaintedControlFlowEvent(["main"], 8),
-        TDTaintedControlFlowEvent(["main"], 15),
-        TDTaintedControlFlowEvent(["main"], 3),
-        TDEnterFunctionEvent(["main", "f1(unsigned char)"]),
-        TDTaintedControlFlowEvent(["main", "f1(unsigned char)"], 7),
-        TDEnterFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
-        TDTaintedControlFlowEvent(
-            ["main", "f1(unsigned char)", "f2(unsigned char)"], 7
-        ),
-        TDLeaveFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
-        TDLeaveFunctionEvent(["main", "f1(unsigned char)"]),
-        TDLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
+        CFEnterFunctionEvent(["main"]),
+        TaintedControlFlowEvent(["main"], 1),
+        TaintedControlFlowEvent(["main"], 2),
+        TaintedControlFlowEvent(["main"], 3),
+        TaintedControlFlowEvent(["main"], 4),
+        TaintedControlFlowEvent(["main"], 5),
+        TaintedControlFlowEvent(["main"], 6),
+        TaintedControlFlowEvent(["main"], 7),
+        TaintedControlFlowEvent(["main"], 8),
+        TaintedControlFlowEvent(["main"], 15),
+        TaintedControlFlowEvent(["main"], 3),
+        CFEnterFunctionEvent(["main", "f1(unsigned char)"]),
+        TaintedControlFlowEvent(["main", "f1(unsigned char)"], 7),
+        CFEnterFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
+        TaintedControlFlowEvent(["main", "f1(unsigned char)", "f2(unsigned char)"], 7),
+        CFLeaveFunctionEvent(["main", "f1(unsigned char)", "f2(unsigned char)"]),
+        CFLeaveFunctionEvent(["main", "f1(unsigned char)"]),
+        CFLeaveFunctionEvent(["main"]),  # This is artifical as there is a call to exit
     ]
 
-    # NOTE(hbrodin): Could have done assert list(cflog) == expected_seq, but this provides the failed element
+    cflog: List[ControlFlowEvent] = program_trace.tdfile.cflog(demangle_symbols=True)
     for got, expected in zip(cflog, expected_seq):
         assert got == expected
+
+        if type(got) is TaintedControlFlowEvent:
+            assert got.label is not None
+
+        assert len(got.callstack) > 0
+
+    for entry in cflog:
+        for callstack_entry in entry.callstack:
+            assert callstack_entry in list(
+                program_trace.tdfile.mangled_fn_symbol_lookup.values()
+            )
