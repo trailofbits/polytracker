@@ -1,44 +1,44 @@
 version: 0.1
 cli:
-  version: 1.14.1
+  version: 1.25.0
 plugins:
   sources:
     - id: trunk
-      ref: v1.2.1
+      ref: v1.10.0
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
-    - go@1.19.5
-    - node@18.12.1
-    - python@3.10.8
+    - go@1.21.0
+    - node@22.16.0
+    - python@3.14.4
 lint:
   ignore:
     - linters: [ALL]
       paths:
         - polytracker/src/compiler-rt/**
   enabled:
-    - taplo@0.8.1
-    - actionlint@1.6.25
-    - bandit@1.7.5
-    - black@23.7.0
-    - checkov@2.4.5
+    - taplo@0.10.0
+    - actionlint@1.7.12
+    - bandit@1.9.4
+    - black@26.5.1
+    - checkov@3.2.529
     - clang-format@16.0.3
-    - flake8@6.1.0
+    - flake8@7.3.0
     - git-diff-check
-    - hadolint@2.12.0
-    - isort@5.12.0
-    - markdownlint@0.35.0
-    - mypy@1.5.1
-    - oxipng@8.0.0
-    - prettier@3.0.2
-    - ruff@0.0.285
-    - shellcheck@0.9.0
+    - hadolint@2.14.0
+    - isort@8.0.1
+    - markdownlint@0.48.0
+    - mypy@2.1.0
+    - oxipng@10.1.1
+    - prettier@3.8.3
+    - ruff@0.15.14
+    - shellcheck@0.11.0
     - shfmt@3.6.0
-    - svgo@3.0.2
-    - terrascan@1.18.3
-    - trivy@0.44.1
-    - trufflehog@3.48.0
-    - yamllint@1.32.0
+    - svgo@4.0.1
+    - terrascan@1.19.9
+    - trivy@0.70.0
+    - trufflehog@3.95.3
+    - yamllint@1.38.0
 actions:
   disabled:
     - trunk-announce
